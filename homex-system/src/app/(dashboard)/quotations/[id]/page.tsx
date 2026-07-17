@@ -6,7 +6,7 @@ import { STATUS_MAP } from "@/lib/types";
 import { cn } from "@/lib/utils";
 import {
   ArrowRight, Printer, Trash2, CheckCircle, XCircle, Send,
-  Clock, FileText, User, MapPin, Phone, Pencil,
+  Clock, FileText, User, MapPin, Phone, Pencil, Download,
 } from "lucide-react";
 import Link from "next/link";
 
@@ -107,6 +107,11 @@ export default function QuotationDetailPage({ params }: { params: Promise<{ id: 
               <Printer className="w-4 h-4" />
               طباعة
             </button>
+            <a href={`/api/quotations/${id}/pdf`} target="_blank" rel="noopener noreferrer"
+              className="flex items-center gap-2 px-4 py-2 border border-gray-200 rounded text-sm font-bold hover:bg-gray-50">
+              <Download className="w-4 h-4" />
+              PDF
+            </a>
             {(q.status === "draft" || q.status === "pending") && (
               <Link href={`/quotations/${id}/edit`}
                 className="flex items-center gap-2 px-4 py-2 border border-gray-200 rounded text-sm font-bold hover:bg-gray-50">

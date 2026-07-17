@@ -3,6 +3,7 @@ import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { logAction } from "@/lib/audit";
+import { notify, notifyAdmins } from "@/lib/notifications";
 
 export async function GET(
   req: NextRequest,
@@ -92,6 +93,20 @@ export async function PATCH(
 
   if (body.status) {
     await logAction(user.id, "status_change", "quotation", id, JSON.stringify({ to: body.status }));
+
+    const statusLabels: Record<string, string> = {
+      pending: "قيد المراجعة",
+      approved: "معتمد",
+      declined: "مرفوض",
+    };
+    const label = statusLabels[body.status] || body.status;
+    const link = `/quotations/${id}`;
+
+    if (body.status === "pending") {
+      await notifyAdmins("عرض سعر جديد للمراجعة", `${user.name} أرسل عرض سعر ${updated.quoteNumber} للمراجعة`, "info", link);
+    } else if (body.status === "approved" || body.status === "declined") {
+      await notify(updated.employeeId, `عرض السعر ${label}`, `تم ${label === "معتمد" ? "اعتماد" : "رفض"} عرض السعر ${updated.quoteNumber}`, body.status === "approved" ? "success" : "error", link);
+    }
   }
 
   return NextResponse.json(updated);
