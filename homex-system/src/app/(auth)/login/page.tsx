@@ -13,6 +13,10 @@ export default function LoginPage() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (!civilId || !password) {
+      setError("أدخل الرقم المدني وكلمة المرور");
+      return;
+    }
     setError("");
     setLoading(true);
 
@@ -72,7 +76,7 @@ export default function LoginPage() {
                 onChange={(e) => setCivilId(e.target.value)}
                 className="w-full border border-gray-200 bg-white text-gray-900 rounded px-4 py-3 text-center font-mono text-lg tracking-widest focus:outline-none focus:border-gray-900 transition-colors"
                 placeholder="••••"
-                required
+                autoComplete="username"
                 autoFocus
               />
             </div>
@@ -85,7 +89,7 @@ export default function LoginPage() {
                 onChange={(e) => setPassword(e.target.value)}
                 className="w-full border border-gray-200 bg-white text-gray-900 rounded px-4 py-3 text-center font-mono text-lg tracking-widest focus:outline-none focus:border-gray-900 transition-colors"
                 placeholder="••••"
-                required
+                autoComplete="current-password"
               />
             </div>
 
