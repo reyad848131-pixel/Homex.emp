@@ -6,7 +6,7 @@ import { STATUS_MAP } from "@/lib/types";
 import { cn } from "@/lib/utils";
 import {
   ArrowRight, Printer, Trash2, CheckCircle, XCircle, Send,
-  Clock, FileText, User, MapPin, Phone, Pencil, Download,
+  Clock, FileText, User, MapPin, Phone, Pencil, Download, Copy, MessageCircle,
 } from "lucide-react";
 import Link from "next/link";
 
@@ -71,6 +71,31 @@ export default function QuotationDetailPage({ params }: { params: Promise<{ id: 
 
   const handlePrint = () => window.print();
 
+  const handleDuplicate = async () => {
+    if (!q) return;
+    const res = await fetch(`/api/quotations/${id}/duplicate`, { method: "POST" });
+    if (res.ok) {
+      const data = await res.json();
+      router.push(`/quotations/${data.id}/edit`);
+    }
+  };
+
+  const handleWhatsApp = () => {
+    if (!q) return;
+    const text = encodeURIComponent(
+      `*عرض سعر - ${q.quoteNumber}*\n` +
+      `العميل: ${q.customer.name}\n` +
+      `الإجمالي: ${fmtCur(q.total)}\n` +
+      `الدفعة المقدمة (${q.advancePct}%): ${fmtCur(q.advanceAmount)}\n\n` +
+      `البنود:\n` +
+      q.items.map((item, i) => `${i + 1}. ${item.description} - ${fmtCur(item.lineTotal)}`).join("\n") +
+      `\n\n--- Homex ---`
+    );
+    const phone = q.customer.phone.replace(/\D/g, "");
+    const fullPhone = phone.startsWith("968") ? phone : `968${phone}`;
+    window.open(`https://wa.me/${fullPhone}?text=${text}`, "_blank");
+  };
+
   if (loading) return <div className="text-center py-20 text-gray-400">جاري التحميل...</div>;
   if (!q) return <div className="text-center py-20 text-red-500">عرض السعر غير موجود</div>;
 
@@ -112,6 +137,16 @@ export default function QuotationDetailPage({ params }: { params: Promise<{ id: 
               <Download className="w-4 h-4" />
               PDF
             </a>
+            <button onClick={handleWhatsApp}
+              className="flex items-center gap-2 px-4 py-2 border border-green-200 text-green-600 rounded text-sm font-bold hover:bg-green-50">
+              <MessageCircle className="w-4 h-4" />
+              واتساب
+            </button>
+            <button onClick={handleDuplicate}
+              className="flex items-center gap-2 px-4 py-2 border border-gray-200 rounded text-sm font-bold hover:bg-gray-50">
+              <Copy className="w-4 h-4" />
+              نسخ
+            </button>
             {(q.status === "draft" || q.status === "pending") && (
               <Link href={`/quotations/${id}/edit`}
                 className="flex items-center gap-2 px-4 py-2 border border-gray-200 rounded text-sm font-bold hover:bg-gray-50">

@@ -4,7 +4,7 @@ import { prisma } from "@/lib/prisma";
 import { formatCurrency } from "@/lib/utils";
 import { STATUS_MAP } from "@/lib/types";
 import Link from "next/link";
-import { FileText, FilePlus, Users, TrendingUp, Clock, CheckCircle } from "lucide-react";
+import { FileText, FilePlus, Users, TrendingUp, Clock, CheckCircle, XCircle, BarChart3, ArrowUpRight } from "lucide-react";
 
 export default async function DashboardPage() {
   const session = await getServerSession(authOptions);
@@ -14,29 +14,42 @@ export default async function DashboardPage() {
   const isAdmin = role === "admin" || role === "manager";
   const whereClause = isAdmin ? {} : { employeeId: userId };
 
-  const [totalQuotes, totalCustomers, quotations] = await Promise.all([
+  const now = new Date();
+  const monthStart = new Date(now.getFullYear(), now.getMonth(), 1);
+
+  const [totalQuotes, totalCustomers, quotations, monthlyQuotes, statusCounts] = await Promise.all([
     prisma.quotation.count({ where: whereClause }),
     prisma.customer.count({ where: isAdmin ? {} : { createdBy: userId } }),
     prisma.quotation.findMany({
       where: whereClause,
-      include: { customer: true, employee: true, items: true },
+      include: { customer: true, employee: { select: { name: true } }, _count: { select: { items: true } } },
       orderBy: { createdAt: "desc" },
-      take: 10,
+      take: 8,
     }),
+    prisma.quotation.count({ where: { ...whereClause, createdAt: { gte: monthStart } } }),
+    Promise.all([
+      prisma.quotation.count({ where: { ...whereClause, status: "draft" } }),
+      prisma.quotation.count({ where: { ...whereClause, status: "pending" } }),
+      prisma.quotation.count({ where: { ...whereClause, status: "approved" } }),
+      prisma.quotation.count({ where: { ...whereClause, status: "declined" } }),
+    ]),
   ]);
 
-  const totalRevenue = quotations
-    .filter((q) => q.status === "accepted" || q.status === "approved")
-    .reduce((sum, q) => sum + q.total, 0);
+  const [draftCount, pendingCount, approvedCount, declinedCount] = statusCounts;
 
-  const pendingCount = quotations.filter((q) => q.status === "draft" || q.status === "pending").length;
-  const acceptedCount = quotations.filter((q) => q.status === "accepted").length;
+  const approvedQuotations = await prisma.quotation.findMany({
+    where: { ...whereClause, status: "approved" },
+    select: { total: true },
+  });
+  const totalRevenue = approvedQuotations.reduce((sum, q) => sum + q.total, 0);
+
+  const conversionRate = totalQuotes > 0 ? ((approvedCount / totalQuotes) * 100).toFixed(0) : "0";
 
   const stats = [
-    { label: "إجمالي العروض", value: totalQuotes, icon: FileText, color: "bg-blue-50 text-blue-600" },
-    { label: "العملاء", value: totalCustomers, icon: Users, color: "bg-green-50 text-green-600" },
-    { label: "قيد المراجعة", value: pendingCount, icon: Clock, color: "bg-yellow-50 text-yellow-600" },
-    { label: "الإيرادات المتوقعة", value: formatCurrency(totalRevenue), icon: TrendingUp, color: "bg-purple-50 text-purple-600" },
+    { label: "إجمالي العروض", value: totalQuotes, sub: `${monthlyQuotes} هذا الشهر`, icon: FileText, color: "bg-blue-50 text-blue-600" },
+    { label: "العملاء", value: totalCustomers, sub: null, icon: Users, color: "bg-green-50 text-green-600" },
+    { label: "الإيرادات المعتمدة", value: formatCurrency(totalRevenue), sub: `${conversionRate}% نسبة التحويل`, icon: TrendingUp, color: "bg-purple-50 text-purple-600" },
+    { label: "قيد المراجعة", value: pendingCount, sub: `${draftCount} مسودة`, icon: Clock, color: "bg-yellow-50 text-yellow-600" },
   ];
 
   return (
@@ -56,7 +69,7 @@ export default async function DashboardPage() {
       </div>
 
       {/* Stats Grid */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
         {stats.map((stat) => (
           <div key={stat.label} className="bg-white border border-gray-200 rounded p-5">
             <div className="flex items-center gap-3 mb-3">
@@ -66,6 +79,22 @@ export default async function DashboardPage() {
               <p className="text-sm text-gray-500 font-semibold">{stat.label}</p>
             </div>
             <p className="text-2xl font-black text-gray-900">{stat.value}</p>
+            {stat.sub && <p className="text-xs text-gray-400 mt-1">{stat.sub}</p>}
+          </div>
+        ))}
+      </div>
+
+      {/* Status Overview */}
+      <div className="grid grid-cols-4 gap-3 mb-6">
+        {[
+          { label: "مسودة", count: draftCount, color: "border-gray-300 text-gray-600 bg-gray-50" },
+          { label: "قيد المراجعة", count: pendingCount, color: "border-blue-300 text-blue-600 bg-blue-50" },
+          { label: "معتمد", count: approvedCount, color: "border-green-300 text-green-600 bg-green-50" },
+          { label: "مرفوض", count: declinedCount, color: "border-red-300 text-red-600 bg-red-50" },
+        ].map((s) => (
+          <div key={s.label} className={`border rounded p-3 text-center ${s.color}`}>
+            <p className="text-2xl font-black font-mono-en">{s.count}</p>
+            <p className="text-xs font-bold mt-0.5">{s.label}</p>
           </div>
         ))}
       </div>
@@ -74,8 +103,9 @@ export default async function DashboardPage() {
       <div className="bg-white border border-gray-200 rounded">
         <div className="flex items-center justify-between p-5 border-b border-gray-100">
           <h2 className="text-lg font-bold">آخر عروض الأسعار</h2>
-          <Link href="/quotations" className="text-sm text-gray-500 hover:text-gray-900 font-semibold">
+          <Link href="/quotations" className="flex items-center gap-1 text-sm text-gray-500 hover:text-gray-900 font-semibold">
             عرض الكل
+            <ArrowUpRight className="w-3.5 h-3.5" />
           </Link>
         </div>
 
@@ -98,7 +128,9 @@ export default async function DashboardPage() {
                 <tr className="border-b border-gray-100">
                   <th className="text-right p-3 px-5 text-xs text-gray-400 font-semibold uppercase tracking-wider">رقم العرض</th>
                   <th className="text-right p-3 text-xs text-gray-400 font-semibold uppercase tracking-wider">العميل</th>
+                  {isAdmin && <th className="text-right p-3 text-xs text-gray-400 font-semibold uppercase tracking-wider">الموظف</th>}
                   <th className="text-right p-3 text-xs text-gray-400 font-semibold uppercase tracking-wider">الحالة</th>
+                  <th className="text-right p-3 text-xs text-gray-400 font-semibold uppercase tracking-wider">البنود</th>
                   <th className="text-right p-3 text-xs text-gray-400 font-semibold uppercase tracking-wider">المجموع</th>
                   <th className="text-right p-3 text-xs text-gray-400 font-semibold uppercase tracking-wider">التاريخ</th>
                 </tr>
@@ -114,11 +146,13 @@ export default async function DashboardPage() {
                         </Link>
                       </td>
                       <td className="p-3 font-semibold text-gray-700">{q.customer.name}</td>
+                      {isAdmin && <td className="p-3 text-gray-500 text-xs">{q.employee.name}</td>}
                       <td className="p-3">
                         <span className={`inline-block px-2.5 py-1 rounded-full text-xs font-bold ${status.color}`}>
                           {status.label}
                         </span>
                       </td>
+                      <td className="p-3 font-mono-en text-gray-400 text-xs">{q._count.items}</td>
                       <td className="p-3 font-mono-en font-bold text-gray-900">{formatCurrency(q.total)}</td>
                       <td className="p-3 text-gray-400 font-mono-en text-xs">
                         {new Date(q.createdAt).toLocaleDateString("ar-OM")}

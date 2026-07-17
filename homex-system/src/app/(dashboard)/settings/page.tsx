@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { Settings, Save, Building2 } from "lucide-react";
+import { Settings, Save, Building2, Download, Database, FileSpreadsheet } from "lucide-react";
 
 export default function SettingsPage() {
   const [settings, setSettings] = useState<Record<string, string>>({});
@@ -105,6 +105,31 @@ export default function SettingsPage() {
                 className="w-full border border-gray-200 rounded px-3 py-2.5 text-sm" />
             </div>
           </div>
+        </div>
+      </div>
+
+      {/* Data Management */}
+      <div className="bg-white border border-gray-200 rounded p-6 mt-6">
+        <h2 className="text-base font-bold mb-4 flex items-center gap-2">
+          <Database className="w-4 h-4 text-gray-400" />
+          إدارة البيانات
+        </h2>
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+          <a href="/api/export?type=quotations" download
+            className="flex items-center justify-center gap-2 px-4 py-3 border border-gray-200 rounded text-sm font-bold hover:bg-gray-50 transition-colors">
+            <FileSpreadsheet className="w-4 h-4 text-green-600" />
+            تصدير العروض (CSV)
+          </a>
+          <a href="/api/export?type=customers" download
+            className="flex items-center justify-center gap-2 px-4 py-3 border border-gray-200 rounded text-sm font-bold hover:bg-gray-50 transition-colors">
+            <FileSpreadsheet className="w-4 h-4 text-blue-600" />
+            تصدير العملاء (CSV)
+          </a>
+          <a href="/api/backup" download
+            className="flex items-center justify-center gap-2 px-4 py-3 border border-gray-200 rounded text-sm font-bold hover:bg-gray-50 transition-colors">
+            <Download className="w-4 h-4 text-purple-600" />
+            نسخة احتياطية
+          </a>
         </div>
       </div>
     </div>
