@@ -1,0 +1,17 @@
+{
+  "name": "Homex - نظام عروض الأسعار",
+  "short_name": "Homex",
+  "description": "نظام إدارة عروض الأسعار الداخلي",
+  "start_url": "/",
+  "display": "standalone",
+  "orientation": "any",
+  "dir": "rtl",
+  "lang": "ar",
+  "theme_color": "#171717",
+  "background_color": "#f5f5f4",
+  "icons": [
+    { "src": "/icons/icon-192.png", "sizes": "192x192", "type": "image/png" },
+    { "src": "/icons/icon-512.png", "sizes": "512x512", "type": "image/png" },
+    { "src": "/icons/icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" }
+  ]
+}
