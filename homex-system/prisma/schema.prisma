@@ -1,0 +1,125 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+model Employee {
+  id        String   @id @default(cuid())
+  name      String
+  civilId   String   @unique @map("civil_id")
+  phone     String?
+  role      String   @default("sales")
+  password  String
+  isActive  Boolean  @default(true) @map("is_active")
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  quotations Quotation[]
+  customers  Customer[]
+  auditLogs  AuditLog[]
+
+  @@map("employees")
+}
+
+model Customer {
+  id          String   @id @default(cuid())
+  name        String
+  phone       String
+  phoneCode   String   @default("+968") @map("phone_code")
+  governorate String
+  wilayat     String
+  address     String?
+  createdBy   String   @map("created_by")
+  createdAt   DateTime @default(now()) @map("created_at")
+  updatedAt   DateTime @updatedAt @map("updated_at")
+
+  creator    Employee    @relation(fields: [createdBy], references: [id])
+  quotations Quotation[]
+
+  @@map("customers")
+}
+
+model Category {
+  id          String  @id @default(cuid())
+  nameAr      String  @map("name_ar")
+  nameEn      String  @map("name_en")
+  icon        String?
+  pricingType String  @map("pricing_type")
+  basePrice   Float?  @map("base_price")
+  config      String?
+  isActive    Boolean @default(true) @map("is_active")
+  sortOrder   Int     @default(0) @map("sort_order")
+
+  items QuoteItem[]
+
+  @@map("categories")
+}
+
+model Quotation {
+  id            String    @id @default(cuid())
+  quoteNumber   String    @unique @map("quote_number")
+  customerId    String    @map("customer_id")
+  employeeId    String    @map("employee_id")
+  status        String    @default("draft")
+  subtotal      Float     @default(0)
+  vatRate       Float     @default(0.05) @map("vat_rate")
+  vatAmount     Float     @default(0) @map("vat_amount")
+  total         Float     @default(0)
+  advancePct    Float     @default(15) @map("advance_pct")
+  advanceAmount Float     @default(0) @map("advance_amount")
+  notes         String?
+  validUntil    DateTime? @map("valid_until")
+  createdAt     DateTime  @default(now()) @map("created_at")
+  updatedAt     DateTime  @updatedAt @map("updated_at")
+
+  customer Customer    @relation(fields: [customerId], references: [id])
+  employee Employee    @relation(fields: [employeeId], references: [id])
+  items    QuoteItem[]
+
+  @@map("quotations")
+}
+
+model QuoteItem {
+  id          String  @id @default(cuid())
+  quotationId String  @map("quotation_id")
+  categoryId  String  @map("category_id")
+  description String
+  details     String?
+  quantity    Int     @default(1)
+  unitPrice   Float   @map("unit_price")
+  extras      Float   @default(0)
+  lineTotal   Float   @map("line_total")
+  sortOrder   Int     @default(0) @map("sort_order")
+
+  quotation Quotation @relation(fields: [quotationId], references: [id], onDelete: Cascade)
+  category  Category  @relation(fields: [categoryId], references: [id])
+
+  @@map("quote_items")
+}
+
+model AuditLog {
+  id         String   @id @default(cuid())
+  employeeId String   @map("employee_id")
+  action     String
+  entity     String
+  entityId   String?  @map("entity_id")
+  details    String?
+  createdAt  DateTime @default(now()) @map("created_at")
+
+  employee Employee @relation(fields: [employeeId], references: [id])
+
+  @@map("audit_logs")
+}
+
+model Settings {
+  id        String   @id @default(cuid())
+  key       String   @unique
+  value     String
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  @@map("settings")
+}
