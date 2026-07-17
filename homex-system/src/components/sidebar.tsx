@@ -9,7 +9,10 @@ import {
   FileText,
   FilePlus,
   Users,
+  UsersRound,
   Settings,
+  ScrollText,
+  BarChart3,
   LogOut,
   Menu,
   X,
@@ -33,7 +36,13 @@ const navItems = [
   { href: "/customers", label: "العملاء", icon: Users },
 ];
 
+const managerItems = [
+  { href: "/reports", label: "التقارير", icon: BarChart3 },
+];
+
 const adminItems = [
+  { href: "/employees", label: "الموظفين", icon: UsersRound },
+  { href: "/audit-logs", label: "سجل النشاطات", icon: ScrollText },
   { href: "/settings", label: "الإعدادات", icon: Settings },
 ];
 
@@ -41,7 +50,11 @@ export function Sidebar({ user }: SidebarProps) {
   const pathname = usePathname();
   const [mobileOpen, setMobileOpen] = useState(false);
 
-  const items = user.role === "admin" ? [...navItems, ...adminItems] : navItems;
+  const items = user.role === "admin"
+    ? [...navItems, ...managerItems, ...adminItems]
+    : user.role === "manager"
+      ? [...navItems, ...managerItems]
+      : navItems;
 
   const content = (
     <>

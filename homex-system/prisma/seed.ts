@@ -76,6 +76,25 @@ async function main() {
     });
   }
 
+  const defaultSettings = [
+    { key: "company_name", value: "Homex" },
+    { key: "company_phone", value: "+96899999900" },
+    { key: "company_address", value: "مسقط، سلطنة عمان" },
+    { key: "company_cr", value: "" },
+    { key: "vat_rate", value: "5" },
+    { key: "advance_pct", value: "15" },
+    { key: "quote_validity_days", value: "30" },
+    { key: "currency", value: "ر.ع" },
+  ];
+
+  for (const s of defaultSettings) {
+    await prisma.settings.upsert({
+      where: { key: s.key },
+      update: {},
+      create: s,
+    });
+  }
+
   console.log("Seed completed successfully.");
 }
 

@@ -18,6 +18,15 @@ const montserrat = Montserrat({
 export const metadata: Metadata = {
   title: "Homex | نظام عروض الأسعار",
   description: "نظام إدارة عروض الأسعار الداخلي - Homex",
+  manifest: "/manifest.json",
+  appleWebApp: {
+    capable: true,
+    statusBarStyle: "black-translucent",
+    title: "Homex",
+  },
+  other: {
+    "mobile-web-app-capable": "yes",
+  },
 };
 
 export default function RootLayout({
@@ -27,6 +36,10 @@ export default function RootLayout({
 }) {
   return (
     <html lang="ar" dir="rtl" className={`${cairo.variable} ${montserrat.variable}`}>
+      <head>
+        <meta name="theme-color" content="#171717" />
+        <link rel="apple-touch-icon" href="/icons/icon-192.png" />
+      </head>
       <body className="font-cairo antialiased bg-stone-100 text-gray-900 min-h-screen">
         <Providers>{children}</Providers>
       </body>

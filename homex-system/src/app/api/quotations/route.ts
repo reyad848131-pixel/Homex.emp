@@ -3,6 +3,8 @@ import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { generateQuoteNumber } from "@/lib/utils";
+import { logAction } from "@/lib/audit";
+import { getSetting } from "@/lib/settings";
 
 export async function GET(req: NextRequest) {
   const session = await getServerSession(authOptions);
@@ -68,10 +70,15 @@ export async function POST(req: NextRequest) {
     });
   }
 
+  const vatRate = parseFloat(await getSetting("vat_rate", "5")) / 100;
+  const defaultAdvance = parseFloat(await getSetting("advance_pct", "15"));
+  const validityDays = parseInt(await getSetting("quote_validity_days", "30"));
+  const finalAdvancePct = advancePct ?? defaultAdvance;
+
   const subtotal = items.reduce((sum: number, item: any) => sum + item.lineTotal, 0);
-  const vatAmount = subtotal * 0.05;
+  const vatAmount = subtotal * vatRate;
   const total = subtotal + vatAmount;
-  const advanceAmount = total * (advancePct / 100);
+  const advanceAmount = total * (finalAdvancePct / 100);
 
   const quotation = await prisma.quotation.create({
     data: {
@@ -80,12 +87,13 @@ export async function POST(req: NextRequest) {
       employeeId: user.id,
       status: "draft",
       subtotal,
+      vatRate,
       vatAmount,
       total,
-      advancePct,
+      advancePct: finalAdvancePct,
       advanceAmount,
       notes,
-      validUntil: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000),
+      validUntil: new Date(Date.now() + validityDays * 24 * 60 * 60 * 1000),
       items: {
         create: items.map((item: any, idx: number) => ({
           categoryId: item.categoryId,
@@ -102,5 +110,6 @@ export async function POST(req: NextRequest) {
     include: { customer: true, items: true },
   });
 
+  await logAction(user.id, "create", "quotation", quotation.id);
   return NextResponse.json(quotation, { status: 201 });
 }
