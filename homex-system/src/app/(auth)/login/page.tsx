@@ -16,18 +16,26 @@ export default function LoginPage() {
     setError("");
     setLoading(true);
 
-    const result = await signIn("credentials", {
-      civilId,
-      password,
-      redirect: false,
-    });
+    try {
+      const result = await signIn("credentials", {
+        civilId,
+        password,
+        redirect: false,
+      });
 
-    if (result?.error) {
-      setError("رقم مدني أو كلمة مرور غير صحيحة");
+      if (result?.error) {
+        setError("رقم مدني أو كلمة مرور غير صحيحة");
+        setLoading(false);
+      } else if (result?.ok) {
+        router.push("/");
+        router.refresh();
+      } else {
+        setError("خطأ في الاتصال بالسيرفر");
+        setLoading(false);
+      }
+    } catch {
+      setError("خطأ في الاتصال بالسيرفر");
       setLoading(false);
-    } else {
-      router.push("/");
-      router.refresh();
     }
   };
 
