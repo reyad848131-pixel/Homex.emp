@@ -2,15 +2,12 @@
 
 import { signIn } from "next-auth/react";
 import { useState } from "react";
-import { useRouter } from "next/navigation";
 
 export default function LoginPage() {
   const [civilId, setCivilId] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
-  const router = useRouter();
-
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!civilId || !password) {
@@ -31,8 +28,7 @@ export default function LoginPage() {
         setError("رقم مدني أو كلمة مرور غير صحيحة");
         setLoading(false);
       } else if (result?.ok) {
-        router.push("/");
-        router.refresh();
+        window.location.href = "/";
       } else {
         setError("خطأ في الاتصال بالسيرفر");
         setLoading(false);
