@@ -3,7 +3,7 @@ generator client {
 }
 
 datasource db {
-  provider = "postgresql"
+  provider = "sqlite"
   url      = env("DATABASE_URL")
 }
 
@@ -54,7 +54,7 @@ model Category {
   icon        String?
   pricingType String  @map("pricing_type")
   basePrice   Float?  @map("base_price")
-  config      Json?   @default("{}")
+  config      String?
   isActive    Boolean @default(true) @map("is_active")
   sortOrder   Int     @default(0) @map("sort_order")
 
@@ -96,7 +96,7 @@ model QuoteItem {
   quotationId String  @map("quotation_id")
   categoryId  String  @map("category_id")
   description String
-  details     Json?
+  details     String?
   quantity    Int     @default(1)
   unitPrice   Float   @map("unit_price")
   extras      Float   @default(0)

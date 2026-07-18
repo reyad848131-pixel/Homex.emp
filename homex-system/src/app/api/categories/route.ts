@@ -16,7 +16,12 @@ export async function GET(req: NextRequest) {
     include: { _count: { select: { items: true } } },
   });
 
-  return NextResponse.json(categories);
+  return NextResponse.json(
+    categories.map((c) => ({
+      ...c,
+      config: c.config ? JSON.parse(c.config) : {},
+    }))
+  );
 }
 
 export async function POST(req: NextRequest) {

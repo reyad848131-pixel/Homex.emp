@@ -68,7 +68,7 @@ export async function PATCH(
             create: body.items.map((item: any, idx: number) => ({
               categoryId: item.categoryId,
               description: item.description,
-              details: item.details || null,
+              details: item.details ? JSON.stringify(item.details) : null,
               quantity: item.quantity,
               unitPrice: item.unitPrice,
               extras: item.extras || 0,
