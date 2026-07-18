@@ -27,6 +27,7 @@ export async function GET(
   const companyPhone = await getSetting("company_phone", "");
   const companyAddress = await getSetting("company_address", "");
   const companyCR = await getSetting("company_cr", "");
+  const termsConditions = await getSetting("terms_conditions", "");
 
   const fmtCur = (n: number) => `${n.toFixed(3)} ر.ع`;
   const fmtDate = (d: Date | string) => new Date(d).toLocaleDateString("ar-OM", { year: "numeric", month: "long", day: "numeric" });
@@ -143,6 +144,16 @@ export async function GET(
   <div class="notes">
     <h3>ملاحظات</h3>
     <p>${quotation.notes}</p>
+  </div>` : ""}
+
+  ${termsConditions ? `
+  <div style="margin-top:24px;padding:16px;border:1px solid #ddd;border-radius:6px">
+    <h3 style="font-size:13px;font-weight:700;margin-bottom:10px">الشروط والأحكام:</h3>
+    <ul style="list-style:none;padding:0;margin:0">
+      ${termsConditions.split("\n").filter(Boolean).map((line: string) =>
+        `<li style="padding:3px 0;font-size:12px;color:#444">• ${line}</li>`
+      ).join("")}
+    </ul>
   </div>` : ""}
 
   <div class="footer">

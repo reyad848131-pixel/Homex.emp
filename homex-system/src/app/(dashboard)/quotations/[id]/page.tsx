@@ -41,6 +41,7 @@ export default function QuotationDetailPage({ params }: { params: Promise<{ id: 
   const router = useRouter();
   const [q, setQ] = useState<QuotationDetail | null>(null);
   const [loading, setLoading] = useState(true);
+  const [terms, setTerms] = useState("");
 
   const fmtCur = (n: number) => `${n.toFixed(3)} ر.ع`;
 
@@ -49,6 +50,9 @@ export default function QuotationDetailPage({ params }: { params: Promise<{ id: 
       .then((r) => r.json())
       .then(setQ)
       .finally(() => setLoading(false));
+    fetch("/api/settings")
+      .then((r) => r.json())
+      .then((s) => setTerms(s.terms_conditions || ""));
   }, [id]);
 
   const updateStatus = async (status: string) => {
@@ -272,6 +276,20 @@ export default function QuotationDetailPage({ params }: { params: Promise<{ id: 
             <p className="text-sm text-gray-700">{q.notes}</p>
           </div>
         )}
+
+        {terms && (
+          <div className="bg-white border border-gray-200 rounded p-5 mt-6">
+            <h2 className="text-sm font-bold text-gray-400 mb-3">الشروط والأحكام</h2>
+            <ul className="space-y-1.5">
+              {terms.split("\n").filter(Boolean).map((line, i) => (
+                <li key={i} className="flex items-start gap-2 text-sm text-gray-600">
+                  <span className="text-gray-300 mt-0.5">•</span>
+                  {line}
+                </li>
+              ))}
+            </ul>
+          </div>
+        )}
       </div>
 
       {/* Print View */}
@@ -334,6 +352,17 @@ export default function QuotationDetailPage({ params }: { params: Promise<{ id: 
             </div>
           </div>
         </div>
+
+        {terms && (
+          <div className="mt-8 pt-4 border-t">
+            <h3 className="font-bold text-sm mb-2">الشروط والأحكام:</h3>
+            <ul className="space-y-1 text-xs text-gray-600">
+              {terms.split("\n").filter(Boolean).map((line, i) => (
+                <li key={i}>• {line}</li>
+              ))}
+            </ul>
+          </div>
+        )}
 
         <div className="mt-12 pt-4 border-t text-center text-xs text-gray-400">
           <p>Homex - نظام عروض الأسعار الداخلي</p>

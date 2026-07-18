@@ -85,6 +85,7 @@ async function main() {
     { key: "advance_pct", value: "15" },
     { key: "quote_validity_days", value: "30" },
     { key: "currency", value: "ر.ع" },
+    { key: "terms_conditions", value: "الأسعار شاملة التوريد والتركيب\nمدة التنفيذ 30 يوم عمل من تاريخ الدفعة المقدمة\nالدفعة المقدمة غير قابلة للاسترداد\nالضمان سنة واحدة من تاريخ التسليم\nالأسعار صالحة لمدة 30 يوم من تاريخ العرض" },
   ];
 
   for (const s of defaultSettings) {

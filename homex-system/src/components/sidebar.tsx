@@ -13,6 +13,7 @@ import {
   Settings,
   ScrollText,
   BarChart3,
+  Layers,
   LogOut,
   Menu,
   X,
@@ -42,6 +43,7 @@ const managerItems = [
 
 const adminItems = [
   { href: "/employees", label: "الموظفين", icon: UsersRound },
+  { href: "/categories", label: "الفئات", icon: Layers },
   { href: "/audit-logs", label: "سجل النشاطات", icon: ScrollText },
   { href: "/settings", label: "الإعدادات", icon: Settings },
 ];
@@ -93,12 +95,12 @@ export function Sidebar({ user }: SidebarProps) {
           <div className="w-9 h-9 rounded-full bg-gray-900 text-white flex items-center justify-center text-sm font-bold">
             {user.name.charAt(0)}
           </div>
-          <div className="flex-1 min-w-0">
-            <p className="text-sm font-bold text-gray-900 truncate">{user.name}</p>
+          <Link href="/profile" onClick={() => setMobileOpen(false)} className="flex-1 min-w-0">
+            <p className="text-sm font-bold text-gray-900 truncate hover:underline">{user.name}</p>
             <p className="text-[11px] text-gray-400 font-mono-en">
               {ROLE_LABELS[user.role] || user.role}
             </p>
-          </div>
+          </Link>
         </div>
         <button
           onClick={() => signOut({ callbackUrl: "/login" })}
