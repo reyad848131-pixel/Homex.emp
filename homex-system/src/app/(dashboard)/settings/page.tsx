@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { Settings, Save, Building2, Download, Database, FileSpreadsheet } from "lucide-react";
+import { Settings, Save, Building2, Download, Database, FileSpreadsheet, ScrollText } from "lucide-react";
 
 export default function SettingsPage() {
   const [settings, setSettings] = useState<Record<string, string>>({});
@@ -106,6 +106,22 @@ export default function SettingsPage() {
             </div>
           </div>
         </div>
+      </div>
+
+      {/* Terms & Conditions */}
+      <div className="bg-white border border-gray-200 rounded p-6 mt-6">
+        <h2 className="text-base font-bold mb-4 flex items-center gap-2">
+          <ScrollText className="w-4 h-4 text-gray-400" />
+          الشروط والأحكام
+        </h2>
+        <p className="text-sm text-gray-500 mb-3">تظهر تلقائياً في عرض السعر وملف PDF. كل سطر يظهر كبند منفصل.</p>
+        <textarea
+          value={settings.terms_conditions || ""}
+          onChange={(e) => update("terms_conditions", e.target.value)}
+          rows={8}
+          className="w-full border border-gray-200 rounded px-3 py-2.5 text-sm leading-relaxed"
+          placeholder={"الأسعار شاملة التوريد والتركيب\nمدة التنفيذ 30 يوم عمل من تاريخ الدفعة المقدمة\nالدفعة المقدمة غير قابلة للاسترداد\nالضمان سنة واحدة من تاريخ التسليم\nالأسعار صالحة لمدة 30 يوم من تاريخ العرض"}
+        />
       </div>
 
       {/* Data Management */}

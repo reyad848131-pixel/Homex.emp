@@ -2,6 +2,7 @@ import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { Users, Phone, MapPin } from "lucide-react";
+import Link from "next/link";
 
 export default async function CustomersPage() {
   const session = await getServerSession(authOptions);
@@ -33,7 +34,7 @@ export default async function CustomersPage() {
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
           {customers.map((c) => (
-            <div key={c.id} className="bg-white border border-gray-200 rounded p-5 hover:border-gray-300 transition-colors">
+            <Link href={`/customers/${c.id}`} key={c.id} className="bg-white border border-gray-200 rounded p-5 hover:border-gray-300 transition-colors block">
               <div className="flex items-start justify-between mb-3">
                 <div>
                   <h3 className="font-bold text-gray-900">{c.name}</h3>
@@ -53,7 +54,7 @@ export default async function CustomersPage() {
                   <span>{c.governorate} - {c.wilayat}</span>
                 </div>
               </div>
-            </div>
+            </Link>
           ))}
         </div>
       )}
