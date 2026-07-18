@@ -7,7 +7,7 @@ async function main() {
   const hash = (pw: string) => bcrypt.hashSync(pw, 10);
 
   const employees = [
-    { name: "رياض الحميمي", civilId: "2016", phone: "+96899999901", role: "admin", password: hash("2016") },
+    { name: "رياض الهميمي", civilId: "2016", phone: "+96899999901", role: "admin", password: hash("2016") },
     { name: "سالم النبهاني", civilId: "1389", phone: "+96899999902", role: "manager", password: hash("1389") },
     { name: "محمد العوفي", civilId: "1383", phone: "+96899999903", role: "sales", password: hash("1383") },
   ];
