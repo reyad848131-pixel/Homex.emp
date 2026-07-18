@@ -1,0 +1,56 @@
+{
+  "name": "homex-desktop",
+  "version": "1.0.0",
+  "description": "Homex - Quotation Management System",
+  "main": "main.js",
+  "author": "Homex",
+  "license": "PROPRIETARY",
+  "scripts": {
+    "start": "electron .",
+    "build": "electron-builder --win",
+    "build:dir": "electron-builder --win --dir"
+  },
+  "dependencies": {
+    "electron-updater": "^6.3.0"
+  },
+  "devDependencies": {
+    "electron": "^33.0.0",
+    "electron-builder": "^25.0.0"
+  },
+  "build": {
+    "appId": "com.homex.system",
+    "productName": "Homex",
+    "directories": {
+      "output": "dist"
+    },
+    "win": {
+      "target": [
+        {
+          "target": "nsis",
+          "arch": ["x64"]
+        }
+      ],
+      "icon": "icons/icon.ico"
+    },
+    "nsis": {
+      "oneClick": false,
+      "allowToChangeInstallationDirectory": true,
+      "installerIcon": "icons/icon.ico",
+      "uninstallerIcon": "icons/icon.ico",
+      "installerHeaderIcon": "icons/icon.ico",
+      "createDesktopShortcut": true,
+      "createStartMenuShortcut": true,
+      "shortcutName": "Homex"
+    },
+    "publish": {
+      "provider": "generic",
+      "url": "https://your-domain.com/updates/"
+    },
+    "files": [
+      "main.js",
+      "preload.js",
+      "config.json",
+      "icons/**/*"
+    ]
+  }
+}

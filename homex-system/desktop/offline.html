@@ -1,0 +1,77 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Homex - غير متصل</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body {
+      font-family: 'Segoe UI', Tahoma, sans-serif;
+      background: #f8f8f8;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      min-height: 100vh;
+      color: #333;
+    }
+    .container {
+      text-align: center;
+      padding: 40px;
+      max-width: 500px;
+    }
+    .icon {
+      font-size: 64px;
+      margin-bottom: 24px;
+    }
+    h1 {
+      font-size: 24px;
+      font-weight: 700;
+      margin-bottom: 12px;
+      color: #171717;
+    }
+    p {
+      font-size: 15px;
+      color: #666;
+      line-height: 1.8;
+      margin-bottom: 32px;
+    }
+    .btn {
+      display: inline-block;
+      background: #171717;
+      color: white;
+      border: none;
+      padding: 14px 40px;
+      border-radius: 6px;
+      font-size: 15px;
+      font-weight: 700;
+      cursor: pointer;
+      text-decoration: none;
+    }
+    .btn:hover { background: #333; }
+    .help {
+      margin-top: 32px;
+      font-size: 13px;
+      color: #999;
+      line-height: 2;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <div class="icon">🔌</div>
+    <h1>لا يمكن الاتصال بالسيرفر</h1>
+    <p>
+      تأكد من اتصالك بالإنترنت وأن السيرفر يعمل بشكل طبيعي.
+      <br>
+      إذا استمرت المشكلة، تواصل مع مسؤول النظام.
+    </p>
+    <button class="btn" onclick="location.reload()">إعادة المحاولة</button>
+    <div class="help">
+      إذا كنت داخل الشركة، تأكد من اتصالك بشبكة Wi-Fi
+      <br>
+      إذا كنت خارج الشركة، تأكد من اتصالك بالإنترنت
+    </div>
+  </div>
+</body>
+</html>

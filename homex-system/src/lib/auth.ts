@@ -3,7 +3,9 @@ import CredentialsProvider from "next-auth/providers/credentials";
 import bcrypt from "bcryptjs";
 import { prisma } from "./prisma";
 
-export const authOptions: NextAuthOptions = {
+const isProduction = process.env.NODE_ENV === "production";
+
+export const authOptions = {
   secret: process.env.NEXTAUTH_SECRET,
   trustHost: true,
   providers: [
@@ -24,6 +26,11 @@ export const authOptions: NextAuthOptions = {
 
         const valid = await bcrypt.compare(credentials.password, employee.password);
         if (!valid) return null;
+
+        await prisma.employee.update({
+          where: { id: employee.id },
+          data: { lastLogin: new Date() },
+        });
 
         return {
           id: employee.id,
@@ -56,35 +63,35 @@ export const authOptions: NextAuthOptions = {
     signIn: "/login",
   },
   session: {
-    strategy: "jwt",
+    strategy: "jwt" as const,
     maxAge: 24 * 60 * 60,
   },
   cookies: {
     sessionToken: {
-      name: "next-auth.session-token",
+      name: isProduction ? "__Secure-next-auth.session-token" : "next-auth.session-token",
       options: {
         httpOnly: true,
-        sameSite: "lax",
+        sameSite: "lax" as const,
         path: "/",
-        secure: false,
+        secure: isProduction,
       },
     },
     csrfToken: {
-      name: "next-auth.csrf-token",
+      name: isProduction ? "__Host-next-auth.csrf-token" : "next-auth.csrf-token",
       options: {
         httpOnly: true,
-        sameSite: "lax",
+        sameSite: "lax" as const,
         path: "/",
-        secure: false,
+        secure: isProduction,
       },
     },
     callbackUrl: {
-      name: "next-auth.callback-url",
+      name: isProduction ? "__Secure-next-auth.callback-url" : "next-auth.callback-url",
       options: {
-        sameSite: "lax",
+        sameSite: "lax" as const,
         path: "/",
-        secure: false,
+        secure: isProduction,
       },
     },
   },
-};
+} satisfies NextAuthOptions;

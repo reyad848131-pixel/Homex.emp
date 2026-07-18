@@ -22,49 +22,49 @@ async function main() {
 
   const categories = [
     { id: "kitchens", nameAr: "المطابخ", nameEn: "Kitchens", icon: "ChefHat", pricingType: "per_sqm", sortOrder: 1,
-      config: JSON.stringify({
+      config: {
         regions: { muscat: { price: 120 }, batinah: { price: 130 }, other: { price: 150 } },
         multipliers: { "2unit": 1, "3unit": 1.3 },
         porcelainSurcharge: 55,
         island: { small: 390, large: 600 }
-      })
+      }
     },
     { id: "cabinets", nameAr: "الخزائن", nameEn: "Cabinets", icon: "DoorOpen", pricingType: "per_sqm", basePrice: 54, sortOrder: 2,
-      config: JSON.stringify({ basePrice: 54, glassDoor: 60, led: 25, shapes: ["single", "L", "U"] })
+      config: { basePrice: 54, glassDoor: 60, led: 25, shapes: ["single", "L", "U"] }
     },
     { id: "nightstand", nameAr: "كومودينو", nameEn: "Nightstand", icon: "Lamp", pricingType: "per_unit", sortOrder: 3,
-      config: JSON.stringify({ standard: 30, round: 50 })
+      config: { standard: 30, round: 50 }
     },
     { id: "curtains", nameAr: "الستائر", nameEn: "Curtains", icon: "Blinds", pricingType: "per_meter", sortOrder: 4,
-      config: JSON.stringify({ types: { chiffon: 8, blackout: 12, both: 18 }, electricMotor: { base: 45, perMeter: 5 }, minOrder: 3 })
+      config: { types: { chiffon: 8, blackout: 12, both: 18 }, electricMotor: { base: 45, perMeter: 5 }, minOrder: 3 }
     },
     { id: "dressing-table", nameAr: "تسريحة", nameEn: "Dressing Table", icon: "Sparkles", pricingType: "per_meter", basePrice: 120, sortOrder: 5,
-      config: JSON.stringify({ pricePerMeter: 120, lighting: 20 })
+      config: { pricePerMeter: 120, lighting: 20 }
     },
     { id: "bed", nameAr: "السرير", nameEn: "Bed", icon: "BedDouble", pricingType: "per_unit", sortOrder: 6,
-      config: JSON.stringify({
+      config: {
         types: { wood: "خشب", fabric: "قماش" },
         sizes: { "90x190": 85, "120x200": 110, "150x200": 130, "160x200": 140, "180x200": 160, "200x200": 180 },
         lighting: 20
-      })
+      }
     },
     { id: "cladding", nameAr: "الكلادينق", nameEn: "Cladding", icon: "Layers", pricingType: "per_sqm", sortOrder: 7,
-      config: JSON.stringify({ types: { wood: 35, pvc: 28, fabric: 42, stone: 55 }, lighting: 15 })
+      config: { types: { wood: 35, pvc: 28, fabric: 42, stone: 55 }, lighting: 15 }
     },
     { id: "tv-table", nameAr: "طاولة تلفزيون", nameEn: "TV Table", icon: "Tv", pricingType: "per_sqm", basePrice: 50, sortOrder: 8,
-      config: JSON.stringify({ pricePerSqm: 50, addon: 20 })
+      config: { pricePerSqm: 50, addon: 20 }
     },
     { id: "office-desk", nameAr: "مكتب", nameEn: "Office Desk", icon: "Monitor", pricingType: "per_sqm", basePrice: 50, sortOrder: 9,
-      config: JSON.stringify({ pricePerSqm: 50, addon: 20 })
+      config: { pricePerSqm: 50, addon: 20 }
     },
     { id: "sofa-set", nameAr: "أطقم الجلوس", nameEn: "Sofa Set", icon: "Sofa", pricingType: "per_unit", sortOrder: 10,
-      config: JSON.stringify({ standard: { min: 80, max: 95 }, wooden: { min: 110, max: 140 } })
+      config: { standard: { min: 80, max: 95 }, wooden: { min: 110, max: 140 } }
     },
     { id: "laundry", nameAr: "غرفة الغسيل", nameEn: "Laundry", icon: "WashingMachine", pricingType: "per_sqm", basePrice: 60, sortOrder: 11,
-      config: JSON.stringify({ pricePerSqm: 60, lighting: 20 })
+      config: { pricePerSqm: 60, lighting: 20 }
     },
     { id: "other", nameAr: "أخرى", nameEn: "Other", icon: "Plus", pricingType: "manual", sortOrder: 12,
-      config: JSON.stringify({})
+      config: {}
     },
   ];
 

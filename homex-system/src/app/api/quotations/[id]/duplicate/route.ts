@@ -38,9 +38,9 @@ export async function POST(
       validUntil: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000),
       items: {
         create: original.items.map((item) => ({
-          categoryId: item.categoryId,
+          category: { connect: { id: item.categoryId } },
           description: item.description,
-          details: item.details,
+          details: item.details ?? undefined,
           quantity: item.quantity,
           unitPrice: item.unitPrice,
           extras: item.extras,

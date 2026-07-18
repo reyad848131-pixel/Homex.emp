@@ -77,7 +77,7 @@ export default function EditQuotationPage({ params }: { params: Promise<{ id: st
           categoryId: item.categoryId,
           categoryName: item.category?.nameAr || "",
           description: item.description,
-          details: item.details ? JSON.parse(item.details) : {},
+          details: item.details || {},
           quantity: item.quantity,
           unitPrice: item.unitPrice,
           extras: item.extras,
