@@ -89,6 +89,12 @@ export default function NewQuotationPage() {
     setBuilderDetails({});
   }, []);
 
+  const handleBuilderUpdate = useCallback((d: string, p: number, e: number) => {
+    setBuilderDesc(d);
+    setBuilderPrice(p);
+    setBuilderExtras(e);
+  }, []);
+
   const addItem = () => {
     if (!selectedCat || !builderDesc || builderPrice <= 0) return;
     const lineTotal = builderQty * builderPrice + builderExtras;
@@ -144,13 +150,13 @@ export default function NewQuotationPage() {
     const config = selectedCat.config || {};
 
     switch (selectedCat.id) {
-      case "kitchens": return <KitchenBuilder config={config} onUpdate={(d, p, e) => { setBuilderDesc(d); setBuilderPrice(p); setBuilderExtras(e); }} />;
-      case "cabinets": return <CabinetBuilder config={config} onUpdate={(d, p, e) => { setBuilderDesc(d); setBuilderPrice(p); setBuilderExtras(e); }} />;
-      case "curtains": return <CurtainBuilder config={config} onUpdate={(d, p, e) => { setBuilderDesc(d); setBuilderPrice(p); setBuilderExtras(e); }} />;
-      case "bed": return <BedBuilder config={config} onUpdate={(d, p, e) => { setBuilderDesc(d); setBuilderPrice(p); setBuilderExtras(e); }} />;
-      case "cladding": return <CladdingBuilder config={config} onUpdate={(d, p, e) => { setBuilderDesc(d); setBuilderPrice(p); setBuilderExtras(e); }} />;
-      case "sofa-set": return <SofaBuilder config={config} onUpdate={(d, p, e) => { setBuilderDesc(d); setBuilderPrice(p); setBuilderExtras(e); }} />;
-      default: return <GenericBuilder cat={selectedCat} onUpdate={(d, p, e) => { setBuilderDesc(d); setBuilderPrice(p); setBuilderExtras(e); }} />;
+      case "kitchens": return <KitchenBuilder config={config} onUpdate={handleBuilderUpdate} />;
+      case "cabinets": return <CabinetBuilder config={config} onUpdate={handleBuilderUpdate} />;
+      case "curtains": return <CurtainBuilder config={config} onUpdate={handleBuilderUpdate} />;
+      case "bed": return <BedBuilder config={config} onUpdate={handleBuilderUpdate} />;
+      case "cladding": return <CladdingBuilder config={config} onUpdate={handleBuilderUpdate} />;
+      case "sofa-set": return <SofaBuilder config={config} onUpdate={handleBuilderUpdate} />;
+      default: return <GenericBuilder cat={selectedCat} onUpdate={handleBuilderUpdate} />;
     }
   };
 

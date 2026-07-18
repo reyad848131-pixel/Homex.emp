@@ -37,11 +37,11 @@ export default async function DashboardPage() {
 
   const [draftCount, pendingCount, approvedCount, declinedCount] = statusCounts;
 
-  const approvedQuotations = await prisma.quotation.findMany({
+  const revenueAgg = await prisma.quotation.aggregate({
     where: { ...whereClause, status: "approved" },
-    select: { total: true },
+    _sum: { total: true },
   });
-  const totalRevenue = approvedQuotations.reduce((sum, q) => sum + q.total, 0);
+  const totalRevenue = revenueAgg._sum.total || 0;
 
   const conversionRate = totalQuotes > 0 ? ((approvedCount / totalQuotes) * 100).toFixed(0) : "0";
 

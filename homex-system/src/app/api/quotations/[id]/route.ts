@@ -85,9 +85,13 @@ export async function PATCH(
     return NextResponse.json(result);
   }
 
+  const allowedFields: Record<string, any> = {};
+  if (body.status) allowedFields.status = body.status;
+  if (body.notes !== undefined) allowedFields.notes = body.notes;
+
   const updated = await prisma.quotation.update({
     where: { id },
-    data: body,
+    data: allowedFields,
     include: { customer: true, items: { include: { category: true } } },
   });
 

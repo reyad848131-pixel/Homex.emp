@@ -47,12 +47,14 @@ export default function QuotationDetailPage({ params }: { params: Promise<{ id: 
 
   useEffect(() => {
     fetch(`/api/quotations/${id}`)
-      .then((r) => r.json())
+      .then((r) => { if (!r.ok) throw new Error(); return r.json(); })
       .then(setQ)
+      .catch(() => {})
       .finally(() => setLoading(false));
     fetch("/api/settings")
       .then((r) => r.json())
-      .then((s) => setTerms(s.terms_conditions || ""));
+      .then((s) => setTerms(s.terms_conditions || ""))
+      .catch(() => {});
   }, [id]);
 
   const updateStatus = async (status: string) => {

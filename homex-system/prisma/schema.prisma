@@ -41,6 +41,8 @@ model Customer {
   creator    Employee    @relation(fields: [createdBy], references: [id])
   quotations Quotation[]
 
+  @@index([createdBy])
+  @@index([phone])
   @@map("customers")
 }
 
@@ -81,6 +83,10 @@ model Quotation {
   employee Employee    @relation(fields: [employeeId], references: [id])
   items    QuoteItem[]
 
+  @@index([employeeId])
+  @@index([customerId])
+  @@index([status])
+  @@index([createdAt])
   @@map("quotations")
 }
 
@@ -99,6 +105,7 @@ model QuoteItem {
   quotation Quotation @relation(fields: [quotationId], references: [id], onDelete: Cascade)
   category  Category  @relation(fields: [categoryId], references: [id])
 
+  @@index([quotationId])
   @@map("quote_items")
 }
 
@@ -113,6 +120,8 @@ model AuditLog {
 
   employee Employee @relation(fields: [employeeId], references: [id])
 
+  @@index([employeeId])
+  @@index([createdAt])
   @@map("audit_logs")
 }
 
@@ -128,6 +137,7 @@ model Notification {
 
   employee Employee @relation(fields: [employeeId], references: [id])
 
+  @@index([employeeId, isRead])
   @@map("notifications")
 }
 

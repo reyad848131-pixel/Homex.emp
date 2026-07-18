@@ -42,8 +42,8 @@ export async function PATCH(req: NextRequest) {
   }
 
   if (body.id) {
-    await prisma.notification.update({
-      where: { id: body.id },
+    await prisma.notification.updateMany({
+      where: { id: body.id, employeeId: user.id },
       data: { isRead: true },
     });
     return NextResponse.json({ success: true });

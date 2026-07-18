@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
-import { readFileSync } from "fs";
+import { readFile } from "fs/promises";
 import { join } from "path";
 
 export async function GET(req: NextRequest) {
@@ -13,7 +13,7 @@ export async function GET(req: NextRequest) {
 
   try {
     const dbPath = join(process.cwd(), "prisma", "dev.db");
-    const buffer = readFileSync(dbPath);
+    const buffer = await readFile(dbPath);
     const date = new Date().toISOString().split("T")[0];
 
     return new NextResponse(buffer, {
