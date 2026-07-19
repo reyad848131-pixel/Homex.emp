@@ -78,15 +78,15 @@ export async function POST(req: NextRequest) {
       });
     }
 
-    const vatRate = parseFloat(await getSetting("vat_rate", "5")) / 100;
-    const defaultAdvance = parseFloat(await getSetting("advance_pct", "15"));
-    const validityDays = parseInt(await getSetting("quote_validity_days", "30"));
+    const vatRate = (parseFloat(await getSetting("vat_rate", "5").catch(() => "5")) || 5) / 100;
+    const defaultAdvance = parseFloat(await getSetting("advance_pct", "15").catch(() => "15")) || 15;
+    const validityDays = parseInt(await getSetting("quote_validity_days", "30").catch(() => "30")) || 30;
     const finalAdvancePct = advancePct ?? defaultAdvance;
 
-    const subtotal = items.reduce((sum: number, item: any) => sum + item.lineTotal, 0);
-    const vatAmount = subtotal * vatRate;
-    const total = subtotal + vatAmount;
-    const advanceAmount = total * (finalAdvancePct / 100);
+    const subtotal = items.reduce((sum: number, item: any) => sum + (item.lineTotal || 0), 0);
+    const vatAmount = Math.round(subtotal * vatRate * 1000) / 1000;
+    const total = Math.round((subtotal + vatAmount) * 1000) / 1000;
+    const advanceAmount = Math.round(total * (finalAdvancePct / 100) * 1000) / 1000;
 
     const quoteNumber = await generateQuoteNumber(prisma);
 
