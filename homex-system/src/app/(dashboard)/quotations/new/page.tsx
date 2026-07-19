@@ -105,7 +105,7 @@ export default function NewQuotationPage() {
     setItems((prev) => [
       ...prev,
       {
-        id: crypto.randomUUID(),
+        id: Date.now().toString(36) + Math.random().toString(36).slice(2),
         categoryId: selectedCat.id,
         categoryName: selectedCat.nameAr,
         description: builderDesc,
