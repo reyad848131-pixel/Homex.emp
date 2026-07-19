@@ -123,7 +123,8 @@ export default function NewQuotationPage() {
 
   const canProceed = (s: number) => {
     if (s === 1) return customer.name && customer.phone && customer.governorate && customer.wilayat;
-    if (s === 2) return items.length > 0;
+    if (s === 2) return selectedCat !== null;
+    if (s === 3) return items.length > 0;
     return true;
   };
 
@@ -167,9 +168,10 @@ export default function NewQuotationPage() {
   };
 
   const steps = [
-    { num: 1, label: "بيانات العميل" },
-    { num: 2, label: "البنود" },
-    { num: 3, label: "المراجعة" },
+    { num: 1, label: "بيانات الزبون" },
+    { num: 2, label: "اختر الأقسام" },
+    { num: 3, label: "البنود" },
+    { num: 4, label: "المراجعة" },
   ];
 
   return (
@@ -177,7 +179,7 @@ export default function NewQuotationPage() {
       <h1 className="text-2xl font-bold mb-6">إنشاء عرض سعر جديد</h1>
 
       {/* Stepper */}
-      <div className="flex items-center gap-2 mb-8 max-w-lg mx-auto">
+      <div className="flex items-center gap-2 mb-8 max-w-2xl mx-auto">
         {steps.map((s, i) => (
           <div key={s.num} className="flex items-center flex-1">
             <div className="flex flex-col items-center gap-1.5 flex-1">
@@ -305,30 +307,70 @@ export default function NewQuotationPage() {
         </div>
       )}
 
-      {/* Step 2: Items */}
+      {/* Step 2: Choose Categories */}
       {step === 2 && (
+        <div className="max-w-3xl mx-auto">
+          <div className="bg-white border border-gray-200 rounded p-5">
+            <div className="mb-4">
+              <p className="text-xs text-gray-400 font-semibold uppercase tracking-wide mb-1">الخطوة 2 من 4</p>
+              <h2 className="text-lg font-bold">اختر القسم</h2>
+              <p className="text-sm text-gray-500">حسب طلب الزبون — يقدر يختار أكثر من قسم لنفس عرض السعر</p>
+            </div>
+            <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-6 gap-3">
+              {categories.map((cat) => {
+                const Icon = ICONS[cat.icon] || Plus;
+                const count = items.filter((i) => i.categoryId === cat.id).length;
+                return (
+                  <button key={cat.id} onClick={() => { setSelectedCat(cat); resetBuilder(); }}
+                    className={cn(
+                      "relative flex flex-col items-center gap-2 p-4 border rounded text-xs font-bold transition-all",
+                      selectedCat?.id === cat.id
+                        ? "bg-gray-900 border-gray-900 text-white"
+                        : "bg-white border-gray-200 text-gray-600 hover:border-gray-400"
+                    )}>
+                    <Icon className="w-6 h-6" />
+                    <span className="text-center leading-tight">{cat.nameAr}</span>
+                    {count > 0 && (
+                      <span className="absolute top-1 left-1 w-5 h-5 bg-red-500 text-white rounded-full text-[10px] flex items-center justify-center font-bold">
+                        {count}
+                      </span>
+                    )}
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Step 3: Items Builder */}
+      {step === 3 && (
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-          {/* Categories + Builder */}
           <div className="lg:col-span-2 space-y-4">
-            {/* Category Grid */}
+            {/* Selected Category Header */}
             <div className="bg-white border border-gray-200 rounded p-5">
-              <h2 className="text-base font-bold mb-4">اختر الفئة</h2>
-              <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-6 gap-2">
+              <div className="mb-4">
+                <p className="text-xs text-gray-400 font-semibold uppercase tracking-wide mb-1">الخطوة 3 من 4</p>
+                <h2 className="text-lg font-bold">إضافة بنود — {selectedCat?.nameAr}</h2>
+              </div>
+
+              {/* Category Tabs (mini) */}
+              <div className="flex gap-2 flex-wrap mb-4">
                 {categories.map((cat) => {
                   const Icon = ICONS[cat.icon] || Plus;
                   const count = items.filter((i) => i.categoryId === cat.id).length;
                   return (
                     <button key={cat.id} onClick={() => { setSelectedCat(cat); resetBuilder(); }}
                       className={cn(
-                        "relative flex flex-col items-center gap-2 p-3 border rounded text-xs font-bold transition-all",
+                        "relative flex items-center gap-1.5 px-3 py-1.5 border rounded-full text-xs font-bold transition-all",
                         selectedCat?.id === cat.id
                           ? "bg-gray-900 border-gray-900 text-white"
-                          : "bg-white border-gray-200 text-gray-600 hover:border-gray-400"
+                          : "bg-white border-gray-200 text-gray-500 hover:border-gray-400"
                       )}>
-                      <Icon className="w-5 h-5" />
-                      <span className="text-center leading-tight">{cat.nameAr}</span>
+                      <Icon className="w-3.5 h-3.5" />
+                      {cat.nameAr}
                       {count > 0 && (
-                        <span className="absolute top-1 left-1 w-4 h-4 bg-red-500 text-white rounded-full text-[9px] flex items-center justify-center font-bold">
+                        <span className="w-4 h-4 bg-red-500 text-white rounded-full text-[9px] flex items-center justify-center font-bold">
                           {count}
                         </span>
                       )}
@@ -336,40 +378,36 @@ export default function NewQuotationPage() {
                   );
                 })}
               </div>
-            </div>
 
-            {/* Item Builder */}
-            {selectedCat && (
-              <div className="bg-white border border-gray-200 rounded p-5">
-                <h2 className="text-base font-bold mb-4">
-                  إضافة: {selectedCat.nameAr}
-                </h2>
+              {/* Item Builder */}
+              {selectedCat && (
+                <>
+                  {renderCategoryBuilder()}
 
-                {renderCategoryBuilder()}
-
-                <div className="grid grid-cols-2 gap-4 mt-4">
-                  <div>
-                    <label className="block text-sm font-semibold text-gray-600 mb-1.5">الكمية</label>
-                    <input type="number" min={1} value={builderQty} onChange={(e) => setBuilderQty(Math.max(1, parseInt(e.target.value) || 1))}
-                      className="w-full border border-gray-200 rounded px-3 py-2.5 text-sm text-center font-mono-en" />
-                  </div>
-                  <div className="flex items-end">
-                    <div className="bg-gray-100 rounded px-4 py-2.5 text-center w-full">
-                      <p className="text-[10px] text-gray-400 uppercase font-semibold mb-0.5">إجمالي البند</p>
-                      <p className="text-lg font-black font-mono-en text-gray-900">
-                        {fmtCur(builderQty * builderPrice + builderExtras)}
-                      </p>
+                  <div className="grid grid-cols-2 gap-4 mt-4">
+                    <div>
+                      <label className="block text-sm font-semibold text-gray-600 mb-1.5">الكمية</label>
+                      <input type="number" min={1} value={builderQty} onChange={(e) => setBuilderQty(Math.max(1, parseInt(e.target.value) || 1))}
+                        className="w-full border border-gray-200 rounded px-3 py-2.5 text-sm text-center font-mono-en" />
+                    </div>
+                    <div className="flex items-end">
+                      <div className="bg-gray-100 rounded px-4 py-2.5 text-center w-full">
+                        <p className="text-[10px] text-gray-400 uppercase font-semibold mb-0.5">إجمالي البند</p>
+                        <p className="text-lg font-black font-mono-en text-gray-900">
+                          {fmtCur(builderQty * builderPrice + builderExtras)}
+                        </p>
+                      </div>
                     </div>
                   </div>
-                </div>
 
-                <button onClick={addItem} disabled={!builderDesc || builderPrice <= 0}
-                  className="mt-4 w-full bg-gray-900 text-white font-bold py-3 rounded text-sm hover:bg-gray-800 transition-colors disabled:opacity-30 flex items-center justify-center gap-2">
-                  <Plus className="w-4 h-4" />
-                  إضافة للعرض
-                </button>
-              </div>
-            )}
+                  <button onClick={addItem} disabled={!builderDesc || builderPrice <= 0}
+                    className="mt-4 w-full bg-gray-900 text-white font-bold py-3 rounded text-sm hover:bg-gray-800 transition-colors disabled:opacity-30 flex items-center justify-center gap-2">
+                    <Plus className="w-4 h-4" />
+                    إضافة للعرض
+                  </button>
+                </>
+              )}
+            </div>
           </div>
 
           {/* Items Summary Sidebar */}
@@ -434,8 +472,8 @@ export default function NewQuotationPage() {
         </div>
       )}
 
-      {/* Step 3: Review */}
-      {step === 3 && (
+      {/* Step 4: Review */}
+      {step === 4 && (
         <div className="max-w-3xl mx-auto space-y-4">
           {/* Customer Summary */}
           <div className="bg-white border border-gray-200 rounded p-5">
@@ -535,7 +573,7 @@ export default function NewQuotationPage() {
           السابق
         </button>
 
-        {step < 3 ? (
+        {step < 4 ? (
           <button onClick={() => setStep((s) => s + 1)} disabled={!canProceed(step)}
             className="flex items-center gap-2 bg-gray-900 text-white px-6 py-2.5 rounded text-sm font-bold hover:bg-gray-800 disabled:opacity-30 transition-colors">
             التالي
@@ -551,7 +589,7 @@ export default function NewQuotationPage() {
       </div>
 
       {/* Floating Summary */}
-      {items.length > 0 && step === 2 && (
+      {items.length > 0 && step === 3 && (
         <div className="fixed bottom-6 left-1/2 -translate-x-1/2 bg-gray-900 text-white rounded-full px-6 py-3 shadow-2xl flex items-center gap-4 z-50">
           <span className="font-bold text-sm">{items.length} بنود</span>
           <span className="text-gray-400">|</span>
