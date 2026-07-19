@@ -18,28 +18,18 @@ export default function LoginPage() {
     setLoading(true);
 
     try {
-      const csrfRes = await fetch("/api/auth/csrf");
-      const { csrfToken } = await csrfRes.json();
-
-      const res = await fetch("/api/auth/callback/credentials", {
+      const res = await fetch("/api/login", {
         method: "POST",
-        headers: { "Content-Type": "application/x-www-form-urlencoded" },
-        body: new URLSearchParams({
-          csrfToken,
-          civilId,
-          password,
-          json: "true",
-        }),
-        redirect: "manual",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ civilId, password }),
       });
 
-      if (res.ok || res.status === 200) {
-        window.location.href = "/";
-      } else if (res.status === 302 || res.status === 0 || res.type === "opaqueredirect") {
+      const data = await res.json();
+
+      if (res.ok && data.ok) {
         window.location.href = "/";
       } else {
-        const text = await res.text().catch(() => "");
-        setError(`فشل تسجيل الدخول (${res.status}): ${text || "رقم مدني أو كلمة مرور غير صحيحة"}`);
+        setError(data.error || "رقم مدني أو كلمة مرور غير صحيحة");
         setLoading(false);
       }
     } catch (e: any) {
