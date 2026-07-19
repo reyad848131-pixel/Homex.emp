@@ -29,6 +29,11 @@ export async function POST(req: NextRequest) {
       data: { lastLogin: new Date() },
     }).catch(() => {});
 
+    const isSecure = process.env.NEXTAUTH_URL?.startsWith("https");
+    const cookieName = isSecure
+      ? "__Secure-next-auth.session-token"
+      : "next-auth.session-token";
+
     const token = await encode({
       token: {
         id: employee.id,
@@ -38,13 +43,9 @@ export async function POST(req: NextRequest) {
         sub: employee.id,
       },
       secret: process.env.NEXTAUTH_SECRET!,
+      salt: cookieName,
       maxAge: 24 * 60 * 60,
     });
-
-    const isSecure = process.env.NEXTAUTH_URL?.startsWith("https");
-    const cookieName = isSecure
-      ? "__Secure-next-auth.session-token"
-      : "next-auth.session-token";
 
     const response = NextResponse.json({ ok: true });
     response.cookies.set(cookieName, token, {
