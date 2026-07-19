@@ -606,76 +606,69 @@ export default function NewQuotationPage() {
 // === Category-specific builders ===
 
 function KitchenBuilder({ config, onUpdate }: { config: any; onUpdate: (d: string, p: number, e: number) => void }) {
-  const [region, setRegion] = useState("muscat");
-  const [units, setUnits] = useState("2unit");
-  const [width, setWidth] = useState(3);
-  const [height, setHeight] = useState(2.4);
-  const [porcelain, setPorcelain] = useState(false);
-  const [island, setIsland] = useState<string>("");
+  const [length, setLength] = useState(4);
+  const [unitType, setUnitType] = useState<"2unit" | "3unit">("2unit");
+  const [island, setIsland] = useState<"none" | "small" | "large">("none");
+
+  const PORCELAIN_PRICE = config?.porcelainSurcharge || 55;
+  const unitMultiplier = unitType === "3unit" ? 3 : 2;
+  const basePrice = config?.basePrice || 18;
+  const pricePerSqm = (basePrice * unitMultiplier) + PORCELAIN_PRICE;
+  const area = Math.round(length * 100) / 100;
+
+  const ISLAND_PRICES = { small: config?.island?.small || 390, large: config?.island?.large || 600 };
 
   useEffect(() => {
-    const regionPrice = config.regions?.[region]?.price || 120;
-    const mult = config.multipliers?.[units] || 1;
-    const area = width * height;
-    const price = area * regionPrice * mult;
-    let extras = 0;
-    if (porcelain) extras += config.porcelainSurcharge || 55;
-    if (island === "small") extras += config.island?.small || 390;
-    if (island === "large") extras += config.island?.large || 600;
-
-    const unitLabel = units === "3unit" ? "3 وحدات" : "وحدتين";
-    const desc = `مطبخ MDF - ${unitLabel} - ${width}×${height}م`;
+    const price = area * pricePerSqm;
+    const extras = island !== "none" ? ISLAND_PRICES[island] : 0;
+    const unitLabel = unitType === "3unit" ? "3 Unit — ارتفاع 3م" : "2 Unit — ارتفاع 2.6م";
+    const desc = `مطبخ MDF - ${unitLabel} - ${length}م`;
     onUpdate(desc, price, extras);
-  }, [region, units, width, height, porcelain, island, config, onUpdate]);
+  }, [length, unitType, island, config, onUpdate]);
 
   return (
     <div className="space-y-4">
       <div>
-        <label className="block text-sm font-semibold text-gray-600 mb-2">المنطقة</label>
+        <label className="block text-sm font-semibold text-gray-600 mb-2">أبعاد المطبخ</label>
+        <div className="flex items-center justify-between mb-1">
+          <span className="text-xs text-gray-500">الطول (م)</span>
+          <span className="text-xs font-mono-en font-bold">{length}</span>
+        </div>
+        <div className="flex items-center gap-2">
+          <input type="range" min={2} max={15} step={1} value={length}
+            onChange={(e) => setLength(parseInt(e.target.value))}
+            className="flex-1 h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer accent-gray-900" />
+          <input type="number" min={2} max={15} step={1} value={length}
+            onChange={(e) => setLength(Math.min(15, Math.max(2, parseInt(e.target.value) || 2)))}
+            className="w-16 border border-gray-200 rounded px-2 py-1.5 text-sm font-mono-en text-center" />
+        </div>
+        <div className="mt-2 text-center py-2 bg-gray-50 rounded border border-gray-100">
+          <span className="text-sm text-gray-600">المساحة: </span>
+          <span className="font-bold font-mono-en text-gray-900">{area.toFixed(2)}</span>
+          <span className="text-sm text-gray-600"> م²</span>
+        </div>
+      </div>
+
+      <div>
+        <label className="block text-sm font-semibold text-gray-600 mb-2">نوع الوحدة</label>
         <div className="flex gap-2">
-          {[["muscat", "مسقط"], ["batinah", "الباطنة"], ["other", "أخرى"]].map(([k, l]) => (
-            <button key={k} onClick={() => setRegion(k)}
+          {([["2unit", "2 Unit — ارتفاع 2.6م"], ["3unit", "3 Unit — ارتفاع 3م"]] as const).map(([k, l]) => (
+            <button key={k} onClick={() => setUnitType(k)}
               className={cn("flex-1 py-2.5 rounded text-sm font-bold border transition-colors",
-                region === k ? "bg-gray-900 text-white border-gray-900" : "bg-white border-gray-200 text-gray-600")}>
+                unitType === k ? "bg-gray-900 text-white border-gray-900" : "bg-white border-gray-200 text-gray-600")}>
               {l}
             </button>
           ))}
         </div>
+        <p className="text-xs text-gray-400 mt-1">
+          السعر: {basePrice}×{unitMultiplier} + {PORCELAIN_PRICE} (برسلين) = {pricePerSqm.toFixed(3)} OMR/م²
+        </p>
       </div>
+
       <div>
-        <label className="block text-sm font-semibold text-gray-600 mb-2">عدد الوحدات</label>
+        <label className="block text-sm font-semibold text-gray-600 mb-2">جزيرة إضافية</label>
         <div className="flex gap-2">
-          {[["2unit", "وحدتين (علوي + سفلي)"], ["3unit", "3 وحدات"]].map(([k, l]) => (
-            <button key={k} onClick={() => setUnits(k)}
-              className={cn("flex-1 py-2.5 rounded text-sm font-bold border transition-colors",
-                units === k ? "bg-gray-900 text-white border-gray-900" : "bg-white border-gray-200 text-gray-600")}>
-              {l}
-            </button>
-          ))}
-        </div>
-      </div>
-      <div className="grid grid-cols-2 gap-4">
-        <div>
-          <label className="block text-sm font-semibold text-gray-600 mb-1.5">العرض (م)</label>
-          <input type="number" step={0.1} min={1} value={width} onChange={(e) => setWidth(parseFloat(e.target.value) || 1)}
-            className="w-full border border-gray-200 rounded px-3 py-2.5 text-sm font-mono-en text-center" />
-        </div>
-        <div>
-          <label className="block text-sm font-semibold text-gray-600 mb-1.5">الارتفاع (م)</label>
-          <input type="number" step={0.1} min={1} value={height} onChange={(e) => setHeight(parseFloat(e.target.value) || 1)}
-            className="w-full border border-gray-200 rounded px-3 py-2.5 text-sm font-mono-en text-center" />
-        </div>
-      </div>
-      <div className="flex gap-4">
-        <label className="flex items-center gap-2 text-sm font-semibold cursor-pointer">
-          <input type="checkbox" checked={porcelain} onChange={(e) => setPorcelain(e.target.checked)} className="rounded" />
-          بورسلين (+{config.porcelainSurcharge || 55} ر.ع)
-        </label>
-      </div>
-      <div>
-        <label className="block text-sm font-semibold text-gray-600 mb-2">جزيرة مطبخ</label>
-        <div className="flex gap-2">
-          {[["", "بدون"], ["small", `صغيرة (${config.island?.small || 390})`], ["large", `كبيرة (${config.island?.large || 600})`]].map(([k, l]) => (
+          {([["none", "بدون جزيرة"], ["small", `جزيرة صغيرة (${ISLAND_PRICES.small})`], ["large", `جزيرة كبيرة (${ISLAND_PRICES.large})`]] as const).map(([k, l]) => (
             <button key={k} onClick={() => setIsland(k)}
               className={cn("flex-1 py-2 rounded text-xs font-bold border transition-colors",
                 island === k ? "bg-gray-900 text-white border-gray-900" : "bg-white border-gray-200 text-gray-600")}>
@@ -683,6 +676,11 @@ function KitchenBuilder({ config, onUpdate }: { config: any; onUpdate: (d: strin
             </button>
           ))}
         </div>
+        {island !== "none" && (
+          <p className="text-xs text-emerald-600 mt-1">
+            {island === "large" ? "جزيرة كبيرة" : "جزيرة صغيرة"}: {ISLAND_PRICES[island].toFixed(3)} OMR (تُضاف كإضافات)
+          </p>
+        )}
       </div>
     </div>
   );
