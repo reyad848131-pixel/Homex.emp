@@ -76,6 +76,7 @@ model Quotation {
   advancePct    Float     @default(15) @map("advance_pct")
   advanceAmount Float     @default(0) @map("advance_amount")
   notes         String?
+  deliveryDate  DateTime? @map("delivery_date")
   validUntil    DateTime? @map("valid_until")
   createdAt     DateTime  @default(now()) @map("created_at")
   updatedAt     DateTime  @updatedAt @map("updated_at")

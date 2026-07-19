@@ -50,7 +50,7 @@ export async function POST(req: NextRequest) {
   const user = session.user as any;
   const body = await req.json();
 
-  const { customer: customerData, items, notes, advancePct = 15 } = body;
+  const { customer: customerData, items, notes, advancePct = 15, deliveryDate } = body;
 
   let customer = await prisma.customer.findFirst({
     where: { phone: customerData.phone, createdBy: user.id },
@@ -93,6 +93,7 @@ export async function POST(req: NextRequest) {
       advancePct: finalAdvancePct,
       advanceAmount,
       notes,
+      deliveryDate: deliveryDate ? new Date(deliveryDate) : null,
       validUntil: new Date(Date.now() + validityDays * 24 * 60 * 60 * 1000),
       items: {
         create: items.map((item: any, idx: number) => ({

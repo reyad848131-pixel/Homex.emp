@@ -55,6 +55,9 @@ export default function NewQuotationPage() {
   const [saving, setSaving] = useState(false);
   const [advancePct, setAdvancePct] = useState(15);
   const [notes, setNotes] = useState("");
+  const [employeeName, setEmployeeName] = useState("");
+  const [quoteDate, setQuoteDate] = useState(() => new Date().toISOString().split("T")[0]);
+  const [deliveryDate, setDeliveryDate] = useState("");
 
   const [customer, setCustomer] = useState<CustomerData>({
     name: "", phone: "", phoneCode: "+968",
@@ -70,6 +73,7 @@ export default function NewQuotationPage() {
 
   useEffect(() => {
     fetch("/api/categories").then((r) => r.json()).then(setCategories);
+    fetch("/api/me").then((r) => r.json()).then((u) => setEmployeeName(u.name || ""));
   }, []);
 
   const wilayats = customer.governorate ? GOVERNORATES[customer.governorate] || [] : [];
@@ -134,6 +138,8 @@ export default function NewQuotationPage() {
           items: items.map(({ id, categoryName, ...rest }) => rest),
           notes,
           advancePct,
+          quoteDate,
+          deliveryDate,
         }),
       });
       if (res.ok) {
@@ -194,15 +200,73 @@ export default function NewQuotationPage() {
         ))}
       </div>
 
-      {/* Step 1: Customer Info */}
+      {/* Step 1: Customer Info + Quote Info */}
       {step === 1 && (
-        <div className="bg-white border border-gray-200 rounded p-6 max-w-2xl mx-auto">
-          <h2 className="text-lg font-bold mb-5">بيانات العميل</h2>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <div className="bg-white border border-gray-200 rounded p-6 max-w-3xl mx-auto">
+          <h2 className="text-lg font-bold mb-5">بيانات الزبون وعرض السعر</h2>
+
+          {/* Row 1: Employee + Quote No + Date */}
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
             <div>
-              <label className="block text-sm font-semibold text-gray-600 mb-1.5">اسم العميل *</label>
+              <label className="block text-sm font-semibold text-gray-600 mb-1.5">اسم الموظف</label>
+              <input type="text" value={employeeName} readOnly
+                className="w-full border border-gray-200 rounded px-3 py-2.5 text-sm bg-gray-50 text-gray-500" />
+            </div>
+            <div>
+              <label className="block text-sm font-semibold text-gray-600 mb-1.5">رقم عرض السعر</label>
+              <input type="text" value="تلقائي عند الحفظ" readOnly
+                className="w-full border border-gray-200 rounded px-3 py-2.5 text-sm bg-gray-50 text-gray-400 font-mono-en" />
+            </div>
+            <div>
+              <label className="block text-sm font-semibold text-gray-600 mb-1.5">التاريخ</label>
+              <input type="date" value={quoteDate} onChange={(e) => setQuoteDate(e.target.value)}
+                className="w-full border border-gray-200 rounded px-3 py-2.5 text-sm font-mono-en" />
+            </div>
+          </div>
+
+          {/* Row 2: Delivery Date + Advance % + Remaining % */}
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
+            <div>
+              <label className="block text-sm font-semibold text-gray-600 mb-1.5">موعد التسليم</label>
+              <input type="date" value={deliveryDate} onChange={(e) => setDeliveryDate(e.target.value)}
+                className="w-full border border-gray-200 rounded px-3 py-2.5 text-sm font-mono-en" />
+            </div>
+            <div>
+              <label className="block text-sm font-semibold text-gray-600 mb-1.5">نسبة الدفعة المقدمة (%)</label>
+              <input type="number" min={0} max={100} value={advancePct}
+                onChange={(e) => setAdvancePct(Math.min(100, Math.max(0, parseInt(e.target.value) || 0)))}
+                className="w-full border border-gray-200 rounded px-3 py-2.5 text-sm font-mono-en text-center" />
+            </div>
+            <div>
+              <label className="block text-sm font-semibold text-gray-600 mb-1.5">نسبة المتبقي (%)</label>
+              <input type="text" value={`${100 - advancePct}%`} readOnly
+                className="w-full border border-gray-200 rounded px-3 py-2.5 text-sm bg-gray-50 text-gray-500 font-mono-en text-center" />
+            </div>
+          </div>
+
+          {/* Row 3: Advance Amount + Remaining Amount */}
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
+            <div>
+              <label className="block text-sm font-semibold text-gray-600 mb-1.5">مبلغ الدفعة المقدمة</label>
+              <input type="text" value={total > 0 ? fmtCur(advance) : "0.000 ر.ع"} readOnly
+                className="w-full border border-gray-200 rounded px-3 py-2.5 text-sm bg-gray-50 text-gray-500 font-mono-en" />
+            </div>
+            <div>
+              <label className="block text-sm font-semibold text-gray-600 mb-1.5">مبلغ المتبقي</label>
+              <input type="text" value={total > 0 ? fmtCur(total - advance) : "0.000 ر.ع"} readOnly
+                className="w-full border border-gray-200 rounded px-3 py-2.5 text-sm bg-gray-50 text-gray-500 font-mono-en" />
+            </div>
+          </div>
+
+          {/* Divider */}
+          <div className="border-t border-gray-200 my-5"></div>
+
+          {/* Row 4: Customer Name + Phone */}
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+            <div>
+              <label className="block text-sm font-semibold text-gray-600 mb-1.5">اسم الزبون *</label>
               <input type="text" value={customer.name} onChange={(e) => setCustomer({ ...customer, name: e.target.value })}
-                className="w-full border border-gray-200 rounded px-3 py-2.5 text-sm" placeholder="الاسم الكامل" />
+                className="w-full border border-gray-200 rounded px-3 py-2.5 text-sm" placeholder="اسم الزبون الكامل" />
             </div>
             <div>
               <label className="block text-sm font-semibold text-gray-600 mb-1.5">رقم الهاتف *</label>
@@ -217,6 +281,10 @@ export default function NewQuotationPage() {
                   className="flex-1 border border-gray-200 rounded px-3 py-2.5 text-sm font-mono-en" placeholder="9XXXXXXX" />
               </div>
             </div>
+          </div>
+
+          {/* Row 5: Governorate + Wilayat */}
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div>
               <label className="block text-sm font-semibold text-gray-600 mb-1.5">المحافظة *</label>
               <select value={customer.governorate} onChange={(e) => setCustomer({ ...customer, governorate: e.target.value, wilayat: "" })}
@@ -232,11 +300,6 @@ export default function NewQuotationPage() {
                 <option value="">اختر الولاية</option>
                 {wilayats.map((w) => <option key={w} value={w}>{w}</option>)}
               </select>
-            </div>
-            <div className="md:col-span-2">
-              <label className="block text-sm font-semibold text-gray-600 mb-1.5">العنوان التفصيلي</label>
-              <input type="text" value={customer.address} onChange={(e) => setCustomer({ ...customer, address: e.target.value })}
-                className="w-full border border-gray-200 rounded px-3 py-2.5 text-sm" placeholder="اختياري" />
             </div>
           </div>
         </div>
@@ -421,16 +484,24 @@ export default function NewQuotationPage() {
           <div className="bg-white border border-gray-200 rounded p-5">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               <div>
-                <label className="block text-sm font-semibold text-gray-600 mb-1.5">نسبة الدفعة المقدمة (%)</label>
-                <input type="number" min={0} max={100} value={advancePct}
-                  onChange={(e) => setAdvancePct(parseInt(e.target.value) || 0)}
-                  className="w-full border border-gray-200 rounded px-3 py-2.5 text-sm font-mono-en" />
-              </div>
-              <div>
                 <label className="block text-sm font-semibold text-gray-600 mb-1.5">ملاحظات</label>
                 <textarea value={notes} onChange={(e) => setNotes(e.target.value)}
                   className="w-full border border-gray-200 rounded px-3 py-2.5 text-sm resize-none" rows={2}
                   placeholder="ملاحظات إضافية (اختياري)" />
+              </div>
+              <div className="space-y-2 text-sm">
+                <div className="flex justify-between">
+                  <span className="text-gray-500">نسبة الدفعة المقدمة</span>
+                  <span className="font-bold font-mono-en">{advancePct}%</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-gray-500">مبلغ الدفعة المقدمة</span>
+                  <span className="font-bold font-mono-en text-green-600">{fmtCur(advance)}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-gray-500">المبلغ المتبقي</span>
+                  <span className="font-bold font-mono-en">{fmtCur(total - advance)}</span>
+                </div>
               </div>
             </div>
 
