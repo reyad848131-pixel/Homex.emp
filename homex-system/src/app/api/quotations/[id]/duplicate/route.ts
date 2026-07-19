@@ -24,7 +24,7 @@ export async function POST(
 
   const quotation = await prisma.quotation.create({
     data: {
-      quoteNumber: generateQuoteNumber(),
+      quoteNumber: await generateQuoteNumber(prisma),
       customerId: original.customerId,
       employeeId: user.id,
       status: "draft",
@@ -38,9 +38,9 @@ export async function POST(
       validUntil: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000),
       items: {
         create: original.items.map((item) => ({
-          categoryId: item.categoryId,
+          category: { connect: { id: item.categoryId } },
           description: item.description,
-          details: item.details,
+          details: item.details ?? undefined,
           quantity: item.quantity,
           unitPrice: item.unitPrice,
           extras: item.extras,

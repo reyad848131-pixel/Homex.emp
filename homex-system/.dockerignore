@@ -1,0 +1,12 @@
+node_modules
+.next
+.git
+*.db
+*.db-journal
+.env
+.env.local
+.env.production
+desktop/
+backups/
+docker-data/
+nginx/ssl/

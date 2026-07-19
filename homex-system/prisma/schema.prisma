@@ -3,7 +3,7 @@ generator client {
 }
 
 datasource db {
-  provider = "sqlite"
+  provider = "postgresql"
   url      = env("DATABASE_URL")
 }
 
@@ -15,6 +15,7 @@ model Employee {
   role      String   @default("sales")
   password  String
   isActive  Boolean  @default(true) @map("is_active")
+  lastLogin DateTime? @map("last_login")
   createdAt DateTime @default(now()) @map("created_at")
   updatedAt DateTime @updatedAt @map("updated_at")
 
@@ -41,6 +42,8 @@ model Customer {
   creator    Employee    @relation(fields: [createdBy], references: [id])
   quotations Quotation[]
 
+  @@index([createdBy])
+  @@index([phone])
   @@map("customers")
 }
 
@@ -73,6 +76,7 @@ model Quotation {
   advancePct    Float     @default(15) @map("advance_pct")
   advanceAmount Float     @default(0) @map("advance_amount")
   notes         String?
+  deliveryDate  DateTime? @map("delivery_date")
   validUntil    DateTime? @map("valid_until")
   createdAt     DateTime  @default(now()) @map("created_at")
   updatedAt     DateTime  @updatedAt @map("updated_at")
@@ -81,6 +85,10 @@ model Quotation {
   employee Employee    @relation(fields: [employeeId], references: [id])
   items    QuoteItem[]
 
+  @@index([employeeId])
+  @@index([customerId])
+  @@index([status])
+  @@index([createdAt])
   @@map("quotations")
 }
 
@@ -99,6 +107,7 @@ model QuoteItem {
   quotation Quotation @relation(fields: [quotationId], references: [id], onDelete: Cascade)
   category  Category  @relation(fields: [categoryId], references: [id])
 
+  @@index([quotationId])
   @@map("quote_items")
 }
 
@@ -113,6 +122,8 @@ model AuditLog {
 
   employee Employee @relation(fields: [employeeId], references: [id])
 
+  @@index([employeeId])
+  @@index([createdAt])
   @@map("audit_logs")
 }
 
@@ -128,6 +139,7 @@ model Notification {
 
   employee Employee @relation(fields: [employeeId], references: [id])
 
+  @@index([employeeId, isRead])
   @@map("notifications")
 }
 

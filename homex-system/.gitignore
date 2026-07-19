@@ -6,4 +6,16 @@ prisma/dev.db-journal
 *.db-journal
 .env
 .env.local
+.env.production
 tsconfig.tsbuildinfo
+
+# Electron
+desktop/dist/
+desktop/node_modules/
+desktop/out/
+
+# Docker
+docker-data/
+
+# Backups
+backups/

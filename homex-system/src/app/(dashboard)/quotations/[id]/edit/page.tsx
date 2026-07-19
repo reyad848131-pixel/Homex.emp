@@ -103,7 +103,7 @@ export default function EditQuotationPage({ params }: { params: Promise<{ id: st
     if (!selectedCat || !builderDesc || builderPrice <= 0) return;
     const lineTotal = builderQty * builderPrice + builderExtras;
     setItems((prev) => [...prev, {
-      id: crypto.randomUUID(), categoryId: selectedCat.id, categoryName: selectedCat.nameAr,
+      id: Date.now().toString(36) + Math.random().toString(36).slice(2), categoryId: selectedCat.id, categoryName: selectedCat.nameAr,
       description: builderDesc, details: {}, quantity: builderQty, unitPrice: builderPrice,
       extras: builderExtras, lineTotal,
     }]);

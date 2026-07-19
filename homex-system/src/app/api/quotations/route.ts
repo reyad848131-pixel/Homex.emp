@@ -23,8 +23,8 @@ export async function GET(req: NextRequest) {
   if (status && status !== "all") where.status = status;
   if (search) {
     where.OR = [
-      { quoteNumber: { contains: search } },
-      { customer: { name: { contains: search } } },
+      { quoteNumber: { contains: search, mode: "insensitive" as const } },
+      { customer: { name: { contains: search, mode: "insensitive" as const } } },
       { customer: { phone: { contains: search } } },
     ];
   }
@@ -47,69 +47,84 @@ export async function POST(req: NextRequest) {
   const session = await getServerSession(authOptions);
   if (!session) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
-  const user = session.user as any;
-  const body = await req.json();
+  try {
+    const user = session.user as any;
+    const body = await req.json();
 
-  const { customer: customerData, items, notes, advancePct = 15 } = body;
+    const { customer: customerData, items, notes, advancePct, deliveryDate } = body;
 
-  let customer = await prisma.customer.findFirst({
-    where: { phone: customerData.phone, createdBy: user.id },
-  });
+    if (!customerData?.name || !customerData?.phone || !customerData?.governorate || !customerData?.wilayat) {
+      return NextResponse.json({ error: "بيانات العميل غير مكتملة" }, { status: 400 });
+    }
+    if (!items || items.length === 0) {
+      return NextResponse.json({ error: "يجب إضافة بند واحد على الأقل" }, { status: 400 });
+    }
 
-  if (!customer) {
-    customer = await prisma.customer.create({
-      data: {
-        name: customerData.name,
-        phone: customerData.phone,
-        phoneCode: customerData.phoneCode || "+968",
-        governorate: customerData.governorate,
-        wilayat: customerData.wilayat,
-        address: customerData.address,
-        createdBy: user.id,
-      },
+    let customer = await prisma.customer.findFirst({
+      where: { phone: customerData.phone, createdBy: user.id },
     });
-  }
 
-  const vatRate = parseFloat(await getSetting("vat_rate", "5")) / 100;
-  const defaultAdvance = parseFloat(await getSetting("advance_pct", "15"));
-  const validityDays = parseInt(await getSetting("quote_validity_days", "30"));
-  const finalAdvancePct = advancePct ?? defaultAdvance;
+    if (!customer) {
+      customer = await prisma.customer.create({
+        data: {
+          name: customerData.name,
+          phone: customerData.phone,
+          phoneCode: customerData.phoneCode || "+968",
+          governorate: customerData.governorate,
+          wilayat: customerData.wilayat,
+          address: customerData.address,
+          createdBy: user.id,
+        },
+      });
+    }
 
-  const subtotal = items.reduce((sum: number, item: any) => sum + item.lineTotal, 0);
-  const vatAmount = subtotal * vatRate;
-  const total = subtotal + vatAmount;
-  const advanceAmount = total * (finalAdvancePct / 100);
+    const vatRate = (parseFloat(await getSetting("vat_rate", "5").catch(() => "5")) || 5) / 100;
+    const defaultAdvance = parseFloat(await getSetting("advance_pct", "15").catch(() => "15")) || 15;
+    const validityDays = parseInt(await getSetting("quote_validity_days", "30").catch(() => "30")) || 30;
+    const finalAdvancePct = advancePct ?? defaultAdvance;
 
-  const quotation = await prisma.quotation.create({
-    data: {
-      quoteNumber: generateQuoteNumber(),
-      customerId: customer.id,
-      employeeId: user.id,
-      status: "draft",
-      subtotal,
-      vatRate,
-      vatAmount,
-      total,
-      advancePct: finalAdvancePct,
-      advanceAmount,
-      notes,
-      validUntil: new Date(Date.now() + validityDays * 24 * 60 * 60 * 1000),
-      items: {
-        create: items.map((item: any, idx: number) => ({
-          categoryId: item.categoryId,
-          description: item.description,
-          details: item.details ? JSON.stringify(item.details) : null,
-          quantity: item.quantity,
-          unitPrice: item.unitPrice,
-          extras: item.extras || 0,
-          lineTotal: item.lineTotal,
-          sortOrder: idx,
-        })),
+    const subtotal = items.reduce((sum: number, item: any) => sum + (item.lineTotal || 0), 0);
+    const vatAmount = Math.round(subtotal * vatRate * 1000) / 1000;
+    const total = Math.round((subtotal + vatAmount) * 1000) / 1000;
+    const advanceAmount = Math.round(total * (finalAdvancePct / 100) * 1000) / 1000;
+
+    const quoteNumber = await generateQuoteNumber(prisma);
+
+    const quotation = await prisma.quotation.create({
+      data: {
+        quoteNumber,
+        customer: { connect: { id: customer.id } },
+        employee: { connect: { id: user.id } },
+        status: "draft",
+        subtotal,
+        vatRate,
+        vatAmount,
+        total,
+        advancePct: finalAdvancePct,
+        advanceAmount,
+        notes,
+        deliveryDate: deliveryDate ? new Date(deliveryDate) : null,
+        validUntil: new Date(Date.now() + validityDays * 24 * 60 * 60 * 1000),
+        items: {
+          create: items.map((item: any, idx: number) => ({
+            category: { connect: { id: item.categoryId } },
+            description: item.description,
+            details: item.details ? JSON.stringify(item.details) : null,
+            quantity: item.quantity,
+            unitPrice: item.unitPrice,
+            extras: item.extras || 0,
+            lineTotal: item.lineTotal,
+            sortOrder: idx,
+          })),
+        },
       },
-    },
-    include: { customer: true, items: true },
-  });
+      include: { customer: true, items: true },
+    });
 
-  await logAction(user.id, "create", "quotation", quotation.id);
-  return NextResponse.json(quotation, { status: 201 });
+    await logAction(user.id, "create", "quotation", quotation.id).catch(() => {});
+    return NextResponse.json(quotation, { status: 201 });
+  } catch (err: any) {
+    console.error("POST /api/quotations error:", err);
+    return NextResponse.json({ error: err.message || "حدث خطأ أثناء حفظ العرض" }, { status: 500 });
+  }
 }
