@@ -1,6 +1,5 @@
 "use client";
 
-import { signIn } from "next-auth/react";
 import { useState } from "react";
 
 export default function LoginPage() {
@@ -8,6 +7,7 @@ export default function LoginPage() {
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!civilId || !password) {
@@ -18,23 +18,32 @@ export default function LoginPage() {
     setLoading(true);
 
     try {
-      const result = await signIn("credentials", {
-        civilId,
-        password,
-        redirect: false,
+      const csrfRes = await fetch("/api/auth/csrf");
+      const { csrfToken } = await csrfRes.json();
+
+      const res = await fetch("/api/auth/callback/credentials", {
+        method: "POST",
+        headers: { "Content-Type": "application/x-www-form-urlencoded" },
+        body: new URLSearchParams({
+          csrfToken,
+          civilId,
+          password,
+          json: "true",
+        }),
+        redirect: "manual",
       });
 
-      if (result?.error) {
-        setError(`خطأ: ${result.error} | status: ${result.status} | url: ${result.url}`);
-        setLoading(false);
-      } else if (result?.ok) {
+      if (res.ok || res.status === 200) {
+        window.location.href = "/";
+      } else if (res.status === 302 || res.status === 0 || res.type === "opaqueredirect") {
         window.location.href = "/";
       } else {
-        setError(`نتيجة غير متوقعة: ${JSON.stringify(result)}`);
+        const text = await res.text().catch(() => "");
+        setError(`فشل تسجيل الدخول (${res.status}): ${text || "رقم مدني أو كلمة مرور غير صحيحة"}`);
         setLoading(false);
       }
     } catch (e: any) {
-      setError(`استثناء: ${e?.message || String(e)}`);
+      setError(`خطأ في الاتصال: ${e?.message || String(e)}`);
       setLoading(false);
     }
   };
