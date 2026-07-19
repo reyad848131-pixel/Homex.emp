@@ -2,6 +2,12 @@ import { NextRequest, NextResponse } from "next/server";
 import { getAuth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 
+function csvSafe(val: string): string {
+  const escaped = val.replace(/"/g, '""');
+  if (/^[=+\-@\t\r]/.test(escaped)) return `"'${escaped}"`;
+  return `"${escaped}"`;
+}
+
 export async function GET(req: NextRequest) {
   try {
     const session = await getAuth();
@@ -41,7 +47,7 @@ export async function GET(req: NextRequest) {
       new Date(q.createdAt).toLocaleDateString("ar-OM"),
     ]);
 
-    const csv = "﻿" + [header, ...rows].map((r) => r.map((c) => `"${c}"`).join(",")).join("\n");
+    const csv = "﻿" + [header, ...rows].map((r) => r.map((c) => csvSafe(c)).join(",")).join("\n");
 
     return new NextResponse(csv, {
       headers: {
@@ -68,7 +74,7 @@ export async function GET(req: NextRequest) {
       new Date(c.createdAt).toLocaleDateString("ar-OM"),
     ]);
 
-    const csv = "﻿" + [header, ...rows].map((r) => r.map((c) => `"${c}"`).join(",")).join("\n");
+    const csv = "﻿" + [header, ...rows].map((r) => r.map((c) => csvSafe(c)).join(",")).join("\n");
 
     return new NextResponse(csv, {
       headers: {

@@ -127,7 +127,7 @@ export default function NewQuotationPage() {
   const removeItem = (id: string) => setItems((prev) => prev.filter((i) => i.id !== id));
 
   const canProceed = (s: number) => {
-    if (s === 1) return customer.name && customer.phone && customer.governorate && customer.wilayat;
+    if (s === 1) return customer.name && customer.phone && /^\d{8}$/.test(customer.phone) && customer.governorate && customer.wilayat;
     if (s === 2) return selectedCat !== null;
     if (s === 3) return items.length > 0;
     return true;
@@ -296,7 +296,8 @@ export default function NewQuotationPage() {
                   <option value="+971">+971</option>
                   <option value="+966">+966</option>
                 </select>
-                <input type="tel" value={customer.phone} onChange={(e) => setCustomer({ ...customer, phone: e.target.value })}
+                <input type="tel" value={customer.phone} onChange={(e) => setCustomer({ ...customer, phone: e.target.value.replace(/\D/g, "").slice(0, 8) })}
+                  pattern="[0-9]{8}" maxLength={8}
                   className="flex-1 border border-gray-200 rounded px-3 py-2.5 text-sm font-mono-en" placeholder="9XXXXXXX" />
               </div>
             </div>
@@ -708,7 +709,7 @@ function KitchenBuilder({ config, onUpdate }: { config: any; onUpdate: (d: strin
           ))}
         </div>
         <p className="text-xs text-gray-400 mt-1">
-          السعر: {basePrice}×{unitMultiplier} + {PORCELAIN_PRICE} (برسلين) = {pricePerSqm.toFixed(3)} OMR/م²
+          السعر: {basePrice}×{unitMultiplier} + {PORCELAIN_PRICE} (برسلين) = {pricePerSqm.toFixed(3)} ر.ع/م²
         </p>
       </div>
 
@@ -725,7 +726,7 @@ function KitchenBuilder({ config, onUpdate }: { config: any; onUpdate: (d: strin
         </div>
         {island !== "none" && (
           <p className="text-xs text-emerald-600 mt-1">
-            {island === "large" ? "جزيرة كبيرة" : "جزيرة صغيرة"}: {ISLAND_PRICES[island].toFixed(3)} OMR (تُضاف كإضافات)
+            {island === "large" ? "جزيرة كبيرة" : "جزيرة صغيرة"}: {ISLAND_PRICES[island].toFixed(3)} ر.ع (تُضاف كإضافات)
           </p>
         )}
       </div>
@@ -831,7 +832,7 @@ function CurtainBuilder({ config, onUpdate }: { config: any; onUpdate: (d: strin
             </button>
           ))}
         </div>
-        <p className="text-xs text-gray-400 mt-1">{TYPES[type]?.label}: {TYPES[type]?.price.toFixed(3)} OMR/م²</p>
+        <p className="text-xs text-gray-400 mt-1">{TYPES[type]?.label}: {TYPES[type]?.price.toFixed(3)} ر.ع/م²</p>
       </div>
 
       <div>
@@ -848,7 +849,7 @@ function CurtainBuilder({ config, onUpdate }: { config: any; onUpdate: (d: strin
         {motor === "electric" && (
           <p className="text-xs text-emerald-600 mt-1">
             موتور: ({MOTOR_BASE} + {MOTOR_PER_METER} × {width}م = {(MOTOR_BASE + MOTOR_PER_METER * width).toFixed(3)})
-            {motorQty > 1 && ` × ${motorQty} موتور`} = {motorSurcharge.toFixed(3)} OMR
+            {motorQty > 1 && ` × ${motorQty} موتور`} = {motorSurcharge.toFixed(3)} ر.ع
           </p>
         )}
       </div>
@@ -986,7 +987,7 @@ function CladdingBuilder({ config, onUpdate }: { config: any; onUpdate: (d: stri
             </button>
           ))}
         </div>
-        <p className="text-xs text-gray-400 mt-1">{TYPES[type]?.label}: {TYPES[type]?.price.toFixed(3)} OMR/م²</p>
+        <p className="text-xs text-gray-400 mt-1">{TYPES[type]?.label}: {TYPES[type]?.price.toFixed(3)} ر.ع/م²</p>
       </div>
 
       <div>
@@ -1046,7 +1047,7 @@ function CladdingBuilder({ config, onUpdate }: { config: any; onUpdate: (d: stri
               onChange={(e) => setLightCount(Math.max(1, parseInt(e.target.value) || 1))}
               className="w-full border border-gray-200 rounded px-3 py-2 text-sm font-mono-en text-center" />
             <p className="text-xs text-emerald-600 mt-1">
-              {lightCount} × {LIGHT_PRICE.toFixed(3)} OMR = {lightSurcharge.toFixed(3)} OMR
+              {lightCount} × {LIGHT_PRICE.toFixed(3)} ر.ع = {lightSurcharge.toFixed(3)} ر.ع
             </p>
           </div>
         )}
