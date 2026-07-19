@@ -747,43 +747,113 @@ function CabinetBuilder({ config, onUpdate }: { config: any; onUpdate: (d: strin
 
 function CurtainBuilder({ config, onUpdate }: { config: any; onUpdate: (d: string, p: number, e: number) => void }) {
   const [type, setType] = useState("chiffon");
-  const [meters, setMeters] = useState(3);
-  const [motor, setMotor] = useState(false);
+  const [motor, setMotor] = useState<"manual" | "electric">("manual");
+  const [count, setCount] = useState(8);
+  const [width, setWidth] = useState(2);
+  const [height, setHeight] = useState(2);
 
-  const typeLabels: Record<string, string> = { chiffon: "شيفون", blackout: "بلاك أوت", both: "شيفون + بلاك أوت" };
+  const TYPES: Record<string, { label: string; price: number }> = {
+    chiffon: { label: "شيفون فقط", price: 9 },
+    blackout: { label: "بلاك آوت", price: 9 },
+    combo: { label: "شيفون + بلاك آوت", price: 12.5 },
+    roll: { label: "Roll", price: 15 },
+  };
+
+  const MOTOR_BASE = config?.electricMotor?.base || 50;
+  const MOTOR_PER_METER = config?.electricMotor?.perMeter || 7.5;
+
+  const area = Math.round(width * height * 100) / 100;
+  const motorQty = type === "combo" ? 2 : 1;
+  const motorSurcharge = motor === "electric" ? (MOTOR_BASE + MOTOR_PER_METER * width) * motorQty : 0;
 
   useEffect(() => {
-    const pricePerMeter = config.types?.[type] || 8;
-    const price = meters * pricePerMeter;
-    let extras = 0;
-    if (motor) extras = (config.electricMotor?.base || 45) + meters * (config.electricMotor?.perMeter || 5);
-    const desc = `ستائر ${typeLabels[type]} - ${meters} م`;
-    onUpdate(desc, price, extras);
-  }, [type, meters, motor, config, onUpdate]);
+    const pricePerSqm = TYPES[type]?.price || 9;
+    const price = area * pricePerSqm;
+    const desc = `ستائر ${TYPES[type]?.label} (${count} ستارة) - ${width}×${height}م = ${area} م²`;
+    onUpdate(desc, price, motorSurcharge);
+  }, [type, motor, count, width, height, config, onUpdate]);
 
   return (
     <div className="space-y-4">
       <div>
-        <label className="block text-sm font-semibold text-gray-600 mb-2">النوع</label>
-        <div className="flex gap-2">
-          {Object.entries(typeLabels).map(([k, l]) => (
+        <label className="block text-sm font-semibold text-gray-600 mb-2">نوع الستائر</label>
+        <div className="grid grid-cols-2 gap-2">
+          {Object.entries(TYPES).map(([k, v]) => (
             <button key={k} onClick={() => setType(k)}
-              className={cn("flex-1 py-2.5 rounded text-sm font-bold border transition-colors",
+              className={cn("py-2.5 rounded text-sm font-bold border transition-colors",
                 type === k ? "bg-gray-900 text-white border-gray-900" : "bg-white border-gray-200 text-gray-600")}>
+              {v.label}
+            </button>
+          ))}
+        </div>
+        <p className="text-xs text-gray-400 mt-1">{TYPES[type]?.label}: {TYPES[type]?.price.toFixed(3)} OMR/م²</p>
+      </div>
+
+      <div>
+        <label className="block text-sm font-semibold text-gray-600 mb-2">طريقة التشغيل</label>
+        <div className="flex gap-2">
+          {([["manual", "يدوي"], ["electric", "تشغيل إلكتروني"]] as const).map(([k, l]) => (
+            <button key={k} onClick={() => setMotor(k)}
+              className={cn("flex-1 py-2.5 rounded text-sm font-bold border transition-colors",
+                motor === k ? "bg-gray-900 text-white border-gray-900" : "bg-white border-gray-200 text-gray-600")}>
               {l}
             </button>
           ))}
         </div>
+        {motor === "electric" && (
+          <p className="text-xs text-emerald-600 mt-1">
+            موتور: ({MOTOR_BASE} + {MOTOR_PER_METER} × {width}م = {(MOTOR_BASE + MOTOR_PER_METER * width).toFixed(3)})
+            {motorQty > 1 && ` × ${motorQty} موتور`} = {motorSurcharge.toFixed(3)} OMR
+          </p>
+        )}
       </div>
+
       <div>
-        <label className="block text-sm font-semibold text-gray-600 mb-1.5">الطول (م)</label>
-        <input type="number" step={0.5} min={1} value={meters} onChange={(e) => setMeters(parseFloat(e.target.value) || 1)}
+        <label className="block text-sm font-semibold text-gray-600 mb-1.5">عدد الستائر</label>
+        <input type="number" min={1} step={1} value={count}
+          onChange={(e) => setCount(Math.max(1, parseInt(e.target.value) || 1))}
           className="w-full border border-gray-200 rounded px-3 py-2.5 text-sm font-mono-en text-center" />
+        <p className="text-xs text-gray-400 mt-1">الحد الأدنى يعتمد على ولاية الزبون</p>
       </div>
-      <label className="flex items-center gap-2 text-sm font-semibold cursor-pointer">
-        <input type="checkbox" checked={motor} onChange={(e) => setMotor(e.target.checked)} className="rounded" />
-        موتور كهربائي
-      </label>
+
+      <div>
+        <label className="block text-sm font-semibold text-gray-600 mb-2">أبعاد الستائر</label>
+        <div className="space-y-3">
+          <div>
+            <div className="flex items-center justify-between mb-1">
+              <span className="text-xs text-gray-500">العرض (م)</span>
+              <span className="text-xs font-mono-en font-bold">{width}</span>
+            </div>
+            <div className="flex items-center gap-2">
+              <input type="range" min={1} max={20} step={1} value={width}
+                onChange={(e) => setWidth(parseInt(e.target.value))}
+                className="flex-1 h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer accent-gray-900" />
+              <input type="number" min={1} max={20} step={1} value={width}
+                onChange={(e) => setWidth(Math.min(20, Math.max(1, parseInt(e.target.value) || 1)))}
+                className="w-16 border border-gray-200 rounded px-2 py-1.5 text-sm font-mono-en text-center" />
+            </div>
+          </div>
+          <div>
+            <div className="flex items-center justify-between mb-1">
+              <span className="text-xs text-gray-500">الارتفاع (م)</span>
+              <span className="text-xs font-mono-en font-bold">{height}</span>
+            </div>
+            <div className="flex items-center gap-2">
+              <input type="range" min={1} max={20} step={1} value={height}
+                onChange={(e) => setHeight(parseInt(e.target.value))}
+                className="flex-1 h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer accent-gray-900" />
+              <input type="number" min={1} max={20} step={1} value={height}
+                onChange={(e) => setHeight(Math.min(20, Math.max(1, parseInt(e.target.value) || 1)))}
+                className="w-16 border border-gray-200 rounded px-2 py-1.5 text-sm font-mono-en text-center" />
+            </div>
+          </div>
+        </div>
+        <div className="mt-2 text-center py-2 bg-gray-50 rounded border border-gray-100">
+          <span className="text-sm text-gray-600">المساحة: </span>
+          <span className="font-bold font-mono-en text-gray-900">{area.toFixed(2)}</span>
+          <span className="text-sm text-gray-600"> م²</span>
+        </div>
+      </div>
     </div>
   );
 }
