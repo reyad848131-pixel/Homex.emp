@@ -25,16 +25,16 @@ export default function LoginPage() {
       });
 
       if (result?.error) {
-        setError("رقم مدني أو كلمة مرور غير صحيحة");
+        setError(`خطأ: ${result.error} | status: ${result.status} | url: ${result.url}`);
         setLoading(false);
       } else if (result?.ok) {
         window.location.href = "/";
       } else {
-        setError("خطأ في الاتصال بالسيرفر");
+        setError(`نتيجة غير متوقعة: ${JSON.stringify(result)}`);
         setLoading(false);
       }
-    } catch {
-      setError("خطأ في الاتصال بالسيرفر");
+    } catch (e: any) {
+      setError(`استثناء: ${e?.message || String(e)}`);
       setLoading(false);
     }
   };
