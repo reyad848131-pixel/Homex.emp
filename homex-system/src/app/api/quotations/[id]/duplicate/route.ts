@@ -24,7 +24,7 @@ export async function POST(
 
   const quotation = await prisma.quotation.create({
     data: {
-      quoteNumber: generateQuoteNumber(),
+      quoteNumber: await generateQuoteNumber(prisma),
       customerId: original.customerId,
       employeeId: user.id,
       status: "draft",
