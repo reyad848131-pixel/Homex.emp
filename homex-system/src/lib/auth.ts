@@ -3,7 +3,7 @@ import CredentialsProvider from "next-auth/providers/credentials";
 import bcrypt from "bcryptjs";
 import { prisma } from "./prisma";
 
-const isProduction = process.env.NODE_ENV === "production";
+const isProduction = process.env.NODE_ENV === "production" && process.env.NEXTAUTH_URL?.startsWith("https");
 
 export const authOptions = {
   secret: process.env.NEXTAUTH_SECRET,
