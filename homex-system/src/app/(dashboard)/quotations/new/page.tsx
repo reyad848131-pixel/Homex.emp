@@ -7,7 +7,7 @@ import { cn } from "@/lib/utils";
 import {
   ChefHat, DoorOpen, Lamp, Blinds, Sparkles, BedDouble,
   Layers, Tv, Monitor, Sofa, WashingMachine, Plus,
-  Trash2, ShoppingCart, ArrowLeft, ArrowRight, Save, Check,
+  Trash2, ShoppingCart, ArrowLeft, ArrowRight, Save, Check, Eye,
 } from "lucide-react";
 
 const ICONS: Record<string, any> = {
@@ -606,10 +606,23 @@ export default function NewQuotationPage() {
 
       {/* Floating Summary */}
       {items.length > 0 && step === 3 && (
-        <div className="fixed bottom-6 left-1/2 -translate-x-1/2 bg-gray-900 text-white rounded-full px-6 py-3 shadow-2xl flex items-center gap-4 z-50">
-          <span className="font-bold text-sm">{items.length} بنود</span>
-          <span className="text-gray-400">|</span>
-          <span className="font-black font-mono-en">{fmtCur(total)}</span>
+        <div className="fixed bottom-6 left-1/2 -translate-x-1/2 bg-gray-900 text-white rounded-2xl px-5 py-3 shadow-2xl flex items-center gap-3 z-50">
+          <div className="flex items-center gap-2">
+            <ShoppingCart className="w-4 h-4 text-gray-400" />
+            <span className="font-bold text-sm">{items.length} بنود</span>
+          </div>
+          <span className="w-px h-5 bg-gray-600" />
+          <span className="font-black font-mono-en text-emerald-400">{fmtCur(total)}</span>
+          <span className="w-px h-5 bg-gray-600" />
+          <button onClick={() => setStep(4)} className="flex items-center gap-1 px-3 py-1.5 bg-white/10 hover:bg-white/20 rounded-lg text-xs font-bold transition-colors">
+            <Eye className="w-3.5 h-3.5" />
+            معاينة
+          </button>
+          <button onClick={handleSave} disabled={saving}
+            className="flex items-center gap-1 px-3 py-1.5 bg-emerald-600 hover:bg-emerald-700 rounded-lg text-xs font-bold transition-colors disabled:opacity-50">
+            <Save className="w-3.5 h-3.5" />
+            حفظ
+          </button>
         </div>
       )}
     </div>
