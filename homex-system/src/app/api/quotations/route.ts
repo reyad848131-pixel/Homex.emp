@@ -93,8 +93,8 @@ export async function POST(req: NextRequest) {
     const quotation = await prisma.quotation.create({
       data: {
         quoteNumber,
-        customerId: customer.id,
-        employeeId: user.id,
+        customer: { connect: { id: customer.id } },
+        employee: { connect: { id: user.id } },
         status: "draft",
         subtotal,
         vatRate,
@@ -107,7 +107,7 @@ export async function POST(req: NextRequest) {
         validUntil: new Date(Date.now() + validityDays * 24 * 60 * 60 * 1000),
         items: {
           create: items.map((item: any, idx: number) => ({
-            categoryId: item.categoryId,
+            category: { connect: { id: item.categoryId } },
             description: item.description,
             details: item.details ? JSON.stringify(item.details) : null,
             quantity: item.quantity,
