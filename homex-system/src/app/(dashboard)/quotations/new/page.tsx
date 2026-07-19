@@ -159,10 +159,13 @@ export default function NewQuotationPage() {
     switch (selectedCat.id) {
       case "kitchens": return <KitchenBuilder config={config} onUpdate={handleBuilderUpdate} />;
       case "cabinets": return <CabinetBuilder config={config} onUpdate={handleBuilderUpdate} />;
+      case "nightstand": return <NightstandBuilder config={config} onUpdate={handleBuilderUpdate} />;
       case "curtains": return <CurtainBuilder config={config} onUpdate={handleBuilderUpdate} />;
+      case "dressing-table": return <DressingBuilder config={config} onUpdate={handleBuilderUpdate} />;
       case "bed": return <BedBuilder config={config} onUpdate={handleBuilderUpdate} />;
       case "cladding": return <CladdingBuilder config={config} onUpdate={handleBuilderUpdate} />;
       case "sofa-set": return <SofaBuilder config={config} onUpdate={handleBuilderUpdate} />;
+      case "laundry": return <LaundryBuilder config={config} onUpdate={handleBuilderUpdate} />;
       default: return <GenericBuilder cat={selectedCat} onUpdate={handleBuilderUpdate} />;
     }
   };
@@ -915,6 +918,171 @@ function SofaBuilder({ config, onUpdate }: { config: any; onUpdate: (d: string, 
           onChange={(e) => setPrice(parseInt(e.target.value))}
           className="w-full accent-gray-900" />
         <p className="text-center text-lg font-black font-mono-en mt-2">{price} ر.ع</p>
+      </div>
+    </div>
+  );
+}
+
+function NightstandBuilder({ config, onUpdate }: { config: any; onUpdate: (d: string, p: number, e: number) => void }) {
+  const [type, setType] = useState("standard");
+  const [mode, setMode] = useState<"fixed" | "custom">("fixed");
+  const [customLength, setCustomLength] = useState(50);
+  const [customWidth, setCustomWidth] = useState(50);
+  const [customPrice, setCustomPrice] = useState(30);
+
+  useEffect(() => {
+    const typeLabel = type === "round" ? "دائري" : "عادي";
+    if (mode === "fixed") {
+      const price = config[type] || (type === "round" ? 50 : 30);
+      onUpdate(`كومودينو ${typeLabel}`, price, 0);
+    } else {
+      onUpdate(`كومودينو ${typeLabel} - ${customLength}×${customWidth} سم`, customPrice, 0);
+    }
+  }, [type, mode, customLength, customWidth, customPrice, config, onUpdate]);
+
+  return (
+    <div className="space-y-4">
+      <div>
+        <label className="block text-sm font-semibold text-gray-600 mb-2">نوع الكومودينو</label>
+        <div className="flex gap-2">
+          {[["standard", "Standard"], ["round", "Round"]].map(([k, l]) => (
+            <button key={k} onClick={() => setType(k)}
+              className={cn("flex-1 py-2.5 rounded text-sm font-bold border transition-colors",
+                type === k ? "bg-gray-900 text-white border-gray-900" : "bg-white border-gray-200 text-gray-600")}>
+              {l}
+            </button>
+          ))}
+        </div>
+      </div>
+      <div>
+        <label className="block text-sm font-semibold text-gray-600 mb-2">طريقة التسعير</label>
+        <div className="flex gap-2">
+          {[["fixed", "ثابت"], ["custom", "مخصص"]].map(([k, l]) => (
+            <button key={k} onClick={() => setMode(k as "fixed" | "custom")}
+              className={cn("flex-1 py-2.5 rounded text-sm font-bold border transition-colors",
+                mode === k ? "bg-gray-900 text-white border-gray-900" : "bg-white border-gray-200 text-gray-600")}>
+              {l}
+            </button>
+          ))}
+        </div>
+        {mode === "fixed" && (
+          <p className="text-xs text-gray-400 mt-2 font-mono-en">السعر: {config[type] || (type === "round" ? 50 : 30)} ر.ع</p>
+        )}
+      </div>
+      {mode === "custom" && (
+        <div className="grid grid-cols-3 gap-3">
+          <div>
+            <label className="block text-sm font-semibold text-gray-600 mb-1.5">الطول (سم)</label>
+            <input type="number" min={1} value={customLength} onChange={(e) => setCustomLength(parseInt(e.target.value) || 1)}
+              className="w-full border border-gray-200 rounded px-3 py-2.5 text-sm font-mono-en text-center" />
+          </div>
+          <div>
+            <label className="block text-sm font-semibold text-gray-600 mb-1.5">العرض (سم)</label>
+            <input type="number" min={1} value={customWidth} onChange={(e) => setCustomWidth(parseInt(e.target.value) || 1)}
+              className="w-full border border-gray-200 rounded px-3 py-2.5 text-sm font-mono-en text-center" />
+          </div>
+          <div>
+            <label className="block text-sm font-semibold text-gray-600 mb-1.5">السعر (ر.ع)</label>
+            <input type="number" min={0} step={0.5} value={customPrice} onChange={(e) => setCustomPrice(parseFloat(e.target.value) || 0)}
+              className="w-full border border-gray-200 rounded px-3 py-2.5 text-sm font-mono-en text-center" />
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+function DressingBuilder({ config, onUpdate }: { config: any; onUpdate: (d: string, p: number, e: number) => void }) {
+  const [length, setLength] = useState(2);
+  const [lighting, setLighting] = useState(false);
+  const [lightCount, setLightCount] = useState(1);
+
+  useEffect(() => {
+    const pricePerMeter = config.pricePerMeter || 120;
+    const price = length * pricePerMeter;
+    const extras = lighting ? lightCount * (config.lighting || 20) : 0;
+    onUpdate(`تسريحة - ${length} م.ط`, price, extras);
+  }, [length, lighting, lightCount, config, onUpdate]);
+
+  return (
+    <div className="space-y-4">
+      <div>
+        <label className="block text-sm font-semibold text-gray-600 mb-1.5">القياس (م.ط)</label>
+        <div className="flex gap-3 items-center">
+          <input type="range" min={1} max={20} step={0.5} value={length}
+            onChange={(e) => setLength(parseFloat(e.target.value))}
+            className="flex-1 accent-gray-900" />
+          <input type="number" min={1} max={20} step={0.5} value={length}
+            onChange={(e) => setLength(parseFloat(e.target.value) || 1)}
+            className="w-20 border border-gray-200 rounded px-2 py-2 text-sm font-mono-en text-center" />
+        </div>
+      </div>
+      <div>
+        <label className="block text-sm font-semibold text-gray-600 mb-2">الإضاءة</label>
+        <div className="flex gap-2">
+          {[[false, "بدون إضاءة"], [true, "مع إضاءة"]].map(([v, l]) => (
+            <button key={String(v)} onClick={() => setLighting(v as boolean)}
+              className={cn("flex-1 py-2.5 rounded text-sm font-bold border transition-colors",
+                lighting === v ? "bg-gray-900 text-white border-gray-900" : "bg-white border-gray-200 text-gray-600")}>
+              {l as string}
+            </button>
+          ))}
+        </div>
+        {lighting && (
+          <div className="mt-3">
+            <label className="block text-sm font-semibold text-gray-600 mb-1.5">عدد الإضاءات ({config.lighting || 20} ر.ع/وحدة)</label>
+            <input type="number" min={1} value={lightCount} onChange={(e) => setLightCount(Math.max(1, parseInt(e.target.value) || 1))}
+              className="w-full border border-gray-200 rounded px-3 py-2.5 text-sm font-mono-en text-center" />
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
+function LaundryBuilder({ config, onUpdate }: { config: any; onUpdate: (d: string, p: number, e: number) => void }) {
+  const [area, setArea] = useState(4);
+  const [lighting, setLighting] = useState(false);
+  const [lightCount, setLightCount] = useState(1);
+
+  useEffect(() => {
+    const pricePerSqm = config.pricePerSqm || 60;
+    const price = area * pricePerSqm;
+    const extras = lighting ? lightCount * (config.lighting || 20) : 0;
+    onUpdate(`غرفة غسيل - ${area} م²`, price, extras);
+  }, [area, lighting, lightCount, config, onUpdate]);
+
+  return (
+    <div className="space-y-4">
+      <div>
+        <label className="block text-sm font-semibold text-gray-600 mb-1.5">المساحة (م²)</label>
+        <div className="flex gap-3 items-center">
+          <input type="range" min={1} max={20} step={1} value={area}
+            onChange={(e) => setArea(parseInt(e.target.value))}
+            className="flex-1 accent-gray-900" />
+          <input type="number" min={1} max={20} step={1} value={area}
+            onChange={(e) => setArea(parseInt(e.target.value) || 1)}
+            className="w-20 border border-gray-200 rounded px-2 py-2 text-sm font-mono-en text-center" />
+        </div>
+      </div>
+      <div>
+        <label className="block text-sm font-semibold text-gray-600 mb-2">الإضاءة</label>
+        <div className="flex gap-2">
+          {[[false, "بدون إضاءة"], [true, "مع إضاءة"]].map(([v, l]) => (
+            <button key={String(v)} onClick={() => setLighting(v as boolean)}
+              className={cn("flex-1 py-2.5 rounded text-sm font-bold border transition-colors",
+                lighting === v ? "bg-gray-900 text-white border-gray-900" : "bg-white border-gray-200 text-gray-600")}>
+              {l as string}
+            </button>
+          ))}
+        </div>
+        {lighting && (
+          <div className="mt-3">
+            <label className="block text-sm font-semibold text-gray-600 mb-1.5">عدد الإضاءات ({config.lighting || 20} ر.ع/وحدة)</label>
+            <input type="number" min={1} value={lightCount} onChange={(e) => setLightCount(Math.max(1, parseInt(e.target.value) || 1))}
+              className="w-full border border-gray-200 rounded px-3 py-2.5 text-sm font-mono-en text-center" />
+          </div>
+        )}
       </div>
     </div>
   );
