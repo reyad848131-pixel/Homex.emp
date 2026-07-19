@@ -13,28 +13,33 @@ export const authOptions: NextAuthOptions = {
         password: { label: "Password", type: "password" },
       },
       async authorize(credentials) {
-        if (!credentials?.civilId || !credentials?.password) return null;
+        try {
+          if (!credentials?.civilId || !credentials?.password) return null;
 
-        const employee = await prisma.employee.findUnique({
-          where: { civilId: credentials.civilId },
-        });
+          const employee = await prisma.employee.findUnique({
+            where: { civilId: credentials.civilId },
+          });
 
-        if (!employee || !employee.isActive) return null;
+          if (!employee || !employee.isActive) return null;
 
-        const valid = await bcrypt.compare(credentials.password, employee.password);
-        if (!valid) return null;
+          const valid = await bcrypt.compare(credentials.password, employee.password);
+          if (!valid) return null;
 
-        await prisma.employee.update({
-          where: { id: employee.id },
-          data: { lastLogin: new Date() },
-        });
+          await prisma.employee.update({
+            where: { id: employee.id },
+            data: { lastLogin: new Date() },
+          }).catch(() => {});
 
-        return {
-          id: employee.id,
-          name: employee.name,
-          civilId: employee.civilId,
-          role: employee.role,
-        };
+          return {
+            id: employee.id,
+            name: employee.name,
+            civilId: employee.civilId,
+            role: employee.role,
+          };
+        } catch (e) {
+          console.error("authorize error:", e);
+          return null;
+        }
       },
     }),
   ],
