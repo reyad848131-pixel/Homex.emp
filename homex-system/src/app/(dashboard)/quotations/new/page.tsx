@@ -904,52 +904,106 @@ function BedBuilder({ config, onUpdate }: { config: any; onUpdate: (d: string, p
 }
 
 function CladdingBuilder({ config, onUpdate }: { config: any; onUpdate: (d: string, p: number, e: number) => void }) {
-  const [type, setType] = useState("wood");
-  const [width, setWidth] = useState(2);
-  const [height, setHeight] = useState(2.5);
+  const [type, setType] = useState("type1");
+  const [width, setWidth] = useState(3);
+  const [height, setHeight] = useState(2.4);
   const [lighting, setLighting] = useState(false);
+  const [lightCount, setLightCount] = useState(1);
 
-  const typeLabels: Record<string, string> = { wood: "خشب", pvc: "PVC", fabric: "قماش", stone: "حجر" };
+  const TYPES: Record<string, { label: string; price: number }> = {
+    type1: { label: "Milamin", price: config?.types?.type1 || 45 },
+    type2: { label: "بديل التشيبورد", price: config?.types?.type2 || 27 },
+  };
+  const LIGHT_PRICE = config?.lightPrice || 20;
+
+  const area = Math.round(width * height * 100) / 100;
+  const lightSurcharge = lighting ? lightCount * LIGHT_PRICE : 0;
 
   useEffect(() => {
-    const area = width * height;
-    const pricePerSqm = config.types?.[type] || 35;
+    const pricePerSqm = TYPES[type]?.price || 45;
     const price = area * pricePerSqm;
-    const extras = lighting ? (config.lighting || 15) : 0;
-    const desc = `كلادينق ${typeLabels[type]} - ${width}×${height}م`;
-    onUpdate(desc, price, extras);
-  }, [type, width, height, lighting, config, onUpdate]);
+    const desc = `كلادينج ${TYPES[type]?.label} - ${width}×${height}م = ${area} م²`;
+    onUpdate(desc, price, lightSurcharge);
+  }, [type, width, height, lighting, lightCount, config, onUpdate]);
 
   return (
     <div className="space-y-4">
       <div>
-        <label className="block text-sm font-semibold text-gray-600 mb-2">نوع الكلادينق</label>
-        <div className="flex gap-2 flex-wrap">
-          {Object.entries(typeLabels).map(([k, l]) => (
+        <label className="block text-sm font-semibold text-gray-600 mb-2">نوع التكسية</label>
+        <div className="flex gap-2">
+          {Object.entries(TYPES).map(([k, v]) => (
             <button key={k} onClick={() => setType(k)}
-              className={cn("flex-1 py-2.5 rounded text-sm font-bold border transition-colors min-w-[70px]",
+              className={cn("flex-1 py-2.5 rounded text-sm font-bold border transition-colors",
                 type === k ? "bg-gray-900 text-white border-gray-900" : "bg-white border-gray-200 text-gray-600")}>
+              {v.label}
+            </button>
+          ))}
+        </div>
+        <p className="text-xs text-gray-400 mt-1">{TYPES[type]?.label}: {TYPES[type]?.price.toFixed(3)} OMR/م²</p>
+      </div>
+
+      <div>
+        <label className="block text-sm font-semibold text-gray-600 mb-2">الأبعاد</label>
+        <div className="space-y-3">
+          <div>
+            <div className="flex items-center justify-between mb-1">
+              <span className="text-xs text-gray-500">العرض (م)</span>
+              <span className="text-xs font-mono-en font-bold">{width}</span>
+            </div>
+            <div className="flex items-center gap-2">
+              <input type="range" min={1} max={10} step={0.1} value={width}
+                onChange={(e) => setWidth(parseFloat(e.target.value))}
+                className="flex-1 h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer accent-gray-900" />
+              <input type="number" min={1} max={10} step={0.1} value={width}
+                onChange={(e) => setWidth(Math.min(10, Math.max(1, parseFloat(e.target.value) || 1)))}
+                className="w-16 border border-gray-200 rounded px-2 py-1.5 text-sm font-mono-en text-center" />
+            </div>
+          </div>
+          <div>
+            <div className="flex items-center justify-between mb-1">
+              <span className="text-xs text-gray-500">الارتفاع (م)</span>
+              <span className="text-xs font-mono-en font-bold">{height}</span>
+            </div>
+            <div className="flex items-center gap-2">
+              <input type="range" min={1} max={10} step={0.1} value={height}
+                onChange={(e) => setHeight(parseFloat(e.target.value))}
+                className="flex-1 h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer accent-gray-900" />
+              <input type="number" min={1} max={10} step={0.1} value={height}
+                onChange={(e) => setHeight(Math.min(10, Math.max(1, parseFloat(e.target.value) || 1)))}
+                className="w-16 border border-gray-200 rounded px-2 py-1.5 text-sm font-mono-en text-center" />
+            </div>
+          </div>
+        </div>
+        <div className="mt-2 text-center py-2 bg-gray-50 rounded border border-gray-100">
+          <span className="text-sm text-gray-600">المساحة: </span>
+          <span className="font-bold font-mono-en text-gray-900">{area.toFixed(2)}</span>
+          <span className="text-sm text-gray-600"> م²</span>
+        </div>
+      </div>
+
+      <div>
+        <label className="block text-sm font-semibold text-gray-600 mb-2">إضاءة</label>
+        <div className="flex gap-2">
+          {([["none", "بدون إضاءة"], ["with", "مع إضاءة"]] as const).map(([k, l]) => (
+            <button key={k} onClick={() => setLighting(k === "with")}
+              className={cn("flex-1 py-2.5 rounded text-sm font-bold border transition-colors",
+                (lighting ? "with" : "none") === k ? "bg-gray-900 text-white border-gray-900" : "bg-white border-gray-200 text-gray-600")}>
               {l}
             </button>
           ))}
         </div>
+        {lighting && (
+          <div className="mt-2">
+            <label className="block text-xs text-gray-500 mb-1">عدد نقاط الإضاءة</label>
+            <input type="number" min={1} step={1} value={lightCount}
+              onChange={(e) => setLightCount(Math.max(1, parseInt(e.target.value) || 1))}
+              className="w-full border border-gray-200 rounded px-3 py-2 text-sm font-mono-en text-center" />
+            <p className="text-xs text-emerald-600 mt-1">
+              {lightCount} × {LIGHT_PRICE.toFixed(3)} OMR = {lightSurcharge.toFixed(3)} OMR
+            </p>
+          </div>
+        )}
       </div>
-      <div className="grid grid-cols-2 gap-4">
-        <div>
-          <label className="block text-sm font-semibold text-gray-600 mb-1.5">العرض (م)</label>
-          <input type="number" step={0.1} min={0.5} value={width} onChange={(e) => setWidth(parseFloat(e.target.value) || 0.5)}
-            className="w-full border border-gray-200 rounded px-3 py-2.5 text-sm font-mono-en text-center" />
-        </div>
-        <div>
-          <label className="block text-sm font-semibold text-gray-600 mb-1.5">الارتفاع (م)</label>
-          <input type="number" step={0.1} min={0.5} value={height} onChange={(e) => setHeight(parseFloat(e.target.value) || 0.5)}
-            className="w-full border border-gray-200 rounded px-3 py-2.5 text-sm font-mono-en text-center" />
-        </div>
-      </div>
-      <label className="flex items-center gap-2 text-sm font-semibold cursor-pointer">
-        <input type="checkbox" checked={lighting} onChange={(e) => setLighting(e.target.checked)} className="rounded" />
-        إضاءة (+{config.lighting || 15} ر.ع)
-      </label>
     </div>
   );
 }
