@@ -73,7 +73,7 @@ export default function NewQuotationPage() {
 
   useEffect(() => {
     fetch("/api/categories").then((r) => r.ok ? r.json() : []).then(setCategories).catch(() => {});
-    fetch("/api/me").then((r) => r.ok ? r.json() : {}).then((u) => setEmployeeName(u?.name || "")).catch(() => {});
+    fetch("/api/me").then((r) => r.ok ? r.json() : {}).then((u: any) => setEmployeeName(u?.name || "")).catch(() => {});
   }, []);
 
   const wilayats = customer.governorate ? GOVERNORATES[customer.governorate] || [] : [];
