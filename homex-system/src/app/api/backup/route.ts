@@ -11,7 +11,7 @@ export async function GET(req: NextRequest) {
 
   try {
     const [employees, customers, categories, quotations, quoteItems, settings, auditLogs] = await Promise.all([
-      prisma.employee.findMany(),
+      prisma.employee.findMany({ select: { id: true, name: true, civilId: true, role: true, phone: true, isActive: true, lastLogin: true, createdAt: true } }),
       prisma.customer.findMany(),
       prisma.category.findMany(),
       prisma.quotation.findMany(),

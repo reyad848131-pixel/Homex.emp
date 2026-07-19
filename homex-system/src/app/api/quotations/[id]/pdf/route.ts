@@ -3,6 +3,11 @@ import { getAuth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { getSetting } from "@/lib/settings";
 
+function esc(str: string | null | undefined): string {
+  if (!str) return "";
+  return str.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
+}
+
 export async function GET(
   req: NextRequest,
   { params }: { params: Promise<{ id: string }> }
@@ -34,8 +39,8 @@ export async function GET(
   const itemRows = quotation.items.map((item, i) => `
     <tr>
       <td style="padding:8px;border:1px solid #ddd;text-align:center">${i + 1}</td>
-      <td style="padding:8px;border:1px solid #ddd;font-weight:600">${item.description}</td>
-      <td style="padding:8px;border:1px solid #ddd;text-align:center">${item.category.nameAr}</td>
+      <td style="padding:8px;border:1px solid #ddd;font-weight:600">${esc(item.description)}</td>
+      <td style="padding:8px;border:1px solid #ddd;text-align:center">${esc(item.category.nameAr)}</td>
       <td style="padding:8px;border:1px solid #ddd;text-align:center">${item.quantity}</td>
       <td style="padding:8px;border:1px solid #ddd;font-family:monospace">${fmtCur(item.unitPrice)}</td>
       <td style="padding:8px;border:1px solid #ddd;font-family:monospace">${item.extras > 0 ? fmtCur(item.extras) : "-"}</td>
@@ -79,25 +84,25 @@ export async function GET(
 </head>
 <body>
   <div class="header">
-    <h1>${companyName.toUpperCase()}</h1>
+    <h1>${esc(companyName).toUpperCase()}</h1>
     <div class="subtitle">عرض سعر</div>
     <div class="quote-num">${quotation.quoteNumber}</div>
-    ${companyCR ? `<div class="company-info">س.ت: ${companyCR}</div>` : ""}
+    ${companyCR ? `<div class="company-info">س.ت: ${esc(companyCR)}</div>` : ""}
   </div>
 
   <div class="meta">
     <div class="meta-box">
       <h3>بيانات العميل</h3>
-      <p class="name">${quotation.customer.name}</p>
-      <p>${quotation.customer.phoneCode} ${quotation.customer.phone}</p>
-      <p>${quotation.customer.governorate} - ${quotation.customer.wilayat}</p>
-      ${quotation.customer.address ? `<p>${quotation.customer.address}</p>` : ""}
+      <p class="name">${esc(quotation.customer.name)}</p>
+      <p>${esc(quotation.customer.phoneCode)} ${esc(quotation.customer.phone)}</p>
+      <p>${esc(quotation.customer.governorate)} - ${esc(quotation.customer.wilayat)}</p>
+      ${quotation.customer.address ? `<p>${esc(quotation.customer.address)}</p>` : ""}
     </div>
     <div class="meta-box" style="text-align:left">
       <h3>تفاصيل العرض</h3>
       <p>التاريخ: ${fmtDate(quotation.createdAt)}</p>
       <p>صالح حتى: ${quotation.validUntil ? fmtDate(quotation.validUntil) : "-"}</p>
-      <p>الموظف: ${quotation.employee.name}</p>
+      <p>الموظف: ${esc(quotation.employee.name)}</p>
     </div>
   </div>
 
@@ -142,7 +147,7 @@ export async function GET(
   ${quotation.notes ? `
   <div class="notes">
     <h3>ملاحظات</h3>
-    <p>${quotation.notes}</p>
+    <p>${esc(quotation.notes)}</p>
   </div>` : ""}
 
   ${termsConditions ? `
@@ -150,15 +155,15 @@ export async function GET(
     <h3 style="font-size:13px;font-weight:700;margin-bottom:10px">الشروط والأحكام:</h3>
     <ul style="list-style:none;padding:0;margin:0">
       ${termsConditions.split("\n").filter(Boolean).map((line: string) =>
-        `<li style="padding:3px 0;font-size:12px;color:#444">• ${line}</li>`
+        `<li style="padding:3px 0;font-size:12px;color:#444">• ${esc(line)}</li>`
       ).join("")}
     </ul>
   </div>` : ""}
 
   <div class="footer">
-    <p>${companyName} - نظام عروض الأسعار</p>
-    ${companyPhone ? `<p>${companyPhone}</p>` : ""}
-    ${companyAddress ? `<p>${companyAddress}</p>` : ""}
+    <p>${esc(companyName)} - نظام عروض الأسعار</p>
+    ${companyPhone ? `<p>${esc(companyPhone)}</p>` : ""}
+    ${companyAddress ? `<p>${esc(companyAddress)}</p>` : ""}
   </div>
 </body>
 </html>`;
