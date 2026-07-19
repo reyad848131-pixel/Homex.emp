@@ -7,6 +7,7 @@ const isProduction = process.env.NODE_ENV === "production";
 
 export const authOptions = {
   secret: process.env.NEXTAUTH_SECRET,
+  // @ts-expect-error trustHost is valid at runtime but not in the type
   trustHost: true,
   providers: [
     CredentialsProvider({
