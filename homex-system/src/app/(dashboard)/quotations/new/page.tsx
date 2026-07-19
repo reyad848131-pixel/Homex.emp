@@ -72,8 +72,8 @@ export default function NewQuotationPage() {
   const [builderDetails, setBuilderDetails] = useState<Record<string, any>>({});
 
   useEffect(() => {
-    fetch("/api/categories").then((r) => r.json()).then(setCategories);
-    fetch("/api/me").then((r) => r.json()).then((u) => setEmployeeName(u.name || ""));
+    fetch("/api/categories").then((r) => r.ok ? r.json() : []).then(setCategories).catch(() => {});
+    fetch("/api/me").then((r) => r.ok ? r.json() : {}).then((u) => setEmployeeName(u?.name || "")).catch(() => {});
   }, []);
 
   const wilayats = customer.governorate ? GOVERNORATES[customer.governorate] || [] : [];
@@ -128,8 +128,11 @@ export default function NewQuotationPage() {
     return true;
   };
 
+  const [saveError, setSaveError] = useState("");
+
   const handleSave = async () => {
     setSaving(true);
+    setSaveError("");
     try {
       const res = await fetch("/api/quotations", {
         method: "POST",
@@ -146,7 +149,12 @@ export default function NewQuotationPage() {
       if (res.ok) {
         const data = await res.json();
         router.push(`/quotations/${data.id}`);
+      } else {
+        const err = await res.json().catch(() => ({}));
+        setSaveError(err.error || "فشل حفظ العرض. حاول مرة أخرى.");
       }
+    } catch {
+      setSaveError("خطأ في الاتصال بالسيرفر. تأكد من اتصال الإنترنت.");
     } finally {
       setSaving(false);
     }
@@ -578,6 +586,13 @@ export default function NewQuotationPage() {
               </div>
             </div>
           </div>
+        </div>
+      )}
+
+      {/* Error Message */}
+      {saveError && (
+        <div className="mt-4 max-w-3xl mx-auto bg-red-50 border border-red-200 rounded p-4 text-red-700 text-sm font-semibold">
+          {saveError}
         </div>
       )}
 
