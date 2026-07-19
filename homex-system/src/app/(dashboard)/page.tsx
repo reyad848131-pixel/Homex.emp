@@ -1,5 +1,4 @@
-import { getServerSession } from "next-auth";
-import { authOptions } from "@/lib/auth";
+import { getAuth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { formatCurrency } from "@/lib/utils";
 import { STATUS_MAP } from "@/lib/types";
@@ -7,7 +6,7 @@ import Link from "next/link";
 import { FileText, FilePlus, Users, TrendingUp, Clock, CheckCircle, XCircle, BarChart3, ArrowUpRight } from "lucide-react";
 
 export default async function DashboardPage() {
-  const session = await getServerSession(authOptions);
+  const session = await getAuth();
   const userId = (session?.user as any)?.id;
   const role = (session?.user as any)?.role;
 

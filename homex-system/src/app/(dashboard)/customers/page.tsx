@@ -1,11 +1,10 @@
-import { getServerSession } from "next-auth";
-import { authOptions } from "@/lib/auth";
+import { getAuth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { Users, Phone, MapPin } from "lucide-react";
 import Link from "next/link";
 
 export default async function CustomersPage() {
-  const session = await getServerSession(authOptions);
+  const session = await getAuth();
   const user = session?.user as any;
   const isAdmin = user?.role === "admin" || user?.role === "manager";
 

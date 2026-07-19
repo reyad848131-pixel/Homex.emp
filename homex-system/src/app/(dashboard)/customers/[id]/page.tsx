@@ -1,5 +1,4 @@
-import { getServerSession } from "next-auth";
-import { authOptions } from "@/lib/auth";
+import { getAuth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { formatCurrency } from "@/lib/utils";
 import { STATUS_MAP } from "@/lib/types";
@@ -8,7 +7,7 @@ import Link from "next/link";
 import { ArrowRight, Phone, MapPin, Calendar, FileText, User } from "lucide-react";
 
 export default async function CustomerDetailPage({ params }: { params: Promise<{ id: string }> }) {
-  const session = await getServerSession(authOptions);
+  const session = await getAuth();
   const user = session?.user as any;
   const { id } = await params;
 

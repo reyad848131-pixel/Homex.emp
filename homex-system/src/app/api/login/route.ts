@@ -29,7 +29,9 @@ export async function POST(req: NextRequest) {
       data: { lastLogin: new Date() },
     }).catch(() => {});
 
-    const isSecure = process.env.NEXTAUTH_URL?.startsWith("https");
+    const isSecure = process.env.VERCEL === "1" ||
+      req.headers.get("x-forwarded-proto") === "https" ||
+      process.env.NEXTAUTH_URL?.startsWith("https");
     const cookieName = isSecure
       ? "__Secure-next-auth.session-token"
       : "next-auth.session-token";

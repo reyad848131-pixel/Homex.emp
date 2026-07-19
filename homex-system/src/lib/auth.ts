@@ -1,5 +1,7 @@
 import { type NextAuthOptions } from "next-auth";
 import CredentialsProvider from "next-auth/providers/credentials";
+import { decode } from "next-auth/jwt";
+import { cookies } from "next/headers";
 import bcrypt from "bcryptjs";
 import { prisma } from "./prisma";
 
@@ -71,3 +73,31 @@ export const authOptions: NextAuthOptions = {
     maxAge: 24 * 60 * 60,
   },
 };
+
+export async function getAuth() {
+  const secret = process.env.NEXTAUTH_SECRET!;
+  const cookieStore = await cookies();
+  const cookieNames = [
+    "__Secure-next-auth.session-token",
+    "next-auth.session-token",
+  ];
+
+  for (const name of cookieNames) {
+    const value = cookieStore.get(name)?.value;
+    if (!value) continue;
+    try {
+      const token = await decode({ token: value, secret, salt: name });
+      if (token) {
+        return {
+          user: {
+            id: token.id as string,
+            name: token.name as string,
+            role: token.role as string,
+            civilId: token.civilId as string,
+          },
+        };
+      }
+    } catch {}
+  }
+  return null;
+}
