@@ -12,20 +12,26 @@ export async function GET(
   req: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
+  try {
   const session = await getAuth();
   if (!session) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
+  const user = session.user as any;
   const { id } = await params;
   const quotation = await prisma.quotation.findUnique({
     where: { id },
     include: {
       customer: true,
-      employee: { select: { name: true } },
+      employee: { select: { id: true, name: true } },
       items: { include: { category: true }, orderBy: { sortOrder: "asc" } },
     },
   });
 
   if (!quotation) return NextResponse.json({ error: "Not found" }, { status: 404 });
+
+  if (user.role === "sales" && quotation.employee.id !== user.id) {
+    return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+  }
 
   const companyName = await getSetting("company_name", "Homex");
   const companyPhone = await getSetting("company_phone", "");
@@ -171,4 +177,7 @@ export async function GET(
   return new NextResponse(html, {
     headers: { "Content-Type": "text/html; charset=utf-8" },
   });
+  } catch {
+    return NextResponse.json({ error: "Server error" }, { status: 500 });
+  }
 }

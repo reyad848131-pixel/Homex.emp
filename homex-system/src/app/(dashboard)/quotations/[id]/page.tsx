@@ -98,7 +98,8 @@ export default function QuotationDetailPage({ params }: { params: Promise<{ id: 
       `\n\n--- Homex ---`
     );
     const phone = q.customer.phone.replace(/\D/g, "");
-    const fullPhone = phone.startsWith("968") ? phone : `968${phone}`;
+    const code = (q.customer.phoneCode || "+968").replace(/\D/g, "");
+    const fullPhone = phone.startsWith(code) ? phone : `${code}${phone}`;
     window.open(`https://wa.me/${fullPhone}?text=${text}`, "_blank");
   };
 

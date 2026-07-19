@@ -8,6 +8,7 @@ export async function POST(
   req: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
+  try {
   const session = await getAuth();
   if (!session) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
@@ -20,6 +21,10 @@ export async function POST(
   });
 
   if (!original) return NextResponse.json({ error: "Not found" }, { status: 404 });
+
+  if (user.role === "sales" && original.employeeId !== user.id) {
+    return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+  }
 
   const quotation = await prisma.quotation.create({
     data: {
@@ -52,4 +57,7 @@ export async function POST(
 
   await logAction(user.id, "duplicate", "quotation", quotation.id, `from:${id}`);
   return NextResponse.json(quotation, { status: 201 });
+  } catch {
+    return NextResponse.json({ error: "Server error" }, { status: 500 });
+  }
 }

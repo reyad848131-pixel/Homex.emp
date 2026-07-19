@@ -54,6 +54,7 @@ export default function NewQuotationPage() {
   const [items, setItems] = useState<LineItem[]>([]);
   const [saving, setSaving] = useState(false);
   const [advancePct, setAdvancePct] = useState(15);
+  const [vatRate, setVatRate] = useState(0.05);
   const [notes, setNotes] = useState("");
   const [employeeName, setEmployeeName] = useState("");
   const [quoteDate, setQuoteDate] = useState(() => new Date().toISOString().split("T")[0]);
@@ -74,12 +75,16 @@ export default function NewQuotationPage() {
   useEffect(() => {
     fetch("/api/categories").then((r) => r.ok ? r.json() : []).then(setCategories).catch(() => {});
     fetch("/api/me").then((r) => r.ok ? r.json() : {}).then((u: any) => setEmployeeName(u?.name || "")).catch(() => {});
+    fetch("/api/settings").then((r) => r.ok ? r.json() : {}).then((s: any) => {
+      if (s.vat_rate) setVatRate(parseFloat(s.vat_rate) / 100 || 0.05);
+      if (s.advance_percent) setAdvancePct(parseInt(s.advance_percent) || 15);
+    }).catch(() => {});
   }, []);
 
   const wilayats = customer.governorate ? GOVERNORATES[customer.governorate] || [] : [];
 
   const subtotal = items.reduce((s, i) => s + i.lineTotal, 0);
-  const vat = subtotal * 0.05;
+  const vat = subtotal * vatRate;
   const total = subtotal + vat;
   const advance = total * (advancePct / 100);
 
@@ -142,6 +147,7 @@ export default function NewQuotationPage() {
           items: items.map(({ id, categoryName, ...rest }) => rest),
           notes,
           advancePct,
+          vatRate,
           quoteDate,
           deliveryDate,
         }),
