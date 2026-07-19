@@ -319,6 +319,20 @@ export default function NewQuotationPage() {
               <h2 className="text-lg font-bold">اختر القسم</h2>
               <p className="text-sm text-gray-500">حسب طلب الزبون — يقدر يختار أكثر من قسم لنفس عرض السعر</p>
             </div>
+            {/* Progress Pills */}
+            {items.length > 0 && (
+              <div className="flex gap-1.5 flex-wrap mb-4 pb-3 border-b border-gray-100">
+                {categories.map((cat) => {
+                  const count = items.filter((i) => i.categoryId === cat.id).length;
+                  if (count === 0) return null;
+                  return (
+                    <span key={cat.id} className="px-3 py-1 bg-emerald-600 text-white rounded-full text-[11px] font-bold">
+                      {cat.nameAr} ✓ ({count})
+                    </span>
+                  );
+                })}
+              </div>
+            )}
             <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-6 gap-3">
               {categories.map((cat) => {
                 const Icon = ICONS[cat.icon] || Plus;
@@ -329,12 +343,14 @@ export default function NewQuotationPage() {
                       "relative flex flex-col items-center gap-2 p-4 border rounded text-xs font-bold transition-all",
                       selectedCat?.id === cat.id
                         ? "bg-gray-900 border-gray-900 text-white"
-                        : "bg-white border-gray-200 text-gray-600 hover:border-gray-400"
+                        : count > 0
+                          ? "bg-emerald-50 border-emerald-300 text-emerald-700"
+                          : "bg-white border-gray-200 text-gray-600 hover:border-gray-400"
                     )}>
                     <Icon className="w-6 h-6" />
                     <span className="text-center leading-tight">{cat.nameAr}</span>
                     {count > 0 && (
-                      <span className="absolute top-1 left-1 w-5 h-5 bg-red-500 text-white rounded-full text-[10px] flex items-center justify-center font-bold">
+                      <span className="absolute top-1 left-1 w-5 h-5 bg-emerald-600 text-white rounded-full text-[10px] flex items-center justify-center font-bold">
                         {count}
                       </span>
                     )}
@@ -357,26 +373,23 @@ export default function NewQuotationPage() {
                 <h2 className="text-lg font-bold">إضافة بنود — {selectedCat?.nameAr}</h2>
               </div>
 
-              {/* Category Tabs (mini) */}
-              <div className="flex gap-2 flex-wrap mb-4">
+              {/* Progress Pills */}
+              <div className="flex gap-1.5 flex-wrap mb-4">
                 {categories.map((cat) => {
-                  const Icon = ICONS[cat.icon] || Plus;
                   const count = items.filter((i) => i.categoryId === cat.id).length;
+                  const isActive = selectedCat?.id === cat.id;
+                  const isDone = count > 0;
                   return (
                     <button key={cat.id} onClick={() => { setSelectedCat(cat); resetBuilder(); }}
                       className={cn(
-                        "relative flex items-center gap-1.5 px-3 py-1.5 border rounded-full text-xs font-bold transition-all",
-                        selectedCat?.id === cat.id
+                        "px-3 py-1.5 border rounded-full text-[11px] font-bold transition-all",
+                        isActive
                           ? "bg-gray-900 border-gray-900 text-white"
-                          : "bg-white border-gray-200 text-gray-500 hover:border-gray-400"
+                          : isDone
+                            ? "bg-emerald-600 border-emerald-600 text-white"
+                            : "bg-white border-gray-200 text-gray-400 hover:border-gray-400"
                       )}>
-                      <Icon className="w-3.5 h-3.5" />
-                      {cat.nameAr}
-                      {count > 0 && (
-                        <span className="w-4 h-4 bg-red-500 text-white rounded-full text-[9px] flex items-center justify-center font-bold">
-                          {count}
-                        </span>
-                      )}
+                      {isDone && !isActive ? `${cat.nameAr} ✓` : cat.nameAr}
                     </button>
                   );
                 })}
