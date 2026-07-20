@@ -9,7 +9,6 @@ import {
   Search,
   Calendar,
   AlertTriangle,
-  AlertCircle,
   ChevronDown,
   ChevronUp,
   FileText,
@@ -45,8 +44,7 @@ function getDaysRemaining(deliveryDate: string): number {
 
 function isAutoUrgent(deliveryDate: string, workStatus: string | null): boolean {
   if (workStatus === "delivered") return false;
-  const days = getDaysRemaining(deliveryDate);
-  return days <= 30;
+  return getDaysRemaining(deliveryDate) <= 30;
 }
 
 function DaysRemainingBadge({ days, workStatus }: { days: number; workStatus: string | null }) {
@@ -130,8 +128,6 @@ export default function WorkOrdersPage() {
     fetchData();
   };
 
-  const statusEntries = Object.entries(WORK_STATUS_MAP);
-
   const fmtDate = (d: string) => new Date(d).toLocaleDateString("ar-OM", { year: "numeric", month: "short", day: "numeric" });
 
   if (loading && !data) {
@@ -159,9 +155,9 @@ export default function WorkOrdersPage() {
         </button>
       </div>
 
-      {/* Status Color Board */}
-      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3 mb-4">
-        {statusEntries.map(([key, s]) => {
+      {/* Status Cards — same style as dashboard */}
+      <div className="grid grid-cols-5 gap-3 mb-4">
+        {Object.entries(WORK_STATUS_MAP).map(([key, s]) => {
           const count = data.counts[key] || 0;
           const isActive = activeFilter === key;
           return (
@@ -169,14 +165,13 @@ export default function WorkOrdersPage() {
               key={key}
               onClick={() => { setActiveFilter(isActive ? null : key); setAlertFilter(null); }}
               className={cn(
-                "border-2 rounded-lg p-3 text-center transition-all",
-                s.borderColor, s.bgColor,
-                isActive ? "ring-2 ring-offset-1 ring-gray-900 dark:ring-gray-100 scale-[1.02]" : "hover:scale-[1.01]"
+                "border rounded p-3 text-center transition-all cursor-pointer",
+                s.cardColor,
+                isActive && "ring-2 ring-offset-1 ring-gray-900 dark:ring-gray-100"
               )}
             >
-              <div className={cn("w-4 h-4 rounded-full mx-auto mb-1.5", s.dotColor)} />
-              <p className={cn("text-2xl font-black font-mono-en", s.color)}>{count}</p>
-              <p className={cn("text-xs font-bold mt-0.5", s.color)}>{s.label}</p>
+              <p className="text-2xl font-black font-mono-en">{count}</p>
+              <p className="text-xs font-bold mt-0.5">{s.label}</p>
             </button>
           );
         })}
@@ -187,29 +182,29 @@ export default function WorkOrdersPage() {
         <button
           onClick={() => { setAlertFilter(alertFilter === "orange" ? null : "orange"); setActiveFilter(null); }}
           className={cn(
-            "flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-bold border transition-colors",
+            "flex items-center gap-1.5 px-3 py-1.5 rounded text-xs font-bold border transition-colors",
             alertFilter === "orange"
-              ? "bg-orange-100 dark:bg-orange-900/40 border-orange-400 text-orange-700 dark:text-orange-300"
+              ? "bg-orange-50 border-orange-300 text-orange-600"
               : "border-gray-200 dark:border-gray-700 text-gray-500 hover:border-orange-300"
           )}
         >
-          <span className="w-2.5 h-2.5 rounded-full bg-orange-500 shrink-0" /> ملاحظة ({data.counts.orange || 0})
+          ملاحظة ({data.counts.orange || 0})
         </button>
         <button
           onClick={() => { setAlertFilter(alertFilter === "red" ? null : "red"); setActiveFilter(null); }}
           className={cn(
-            "flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-bold border transition-colors",
+            "flex items-center gap-1.5 px-3 py-1.5 rounded text-xs font-bold border transition-colors",
             alertFilter === "red"
-              ? "bg-red-100 dark:bg-red-900/40 border-red-400 text-red-700 dark:text-red-300"
+              ? "bg-red-50 border-red-300 text-red-600"
               : "border-gray-200 dark:border-gray-700 text-gray-500 hover:border-red-300"
           )}
         >
-          <span className="w-2.5 h-2.5 rounded-full bg-red-500 shrink-0" /> مستعجل / متابعة ({data.counts.red || 0})
+          مستعجل / متابعة ({data.counts.red || 0})
         </button>
         {(activeFilter || alertFilter) && (
           <button
             onClick={() => { setActiveFilter(null); setAlertFilter(null); }}
-            className="flex items-center gap-1 px-3 py-1.5 rounded-full text-xs font-bold text-gray-500 hover:text-gray-900 dark:hover:text-white border border-gray-200 dark:border-gray-700 transition-colors"
+            className="flex items-center gap-1 px-3 py-1.5 rounded text-xs font-bold text-gray-500 hover:text-gray-900 dark:hover:text-white border border-gray-200 dark:border-gray-700 transition-colors"
           >
             <X className="w-3 h-3" /> مسح الفلتر
           </button>
@@ -236,7 +231,6 @@ export default function WorkOrdersPage() {
               value={deliveryFrom}
               onChange={(e) => setDeliveryFrom(e.target.value)}
               className="flex-1 border border-gray-200 dark:border-gray-600 dark:bg-gray-700 rounded px-3 py-2 text-sm font-mono-en"
-              placeholder="من"
             />
           </div>
           <div className="flex items-center gap-2">
@@ -271,8 +265,8 @@ export default function WorkOrdersPage() {
                 key={q.id}
                 className={cn(
                   "bg-white dark:bg-gray-800 border rounded-lg overflow-hidden transition-all",
-                  ws ? ws.borderColor : "border-gray-200 dark:border-gray-700",
-                  (q.hasRedAlert || autoUrgent) && q.workStatus !== "delivered" && "ring-1 ring-red-300 dark:ring-red-700"
+                  "border-gray-200 dark:border-gray-700",
+                  (q.hasRedAlert || autoUrgent) && q.workStatus !== "delivered" && "border-red-300 dark:border-red-700"
                 )}
               >
                 {/* Main Row */}
@@ -280,11 +274,6 @@ export default function WorkOrdersPage() {
                   className="flex items-center gap-3 p-4 cursor-pointer hover:bg-gray-50/50 dark:hover:bg-gray-700/30 transition-colors"
                   onClick={() => setExpandedId(isExpanded ? null : q.id)}
                 >
-                  {/* Status Dot */}
-                  <div className="shrink-0 w-10 flex items-center justify-center">
-                    <div className={cn("w-3.5 h-3.5 rounded-full", ws ? ws.dotColor : "bg-gray-300")} />
-                  </div>
-
                   {/* Info */}
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center gap-2 flex-wrap">
@@ -296,12 +285,18 @@ export default function WorkOrdersPage() {
                         {q.quoteNumber}
                       </Link>
                       <span className="text-sm font-semibold text-gray-700 dark:text-gray-300">{q.customer.name}</span>
+                      {/* Status badge */}
+                      {ws && (
+                        <span className={cn("text-[10px] font-bold px-2 py-0.5 rounded", ws.badgeColor)}>
+                          {ws.label}
+                        </span>
+                      )}
                       {/* Alert badges */}
                       {q.hasOrangeAlert && (
-                        <span className="w-2.5 h-2.5 rounded-full bg-orange-500 shrink-0" />
+                        <span className="text-[10px] font-bold px-2 py-0.5 rounded bg-orange-100 text-orange-600 dark:bg-orange-900/30 dark:text-orange-300">ملاحظة</span>
                       )}
                       {(q.hasRedAlert || autoUrgent) && q.workStatus !== "delivered" && (
-                        <span className="w-2.5 h-2.5 rounded-full bg-red-500 shrink-0" />
+                        <span className="text-[10px] font-bold px-2 py-0.5 rounded bg-red-100 text-red-600 dark:bg-red-900/30 dark:text-red-300">مستعجل</span>
                       )}
                     </div>
                     <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5 truncate">
@@ -315,15 +310,6 @@ export default function WorkOrdersPage() {
                     <div className="mt-1">
                       <DaysRemainingBadge days={days} workStatus={q.workStatus} />
                     </div>
-                  </div>
-
-                  {/* Status Badge */}
-                  <div className="shrink-0 hidden md:block">
-                    {ws && (
-                      <span className={cn("text-xs font-bold px-2.5 py-1 rounded-full", ws.bgColor, ws.color)}>
-                        {ws.label}
-                      </span>
-                    )}
                   </div>
 
                   {/* Expand */}
@@ -380,13 +366,13 @@ export default function WorkOrdersPage() {
                             key={key}
                             onClick={() => handleStatusChange(q.id, key)}
                             className={cn(
-                              "flex items-center gap-1.5 px-3 py-1.5 rounded text-xs font-bold border transition-all",
+                              "px-3 py-1.5 rounded text-xs font-bold border transition-all",
                               q.workStatus === key
-                                ? cn(s.bgColor, s.borderColor, s.color, "ring-1 ring-offset-1")
+                                ? cn(s.cardColor, "ring-1 ring-offset-1 ring-gray-400")
                                 : "border-gray-200 dark:border-gray-600 text-gray-500 hover:border-gray-400"
                             )}
                           >
-                            <span className={cn("w-2.5 h-2.5 rounded-full shrink-0", s.dotColor)} /> {s.label}
+                            {s.label}
                           </button>
                         ))}
                       </div>
@@ -397,24 +383,24 @@ export default function WorkOrdersPage() {
                       <button
                         onClick={() => handleAlertToggle(q.id, "hasOrangeAlert", q.hasOrangeAlert)}
                         className={cn(
-                          "flex items-center gap-1.5 px-3 py-1.5 rounded text-xs font-bold border transition-all",
+                          "px-3 py-1.5 rounded text-xs font-bold border transition-all",
                           q.hasOrangeAlert
-                            ? "bg-orange-100 dark:bg-orange-900/40 border-orange-400 text-orange-700 dark:text-orange-300"
+                            ? "bg-orange-50 border-orange-300 text-orange-600"
                             : "border-gray-200 dark:border-gray-600 text-gray-500"
                         )}
                       >
-                        <span className="w-2.5 h-2.5 rounded-full bg-orange-500 shrink-0" /> {q.hasOrangeAlert ? "إزالة الملاحظة" : "إضافة ملاحظة"}
+                        {q.hasOrangeAlert ? "إزالة الملاحظة" : "إضافة ملاحظة"}
                       </button>
                       <button
                         onClick={() => handleAlertToggle(q.id, "hasRedAlert", q.hasRedAlert)}
                         className={cn(
-                          "flex items-center gap-1.5 px-3 py-1.5 rounded text-xs font-bold border transition-all",
+                          "px-3 py-1.5 rounded text-xs font-bold border transition-all",
                           q.hasRedAlert
-                            ? "bg-red-100 dark:bg-red-900/40 border-red-400 text-red-700 dark:text-red-300"
+                            ? "bg-red-50 border-red-300 text-red-600"
                             : "border-gray-200 dark:border-gray-600 text-gray-500"
                         )}
                       >
-                        <span className="w-2.5 h-2.5 rounded-full bg-red-500 shrink-0" /> {q.hasRedAlert ? "إزالة الاستعجال" : "تحديد مستعجل"}
+                        {q.hasRedAlert ? "إزالة الاستعجال" : "تحديد مستعجل"}
                       </button>
                       {autoUrgent && q.workStatus !== "delivered" && !q.hasRedAlert && (
                         <span className="flex items-center gap-1 text-xs text-red-500 dark:text-red-400">

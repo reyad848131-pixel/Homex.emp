@@ -43,12 +43,12 @@ export const STATUS_MAP: Record<string, { label: string; color: string }> = {
   cancelled: { label: "ملغي", color: "bg-gray-200 text-gray-500" },
 };
 
-export const WORK_STATUS_MAP: Record<string, { label: string; color: string; bgColor: string; borderColor: string; dotColor: string }> = {
-  needs_preparation: { label: "يحتاج تجهيز", color: "text-blue-700 dark:text-blue-300", bgColor: "bg-blue-50 dark:bg-blue-900/30", borderColor: "border-blue-300 dark:border-blue-700", dotColor: "bg-blue-500" },
-  ready_to_execute: { label: "جاهز للتنفيذ", color: "text-pink-700 dark:text-pink-300", bgColor: "bg-pink-50 dark:bg-pink-900/30", borderColor: "border-pink-300 dark:border-pink-700", dotColor: "bg-pink-500" },
-  in_progress: { label: "جاري العمل", color: "text-gray-700 dark:text-gray-300", bgColor: "bg-gray-100 dark:bg-gray-700/50", borderColor: "border-gray-300 dark:border-gray-600", dotColor: "bg-gray-400" },
-  completed: { label: "جاهز", color: "text-green-700 dark:text-green-300", bgColor: "bg-green-50 dark:bg-green-900/30", borderColor: "border-green-300 dark:border-green-700", dotColor: "bg-green-500" },
-  delivered: { label: "تم التوصيل", color: "text-yellow-700 dark:text-yellow-300", bgColor: "bg-yellow-50 dark:bg-yellow-900/30", borderColor: "border-yellow-300 dark:border-yellow-700", dotColor: "bg-yellow-500" },
+export const WORK_STATUS_MAP: Record<string, { label: string; cardColor: string; badgeColor: string }> = {
+  needs_preparation: { label: "يحتاج تجهيز", cardColor: "border-blue-300 text-blue-600 bg-blue-50", badgeColor: "bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-300" },
+  ready_to_execute: { label: "جاهز للتنفيذ", cardColor: "border-pink-300 text-pink-600 bg-pink-50", badgeColor: "bg-pink-100 text-pink-700 dark:bg-pink-900/30 dark:text-pink-300" },
+  in_progress: { label: "جاري العمل", cardColor: "border-gray-300 text-gray-600 bg-gray-50", badgeColor: "bg-gray-100 text-gray-700 dark:bg-gray-700 dark:text-gray-300" },
+  completed: { label: "جاهز", cardColor: "border-green-300 text-green-600 bg-green-50", badgeColor: "bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-300" },
+  delivered: { label: "تم التوصيل", cardColor: "border-yellow-300 text-yellow-600 bg-yellow-50", badgeColor: "bg-yellow-100 text-yellow-700 dark:bg-yellow-900/30 dark:text-yellow-300" },
 };
 
 export const VALID_WORK_STATUSES = Object.keys(WORK_STATUS_MAP);
