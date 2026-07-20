@@ -19,8 +19,16 @@ export async function GET(req: NextRequest) {
   const page = parseInt(searchParams.get("page") || "1");
   const limit = Math.min(parseInt(searchParams.get("limit") || "20"), 100);
 
+  const dateFrom = searchParams.get("dateFrom");
+  const dateTo = searchParams.get("dateTo");
+
   const where: any = isAdmin ? {} : { employeeId: user.id };
   if (status && status !== "all") where.status = status;
+  if (dateFrom || dateTo) {
+    where.createdAt = {};
+    if (dateFrom) where.createdAt.gte = new Date(dateFrom);
+    if (dateTo) where.createdAt.lte = new Date(dateTo + "T23:59:59.999Z");
+  }
   if (search) {
     where.OR = [
       { quoteNumber: { contains: search, mode: "insensitive" as const } },

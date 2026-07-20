@@ -3,7 +3,7 @@
 import { useState, useEffect } from "react";
 import Link from "next/link";
 import { STATUS_MAP } from "@/lib/types";
-import { Search, FilePlus, Filter, FileText } from "lucide-react";
+import { Search, FilePlus, Filter, FileText, Calendar } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 interface Quotation {
@@ -24,19 +24,23 @@ export default function QuotationsPage() {
   const [statusFilter, setStatusFilter] = useState("all");
   const [total, setTotal] = useState(0);
   const [page, setPage] = useState(1);
+  const [dateFrom, setDateFrom] = useState("");
+  const [dateTo, setDateTo] = useState("");
   const limit = 20;
 
   const fmtCur = (n: number) => `${n.toFixed(3)} ر.ع`;
 
   useEffect(() => {
     setPage(1);
-  }, [search, statusFilter]);
+  }, [search, statusFilter, dateFrom, dateTo]);
 
   useEffect(() => {
     setLoading(true);
     const params = new URLSearchParams();
     if (search) params.set("search", search);
     if (statusFilter !== "all") params.set("status", statusFilter);
+    if (dateFrom) params.set("dateFrom", dateFrom);
+    if (dateTo) params.set("dateTo", dateTo);
     params.set("page", String(page));
     params.set("limit", String(limit));
 
@@ -47,7 +51,7 @@ export default function QuotationsPage() {
         setTotal(data.total || 0);
       })
       .finally(() => setLoading(false));
-  }, [search, statusFilter, page]);
+  }, [search, statusFilter, dateFrom, dateTo, page]);
 
   const statuses = ["all", ...Object.keys(STATUS_MAP)];
   const statusLabels: Record<string, string> = { all: "الكل", ...Object.fromEntries(Object.entries(STATUS_MAP).map(([k, v]) => [k, v.label])) };
@@ -86,6 +90,20 @@ export default function QuotationsPage() {
               </button>
             ))}
           </div>
+        </div>
+        <div className="flex items-center gap-3 mt-3 pt-3 border-t border-gray-100">
+          <Calendar className="w-4 h-4 text-gray-400 shrink-0" />
+          <div className="flex items-center gap-2 flex-1">
+            <input type="date" value={dateFrom} onChange={(e) => setDateFrom(e.target.value)}
+              className="border border-gray-200 rounded px-3 py-1.5 text-sm font-mono-en flex-1" />
+            <span className="text-xs text-gray-400">إلى</span>
+            <input type="date" value={dateTo} onChange={(e) => setDateTo(e.target.value)}
+              className="border border-gray-200 rounded px-3 py-1.5 text-sm font-mono-en flex-1" />
+          </div>
+          {(dateFrom || dateTo) && (
+            <button onClick={() => { setDateFrom(""); setDateTo(""); }}
+              className="text-xs text-red-500 font-bold hover:text-red-700">مسح</button>
+          )}
         </div>
       </div>
 
