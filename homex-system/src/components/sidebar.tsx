@@ -17,6 +17,7 @@ import {
   LogOut,
   Menu,
   X,
+  Truck,
 } from "lucide-react";
 import { useState, useEffect } from "react";
 import { DarkModeToggle } from "@/components/dark-mode-toggle";
@@ -39,6 +40,7 @@ const navItems = [
 ];
 
 const managerItems = [
+  { href: "/work-orders", label: "إدارة الأعمال", icon: Truck },
   { href: "/reports", label: "التقارير", icon: BarChart3 },
 ];
 

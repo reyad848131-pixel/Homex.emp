@@ -115,6 +115,7 @@ export async function POST(req: NextRequest) {
         advanceAmount,
         notes,
         deliveryDate: deliveryDate ? new Date(deliveryDate) : null,
+        workStatus: deliveryDate ? "needs_preparation" : null,
         validUntil: new Date(Date.now() + validityDays * 24 * 60 * 60 * 1000),
         items: {
           create: items.map((item: any, idx: number) => ({
