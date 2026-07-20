@@ -942,15 +942,21 @@ function CurtainBuilder({ config, onUpdate }: { config: any; onUpdate: (d: strin
   );
 }
 
+const BED_PRICES: Record<string, Record<string, number>> = {
+  wood:   { "90x190": 120, "100x200": 130, "120x200": 135, "180x200": 390, "200x200": 400, "220x220": 410 },
+  fabric: { "90x190": 125, "100x200": 135, "120x200": 140, "180x200": 420, "200x200": 430, "220x220": 450 },
+};
+const BED_SIZES = ["90x190", "100x200", "120x200", "180x200", "200x200", "220x220"];
+
 function BedBuilder({ config, onUpdate }: { config: any; onUpdate: (d: string, p: number, e: number) => void }) {
   const [type, setType] = useState("wood");
   const [size, setSize] = useState("180x200");
   const [lighting, setLighting] = useState(false);
 
   useEffect(() => {
-    const price = config.sizes?.[size] || 160;
+    const price = BED_PRICES[type]?.[size] || 160;
     const extras = lighting ? (config.lighting || 20) : 0;
-    const typeLabel = config.types?.[type] || type;
+    const typeLabel = type === "wood" ? "خشب" : "قماش";
     const desc = `سرير ${typeLabel} - ${size} سم`;
     onUpdate(desc, price, extras);
   }, [type, size, lighting, config, onUpdate]);
@@ -960,11 +966,11 @@ function BedBuilder({ config, onUpdate }: { config: any; onUpdate: (d: string, p
       <div>
         <label className="block text-sm font-semibold text-gray-600 mb-2">النوع</label>
         <div className="flex gap-2">
-          {Object.entries(config.types || { wood: "خشب", fabric: "قماش" }).map(([k, l]) => (
+          {([["wood", "خشب"], ["fabric", "قماش"]] as const).map(([k, l]) => (
             <button key={k} onClick={() => setType(k)}
               className={cn("flex-1 py-2.5 rounded text-sm font-bold border transition-colors",
                 type === k ? "bg-gray-900 text-white border-gray-900" : "bg-white border-gray-200 text-gray-600")}>
-              {l as string}
+              {l}
             </button>
           ))}
         </div>
@@ -972,11 +978,12 @@ function BedBuilder({ config, onUpdate }: { config: any; onUpdate: (d: string, p
       <div>
         <label className="block text-sm font-semibold text-gray-600 mb-2">المقاس</label>
         <div className="grid grid-cols-3 gap-2">
-          {Object.entries(config.sizes || {}).map(([s, p]) => (
+          {BED_SIZES.map((s) => (
             <button key={s} onClick={() => setSize(s)}
               className={cn("py-2 rounded text-xs font-bold border transition-colors",
                 size === s ? "bg-gray-900 text-white border-gray-900" : "bg-white border-gray-200 text-gray-600")}>
               {s}
+              <span className="block text-[10px] font-mono-en mt-0.5">{BED_PRICES[type]?.[s]} ر.ع</span>
             </button>
           ))}
         </div>
