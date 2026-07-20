@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getAuth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
-import { getSetting } from "@/lib/settings";
+import { getSettings } from "@/lib/settings";
 
 function esc(str: string | null | undefined): string {
   if (!str) return "";
@@ -35,13 +35,14 @@ export async function GET(
     if (!invoice) return NextResponse.json({ error: "Not found" }, { status: 404 });
 
     const q = invoice.quotation;
-    const companyName = await getSetting("company_name", "Homex");
-    const companyPhone = await getSetting("company_phone", "");
-    const companyAddress = await getSetting("company_address", "");
-    const companyCR = await getSetting("company_cr", "");
-    const companyLogo = await getSetting("company_logo", "");
-    const companySubtitle = await getSetting("company_subtitle", "");
-    const companyFactory = await getSetting("company_factory", "");
+    const s = await getSettings();
+    const companyName = s.company_name || "Homex";
+    const companyPhone = s.company_phone || "";
+    const companyAddress = s.company_address || "";
+    const companyCR = s.company_cr || "";
+    const companyLogo = s.company_logo || "";
+    const companySubtitle = s.company_subtitle || "";
+    const companyFactory = s.company_factory || "";
 
     const fmtCur = (n: number) => n.toFixed(3);
     const fmtDate = (d: Date | string) => new Date(d).toLocaleDateString("ar-OM", { year: "numeric", month: "long", day: "numeric" });
