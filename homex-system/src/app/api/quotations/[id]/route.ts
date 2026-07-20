@@ -84,6 +84,10 @@ export async function PATCH(
             subtotal, vatRate, vatAmount, total, advancePct, advanceAmount,
             notes: body.notes,
             customerId: body.customerId,
+            ...(body.deliveryDate !== undefined ? {
+              deliveryDate: body.deliveryDate ? new Date(body.deliveryDate) : null,
+              ...(body.deliveryDate && !quotation.workStatus ? { workStatus: "needs_preparation" } : {}),
+            } : {}),
             items: {
               create: body.items.map((item: any, idx: number) => ({
                 categoryId: item.categoryId,
