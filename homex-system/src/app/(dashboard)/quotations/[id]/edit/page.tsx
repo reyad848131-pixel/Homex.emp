@@ -298,7 +298,7 @@ export default function EditQuotationPage({ params }: { params: Promise<{ id: st
             {items.length > 0 && (
               <div className="border-t border-gray-100 mt-4 pt-4 space-y-2">
                 <div className="flex justify-between text-sm"><span className="text-gray-500">المجموع الفرعي</span><span className="font-bold font-mono-en">{fmtCur(subtotal)}</span></div>
-                <div className="flex justify-between text-sm"><span className="text-gray-500">ضريبة (5%)</span><span className="font-bold font-mono-en">{fmtCur(vat)}</span></div>
+                <div className="flex justify-between text-sm"><span className="text-gray-500">ضريبة ({(vatRate * 100).toFixed(0)}%)</span><span className="font-bold font-mono-en">{fmtCur(vat)}</span></div>
                 <div className="flex justify-between text-base pt-2 border-t border-gray-200"><span className="font-bold">الإجمالي</span><span className="font-black font-mono-en text-lg">{fmtCur(total)}</span></div>
               </div>
             )}
@@ -359,7 +359,7 @@ export default function EditQuotationPage({ params }: { params: Promise<{ id: st
             </div>
             <div className="bg-gray-900 text-white rounded p-5 mt-5">
               <div className="flex justify-between items-center mb-3"><span className="text-gray-400 text-sm">المجموع الفرعي</span><span className="font-bold font-mono-en">{fmtCur(subtotal)}</span></div>
-              <div className="flex justify-between items-center mb-3"><span className="text-gray-400 text-sm">ضريبة (5%)</span><span className="font-bold font-mono-en">{fmtCur(vat)}</span></div>
+              <div className="flex justify-between items-center mb-3"><span className="text-gray-400 text-sm">ضريبة ({(vatRate * 100).toFixed(0)}%)</span><span className="font-bold font-mono-en">{fmtCur(vat)}</span></div>
               <div className="flex justify-between items-center pt-3 border-t border-gray-700"><span className="font-bold text-lg">الإجمالي النهائي</span><span className="text-2xl font-black font-mono-en">{fmtCur(total)}</span></div>
               <div className="flex justify-between items-center mt-2"><span className="text-gray-400 text-sm">الدفعة المقدمة ({advancePct}%)</span><span className="font-bold font-mono-en text-green-400">{fmtCur(advance)}</span></div>
             </div>

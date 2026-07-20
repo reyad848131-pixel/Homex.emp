@@ -77,7 +77,7 @@ export default function NewQuotationPage() {
     fetch("/api/me").then((r) => r.ok ? r.json() : {}).then((u: any) => setEmployeeName(u?.name || "")).catch(() => {});
     fetch("/api/settings").then((r) => r.ok ? r.json() : {}).then((s: any) => {
       if (s.vat_rate) setVatRate(parseFloat(s.vat_rate) / 100 || 0.05);
-      if (s.advance_percent) setAdvancePct(parseInt(s.advance_percent) || 15);
+      if (s.advance_pct) setAdvancePct(parseInt(s.advance_pct) || 15);
     }).catch(() => {});
   }, []);
 
@@ -489,7 +489,7 @@ export default function NewQuotationPage() {
                     <span className="font-bold font-mono-en">{fmtCur(subtotal)}</span>
                   </div>
                   <div className="flex justify-between text-sm">
-                    <span className="text-gray-500">ضريبة القيمة المضافة (5%)</span>
+                    <span className="text-gray-500">ضريبة القيمة المضافة ({(vatRate * 100).toFixed(0)}%)</span>
                     <span className="font-bold font-mono-en">{fmtCur(vat)}</span>
                   </div>
                   <div className="flex justify-between text-base pt-2 border-t border-gray-200">
@@ -580,7 +580,7 @@ export default function NewQuotationPage() {
                 <span className="font-bold font-mono-en">{fmtCur(subtotal)}</span>
               </div>
               <div className="flex justify-between items-center mb-3">
-                <span className="text-gray-400 text-sm">ضريبة القيمة المضافة (5%)</span>
+                <span className="text-gray-400 text-sm">ضريبة القيمة المضافة ({(vatRate * 100).toFixed(0)}%)</span>
                 <span className="font-bold font-mono-en">{fmtCur(vat)}</span>
               </div>
               <div className="flex justify-between items-center pt-3 border-t border-gray-700">

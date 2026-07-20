@@ -23,14 +23,22 @@ export default function QuotationsPage() {
   const [search, setSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState("all");
   const [total, setTotal] = useState(0);
+  const [page, setPage] = useState(1);
+  const limit = 20;
 
   const fmtCur = (n: number) => `${n.toFixed(3)} ر.ع`;
+
+  useEffect(() => {
+    setPage(1);
+  }, [search, statusFilter]);
 
   useEffect(() => {
     setLoading(true);
     const params = new URLSearchParams();
     if (search) params.set("search", search);
     if (statusFilter !== "all") params.set("status", statusFilter);
+    params.set("page", String(page));
+    params.set("limit", String(limit));
 
     fetch(`/api/quotations?${params}`)
       .then((r) => r.json())
@@ -39,7 +47,7 @@ export default function QuotationsPage() {
         setTotal(data.total || 0);
       })
       .finally(() => setLoading(false));
-  }, [search, statusFilter]);
+  }, [search, statusFilter, page]);
 
   const statuses = ["all", ...Object.keys(STATUS_MAP)];
   const statusLabels: Record<string, string> = { all: "الكل", ...Object.fromEntries(Object.entries(STATUS_MAP).map(([k, v]) => [k, v.label])) };
@@ -137,6 +145,34 @@ export default function QuotationsPage() {
           </div>
         )}
       </div>
+
+      {/* Pagination */}
+      {total > limit && (
+        <div className="flex items-center justify-between mt-4">
+          <p className="text-sm text-gray-500">
+            عرض {(page - 1) * limit + 1} - {Math.min(page * limit, total)} من {total}
+          </p>
+          <div className="flex gap-2">
+            <button
+              onClick={() => setPage((p) => Math.max(1, p - 1))}
+              disabled={page === 1}
+              className="px-4 py-2 border border-gray-200 rounded text-sm font-bold hover:bg-gray-50 disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
+            >
+              السابق
+            </button>
+            <span className="flex items-center px-3 text-sm text-gray-500 font-mono-en">
+              {page} / {Math.ceil(total / limit)}
+            </span>
+            <button
+              onClick={() => setPage((p) => Math.min(Math.ceil(total / limit), p + 1))}
+              disabled={page >= Math.ceil(total / limit)}
+              className="px-4 py-2 border border-gray-200 rounded text-sm font-bold hover:bg-gray-50 disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
+            >
+              التالي
+            </button>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

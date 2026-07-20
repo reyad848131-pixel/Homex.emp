@@ -258,7 +258,7 @@ export default function QuotationDetailPage({ params }: { params: Promise<{ id: 
                 <span className="font-bold font-mono-en">{fmtCur(q.subtotal)}</span>
               </div>
               <div className="flex justify-between text-sm">
-                <span className="text-gray-500">ضريبة القيمة المضافة (5%)</span>
+                <span className="text-gray-500">ضريبة القيمة المضافة ({(q.vatRate * 100).toFixed(0)}%)</span>
                 <span className="font-bold font-mono-en">{fmtCur(q.vatAmount)}</span>
               </div>
               <div className="flex justify-between text-lg pt-2 border-t border-gray-200">
@@ -344,7 +344,7 @@ export default function QuotationDetailPage({ params }: { params: Promise<{ id: 
         <div className="flex justify-end">
           <div className="w-64 space-y-1 text-sm">
             <div className="flex justify-between"><span>المجموع الفرعي</span><span className="font-bold font-mono-en">{fmtCur(q.subtotal)}</span></div>
-            <div className="flex justify-between"><span>ضريبة (5%)</span><span className="font-mono-en">{fmtCur(q.vatAmount)}</span></div>
+            <div className="flex justify-between"><span>ضريبة ({(q.vatRate * 100).toFixed(0)}%)</span><span className="font-mono-en">{fmtCur(q.vatAmount)}</span></div>
             <div className="flex justify-between border-t-2 border-gray-900 pt-2 text-lg">
               <span className="font-bold">الإجمالي</span>
               <span className="font-black font-mono-en">{fmtCur(q.total)}</span>

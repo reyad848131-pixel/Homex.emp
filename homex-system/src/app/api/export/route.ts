@@ -12,7 +12,6 @@ export async function GET(req: NextRequest) {
   try {
     const session = await getAuth();
     if (!session) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-
     const user = session.user as any;
     if (user.role === "sales") return NextResponse.json({ error: "Forbidden" }, { status: 403 });
 
