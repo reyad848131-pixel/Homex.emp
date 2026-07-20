@@ -42,10 +42,7 @@
       "createStartMenuShortcut": true,
       "shortcutName": "Homex"
     },
-    "publish": {
-      "provider": "generic",
-      "url": "https://your-domain.com/updates/"
-    },
+    "publish": null,
     "files": [
       "main.js",
       "preload.js",

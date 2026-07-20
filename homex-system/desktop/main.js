@@ -4,7 +4,7 @@ const path = require("path");
 const fs = require("fs");
 
 const configPath = path.join(app.isPackaged ? path.dirname(process.execPath) : __dirname, "config.json");
-let config = { serverUrl: "https://your-domain.com" };
+let config = { serverUrl: "https://homex-emp-five.vercel.app" };
 try {
   config = JSON.parse(fs.readFileSync(configPath, "utf-8"));
 } catch {}
