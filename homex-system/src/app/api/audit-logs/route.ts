@@ -3,17 +3,18 @@ import { getAuth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 
 export async function GET(req: NextRequest) {
-  const session = await getAuth();
-  if (!session) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  try {
+    const session = await getAuth();
+    if (!session) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
-  const user = session.user as any;
-  if (user.role !== "admin" && user.role !== "manager") {
-    return NextResponse.json({ error: "Forbidden" }, { status: 403 });
-  }
+    const user = session.user as any;
+    if (user.role !== "admin" && user.role !== "manager") {
+      return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+    }
 
   const { searchParams } = new URL(req.url);
   const page = parseInt(searchParams.get("page") || "1");
-  const limit = parseInt(searchParams.get("limit") || "30");
+  const limit = Math.min(parseInt(searchParams.get("limit") || "30"), 100);
   const entity = searchParams.get("entity");
 
   const where: any = {};
@@ -30,5 +31,8 @@ export async function GET(req: NextRequest) {
     prisma.auditLog.count({ where }),
   ]);
 
-  return NextResponse.json({ logs, total, page, totalPages: Math.ceil(total / limit) });
+    return NextResponse.json({ logs, total, page, totalPages: Math.ceil(total / limit) });
+  } catch {
+    return NextResponse.json({ error: "Server error" }, { status: 500 });
+  }
 }

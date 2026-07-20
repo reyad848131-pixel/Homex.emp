@@ -6,17 +6,18 @@ import { logAction } from "@/lib/audit";
 import { getSetting } from "@/lib/settings";
 
 export async function GET(req: NextRequest) {
-  const session = await getAuth();
-  if (!session) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  try {
+    const session = await getAuth();
+    if (!session) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
-  const user = session.user as any;
-  const isAdmin = user.role === "admin" || user.role === "manager";
+    const user = session.user as any;
+    const isAdmin = user.role === "admin" || user.role === "manager";
 
   const { searchParams } = new URL(req.url);
   const status = searchParams.get("status");
   const search = searchParams.get("search");
   const page = parseInt(searchParams.get("page") || "1");
-  const limit = parseInt(searchParams.get("limit") || "20");
+  const limit = Math.min(parseInt(searchParams.get("limit") || "20"), 100);
 
   const where: any = isAdmin ? {} : { employeeId: user.id };
   if (status && status !== "all") where.status = status;
@@ -39,7 +40,10 @@ export async function GET(req: NextRequest) {
     prisma.quotation.count({ where }),
   ]);
 
-  return NextResponse.json({ quotations, total, page, totalPages: Math.ceil(total / limit) });
+    return NextResponse.json({ quotations, total, page, totalPages: Math.ceil(total / limit) });
+  } catch {
+    return NextResponse.json({ error: "Server error" }, { status: 500 });
+  }
 }
 
 export async function POST(req: NextRequest) {

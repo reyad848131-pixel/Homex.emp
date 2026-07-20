@@ -42,6 +42,7 @@ export default function EditQuotationPage({ params }: { params: Promise<{ id: st
   const [items, setItems] = useState<LineItem[]>([]);
   const [saving, setSaving] = useState(false);
   const [advancePct, setAdvancePct] = useState(15);
+  const [vatRate, setVatRate] = useState(0.05);
   const [notes, setNotes] = useState("");
   const [customerId, setCustomerId] = useState("");
 
@@ -70,6 +71,7 @@ export default function EditQuotationPage({ params }: { params: Promise<{ id: st
         address: q.customer?.address || "",
       });
       setAdvancePct(q.advancePct || 15);
+      setVatRate(q.vatRate || 0.05);
       setNotes(q.notes || "");
       setItems(
         (q.items || []).map((item: any) => ({
@@ -90,7 +92,7 @@ export default function EditQuotationPage({ params }: { params: Promise<{ id: st
 
   const wilayats = customer.governorate ? GOVERNORATES[customer.governorate] || [] : [];
   const subtotal = items.reduce((s, i) => s + i.lineTotal, 0);
-  const vat = subtotal * 0.05;
+  const vat = subtotal * vatRate;
   const total = subtotal + vat;
   const advance = total * (advancePct / 100);
   const fmtCur = (n: number) => `${n.toFixed(3)} ر.ع`;
@@ -179,7 +181,8 @@ export default function EditQuotationPage({ params }: { params: Promise<{ id: st
                   className="border border-gray-200 rounded px-2 py-2.5 text-sm w-24 font-mono-en">
                   <option value="+968">+968</option><option value="+971">+971</option><option value="+966">+966</option>
                 </select>
-                <input type="tel" value={customer.phone} onChange={(e) => setCustomer({ ...customer, phone: e.target.value })}
+                <input type="tel" value={customer.phone} onChange={(e) => setCustomer({ ...customer, phone: e.target.value.replace(/\D/g, "").slice(0, 8) })}
+                  pattern="[0-9]{8}" maxLength={8}
                   className="flex-1 border border-gray-200 rounded px-3 py-2.5 text-sm font-mono-en" placeholder="9XXXXXXX" />
               </div>
             </div>
