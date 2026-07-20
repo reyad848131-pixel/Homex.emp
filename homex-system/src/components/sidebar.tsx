@@ -18,7 +18,7 @@ import {
   Menu,
   X,
 } from "lucide-react";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 
 const ROLE_LABELS: Record<string, string> = {
   admin: "مدير النظام",
@@ -52,6 +52,11 @@ export function Sidebar({ user }: SidebarProps) {
   const pathname = usePathname();
   const router = useRouter();
   const [mobileOpen, setMobileOpen] = useState(false);
+  const [logo, setLogo] = useState("");
+
+  useEffect(() => {
+    fetch("/api/logo").then((r) => r.json()).then((d) => setLogo(d.logo || "")).catch(() => {});
+  }, []);
 
   const handleLogout = async () => {
     await fetch("/api/logout", { method: "POST" });
@@ -68,10 +73,24 @@ export function Sidebar({ user }: SidebarProps) {
   const content = (
     <>
       <div className="p-5 border-b border-gray-200">
-        <h1 className="text-xl font-black tracking-tight text-gray-900">homex</h1>
-        <p className="text-[10px] tracking-[0.12em] uppercase text-gray-400 font-medium mt-0.5 font-mono-en">
-          Quotation System
-        </p>
+        {logo ? (
+          <div className="flex items-center gap-3">
+            <img src={logo} alt="Logo" className="w-10 h-10 object-contain" />
+            <div>
+              <h1 className="text-lg font-black tracking-tight text-gray-900">homex</h1>
+              <p className="text-[9px] tracking-[0.12em] uppercase text-gray-400 font-medium font-mono-en">
+                Quotation System
+              </p>
+            </div>
+          </div>
+        ) : (
+          <>
+            <h1 className="text-xl font-black tracking-tight text-gray-900">homex</h1>
+            <p className="text-[10px] tracking-[0.12em] uppercase text-gray-400 font-medium mt-0.5 font-mono-en">
+              Quotation System
+            </p>
+          </>
+        )}
       </div>
 
       <nav className="flex-1 p-3 space-y-1">

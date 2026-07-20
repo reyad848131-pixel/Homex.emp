@@ -23,6 +23,7 @@ model Employee {
   customers     Customer[]
   auditLogs     AuditLog[]
   notifications Notification[]
+  payments      Payment[]
 
   @@map("employees")
 }
@@ -84,12 +85,31 @@ model Quotation {
   customer Customer    @relation(fields: [customerId], references: [id])
   employee Employee    @relation(fields: [employeeId], references: [id])
   items    QuoteItem[]
+  payments Payment[]
 
   @@index([employeeId])
   @@index([customerId])
   @@index([status])
   @@index([createdAt])
   @@map("quotations")
+}
+
+model Payment {
+  id          String   @id @default(cuid())
+  quotationId String   @map("quotation_id")
+  amount      Float
+  method      String   @default("cash")
+  reference   String?
+  notes       String?
+  paidAt      DateTime @default(now()) @map("paid_at")
+  recordedBy  String   @map("recorded_by")
+  createdAt   DateTime @default(now()) @map("created_at")
+
+  quotation Quotation @relation(fields: [quotationId], references: [id], onDelete: Cascade)
+  recorder  Employee  @relation(fields: [recordedBy], references: [id])
+
+  @@index([quotationId])
+  @@map("payments")
 }
 
 model QuoteItem {
