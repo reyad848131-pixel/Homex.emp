@@ -141,6 +141,11 @@ export default function SettingsPage() {
               <input type="text" value={settings.company_cr || ""} onChange={(e) => update("company_cr", e.target.value)}
                 className="w-full border border-gray-200 rounded px-3 py-2.5 text-sm font-mono-en" placeholder="XXXXXXXX" />
             </div>
+            <div>
+              <label className="block text-sm font-semibold text-gray-600 mb-1.5">موقع الشركة</label>
+              <input type="url" value={settings.company_website || ""} onChange={(e) => update("company_website", e.target.value)}
+                className="w-full border border-gray-200 rounded px-3 py-2.5 text-sm font-mono-en" dir="ltr" placeholder="https://homex-om.netlify.app" />
+            </div>
           </div>
         </div>
 

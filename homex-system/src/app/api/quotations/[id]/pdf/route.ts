@@ -41,9 +41,12 @@ export async function GET(
   const companyFactory = await getSetting("company_factory", "شركة تابعة لمصنع سلطان النبهاني للمنتجات الخشبية — بهلاء، عُمان");
   const termsConditions = await getSetting("terms_conditions", "");
   const companyLogo = await getSetting("company_logo", "");
+  const companyWebsite = await getSetting("company_website", "");
 
   const fmtCur = (n: number) => n.toFixed(3);
   const fmtDate = (d: Date | string) => new Date(d).toLocaleDateString("ar-OM", { year: "numeric", month: "long", day: "numeric" });
+  const now = new Date();
+  const printDate = `${now.getDate().toString().padStart(2,"0")}/${(now.getMonth()+1).toString().padStart(2,"0")}/${now.getFullYear()}, ${now.getHours().toString().padStart(2,"0")}:${now.getMinutes().toString().padStart(2,"0")} ${now.getHours() >= 12 ? "PM" : "AM"}`;
 
   const itemRows = quotation.items.map((item, i) => `
     <tr>
@@ -57,9 +60,28 @@ export async function GET(
 
   const termsHtml = termsConditions ? (() => {
     const lines = termsConditions.split("\n").filter(Boolean);
-    return lines.map((line: string) =>
-      `<div class="term-item">– ${esc(line)}</div>`
-    ).join("");
+    const sections: { title: string; items: string[] }[] = [];
+    let current: { title: string; items: string[] } | null = null;
+    for (const line of lines) {
+      const trimmed = line.trim();
+      if (trimmed.startsWith("#")) {
+        if (current) sections.push(current);
+        current = { title: trimmed.replace(/^#+\s*/, ""), items: [] };
+      } else {
+        if (!current) current = { title: "", items: [] };
+        current.items.push(trimmed);
+      }
+    }
+    if (current) sections.push(current);
+
+    if (sections.length === 1 && !sections[0].title) {
+      return sections[0].items.map(l => `<div class="term-item">– ${esc(l)}</div>`).join("");
+    }
+
+    return sections.map(s => `
+      ${s.title ? `<div class="terms-section-title">${esc(s.title)}</div>` : ""}
+      ${s.items.map(l => `<div class="term-item">– ${esc(l)}</div>`).join("")}
+    `).join("");
   })() : "";
 
   const html = `<!DOCTYPE html>
@@ -89,60 +111,72 @@ export async function GET(
     /* ===== HEADER ===== */
     .header {
       background: #d5d0c8;
-      padding: 40px 48px 36px;
+      padding: 32px 48px 28px;
       display: flex;
       align-items: center;
-      gap: 28px;
+      position: relative;
+    }
+
+    .header-accent {
+      position: absolute;
+      left: 0;
+      top: 0;
+      bottom: 0;
+      width: 10px;
+      background: #8B9A7B;
     }
 
     .header-logo {
       flex-shrink: 0;
+      margin-left: 0;
     }
 
     .header-logo img {
-      width: 100px;
-      height: 100px;
+      width: 90px;
+      height: 90px;
       object-fit: contain;
     }
 
     .logo-placeholder {
-      width: 100px;
-      height: 100px;
+      width: 90px;
+      height: 90px;
       background: rgba(255,255,255,0.25);
-      border-radius: 8px;
+      border-radius: 6px;
       display: flex;
       align-items: center;
       justify-content: center;
     }
 
     .logo-placeholder svg {
-      width: 50px;
-      height: 50px;
+      width: 45px;
+      height: 45px;
       opacity: 0.5;
     }
 
     .header-info {
       flex: 1;
+      text-align: center;
+      padding: 0 20px;
     }
 
     .header-info h1 {
-      font-size: 36px;
+      font-size: 32px;
       font-weight: 900;
-      letter-spacing: 3px;
+      letter-spacing: 4px;
       color: #1a1a1a;
       margin-bottom: 2px;
     }
 
     .header-subtitle {
-      font-size: 14px;
+      font-size: 13px;
       color: #555;
       font-weight: 500;
     }
 
     .header-factory {
-      font-size: 11px;
+      font-size: 10.5px;
       color: #777;
-      margin-top: 2px;
+      margin-top: 3px;
     }
 
     /* ===== INFO TABLE ===== */
@@ -153,19 +187,19 @@ export async function GET(
     .info-table {
       width: 100%;
       border-collapse: collapse;
-      margin-top: 28px;
+      margin-top: 24px;
       border: 1px solid #ddd;
     }
 
     .info-table td {
-      padding: 12px 20px;
+      padding: 10px 20px;
       border: 1px solid #ddd;
       font-size: 13px;
       vertical-align: top;
     }
 
     .info-label {
-      width: 120px;
+      width: 110px;
       font-weight: 700;
       color: #1a1a1a;
       background: #fafaf8;
@@ -176,31 +210,32 @@ export async function GET(
       color: #333;
     }
 
-    .info-value .company-name-val {
+    .info-value .name-val {
       font-weight: 700;
-      font-size: 14px;
+      font-size: 13.5px;
     }
 
     .info-value .sub-line {
       font-size: 12px;
       color: #666;
-      margin-top: 2px;
+      margin-top: 1px;
     }
 
     /* ===== SUBJECT ===== */
     .subject {
-      padding: 24px 48px 0;
-      margin-bottom: 8px;
-    }
-
-    .subject h2 {
-      font-size: 16px;
-      font-weight: 800;
+      padding: 22px 48px 0;
+      text-align: center;
       margin-bottom: 6px;
     }
 
+    .subject h2 {
+      font-size: 15px;
+      font-weight: 800;
+      margin-bottom: 5px;
+    }
+
     .subject p {
-      font-size: 12.5px;
+      font-size: 12px;
       color: #555;
       line-height: 1.7;
     }
@@ -209,20 +244,30 @@ export async function GET(
     .section-bar {
       background: #3d3d3d;
       color: #fff;
-      padding: 14px 48px;
-      font-size: 18px;
+      padding: 12px 48px;
+      font-size: 16px;
       font-weight: 800;
-      margin-top: 30px;
+      margin-top: 24px;
       display: flex;
       align-items: center;
-      justify-content: flex-end;
-      gap: 12px;
+      justify-content: space-between;
+      direction: rtl;
+    }
+
+    .section-bar-text {
+      flex: 1;
+      text-align: right;
     }
 
     .section-bar-icon {
-      opacity: 0.5;
+      flex-shrink: 0;
+    }
+
+    .section-bar-icon svg {
       width: 22px;
       height: 22px;
+      opacity: 0.6;
+      fill: #fff;
     }
 
     /* ===== ITEMS TABLE ===== */
@@ -233,7 +278,8 @@ export async function GET(
     .items-table {
       width: 100%;
       border-collapse: collapse;
-      margin-top: 20px;
+      margin-top: 16px;
+      border: 1px solid #ddd;
     }
 
     .items-table thead th {
@@ -241,14 +287,14 @@ export async function GET(
       color: #555;
       font-size: 12px;
       font-weight: 700;
-      padding: 10px 14px;
+      padding: 9px 12px;
       text-align: right;
-      border-bottom: 2px solid #ddd;
+      border: 1px solid #ddd;
     }
 
     .td-cell {
-      padding: 11px 14px;
-      border-bottom: 1px solid #eee;
+      padding: 9px 12px;
+      border: 1px solid #eee;
       font-size: 13px;
     }
 
@@ -257,66 +303,99 @@ export async function GET(
     .td-bold { font-weight: 700; }
 
     .td-desc {
-      font-weight: 600;
-      max-width: 300px;
+      font-weight: 500;
     }
 
-    /* ===== TOTALS ===== */
-    .totals-table {
-      width: 100%;
-      border-collapse: collapse;
-      margin-top: 0;
-    }
-
-    .totals-table td {
-      padding: 10px 14px;
+    /* ===== TOTALS (inside items table) ===== */
+    .totals-row td {
+      padding: 9px 12px;
+      border: 1px solid #eee;
       font-size: 13px;
-      border-bottom: 1px solid #eee;
     }
 
-    .totals-label {
+    .totals-row .t-label {
       text-align: right;
-      font-weight: 600;
-      color: #555;
+      font-weight: 700;
+      color: #333;
     }
 
-    .totals-value {
+    .totals-row .t-value {
       text-align: left;
       font-weight: 700;
       font-family: 'Cairo', monospace;
       direction: ltr;
-      width: 140px;
+      text-decoration: underline;
     }
 
-    .totals-spacer {
-      border: none !important;
-    }
-
-    .grand-total td {
+    .grand-total-row td {
       background: #3d3d3d;
       color: #fff;
-      font-size: 15px;
+      font-size: 14px;
       font-weight: 800;
-      padding: 13px 14px;
-      border: none;
+      padding: 11px 12px;
+      border: 1px solid #3d3d3d;
     }
 
-    .grand-total .totals-value {
-      font-size: 16px;
+    .grand-total-row .t-value {
+      text-align: left;
       font-weight: 900;
+      font-family: 'Cairo', monospace;
+      direction: ltr;
+      text-decoration: underline;
+      color: #fff;
     }
 
-    /* ===== NOTES ===== */
-    .notes-section {
-      padding: 20px 48px 0;
+    .advance-row td {
+      padding: 9px 12px;
+      border: 1px solid #eee;
+      font-size: 13px;
+      color: #16a34a;
     }
 
-    .note-text {
-      font-size: 12px;
-      color: #777;
+    .advance-row .t-label { text-align: right; font-weight: 700; }
+    .advance-row .t-value { text-align: left; font-weight: 700; font-family: 'Cairo', monospace; direction: ltr; }
+
+    /* ===== DISCLAIMER NOTE ===== */
+    .disclaimer {
       text-align: center;
-      margin-top: 16px;
+      font-size: 11px;
+      color: #888;
+      padding: 14px 48px 0;
       line-height: 1.7;
+    }
+
+    /* ===== PAGE FOOTER ===== */
+    .page-footer {
+      border-top: 1px solid #ddd;
+      padding: 14px 48px;
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+      font-size: 11px;
+      color: #999;
+      margin-top: 30px;
+      direction: ltr;
+    }
+
+    .footer-left {
+      text-align: left;
+      color: #aaa;
+    }
+
+    .footer-right {
+      text-align: right;
+      color: #999;
+      line-height: 1.5;
+    }
+
+    /* ===== TERMS FOOTER ===== */
+    .terms-footer {
+      border-top: 1px solid #ddd;
+      padding: 14px 48px;
+      text-align: center;
+      font-size: 11px;
+      color: #999;
+      margin-top: 30px;
     }
 
     /* ===== PAGE 2: TERMS ===== */
@@ -326,35 +405,29 @@ export async function GET(
     }
 
     .terms-content {
-      padding: 30px 48px 40px;
+      padding: 28px 48px 40px;
     }
 
-    .terms-group {
-      margin-bottom: 28px;
-    }
-
-    .terms-group h3 {
-      font-size: 16px;
+    .terms-section-title {
+      font-size: 14px;
       font-weight: 800;
-      margin-bottom: 14px;
       color: #1a1a1a;
+      margin-top: 22px;
+      margin-bottom: 10px;
+      padding-bottom: 4px;
+      border-bottom: 1.5px solid #1a1a1a;
+      display: inline-block;
+    }
+
+    .terms-section-title:first-child {
+      margin-top: 0;
     }
 
     .term-item {
       font-size: 13px;
       color: #444;
-      padding: 4px 0;
+      padding: 3px 0;
       line-height: 1.8;
-    }
-
-    /* ===== FOOTER ===== */
-    .page-footer {
-      border-top: 1px solid #ddd;
-      padding: 16px 48px;
-      text-align: center;
-      font-size: 11px;
-      color: #999;
-      margin-top: 40px;
     }
 
     @media print {
@@ -369,15 +442,16 @@ export async function GET(
 
     <!-- ========== HEADER ========== -->
     <div class="header">
+      <div class="header-accent"></div>
       <div class="header-logo">
         ${companyLogo
           ? `<img src="${companyLogo}" alt="${esc(companyName)}" />`
           : `<div class="logo-placeholder">
               <svg viewBox="0 0 100 100" fill="none" xmlns="http://www.w3.org/2000/svg">
-                <rect x="10" y="10" width="35" height="35" rx="2" fill="#888" opacity="0.6"/>
-                <rect x="55" y="10" width="35" height="35" rx="2" fill="#888" opacity="0.4"/>
-                <rect x="10" y="55" width="35" height="35" rx="2" fill="#888" opacity="0.4"/>
-                <rect x="55" y="55" width="35" height="35" rx="2" fill="#888" opacity="0.6"/>
+                <rect x="10" y="10" width="35" height="35" rx="3" fill="#8B9A7B"/>
+                <rect x="55" y="10" width="35" height="35" rx="3" fill="#C4A97D"/>
+                <rect x="10" y="55" width="35" height="35" rx="3" fill="#C4A97D"/>
+                <rect x="55" y="55" width="35" height="35" rx="3" fill="#8B9A7B"/>
               </svg>
             </div>`
         }
@@ -395,18 +469,18 @@ export async function GET(
         <tr>
           <td class="info-label">من شركة</td>
           <td class="info-value">
-            <div class="company-name-val">${esc(companyName)}</div>
+            <div class="name-val">${esc(companyName)}</div>
+            ${companyFactory ? `<div class="sub-line">${esc(companyFactory)}</div>` : ""}
             ${companyAddress ? `<div class="sub-line">${esc(companyAddress)}</div>` : ""}
             ${companyPhone ? `<div class="sub-line">${esc(companyPhone)}</div>` : ""}
-            ${companyCR ? `<div class="sub-line">س.ت: ${esc(companyCR)}</div>` : ""}
           </td>
         </tr>
         <tr>
           <td class="info-label">إلى العميل</td>
           <td class="info-value">
-            <div class="company-name-val">${esc(quotation.customer.name)}</div>
+            <div class="name-val">${esc(quotation.customer.name)}</div>
             <div class="sub-line">${esc(quotation.customer.phoneCode)} ${esc(quotation.customer.phone)}</div>
-            <div class="sub-line">${esc(quotation.customer.governorate)} - ${esc(quotation.customer.wilayat)}</div>
+            <div class="sub-line">${esc(quotation.customer.governorate)} – ${esc(quotation.customer.wilayat)}</div>
             ${quotation.customer.address ? `<div class="sub-line">${esc(quotation.customer.address)}</div>` : ""}
           </td>
         </tr>
@@ -434,82 +508,81 @@ export async function GET(
     <!-- ========== SUBJECT ========== -->
     <div class="subject">
       <h2>الموضوع: عرض سعر</h2>
-      <p>هذا العرض مقدّم بناءً على المواصفات والبنود المحددة أدناه، من قبل الموظف ${esc(quotation.employee.name)}.</p>
+      <p>هذا العرض مقدّم بناءً على المواصفات والبنود المحددة أدناه، وفق المواصفات التالية.</p>
     </div>
 
     <!-- ========== ITEMS SECTION ========== -->
     <div class="section-bar">
-      تفاصيل البنود
+      <span class="section-bar-text">تفاصيل البنود</span>
+      <span class="section-bar-icon">
+        <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8l-6-6z" fill="none" stroke="#fff" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/><polyline points="14 2 14 8 20 8" fill="none" stroke="#fff" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/><line x1="16" y1="13" x2="8" y2="13" stroke="#fff" stroke-width="1.5" stroke-linecap="round"/><line x1="16" y1="17" x2="8" y2="17" stroke="#fff" stroke-width="1.5" stroke-linecap="round"/><polyline points="10 9 9 9 8 9" fill="none" stroke="#fff" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
+      </span>
     </div>
 
     <div class="items-section">
       <table class="items-table">
         <thead>
           <tr>
-            <th style="width:45px">م</th>
+            <th style="width:40px;text-align:center">م</th>
             <th>الوصف</th>
-            <th style="width:80px">الكمية</th>
-            <th style="width:120px">سعر الوحدة (ر.ع)</th>
-            <th style="width:120px">الإجمالي (ر.ع)</th>
+            <th style="width:80px;text-align:center">الكمية</th>
+            <th style="width:115px;text-align:center">سعر الوحدة (ر.ع)</th>
+            <th style="width:115px;text-align:center">الإجمالي (ر.ع)</th>
           </tr>
         </thead>
         <tbody>
           ${itemRows}
+          <!-- Totals rows inside the table -->
+          <tr class="totals-row">
+            <td colspan="4" class="t-label">الإجمالي</td>
+            <td class="t-value">${fmtCur(quotation.subtotal)}</td>
+          </tr>
+          <tr class="totals-row">
+            <td colspan="4" class="t-label">ضريبة القيمة المضافة ${(quotation.vatRate * 100).toFixed(0)}%</td>
+            <td class="t-value">${fmtCur(quotation.vatAmount)}</td>
+          </tr>
+          <tr class="grand-total-row">
+            <td colspan="4" class="t-label" style="text-align:right;color:#fff">المبلغ الإجمالي</td>
+            <td class="t-value">${fmtCur(quotation.total)}</td>
+          </tr>
+          ${quotation.advancePct > 0 ? `
+          <tr class="advance-row">
+            <td colspan="4" class="t-label">الدفعة المقدمة (${quotation.advancePct}%)</td>
+            <td class="t-value">${fmtCur(quotation.advanceAmount)}</td>
+          </tr>` : ""}
         </tbody>
-      </table>
-
-      <!-- Totals integrated into table style -->
-      <table class="totals-table">
-        <tr>
-          <td class="totals-spacer" colspan="1"></td>
-          <td class="totals-label">الإجمالي</td>
-          <td class="totals-value">${fmtCur(quotation.subtotal)}</td>
-        </tr>
-        <tr>
-          <td class="totals-spacer" colspan="1"></td>
-          <td class="totals-label">ضريبة القيمة المضافة ${(quotation.vatRate * 100).toFixed(0)}%</td>
-          <td class="totals-value">${fmtCur(quotation.vatAmount)}</td>
-        </tr>
-        <tr class="grand-total">
-          <td class="totals-spacer" style="background:none"></td>
-          <td class="totals-label" style="color:#fff">المبلغ الإجمالي</td>
-          <td class="totals-value" style="color:#fff">${fmtCur(quotation.total)}</td>
-        </tr>
-        ${quotation.advancePct > 0 ? `
-        <tr>
-          <td class="totals-spacer" colspan="1"></td>
-          <td class="totals-label" style="color:#16a34a">الدفعة المقدمة (${quotation.advancePct}%)</td>
-          <td class="totals-value" style="color:#16a34a">${fmtCur(quotation.advanceAmount)}</td>
-        </tr>` : ""}
       </table>
     </div>
 
-    ${quotation.notes ? `
-    <div class="notes-section">
-      <div class="note-text">${esc(quotation.notes)}</div>
-    </div>` : ""}
+    <!-- Disclaimer -->
+    <div class="disclaimer">
+      ${quotation.notes ? esc(quotation.notes) : "هذا السعر تقديري ويعتمد على المواصفات المدخلة – يُؤكَّد السعر النهائي بعد المعاينة الفعلية"}
+    </div>
+
+    <!-- ========== FOOTER (page 1) ========== -->
+    <div class="page-footer">
+      <div class="footer-left">${companyWebsite ? esc(companyWebsite) : ""}</div>
+      <div class="footer-right">
+        ${printDate}
+      </div>
+    </div>
 
     <!-- ========== PAGE 2: TERMS ========== -->
     ${termsConditions ? `
     <div class="terms-page">
       <div class="section-bar">
-        الشروط والمواصفات
+        <span class="section-bar-text">الشروط والمواصفات</span>
+        <span class="section-bar-icon">
+          <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8l-6-6z" fill="none" stroke="#fff" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/><polyline points="14 2 14 8 20 8" fill="none" stroke="#fff" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/><line x1="16" y1="13" x2="8" y2="13" stroke="#fff" stroke-width="1.5" stroke-linecap="round"/><line x1="16" y1="17" x2="8" y2="17" stroke="#fff" stroke-width="1.5" stroke-linecap="round"/><polyline points="10 9 9 9 8 9" fill="none" stroke="#fff" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
+        </span>
       </div>
       <div class="terms-content">
-        <div class="terms-group">
-          ${termsHtml}
-        </div>
+        ${termsHtml}
       </div>
 
-      <div class="page-footer">
-        ${esc(companyName)} · ${esc(companyAddress)}
+      <div class="terms-footer">
+        ${esc(companyName)} · ${esc(companyFactory)} · ${esc(companyAddress)}
       </div>
-    </div>` : ""}
-
-    <!-- ========== FOOTER (page 1) ========== -->
-    ${!termsConditions ? `
-    <div class="page-footer">
-      ${esc(companyName)} · ${esc(companyAddress)}
     </div>` : ""}
 
   </div>
