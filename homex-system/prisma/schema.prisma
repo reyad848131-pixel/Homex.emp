@@ -24,6 +24,7 @@ model Employee {
   auditLogs     AuditLog[]
   notifications Notification[]
   payments      Payment[]
+  invoices      Invoice[]
 
   @@map("employees")
 }
@@ -70,6 +71,7 @@ model Quotation {
   customerId    String    @map("customer_id")
   employeeId    String    @map("employee_id")
   status        String    @default("draft")
+  statusComment String?   @map("status_comment")
   subtotal      Float     @default(0)
   vatRate       Float     @default(0.05) @map("vat_rate")
   vatAmount     Float     @default(0) @map("vat_amount")
@@ -86,12 +88,27 @@ model Quotation {
   employee Employee    @relation(fields: [employeeId], references: [id])
   items    QuoteItem[]
   payments Payment[]
+  invoice  Invoice?
 
   @@index([employeeId])
   @@index([customerId])
   @@index([status])
   @@index([createdAt])
   @@map("quotations")
+}
+
+model Invoice {
+  id            String   @id @default(cuid())
+  invoiceNumber String   @unique @map("invoice_number")
+  quotationId   String   @unique @map("quotation_id")
+  issuedAt      DateTime @default(now()) @map("issued_at")
+  issuedBy      String   @map("issued_by")
+  createdAt     DateTime @default(now()) @map("created_at")
+
+  quotation Quotation @relation(fields: [quotationId], references: [id], onDelete: Cascade)
+  issuer    Employee  @relation(fields: [issuedBy], references: [id])
+
+  @@map("invoices")
 }
 
 model Payment {

@@ -39,8 +39,9 @@ export default function RootLayout({
       <head>
         <meta name="theme-color" content="#171717" />
         <link rel="apple-touch-icon" href="/icons/icon-192.png" />
+        <script dangerouslySetInnerHTML={{ __html: `try{if(localStorage.getItem("theme")==="dark")document.documentElement.classList.add("dark")}catch(e){}` }} />
       </head>
-      <body className="font-cairo antialiased bg-stone-100 text-gray-900 min-h-screen">
+      <body className="font-cairo antialiased bg-stone-100 dark:bg-gray-900 text-gray-900 dark:text-gray-100 min-h-screen">
         <Providers>{children}</Providers>
       </body>
     </html>

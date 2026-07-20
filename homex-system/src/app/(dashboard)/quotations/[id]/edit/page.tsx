@@ -166,7 +166,7 @@ export default function EditQuotationPage({ params }: { params: Promise<{ id: st
       </div>
 
       {step === 1 && (
-        <div className="bg-white border border-gray-200 rounded p-6 max-w-2xl mx-auto">
+        <div className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded p-6 max-w-2xl mx-auto">
           <h2 className="text-lg font-bold mb-5">بيانات العميل</h2>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div>
@@ -209,7 +209,7 @@ export default function EditQuotationPage({ params }: { params: Promise<{ id: st
       {step === 2 && (
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
           <div className="lg:col-span-2 space-y-4">
-            <div className="bg-white border border-gray-200 rounded p-5">
+            <div className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded p-5">
               <h2 className="text-base font-bold mb-4">اختر الفئة</h2>
               <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-6 gap-2">
                 {categories.map((cat) => {
@@ -233,7 +233,7 @@ export default function EditQuotationPage({ params }: { params: Promise<{ id: st
             </div>
 
             {selectedCat && (
-              <div className="bg-white border border-gray-200 rounded p-5">
+              <div className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded p-5">
                 <h2 className="text-base font-bold mb-4">إضافة: {selectedCat.nameAr}</h2>
                 <div className="space-y-4">
                   <div>
@@ -267,7 +267,7 @@ export default function EditQuotationPage({ params }: { params: Promise<{ id: st
             )}
           </div>
 
-          <div className="bg-white border border-gray-200 rounded p-5">
+          <div className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded p-5">
             <div className="flex items-center justify-between mb-4">
               <h2 className="text-base font-bold">البنود المضافة</h2>
               <span className="bg-gray-100 text-gray-600 text-xs font-bold px-2 py-1 rounded-full">{items.length}</span>
@@ -308,7 +308,7 @@ export default function EditQuotationPage({ params }: { params: Promise<{ id: st
 
       {step === 3 && (
         <div className="max-w-3xl mx-auto space-y-4">
-          <div className="bg-white border border-gray-200 rounded p-5">
+          <div className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded p-5">
             <h2 className="text-base font-bold mb-3">بيانات العميل</h2>
             <div className="grid grid-cols-2 gap-3 text-sm">
               <div><span className="text-gray-400">الاسم:</span> <span className="font-bold">{customer.name}</span></div>
@@ -318,7 +318,7 @@ export default function EditQuotationPage({ params }: { params: Promise<{ id: st
             </div>
           </div>
 
-          <div className="bg-white border border-gray-200 rounded p-5">
+          <div className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded p-5">
             <h2 className="text-base font-bold mb-3">تفاصيل البنود ({items.length})</h2>
             <div className="overflow-x-auto">
               <table className="w-full text-sm">
@@ -344,7 +344,7 @@ export default function EditQuotationPage({ params }: { params: Promise<{ id: st
             </div>
           </div>
 
-          <div className="bg-white border border-gray-200 rounded p-5">
+          <div className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded p-5">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               <div>
                 <label className="block text-sm font-semibold text-gray-600 mb-1.5">نسبة الدفعة المقدمة (%)</label>

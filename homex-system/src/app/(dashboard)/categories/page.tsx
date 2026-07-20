@@ -114,7 +114,7 @@ export default function CategoriesPage() {
       </div>
 
       {showForm && (
-        <div className="bg-white border border-gray-200 rounded p-6 mb-6">
+        <div className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded p-6 mb-6">
           <div className="flex items-center justify-between mb-4">
             <h2 className="text-base font-bold">
               {editingId ? "تعديل الفئة" : "إضافة فئة جديدة"}
@@ -189,7 +189,7 @@ export default function CategoriesPage() {
         </div>
       )}
 
-      <div className="bg-white border border-gray-200 rounded">
+      <div className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded">
         {loading ? (
           <div className="p-12 text-center text-gray-400">جاري التحميل...</div>
         ) : categories.length === 0 ? (
@@ -201,7 +201,7 @@ export default function CategoriesPage() {
           <div className="overflow-x-auto">
             <table className="w-full text-sm">
               <thead>
-                <tr className="border-b border-gray-100">
+                <tr className="border-b border-gray-100 dark:border-gray-700">
                   <th className="text-right p-3 px-5 text-xs text-gray-400 font-semibold">الترتيب</th>
                   <th className="text-right p-3 text-xs text-gray-400 font-semibold">الأيقونة</th>
                   <th className="text-right p-3 text-xs text-gray-400 font-semibold">الاسم</th>

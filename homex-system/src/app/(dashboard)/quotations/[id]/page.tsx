@@ -7,7 +7,7 @@ import { cn } from "@/lib/utils";
 import {
   ArrowRight, Printer, Trash2, CheckCircle, XCircle, Send,
   Clock, FileText, User, MapPin, Phone, Pencil, Download, Copy, MessageCircle, CalendarDays,
-  CreditCard, Plus, Banknote,
+  CreditCard, Plus, Banknote, RotateCcw, Receipt, MessageSquare, AlertCircle,
 } from "lucide-react";
 import Link from "next/link";
 
@@ -15,6 +15,7 @@ interface QuotationDetail {
   id: string;
   quoteNumber: string;
   status: string;
+  statusComment: string | null;
   subtotal: number;
   vatRate: number;
   vatAmount: number;
@@ -45,6 +46,12 @@ interface QuotationDetail {
     paidAt: string;
     recorder: { name: string };
   }>;
+  invoice: {
+    id: string;
+    invoiceNumber: string;
+    issuedAt: string;
+    issuer: { name: string };
+  } | null;
 }
 
 const PAYMENT_METHODS: Record<string, string> = {
@@ -66,6 +73,10 @@ export default function QuotationDetailPage({ params }: { params: Promise<{ id: 
   const [payRef, setPayRef] = useState("");
   const [payNotes, setPayNotes] = useState("");
   const [paying, setPaying] = useState(false);
+  const [showStatusDialog, setShowStatusDialog] = useState<"approved" | "declined" | "revised" | null>(null);
+  const [statusComment, setStatusComment] = useState("");
+  const [creatingInvoice, setCreatingInvoice] = useState(false);
+  const [me, setMe] = useState<{ id: string; role: string } | null>(null);
 
   const fmtCur = (n: number) => `${n.toFixed(3)} ر.ع`;
 
@@ -79,18 +90,51 @@ export default function QuotationDetailPage({ params }: { params: Promise<{ id: 
       .then((r) => r.json())
       .then((s) => setTerms(s.terms_conditions || ""))
       .catch(() => {});
+    fetch("/api/me")
+      .then((r) => r.json())
+      .then(setMe)
+      .catch(() => {});
   }, [id]);
 
-  const updateStatus = async (status: string) => {
+  const updateStatus = async (status: string, comment?: string) => {
     const res = await fetch(`/api/quotations/${id}`, {
       method: "PATCH",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ status }),
+      body: JSON.stringify({ status, statusComment: comment || null }),
     });
     if (res.ok) {
       const data = await res.json();
-      setQ((prev) => prev ? { ...prev, status: data.status } : prev);
+      setQ((prev) => prev ? { ...prev, status: data.status, statusComment: data.statusComment } : prev);
+      setShowStatusDialog(null);
+      setStatusComment("");
     }
+  };
+
+  const handleStatusAction = (action: "approved" | "declined" | "revised") => {
+    setStatusComment("");
+    setShowStatusDialog(action);
+  };
+
+  const confirmStatusAction = () => {
+    if (!showStatusDialog) return;
+    if (showStatusDialog === "revised" && !statusComment.trim()) return;
+    updateStatus(showStatusDialog, statusComment.trim());
+  };
+
+  const handleCreateInvoice = async () => {
+    if (!q) return;
+    setCreatingInvoice(true);
+    try {
+      const res = await fetch("/api/invoices", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ quotationId: q.id }),
+      });
+      if (res.ok) {
+        const invoice = await res.json();
+        setQ((prev) => prev ? { ...prev, invoice: { ...invoice, issuer: { name: "" } } } : prev);
+      }
+    } catch {} finally { setCreatingInvoice(false); }
   };
 
   const handleDelete = async () => {
@@ -204,33 +248,52 @@ export default function QuotationDetailPage({ params }: { params: Promise<{ id: 
               <Copy className="w-4 h-4" />
               نسخ
             </button>
-            {(q.status === "draft" || q.status === "pending") && (
+            {(q.status === "draft" || q.status === "pending" || q.status === "revised") && (
               <Link href={`/quotations/${id}/edit`}
                 className="flex items-center gap-2 px-4 py-2 border border-gray-200 rounded text-sm font-bold hover:bg-gray-50">
                 <Pencil className="w-4 h-4" />
                 تعديل
               </Link>
             )}
-            {q.status === "draft" && (
+            {(q.status === "draft" || q.status === "revised") && (
               <button onClick={() => updateStatus("pending")}
                 className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded text-sm font-bold hover:bg-blue-700">
                 <Send className="w-4 h-4" />
                 إرسال للمراجعة
               </button>
             )}
-            {q.status === "pending" && (
+            {q.status === "pending" && me?.role !== "sales" && (
               <>
-                <button onClick={() => updateStatus("approved")}
+                <button onClick={() => handleStatusAction("approved")}
                   className="flex items-center gap-2 px-4 py-2 bg-green-600 text-white rounded text-sm font-bold hover:bg-green-700">
                   <CheckCircle className="w-4 h-4" />
                   اعتماد
                 </button>
-                <button onClick={() => updateStatus("declined")}
+                <button onClick={() => handleStatusAction("revised")}
+                  className="flex items-center gap-2 px-4 py-2 bg-orange-500 text-white rounded text-sm font-bold hover:bg-orange-600">
+                  <RotateCcw className="w-4 h-4" />
+                  إعادة للتعديل
+                </button>
+                <button onClick={() => handleStatusAction("declined")}
                   className="flex items-center gap-2 px-4 py-2 bg-red-600 text-white rounded text-sm font-bold hover:bg-red-700">
                   <XCircle className="w-4 h-4" />
                   رفض
                 </button>
               </>
+            )}
+            {q.status === "approved" && !q.invoice && (
+              <button onClick={handleCreateInvoice} disabled={creatingInvoice}
+                className="flex items-center gap-2 px-4 py-2 bg-emerald-600 text-white rounded text-sm font-bold hover:bg-emerald-700 disabled:opacity-50">
+                <Receipt className="w-4 h-4" />
+                {creatingInvoice ? "جاري الإصدار..." : "إصدار فاتورة"}
+              </button>
+            )}
+            {q.invoice && (
+              <a href={`/api/invoices/${q.invoice.id}/pdf`} target="_blank" rel="noopener noreferrer"
+                className="flex items-center gap-2 px-4 py-2 border border-emerald-200 text-emerald-600 rounded text-sm font-bold hover:bg-emerald-50">
+                <Receipt className="w-4 h-4" />
+                فاتورة {q.invoice.invoiceNumber}
+              </a>
             )}
             <button onClick={handleDelete}
               className="flex items-center gap-2 px-4 py-2 border border-red-200 text-red-600 rounded text-sm font-bold hover:bg-red-50">
@@ -241,7 +304,7 @@ export default function QuotationDetailPage({ params }: { params: Promise<{ id: 
 
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
           {/* Customer Info */}
-          <div className="bg-white border border-gray-200 rounded p-5">
+          <div className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded p-5">
             <h2 className="text-sm font-bold text-gray-400 uppercase tracking-wider mb-4 flex items-center gap-2">
               <User className="w-4 h-4" /> بيانات العميل
             </h2>
@@ -273,7 +336,7 @@ export default function QuotationDetailPage({ params }: { params: Promise<{ id: 
           </div>
 
           {/* Items Table */}
-          <div className="lg:col-span-2 bg-white border border-gray-200 rounded p-5">
+          <div className="lg:col-span-2 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded p-5">
             <h2 className="text-sm font-bold text-gray-400 uppercase tracking-wider mb-4 flex items-center gap-2">
               <FileText className="w-4 h-4" /> تفاصيل البنود ({q.items.length})
             </h2>
@@ -335,15 +398,39 @@ export default function QuotationDetailPage({ params }: { params: Promise<{ id: 
           </div>
         </div>
 
+        {/* Status Comment Banner */}
+        {q.statusComment && (q.status === "declined" || q.status === "revised" || q.status === "approved") && (
+          <div className={cn(
+            "border rounded p-4 mt-6 flex items-start gap-3",
+            q.status === "declined" ? "bg-red-50 border-red-200" :
+            q.status === "revised" ? "bg-orange-50 border-orange-200" :
+            "bg-green-50 border-green-200"
+          )}>
+            <MessageSquare className={cn("w-5 h-5 mt-0.5 flex-shrink-0",
+              q.status === "declined" ? "text-red-500" :
+              q.status === "revised" ? "text-orange-500" : "text-green-500"
+            )} />
+            <div>
+              <p className={cn("text-sm font-bold",
+                q.status === "declined" ? "text-red-700" :
+                q.status === "revised" ? "text-orange-700" : "text-green-700"
+              )}>
+                {q.status === "declined" ? "سبب الرفض" : q.status === "revised" ? "ملاحظة الإعادة للتعديل" : "ملاحظة الاعتماد"}
+              </p>
+              <p className="text-sm text-gray-700 mt-1">{q.statusComment}</p>
+            </div>
+          </div>
+        )}
+
         {q.notes && (
-          <div className="bg-white border border-gray-200 rounded p-5 mt-6">
+          <div className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded p-5 mt-6">
             <h2 className="text-sm font-bold text-gray-400 mb-2">ملاحظات</h2>
             <p className="text-sm text-gray-700">{q.notes}</p>
           </div>
         )}
 
         {terms && (
-          <div className="bg-white border border-gray-200 rounded p-5 mt-6">
+          <div className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded p-5 mt-6">
             <h2 className="text-sm font-bold text-gray-400 mb-3">الشروط والأحكام</h2>
             <ul className="space-y-1.5">
               {terms.split("\n").filter(Boolean).map((line, i) => (
@@ -362,8 +449,8 @@ export default function QuotationDetailPage({ params }: { params: Promise<{ id: 
           const remaining = q.total - totalPaid;
           const paidPct = q.total > 0 ? (totalPaid / q.total) * 100 : 0;
           return (
-            <div className="bg-white border border-gray-200 rounded mt-6">
-              <div className="p-5 border-b border-gray-100 flex items-center justify-between">
+            <div className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded mt-6">
+              <div className="p-5 border-b border-gray-100 dark:border-gray-700 flex items-center justify-between">
                 <h2 className="text-sm font-bold text-gray-400 uppercase tracking-wider flex items-center gap-2">
                   <Banknote className="w-4 h-4" /> المدفوعات
                 </h2>
@@ -544,6 +631,49 @@ export default function QuotationDetailPage({ params }: { params: Promise<{ id: 
           <p>Homex - نظام عروض الأسعار الداخلي</p>
         </div>
       </div>
+
+      {/* Status Comment Dialog */}
+      {showStatusDialog && (
+        <div className="fixed inset-0 bg-black/40 z-50 flex items-center justify-center no-print" onClick={() => setShowStatusDialog(null)}>
+          <div className="bg-white rounded-lg shadow-xl w-full max-w-md p-6 mx-4" onClick={(e) => e.stopPropagation()}>
+            <h3 className="text-lg font-bold mb-1 flex items-center gap-2">
+              {showStatusDialog === "approved" && <><CheckCircle className="w-5 h-5 text-green-600" /> اعتماد عرض السعر</>}
+              {showStatusDialog === "declined" && <><XCircle className="w-5 h-5 text-red-600" /> رفض عرض السعر</>}
+              {showStatusDialog === "revised" && <><RotateCcw className="w-5 h-5 text-orange-500" /> إعادة للتعديل</>}
+            </h3>
+            <p className="text-sm text-gray-500 mb-4">
+              {showStatusDialog === "revised"
+                ? "اكتب ملاحظة للموظف توضح التعديل المطلوب (إلزامي)"
+                : "أضف تعليق أو ملاحظة (اختياري)"}
+            </p>
+            <textarea
+              value={statusComment}
+              onChange={(e) => setStatusComment(e.target.value)}
+              rows={3}
+              className="w-full border border-gray-200 rounded px-3 py-2.5 text-sm mb-4"
+              placeholder={showStatusDialog === "revised" ? "مثال: يرجى تعديل السعر في البند الثاني..." : "أضف ملاحظة..."}
+              autoFocus
+            />
+            <div className="flex gap-2 justify-end">
+              <button onClick={() => setShowStatusDialog(null)}
+                className="px-4 py-2 border border-gray-200 rounded text-sm font-bold hover:bg-gray-50">
+                إلغاء
+              </button>
+              <button onClick={confirmStatusAction}
+                disabled={showStatusDialog === "revised" && !statusComment.trim()}
+                className={cn(
+                  "px-5 py-2 rounded text-sm font-bold text-white disabled:opacity-50",
+                  showStatusDialog === "approved" ? "bg-green-600 hover:bg-green-700" :
+                  showStatusDialog === "revised" ? "bg-orange-500 hover:bg-orange-600" :
+                  "bg-red-600 hover:bg-red-700"
+                )}>
+                {showStatusDialog === "approved" ? "تأكيد الاعتماد" :
+                 showStatusDialog === "revised" ? "إعادة للتعديل" : "تأكيد الرفض"}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </>
   );
 }

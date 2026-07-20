@@ -53,7 +53,7 @@ export default async function CustomerDetailPage({ params }: { params: Promise<{
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-6">
-        <div className="bg-white border border-gray-200 rounded p-5">
+        <div className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded p-5">
           <h2 className="text-sm font-bold text-gray-400 mb-4">معلومات العميل</h2>
           <div className="space-y-3">
             <div className="flex items-center gap-3">
@@ -83,7 +83,7 @@ export default async function CustomerDetailPage({ params }: { params: Promise<{
           </div>
         </div>
 
-        <div className="bg-white border border-gray-200 rounded p-5">
+        <div className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded p-5">
           <h2 className="text-sm font-bold text-gray-400 mb-4">إحصائيات</h2>
           <div className="space-y-4">
             <div>
@@ -97,15 +97,15 @@ export default async function CustomerDetailPage({ params }: { params: Promise<{
           </div>
         </div>
 
-        <div className="bg-white border border-gray-200 rounded p-5">
+        <div className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded p-5">
           <h2 className="text-sm font-bold text-gray-400 mb-4">الإيرادات</h2>
           <p className="text-3xl font-black text-gray-900">{formatCurrency(totalRevenue)}</p>
           <p className="text-xs text-gray-400 mt-1">من العروض المعتمدة</p>
         </div>
       </div>
 
-      <div className="bg-white border border-gray-200 rounded">
-        <div className="p-5 border-b border-gray-100">
+      <div className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded">
+        <div className="p-5 border-b border-gray-100 dark:border-gray-700">
           <h2 className="text-lg font-bold flex items-center gap-2">
             <FileText className="w-5 h-5 text-gray-400" />
             عروض الأسعار ({totalQuotes})
@@ -121,7 +121,7 @@ export default async function CustomerDetailPage({ params }: { params: Promise<{
           <div className="overflow-x-auto">
             <table className="w-full text-sm">
               <thead>
-                <tr className="border-b border-gray-100">
+                <tr className="border-b border-gray-100 dark:border-gray-700">
                   <th className="text-right p-3 px-5 text-xs text-gray-400 font-semibold">رقم العرض</th>
                   <th className="text-right p-3 text-xs text-gray-400 font-semibold">الموظف</th>
                   <th className="text-right p-3 text-xs text-gray-400 font-semibold">الحالة</th>

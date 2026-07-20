@@ -65,7 +65,7 @@ export default function AuditLogsPage() {
         </select>
       </div>
 
-      <div className="bg-white border border-gray-200 rounded overflow-hidden">
+      <div className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded overflow-hidden">
         {data.logs.length === 0 ? (
           <div className="p-12 text-center text-gray-400">
             <ScrollText className="w-10 h-10 mx-auto mb-2 opacity-50" />
