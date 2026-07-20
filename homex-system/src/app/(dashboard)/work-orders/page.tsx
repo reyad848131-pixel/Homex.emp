@@ -174,7 +174,7 @@ export default function WorkOrdersPage() {
                 isActive ? "ring-2 ring-offset-1 ring-gray-900 dark:ring-gray-100 scale-[1.02]" : "hover:scale-[1.01]"
               )}
             >
-              <p className="text-2xl mb-0.5">{s.emoji}</p>
+              <div className={cn("w-4 h-4 rounded-full mx-auto mb-1.5", s.dotColor)} />
               <p className={cn("text-2xl font-black font-mono-en", s.color)}>{count}</p>
               <p className={cn("text-xs font-bold mt-0.5", s.color)}>{s.label}</p>
             </button>
@@ -193,7 +193,7 @@ export default function WorkOrdersPage() {
               : "border-gray-200 dark:border-gray-700 text-gray-500 hover:border-orange-300"
           )}
         >
-          🟧 ملاحظة ({data.counts.orange || 0})
+          <span className="w-2.5 h-2.5 rounded-full bg-orange-500 shrink-0" /> ملاحظة ({data.counts.orange || 0})
         </button>
         <button
           onClick={() => { setAlertFilter(alertFilter === "red" ? null : "red"); setActiveFilter(null); }}
@@ -204,7 +204,7 @@ export default function WorkOrdersPage() {
               : "border-gray-200 dark:border-gray-700 text-gray-500 hover:border-red-300"
           )}
         >
-          🔴 مستعجل / متابعة ({data.counts.red || 0})
+          <span className="w-2.5 h-2.5 rounded-full bg-red-500 shrink-0" /> مستعجل / متابعة ({data.counts.red || 0})
         </button>
         {(activeFilter || alertFilter) && (
           <button
@@ -280,9 +280,9 @@ export default function WorkOrdersPage() {
                   className="flex items-center gap-3 p-4 cursor-pointer hover:bg-gray-50/50 dark:hover:bg-gray-700/30 transition-colors"
                   onClick={() => setExpandedId(isExpanded ? null : q.id)}
                 >
-                  {/* Status Emoji */}
-                  <div className="text-2xl shrink-0 w-10 text-center">
-                    {ws ? ws.emoji : "⚪"}
+                  {/* Status Dot */}
+                  <div className="shrink-0 w-10 flex items-center justify-center">
+                    <div className={cn("w-3.5 h-3.5 rounded-full", ws ? ws.dotColor : "bg-gray-300")} />
                   </div>
 
                   {/* Info */}
@@ -298,10 +298,10 @@ export default function WorkOrdersPage() {
                       <span className="text-sm font-semibold text-gray-700 dark:text-gray-300">{q.customer.name}</span>
                       {/* Alert badges */}
                       {q.hasOrangeAlert && (
-                        <span className="text-xs px-1.5 py-0.5 rounded bg-orange-100 dark:bg-orange-900/30 text-orange-600">🟧</span>
+                        <span className="w-2.5 h-2.5 rounded-full bg-orange-500 shrink-0" />
                       )}
                       {(q.hasRedAlert || autoUrgent) && q.workStatus !== "delivered" && (
-                        <span className="text-xs px-1.5 py-0.5 rounded bg-red-100 dark:bg-red-900/30 text-red-600">🔴</span>
+                        <span className="w-2.5 h-2.5 rounded-full bg-red-500 shrink-0" />
                       )}
                     </div>
                     <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5 truncate">
@@ -386,7 +386,7 @@ export default function WorkOrdersPage() {
                                 : "border-gray-200 dark:border-gray-600 text-gray-500 hover:border-gray-400"
                             )}
                           >
-                            {s.emoji} {s.label}
+                            <span className={cn("w-2.5 h-2.5 rounded-full shrink-0", s.dotColor)} /> {s.label}
                           </button>
                         ))}
                       </div>
@@ -403,7 +403,7 @@ export default function WorkOrdersPage() {
                             : "border-gray-200 dark:border-gray-600 text-gray-500"
                         )}
                       >
-                        🟧 {q.hasOrangeAlert ? "إزالة الملاحظة" : "إضافة ملاحظة"}
+                        <span className="w-2.5 h-2.5 rounded-full bg-orange-500 shrink-0" /> {q.hasOrangeAlert ? "إزالة الملاحظة" : "إضافة ملاحظة"}
                       </button>
                       <button
                         onClick={() => handleAlertToggle(q.id, "hasRedAlert", q.hasRedAlert)}
@@ -414,7 +414,7 @@ export default function WorkOrdersPage() {
                             : "border-gray-200 dark:border-gray-600 text-gray-500"
                         )}
                       >
-                        🔴 {q.hasRedAlert ? "إزالة الاستعجال" : "تحديد مستعجل"}
+                        <span className="w-2.5 h-2.5 rounded-full bg-red-500 shrink-0" /> {q.hasRedAlert ? "إزالة الاستعجال" : "تحديد مستعجل"}
                       </button>
                       {autoUrgent && q.workStatus !== "delivered" && !q.hasRedAlert && (
                         <span className="flex items-center gap-1 text-xs text-red-500 dark:text-red-400">
