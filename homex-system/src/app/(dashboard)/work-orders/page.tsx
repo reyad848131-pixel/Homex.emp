@@ -155,8 +155,8 @@ export default function WorkOrdersPage() {
         </button>
       </div>
 
-      {/* Status Cards — same style as dashboard */}
-      <div className="grid grid-cols-5 gap-3 mb-4">
+      {/* Status Cards + Alert Filters — same row */}
+      <div className="flex gap-3 mb-4 flex-wrap">
         {Object.entries(WORK_STATUS_MAP).map(([key, s]) => {
           const count = data.counts[key] || 0;
           const isActive = activeFilter === key;
@@ -165,7 +165,7 @@ export default function WorkOrdersPage() {
               key={key}
               onClick={() => { setActiveFilter(isActive ? null : key); setAlertFilter(null); }}
               className={cn(
-                "border rounded p-3 text-center transition-all cursor-pointer",
+                "border rounded p-3 text-center transition-all cursor-pointer flex-1 min-w-0",
                 s.cardColor,
                 isActive && "ring-2 ring-offset-1 ring-gray-900 dark:ring-gray-100"
               )}
@@ -175,38 +175,37 @@ export default function WorkOrdersPage() {
             </button>
           );
         })}
-      </div>
-
-      {/* Alert Filters */}
-      <div className="flex flex-wrap gap-2 mb-4">
         <button
           onClick={() => { setAlertFilter(alertFilter === "orange" ? null : "orange"); setActiveFilter(null); }}
           className={cn(
-            "flex items-center gap-1.5 px-3 py-1.5 rounded text-xs font-bold border transition-colors",
+            "border rounded p-3 text-center transition-all cursor-pointer flex-1 min-w-0",
             alertFilter === "orange"
-              ? "bg-orange-50 border-orange-300 text-orange-600"
-              : "border-gray-200 dark:border-gray-700 text-gray-500 hover:border-orange-300"
+              ? "border-orange-300 text-orange-600 bg-orange-50 ring-2 ring-offset-1 ring-gray-900 dark:ring-gray-100"
+              : "border-orange-300 text-orange-600 bg-orange-50"
           )}
         >
-          ملاحظة ({data.counts.orange || 0})
+          <p className="text-2xl font-black font-mono-en">{data.counts.orange || 0}</p>
+          <p className="text-xs font-bold mt-0.5">ملاحظة</p>
         </button>
         <button
           onClick={() => { setAlertFilter(alertFilter === "red" ? null : "red"); setActiveFilter(null); }}
           className={cn(
-            "flex items-center gap-1.5 px-3 py-1.5 rounded text-xs font-bold border transition-colors",
+            "border rounded p-3 text-center transition-all cursor-pointer flex-1 min-w-0",
             alertFilter === "red"
-              ? "bg-red-50 border-red-300 text-red-600"
-              : "border-gray-200 dark:border-gray-700 text-gray-500 hover:border-red-300"
+              ? "border-red-300 text-red-600 bg-red-50 ring-2 ring-offset-1 ring-gray-900 dark:ring-gray-100"
+              : "border-red-300 text-red-600 bg-red-50"
           )}
         >
-          مستعجل / متابعة ({data.counts.red || 0})
+          <p className="text-2xl font-black font-mono-en">{data.counts.red || 0}</p>
+          <p className="text-xs font-bold mt-0.5">مستعجل</p>
         </button>
         {(activeFilter || alertFilter) && (
           <button
             onClick={() => { setActiveFilter(null); setAlertFilter(null); }}
-            className="flex items-center gap-1 px-3 py-1.5 rounded text-xs font-bold text-gray-500 hover:text-gray-900 dark:hover:text-white border border-gray-200 dark:border-gray-700 transition-colors"
+            className="border rounded p-3 text-center transition-all cursor-pointer border-gray-300 text-gray-600 bg-gray-50 flex-1 min-w-0 flex flex-col items-center justify-center"
           >
-            <X className="w-3 h-3" /> مسح الفلتر
+            <X className="w-5 h-5 mb-0.5" />
+            <p className="text-xs font-bold">مسح</p>
           </button>
         )}
       </div>
