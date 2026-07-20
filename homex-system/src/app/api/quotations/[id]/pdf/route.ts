@@ -38,6 +38,7 @@ export async function GET(
   const companyAddress = await getSetting("company_address", "");
   const companyCR = await getSetting("company_cr", "");
   const termsConditions = await getSetting("terms_conditions", "");
+  const companyLogo = await getSetting("company_logo", "");
 
   const fmtCur = (n: number) => `${n.toFixed(3)} ر.ع`;
   const fmtDate = (d: Date | string) => new Date(d).toLocaleDateString("ar-OM", { year: "numeric", month: "long", day: "numeric" });
@@ -90,6 +91,7 @@ export async function GET(
 </head>
 <body>
   <div class="header">
+    ${companyLogo ? `<img src="${companyLogo}" alt="Logo" style="max-height:60px;max-width:200px;margin:0 auto 8px" />` : ""}
     <h1>${esc(companyName).toUpperCase()}</h1>
     <div class="subtitle">عرض سعر</div>
     <div class="quote-num">${quotation.quoteNumber}</div>

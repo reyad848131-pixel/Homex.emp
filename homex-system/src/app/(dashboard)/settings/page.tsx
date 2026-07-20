@@ -1,16 +1,38 @@
 "use client";
 
-import { useState, useEffect } from "react";
-import { Settings, Save, Building2, Download, Database, FileSpreadsheet, ScrollText } from "lucide-react";
+import { useState, useEffect, useRef } from "react";
+import { Settings, Save, Building2, Download, Database, FileSpreadsheet, ScrollText, Upload, Trash2, ImageIcon } from "lucide-react";
 
 export default function SettingsPage() {
   const [settings, setSettings] = useState<Record<string, string>>({});
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
+  const [logo, setLogo] = useState("");
+  const [uploadingLogo, setUploadingLogo] = useState(false);
+  const fileRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     fetch("/api/settings").then((r) => r.json()).then(setSettings);
+    fetch("/api/logo").then((r) => r.json()).then((d) => setLogo(d.logo || ""));
   }, []);
+
+  const handleLogoUpload = async (file: File) => {
+    setUploadingLogo(true);
+    const form = new FormData();
+    form.append("logo", file);
+    try {
+      const res = await fetch("/api/logo", { method: "POST", body: form });
+      if (res.ok) {
+        const data = await res.json();
+        setLogo(data.logo);
+      }
+    } catch {} finally { setUploadingLogo(false); }
+  };
+
+  const handleLogoDelete = async () => {
+    const res = await fetch("/api/logo", { method: "DELETE" });
+    if (res.ok) setLogo("");
+  };
 
   const update = (key: string, value: string) => {
     setSettings((prev) => ({ ...prev, [key]: value }));
@@ -46,6 +68,40 @@ export default function SettingsPage() {
           <Save className="w-4 h-4" />
           {saving ? "جاري الحفظ..." : saved ? "تم الحفظ ✓" : "حفظ التغييرات"}
         </button>
+      </div>
+
+      {/* Logo Upload */}
+      <div className="bg-white border border-gray-200 rounded p-6 mb-6">
+        <h2 className="text-base font-bold mb-4 flex items-center gap-2">
+          <ImageIcon className="w-4 h-4 text-gray-400" />
+          شعار الشركة
+        </h2>
+        <div className="flex items-center gap-6">
+          <div className="w-24 h-24 border-2 border-dashed border-gray-200 rounded-lg flex items-center justify-center overflow-hidden bg-gray-50">
+            {logo ? (
+              <img src={logo} alt="شعار الشركة" className="w-full h-full object-contain" />
+            ) : (
+              <ImageIcon className="w-8 h-8 text-gray-300" />
+            )}
+          </div>
+          <div className="space-y-2">
+            <input type="file" ref={fileRef} className="hidden" accept="image/png,image/jpeg,image/webp,image/svg+xml"
+              onChange={(e) => { if (e.target.files?.[0]) handleLogoUpload(e.target.files[0]); }} />
+            <button onClick={() => fileRef.current?.click()} disabled={uploadingLogo}
+              className="flex items-center gap-2 px-4 py-2 border border-gray-200 rounded text-sm font-bold hover:bg-gray-50 disabled:opacity-50 transition-colors">
+              <Upload className="w-4 h-4" />
+              {uploadingLogo ? "جاري الرفع..." : "رفع شعار"}
+            </button>
+            {logo && (
+              <button onClick={handleLogoDelete}
+                className="flex items-center gap-2 px-4 py-2 border border-red-200 text-red-600 rounded text-sm font-bold hover:bg-red-50 transition-colors">
+                <Trash2 className="w-4 h-4" />
+                حذف الشعار
+              </button>
+            )}
+            <p className="text-xs text-gray-400">PNG, JPG, WebP أو SVG - حد أقصى 500KB</p>
+          </div>
+        </div>
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">

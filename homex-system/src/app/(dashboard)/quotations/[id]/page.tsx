@@ -7,6 +7,7 @@ import { cn } from "@/lib/utils";
 import {
   ArrowRight, Printer, Trash2, CheckCircle, XCircle, Send,
   Clock, FileText, User, MapPin, Phone, Pencil, Download, Copy, MessageCircle, CalendarDays,
+  CreditCard, Plus, Banknote,
 } from "lucide-react";
 import Link from "next/link";
 
@@ -35,7 +36,23 @@ interface QuotationDetail {
     lineTotal: number;
     category: { nameAr: string; nameEn: string };
   }>;
+  payments: Array<{
+    id: string;
+    amount: number;
+    method: string;
+    reference: string | null;
+    notes: string | null;
+    paidAt: string;
+    recorder: { name: string };
+  }>;
 }
+
+const PAYMENT_METHODS: Record<string, string> = {
+  cash: "نقدي",
+  bank_transfer: "تحويل بنكي",
+  cheque: "شيك",
+  card: "بطاقة",
+};
 
 export default function QuotationDetailPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = use(params);
@@ -43,6 +60,12 @@ export default function QuotationDetailPage({ params }: { params: Promise<{ id: 
   const [q, setQ] = useState<QuotationDetail | null>(null);
   const [loading, setLoading] = useState(true);
   const [terms, setTerms] = useState("");
+  const [showPayForm, setShowPayForm] = useState(false);
+  const [payAmount, setPayAmount] = useState("");
+  const [payMethod, setPayMethod] = useState("cash");
+  const [payRef, setPayRef] = useState("");
+  const [payNotes, setPayNotes] = useState("");
+  const [paying, setPaying] = useState(false);
 
   const fmtCur = (n: number) => `${n.toFixed(3)} ر.ع`;
 
@@ -102,6 +125,32 @@ export default function QuotationDetailPage({ params }: { params: Promise<{ id: 
     const code = (q.customer.phoneCode || "+968").replace(/\D/g, "");
     const fullPhone = phone.startsWith(code) ? phone : `${code}${phone}`;
     window.open(`https://wa.me/${fullPhone}?text=${text}`, "_blank");
+  };
+
+  const handleAddPayment = async () => {
+    if (!q || !payAmount || Number(payAmount) <= 0) return;
+    setPaying(true);
+    try {
+      const res = await fetch("/api/payments", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          quotationId: q.id,
+          amount: Number(payAmount),
+          method: payMethod,
+          reference: payRef || null,
+          notes: payNotes || null,
+        }),
+      });
+      if (res.ok) {
+        const payment = await res.json();
+        setQ((prev) => prev ? { ...prev, payments: [payment, ...prev.payments] } : prev);
+        setPayAmount("");
+        setPayRef("");
+        setPayNotes("");
+        setShowPayForm(false);
+      }
+    } catch {} finally { setPaying(false); }
   };
 
   if (loading) return <div className="text-center py-20 text-gray-400">جاري التحميل...</div>;
@@ -306,6 +355,116 @@ export default function QuotationDetailPage({ params }: { params: Promise<{ id: 
             </ul>
           </div>
         )}
+
+        {/* Payments Section */}
+        {q.status === "approved" && (() => {
+          const totalPaid = q.payments.reduce((s, p) => s + p.amount, 0);
+          const remaining = q.total - totalPaid;
+          const paidPct = q.total > 0 ? (totalPaid / q.total) * 100 : 0;
+          return (
+            <div className="bg-white border border-gray-200 rounded mt-6">
+              <div className="p-5 border-b border-gray-100 flex items-center justify-between">
+                <h2 className="text-sm font-bold text-gray-400 uppercase tracking-wider flex items-center gap-2">
+                  <Banknote className="w-4 h-4" /> المدفوعات
+                </h2>
+                <button onClick={() => setShowPayForm(!showPayForm)}
+                  className="flex items-center gap-1 text-sm font-bold text-gray-900 hover:text-gray-600 transition-colors">
+                  <Plus className="w-4 h-4" /> تسجيل دفعة
+                </button>
+              </div>
+
+              <div className="p-5">
+                <div className="flex items-center gap-4 mb-4">
+                  <div className="flex-1">
+                    <div className="h-3 bg-gray-100 rounded-full overflow-hidden">
+                      <div className="h-full bg-green-500 rounded-full transition-all" style={{ width: `${Math.min(paidPct, 100)}%` }} />
+                    </div>
+                  </div>
+                  <span className="text-sm font-bold font-mono-en text-green-600">{paidPct.toFixed(0)}%</span>
+                </div>
+                <div className="grid grid-cols-3 gap-4 text-center mb-4">
+                  <div>
+                    <p className="text-xs text-gray-400">الإجمالي</p>
+                    <p className="font-bold font-mono-en">{fmtCur(q.total)}</p>
+                  </div>
+                  <div>
+                    <p className="text-xs text-gray-400">المدفوع</p>
+                    <p className="font-bold font-mono-en text-green-600">{fmtCur(totalPaid)}</p>
+                  </div>
+                  <div>
+                    <p className="text-xs text-gray-400">المتبقي</p>
+                    <p className="font-bold font-mono-en text-red-600">{fmtCur(remaining)}</p>
+                  </div>
+                </div>
+
+                {showPayForm && remaining > 0 && (
+                  <div className="border border-gray-200 rounded p-4 mb-4 space-y-3">
+                    <div className="grid grid-cols-2 gap-3">
+                      <div>
+                        <label className="block text-xs font-semibold text-gray-500 mb-1">المبلغ *</label>
+                        <input type="number" step="0.001" min="0.001" max={remaining}
+                          value={payAmount} onChange={(e) => setPayAmount(e.target.value)}
+                          className="w-full border border-gray-200 rounded px-3 py-2 text-sm font-mono-en"
+                          placeholder={`الحد الأقصى ${remaining.toFixed(3)}`} />
+                      </div>
+                      <div>
+                        <label className="block text-xs font-semibold text-gray-500 mb-1">طريقة الدفع</label>
+                        <select value={payMethod} onChange={(e) => setPayMethod(e.target.value)}
+                          className="w-full border border-gray-200 rounded px-3 py-2 text-sm">
+                          {Object.entries(PAYMENT_METHODS).map(([k, v]) => <option key={k} value={k}>{v}</option>)}
+                        </select>
+                      </div>
+                    </div>
+                    <div>
+                      <label className="block text-xs font-semibold text-gray-500 mb-1">رقم المرجع</label>
+                      <input type="text" value={payRef} onChange={(e) => setPayRef(e.target.value)}
+                        className="w-full border border-gray-200 rounded px-3 py-2 text-sm font-mono-en" placeholder="اختياري" />
+                    </div>
+                    <div>
+                      <label className="block text-xs font-semibold text-gray-500 mb-1">ملاحظات</label>
+                      <input type="text" value={payNotes} onChange={(e) => setPayNotes(e.target.value)}
+                        className="w-full border border-gray-200 rounded px-3 py-2 text-sm" placeholder="اختياري" />
+                    </div>
+                    <button onClick={handleAddPayment} disabled={paying || !payAmount || Number(payAmount) <= 0}
+                      className="w-full flex items-center justify-center gap-2 bg-green-600 text-white px-4 py-2.5 rounded text-sm font-bold hover:bg-green-700 disabled:opacity-50 transition-colors">
+                      <CreditCard className="w-4 h-4" />
+                      {paying ? "جاري التسجيل..." : "تسجيل الدفعة"}
+                    </button>
+                  </div>
+                )}
+
+                {q.payments.length > 0 ? (
+                  <div className="overflow-x-auto">
+                    <table className="w-full text-sm">
+                      <thead>
+                        <tr className="border-b border-gray-200">
+                          <th className="text-right py-2 text-xs text-gray-400">المبلغ</th>
+                          <th className="text-right py-2 text-xs text-gray-400">الطريقة</th>
+                          <th className="text-right py-2 text-xs text-gray-400">المرجع</th>
+                          <th className="text-right py-2 text-xs text-gray-400">بواسطة</th>
+                          <th className="text-right py-2 text-xs text-gray-400">التاريخ</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {q.payments.map((p) => (
+                          <tr key={p.id} className="border-b border-gray-50">
+                            <td className="py-2 font-mono-en font-bold text-green-600">{fmtCur(p.amount)}</td>
+                            <td className="py-2 text-gray-500">{PAYMENT_METHODS[p.method] || p.method}</td>
+                            <td className="py-2 font-mono-en text-gray-400 text-xs">{p.reference || "—"}</td>
+                            <td className="py-2 text-gray-500 text-xs">{p.recorder.name}</td>
+                            <td className="py-2 font-mono-en text-gray-400 text-xs">{new Date(p.paidAt).toLocaleDateString("ar-OM")}</td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                ) : (
+                  <p className="text-sm text-gray-400 text-center py-4">لا توجد دفعات مسجلة</p>
+                )}
+              </div>
+            </div>
+          );
+        })()}
       </div>
 
       {/* Print View */}

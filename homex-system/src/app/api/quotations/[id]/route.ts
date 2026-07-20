@@ -22,6 +22,7 @@ export async function GET(
         customer: true,
         employee: { select: { id: true, name: true, civilId: true } },
         items: { include: { category: true }, orderBy: { sortOrder: "asc" } },
+        payments: { include: { recorder: { select: { name: true } } }, orderBy: { paidAt: "desc" } },
       },
     });
 
