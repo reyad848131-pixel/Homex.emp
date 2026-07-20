@@ -117,6 +117,16 @@ export default function SettingsPage() {
                 className="w-full border border-gray-200 rounded px-3 py-2.5 text-sm" placeholder="Homex" />
             </div>
             <div>
+              <label className="block text-sm font-semibold text-gray-600 mb-1.5">الوصف التعريفي</label>
+              <input type="text" value={settings.company_subtitle || ""} onChange={(e) => update("company_subtitle", e.target.value)}
+                className="w-full border border-gray-200 rounded px-3 py-2.5 text-sm" placeholder="مطابخ · خزائن · أثاث مخصص وتصميم داخلي" />
+            </div>
+            <div>
+              <label className="block text-sm font-semibold text-gray-600 mb-1.5">المصنع التابع</label>
+              <input type="text" value={settings.company_factory || ""} onChange={(e) => update("company_factory", e.target.value)}
+                className="w-full border border-gray-200 rounded px-3 py-2.5 text-sm" placeholder="شركة تابعة لمصنع سلطان النبهاني للمنتجات الخشبية — بهلاء، عُمان" />
+            </div>
+            <div>
               <label className="block text-sm font-semibold text-gray-600 mb-1.5">هاتف الشركة</label>
               <input type="tel" value={settings.company_phone || ""} onChange={(e) => update("company_phone", e.target.value)}
                 className="w-full border border-gray-200 rounded px-3 py-2.5 text-sm font-mono-en" placeholder="+968 XXXXXXXX" />
