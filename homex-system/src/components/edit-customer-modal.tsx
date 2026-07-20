@@ -1,0 +1,139 @@
+"use client";
+
+import { useState } from "react";
+import { useRouter } from "next/navigation";
+import { GOVERNORATES } from "@/lib/types";
+import { X, Save } from "lucide-react";
+
+interface Props {
+  customer: {
+    id: string;
+    name: string;
+    phone: string;
+    phoneCode: string;
+    governorate: string;
+    wilayat: string;
+    address: string | null;
+  };
+  onClose: () => void;
+}
+
+export function EditCustomerModal({ customer, onClose }: Props) {
+  const router = useRouter();
+  const [form, setForm] = useState({
+    name: customer.name,
+    phone: customer.phone,
+    phoneCode: customer.phoneCode,
+    governorate: customer.governorate,
+    wilayat: customer.wilayat,
+    address: customer.address || "",
+  });
+  const [saving, setSaving] = useState(false);
+  const [error, setError] = useState("");
+
+  const wilayats = form.governorate ? GOVERNORATES[form.governorate] || [] : [];
+
+  const handleSave = async () => {
+    if (!form.name.trim() || !form.phone.trim()) {
+      setError("الاسم ورقم الهاتف مطلوبان");
+      return;
+    }
+    setSaving(true);
+    setError("");
+    try {
+      const res = await fetch(`/api/customers/${customer.id}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(form),
+      });
+      if (res.ok) {
+        router.refresh();
+        onClose();
+      } else {
+        const data = await res.json();
+        setError(data.error || "حدث خطأ");
+      }
+    } catch {
+      setError("خطأ في الاتصال");
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  return (
+    <div className="fixed inset-0 bg-black/40 z-50 flex items-center justify-center p-4" onClick={onClose}>
+      <div className="bg-white rounded-lg w-full max-w-lg" onClick={(e) => e.stopPropagation()}>
+        <div className="flex items-center justify-between p-5 border-b border-gray-100">
+          <h2 className="text-lg font-bold">تعديل بيانات العميل</h2>
+          <button onClick={onClose} className="text-gray-400 hover:text-gray-600">
+            <X className="w-5 h-5" />
+          </button>
+        </div>
+
+        <div className="p-5 space-y-4">
+          <div>
+            <label className="block text-sm font-semibold text-gray-600 mb-1.5">الاسم *</label>
+            <input type="text" value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })}
+              className="w-full border border-gray-200 rounded px-3 py-2.5 text-sm" />
+          </div>
+
+          <div>
+            <label className="block text-sm font-semibold text-gray-600 mb-1.5">رقم الهاتف *</label>
+            <div className="flex gap-2">
+              <select value={form.phoneCode} onChange={(e) => setForm({ ...form, phoneCode: e.target.value })}
+                className="border border-gray-200 rounded px-2 py-2.5 text-sm w-24 font-mono-en">
+                <option value="+968">+968</option>
+                <option value="+971">+971</option>
+                <option value="+966">+966</option>
+              </select>
+              <input type="tel" value={form.phone}
+                onChange={(e) => setForm({ ...form, phone: e.target.value.replace(/\D/g, "").slice(0, 8) })}
+                pattern="[0-9]{8}" maxLength={8}
+                className="flex-1 border border-gray-200 rounded px-3 py-2.5 text-sm font-mono-en" placeholder="9XXXXXXX" />
+            </div>
+          </div>
+
+          <div className="grid grid-cols-2 gap-4">
+            <div>
+              <label className="block text-sm font-semibold text-gray-600 mb-1.5">المحافظة</label>
+              <select value={form.governorate}
+                onChange={(e) => setForm({ ...form, governorate: e.target.value, wilayat: "" })}
+                className="w-full border border-gray-200 rounded px-3 py-2.5 text-sm">
+                <option value="">اختر</option>
+                {Object.keys(GOVERNORATES).map((g) => <option key={g} value={g}>{g}</option>)}
+              </select>
+            </div>
+            <div>
+              <label className="block text-sm font-semibold text-gray-600 mb-1.5">الولاية</label>
+              <select value={form.wilayat} onChange={(e) => setForm({ ...form, wilayat: e.target.value })}
+                className="w-full border border-gray-200 rounded px-3 py-2.5 text-sm" disabled={!form.governorate}>
+                <option value="">اختر</option>
+                {wilayats.map((w) => <option key={w} value={w}>{w}</option>)}
+              </select>
+            </div>
+          </div>
+
+          <div>
+            <label className="block text-sm font-semibold text-gray-600 mb-1.5">العنوان</label>
+            <input type="text" value={form.address} onChange={(e) => setForm({ ...form, address: e.target.value })}
+              className="w-full border border-gray-200 rounded px-3 py-2.5 text-sm" placeholder="اختياري" />
+          </div>
+
+          {error && <p className="text-red-600 text-sm font-medium">{error}</p>}
+        </div>
+
+        <div className="flex gap-3 p-5 border-t border-gray-100">
+          <button onClick={handleSave} disabled={saving}
+            className="flex-1 flex items-center justify-center gap-2 bg-gray-900 text-white px-4 py-2.5 rounded text-sm font-bold hover:bg-gray-800 disabled:opacity-50 transition-colors">
+            <Save className="w-4 h-4" />
+            {saving ? "جاري الحفظ..." : "حفظ التعديلات"}
+          </button>
+          <button onClick={onClose}
+            className="px-4 py-2.5 border border-gray-200 rounded text-sm font-bold hover:bg-gray-50 transition-colors">
+            إلغاء
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}

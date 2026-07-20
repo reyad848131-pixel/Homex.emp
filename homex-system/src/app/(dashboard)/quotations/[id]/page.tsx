@@ -6,7 +6,7 @@ import { STATUS_MAP } from "@/lib/types";
 import { cn } from "@/lib/utils";
 import {
   ArrowRight, Printer, Trash2, CheckCircle, XCircle, Send,
-  Clock, FileText, User, MapPin, Phone, Pencil, Download, Copy, MessageCircle,
+  Clock, FileText, User, MapPin, Phone, Pencil, Download, Copy, MessageCircle, CalendarDays,
 } from "lucide-react";
 import Link from "next/link";
 
@@ -22,6 +22,7 @@ interface QuotationDetail {
   advanceAmount: number;
   notes: string | null;
   validUntil: string | null;
+  deliveryDate: string | null;
   createdAt: string;
   customer: { name: string; phone: string; phoneCode: string; governorate: string; wilayat: string; address: string | null };
   employee: { id: string; name: string; civilId: string };
@@ -208,6 +209,18 @@ export default function QuotationDetailPage({ params }: { params: Promise<{ id: 
                 <span>{q.customer.governorate} - {q.customer.wilayat}</span>
               </div>
             </div>
+            <div className="border-t border-gray-100 mt-4 pt-4 space-y-3">
+              <div className="flex items-center gap-2 text-sm text-gray-500">
+                <CalendarDays className="w-4 h-4" />
+                <span>صالح حتى: {q.validUntil ? new Date(q.validUntil).toLocaleDateString("ar-OM") : "—"}</span>
+              </div>
+              {q.deliveryDate && (
+                <div className="flex items-center gap-2 text-sm text-gray-500">
+                  <Clock className="w-4 h-4" />
+                  <span>موعد التسليم: {new Date(q.deliveryDate).toLocaleDateString("ar-OM")}</span>
+                </div>
+              )}
+            </div>
           </div>
 
           {/* Items Table */}
@@ -314,6 +327,7 @@ export default function QuotationDetailPage({ params }: { params: Promise<{ id: 
             <h3 className="font-bold text-gray-500 text-xs uppercase mb-2">تفاصيل العرض</h3>
             <p>التاريخ: {new Date(q.createdAt).toLocaleDateString("ar-OM")}</p>
             <p>صالح حتى: {q.validUntil ? new Date(q.validUntil).toLocaleDateString("ar-OM") : "-"}</p>
+            {q.deliveryDate && <p>موعد التسليم: {new Date(q.deliveryDate).toLocaleDateString("ar-OM")}</p>}
             <p>الموظف: {q.employee.name}</p>
           </div>
         </div>
