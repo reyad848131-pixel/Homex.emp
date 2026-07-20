@@ -102,32 +102,58 @@ export default function WorkOrdersPage() {
     fetchData();
   }, [fetchData]);
 
-  const handleStatusChange = async (id: string, workStatus: string) => {
-    await fetch("/api/work-orders", {
-      method: "PATCH",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ id, workStatus }),
+  const updateLocal = (id: string, patch: Partial<WorkQuotation>) => {
+    setData((prev) => {
+      if (!prev) return prev;
+      const updated = prev.quotations.map((q) => q.id === id ? { ...q, ...patch } : q);
+      const counts = { ...prev.counts };
+      if (patch.workStatus !== undefined) {
+        const old = prev.quotations.find((q) => q.id === id);
+        if (old?.workStatus) counts[old.workStatus] = Math.max(0, (counts[old.workStatus] || 0) - 1);
+        else counts.no_status = Math.max(0, (counts.no_status || 0) - 1);
+        if (patch.workStatus) counts[patch.workStatus] = (counts[patch.workStatus] || 0) + 1;
+        else counts.no_status = (counts.no_status || 0) + 1;
+      }
+      if (patch.hasOrangeAlert !== undefined) {
+        const old = prev.quotations.find((q) => q.id === id);
+        if (old && old.hasOrangeAlert !== patch.hasOrangeAlert) {
+          counts.orange = (counts.orange || 0) + (patch.hasOrangeAlert ? 1 : -1);
+        }
+      }
+      if (patch.hasRedAlert !== undefined) {
+        const old = prev.quotations.find((q) => q.id === id);
+        if (old && old.hasRedAlert !== patch.hasRedAlert) {
+          counts.red = (counts.red || 0) + (patch.hasRedAlert ? 1 : -1);
+        }
+      }
+      return { quotations: updated, counts };
     });
-    fetchData();
   };
 
-  const handleAlertToggle = async (id: string, field: "hasOrangeAlert" | "hasRedAlert", current: boolean) => {
-    await fetch("/api/work-orders", {
+  const patchApi = (body: Record<string, any>) => {
+    fetch("/api/work-orders", {
       method: "PATCH",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ id, [field]: !current }),
-    });
-    fetchData();
+      body: JSON.stringify(body),
+    }).catch(() => fetchData());
   };
 
-  const handleSaveNotes = async (id: string) => {
-    await fetch("/api/work-orders", {
-      method: "PATCH",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ id, workNotes: notesText }),
-    });
+  const handleStatusChange = (id: string, workStatus: string) => {
+    const patch: Partial<WorkQuotation> = { workStatus };
+    if (workStatus === "delivered") patch.hasRedAlert = false;
+    updateLocal(id, patch);
+    patchApi({ id, workStatus });
+  };
+
+  const handleAlertToggle = (id: string, field: "hasOrangeAlert" | "hasRedAlert", current: boolean) => {
+    updateLocal(id, { [field]: !current });
+    patchApi({ id, [field]: !current });
+  };
+
+  const handleSaveNotes = (id: string) => {
+    updateLocal(id, { workNotes: notesText });
     setEditingNotes(null);
-    fetchData();
+    patchApi({ id, workNotes: notesText });
   };
 
   const fmtDate = (d: string) => new Date(d).toLocaleDateString("ar-OM", { year: "numeric", month: "short", day: "numeric" });
