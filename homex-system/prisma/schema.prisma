@@ -98,6 +98,8 @@ model Quotation {
   @@index([customerId])
   @@index([status])
   @@index([createdAt])
+  @@index([deliveryDate])
+  @@index([workStatus])
   @@map("quotations")
 }
 

@@ -3,7 +3,7 @@ import { getAuth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { generateQuoteNumber } from "@/lib/utils";
 import { logAction } from "@/lib/audit";
-import { getSetting } from "@/lib/settings";
+import { getSettings } from "@/lib/settings";
 
 export async function GET(req: NextRequest) {
   try {
@@ -89,9 +89,10 @@ export async function POST(req: NextRequest) {
       });
     }
 
-    const vatRate = (parseFloat(await getSetting("vat_rate", "5").catch(() => "5")) || 5) / 100;
-    const defaultAdvance = parseFloat(await getSetting("advance_pct", "15").catch(() => "15")) || 15;
-    const validityDays = parseInt(await getSetting("quote_validity_days", "30").catch(() => "30")) || 30;
+    const cfg = await getSettings();
+    const vatRate = (parseFloat(cfg.vat_rate || "5") || 5) / 100;
+    const defaultAdvance = parseFloat(cfg.advance_pct || "15") || 15;
+    const validityDays = parseInt(cfg.quote_validity_days || "30") || 30;
     const finalAdvancePct = advancePct ?? defaultAdvance;
 
     const subtotal = items.reduce((sum: number, item: any) => sum + (item.lineTotal || 0), 0);

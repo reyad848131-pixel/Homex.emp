@@ -55,33 +55,27 @@ export async function GET(req: NextRequest) {
       if (deliveryTo) where.deliveryDate.lte = new Date(deliveryTo + "T23:59:59.999Z");
     }
 
-    const quotations = await prisma.quotation.findMany({
-      where,
-      include: {
-        customer: true,
-        employee: { select: { name: true } },
-        items: { include: { category: true }, orderBy: { sortOrder: "asc" } },
-      },
-      orderBy: { deliveryDate: "asc" },
-    });
+    const deliveryWhere = { deliveryDate: { not: null } } as const;
 
-    const statusCounts = await prisma.quotation.groupBy({
-      by: ["workStatus"],
-      where: { deliveryDate: { not: null } },
-      _count: true,
-    });
-
-    const totalWithDelivery = await prisma.quotation.count({
-      where: { deliveryDate: { not: null } },
-    });
-
-    const orangeCount = await prisma.quotation.count({
-      where: { deliveryDate: { not: null }, hasOrangeAlert: true },
-    });
-
-    const redCount = await prisma.quotation.count({
-      where: { deliveryDate: { not: null }, hasRedAlert: true },
-    });
+    const [quotations, statusCounts, totalWithDelivery, orangeCount, redCount] = await Promise.all([
+      prisma.quotation.findMany({
+        where,
+        include: {
+          customer: true,
+          employee: { select: { name: true } },
+          items: { include: { category: { select: { nameAr: true } } }, orderBy: { sortOrder: "asc" } },
+        },
+        orderBy: { deliveryDate: "asc" },
+      }),
+      prisma.quotation.groupBy({
+        by: ["workStatus"],
+        where: deliveryWhere,
+        _count: true,
+      }),
+      prisma.quotation.count({ where: deliveryWhere }),
+      prisma.quotation.count({ where: { ...deliveryWhere, hasOrangeAlert: true } }),
+      prisma.quotation.count({ where: { ...deliveryWhere, hasRedAlert: true } }),
+    ]);
 
     const counts: Record<string, number> = {
       total: totalWithDelivery,

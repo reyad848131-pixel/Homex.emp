@@ -4,6 +4,7 @@ import { useState, useEffect, useCallback } from "react";
 import Link from "next/link";
 import { cn } from "@/lib/utils";
 import { WORK_STATUS_MAP } from "@/lib/types";
+import { useDebouncedValue } from "@/lib/hooks";
 import {
   Truck,
   Search,
@@ -78,13 +79,14 @@ export default function WorkOrdersPage() {
   const [editingNotes, setEditingNotes] = useState<string | null>(null);
   const [notesText, setNotesText] = useState("");
   const [showFilters, setShowFilters] = useState(false);
+  const debouncedSearch = useDebouncedValue(search);
 
   const fetchData = useCallback(() => {
     const params = new URLSearchParams();
     if (activeFilter) params.set("workStatus", activeFilter);
     if (alertFilter === "orange") params.set("hasOrange", "true");
     if (alertFilter === "red") params.set("hasRed", "true");
-    if (search) params.set("search", search);
+    if (debouncedSearch) params.set("search", debouncedSearch);
     if (deliveryFrom) params.set("deliveryFrom", deliveryFrom);
     if (deliveryTo) params.set("deliveryTo", deliveryTo);
 
@@ -93,7 +95,7 @@ export default function WorkOrdersPage() {
       .then(setData)
       .catch(() => {})
       .finally(() => setLoading(false));
-  }, [activeFilter, alertFilter, search, deliveryFrom, deliveryTo]);
+  }, [activeFilter, alertFilter, debouncedSearch, deliveryFrom, deliveryTo]);
 
   useEffect(() => {
     setLoading(true);

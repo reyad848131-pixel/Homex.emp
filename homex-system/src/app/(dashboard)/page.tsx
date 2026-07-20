@@ -16,7 +16,9 @@ export default async function DashboardPage() {
   const now = new Date();
   const monthStart = new Date(now.getFullYear(), now.getMonth(), 1);
 
-  const [totalQuotes, totalCustomers, quotations, monthlyQuotes, statusCounts] = await Promise.all([
+  const sevenDaysFromNow = new Date(now.getTime() + 7 * 24 * 60 * 60 * 1000);
+
+  const [totalQuotes, totalCustomers, quotations, monthlyQuotes, statusGroupBy, expiringQuotations, revenueAgg] = await Promise.all([
     prisma.quotation.count({ where: whereClause }),
     prisma.customer.count({ where: isAdmin ? {} : { createdBy: userId } }),
     prisma.quotation.findMany({
@@ -26,33 +28,34 @@ export default async function DashboardPage() {
       take: 8,
     }),
     prisma.quotation.count({ where: { ...whereClause, createdAt: { gte: monthStart } } }),
-    Promise.all([
-      prisma.quotation.count({ where: { ...whereClause, status: "draft" } }),
-      prisma.quotation.count({ where: { ...whereClause, status: "pending" } }),
-      prisma.quotation.count({ where: { ...whereClause, status: "approved" } }),
-      prisma.quotation.count({ where: { ...whereClause, status: "declined" } }),
-      prisma.quotation.count({ where: { ...whereClause, status: "revised" } }),
-    ]),
+    prisma.quotation.groupBy({
+      by: ["status"],
+      where: whereClause,
+      _count: true,
+    }),
+    prisma.quotation.findMany({
+      where: {
+        ...whereClause,
+        status: { in: ["draft", "pending", "revised"] },
+        validUntil: { not: null, lte: sevenDaysFromNow },
+      },
+      include: { customer: true },
+      orderBy: { validUntil: "asc" },
+      take: 5,
+    }),
+    prisma.quotation.aggregate({
+      where: { ...whereClause, status: "approved" },
+      _sum: { total: true },
+    }),
   ]);
 
-  const [draftCount, pendingCount, approvedCount, declinedCount, revisedCount] = statusCounts;
+  const statusMap = Object.fromEntries(statusGroupBy.map((s) => [s.status, s._count]));
+  const draftCount = statusMap.draft || 0;
+  const pendingCount = statusMap.pending || 0;
+  const approvedCount = statusMap.approved || 0;
+  const declinedCount = statusMap.declined || 0;
+  const revisedCount = statusMap.revised || 0;
 
-  const sevenDaysFromNow = new Date(now.getTime() + 7 * 24 * 60 * 60 * 1000);
-  const expiringQuotations = await prisma.quotation.findMany({
-    where: {
-      ...whereClause,
-      status: { in: ["draft", "pending", "revised"] },
-      validUntil: { not: null, lte: sevenDaysFromNow },
-    },
-    include: { customer: true },
-    orderBy: { validUntil: "asc" },
-    take: 5,
-  });
-
-  const revenueAgg = await prisma.quotation.aggregate({
-    where: { ...whereClause, status: "approved" },
-    _sum: { total: true },
-  });
   const totalRevenue = revenueAgg._sum.total || 0;
 
   const conversionRate = totalQuotes > 0 ? ((approvedCount / totalQuotes) * 100).toFixed(0) : "0";

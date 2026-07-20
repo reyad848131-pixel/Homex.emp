@@ -3,8 +3,9 @@
 import { useState, useEffect } from "react";
 import Link from "next/link";
 import { STATUS_MAP } from "@/lib/types";
-import { Search, FilePlus, Filter, FileText, Calendar } from "lucide-react";
+import { Search, FilePlus, FileText, Calendar } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { useDebouncedValue } from "@/lib/hooks";
 
 interface Quotation {
   id: string;
@@ -27,17 +28,18 @@ export default function QuotationsPage() {
   const [dateFrom, setDateFrom] = useState("");
   const [dateTo, setDateTo] = useState("");
   const limit = 20;
+  const debouncedSearch = useDebouncedValue(search);
 
   const fmtCur = (n: number) => `${n.toFixed(3)} ر.ع`;
 
   useEffect(() => {
     setPage(1);
-  }, [search, statusFilter, dateFrom, dateTo]);
+  }, [debouncedSearch, statusFilter, dateFrom, dateTo]);
 
   useEffect(() => {
     setLoading(true);
     const params = new URLSearchParams();
-    if (search) params.set("search", search);
+    if (debouncedSearch) params.set("search", debouncedSearch);
     if (statusFilter !== "all") params.set("status", statusFilter);
     if (dateFrom) params.set("dateFrom", dateFrom);
     if (dateTo) params.set("dateTo", dateTo);
@@ -51,7 +53,7 @@ export default function QuotationsPage() {
         setTotal(data.total || 0);
       })
       .finally(() => setLoading(false));
-  }, [search, statusFilter, dateFrom, dateTo, page]);
+  }, [debouncedSearch, statusFilter, dateFrom, dateTo, page]);
 
   const statuses = ["all", ...Object.keys(STATUS_MAP)];
   const statusLabels: Record<string, string> = { all: "الكل", ...Object.fromEntries(Object.entries(STATUS_MAP).map(([k, v]) => [k, v.label])) };

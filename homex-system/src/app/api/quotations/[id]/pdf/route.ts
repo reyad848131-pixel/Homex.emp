@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getAuth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
-import { getSetting } from "@/lib/settings";
+import { getSettings } from "@/lib/settings";
 
 function esc(str: string | null | undefined): string {
   if (!str) return "";
@@ -33,15 +33,16 @@ export async function GET(
     return NextResponse.json({ error: "Forbidden" }, { status: 403 });
   }
 
-  const companyName = await getSetting("company_name", "Homex");
-  const companyPhone = await getSetting("company_phone", "+968 97460716");
-  const companyAddress = await getSetting("company_address", "بهلاء، محافظة الداخلية، عُمان");
-  const companyCR = await getSetting("company_cr", "");
-  const companySubtitle = await getSetting("company_subtitle", "مطابخ · خزائن · أثاث مخصص وتصميم داخلي");
-  const companyFactory = await getSetting("company_factory", "شركة تابعة لمصنع سلطان النبهاني للمنتجات الخشبية — بهلاء، عُمان");
-  const termsConditions = await getSetting("terms_conditions", "");
-  const companyLogo = await getSetting("company_logo", "");
-  const companyWebsite = await getSetting("company_website", "");
+  const s = await getSettings();
+  const companyName = s.company_name || "Homex";
+  const companyPhone = s.company_phone || "+968 97460716";
+  const companyAddress = s.company_address || "بهلاء، محافظة الداخلية، عُمان";
+  const companyCR = s.company_cr || "";
+  const companySubtitle = s.company_subtitle || "مطابخ · خزائن · أثاث مخصص وتصميم داخلي";
+  const companyFactory = s.company_factory || "شركة تابعة لمصنع سلطان النبهاني للمنتجات الخشبية — بهلاء، عُمان";
+  const termsConditions = s.terms_conditions || "";
+  const companyLogo = s.company_logo || "";
+  const companyWebsite = s.company_website || "";
 
   const fmtCur = (n: number) => n.toFixed(3);
   const fmtDate = (d: Date | string) => new Date(d).toLocaleDateString("ar-OM", { year: "numeric", month: "long", day: "numeric" });
