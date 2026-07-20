@@ -16,6 +16,27 @@ const ICONS: Record<string, any> = {
   Layers, Tv, Monitor, Sofa, WashingMachine, Plus,
 };
 
+const KITCHEN_BASE_PRICES: Record<string, number | Record<string, number> | null> = {
+  "مسقط": 130,
+  "ظفار": null,
+  "مسندم": null,
+  "البريمي": 150,
+  "الداخلية": { _default: 125, "بهلاء": 120, "نزوى": 120, "الحمراء": 120 },
+  "شمال الباطنة": 135,
+  "جنوب الباطنة": 135,
+  "جنوب الشرقية": 140,
+  "شمال الشرقية": 140,
+  "الظاهرة": 135,
+  "الوسطى": null,
+};
+
+function getKitchenBasePrice(governorate: string, wilayat: string): number | null {
+  const entry = KITCHEN_BASE_PRICES[governorate];
+  if (entry === null || entry === undefined) return null;
+  if (typeof entry === "number") return entry;
+  return entry[wilayat] ?? entry._default ?? null;
+}
+
 interface Category {
   id: string; nameAr: string; nameEn: string; icon: string;
   pricingType: string; basePrice: number | null; config: any;
@@ -167,7 +188,7 @@ export default function EditQuotationPage({ params }: { params: Promise<{ id: st
     const config = selectedCat.config ? (typeof selectedCat.config === "string" ? JSON.parse(selectedCat.config) : selectedCat.config) : {};
 
     switch (selectedCat.id) {
-      case "kitchens": return <KitchenBuilder config={config} onUpdate={handleBuilderUpdate} />;
+      case "kitchens": return <KitchenBuilder config={config} governorate={customer.governorate} wilayat={customer.wilayat} onUpdate={handleBuilderUpdate} />;
       case "cabinets": return <CabinetBuilder config={config} onUpdate={handleBuilderUpdate} />;
       case "nightstand": return <NightstandBuilder config={config} onUpdate={handleBuilderUpdate} />;
       case "curtains": return <CurtainBuilder config={config} onUpdate={handleBuilderUpdate} />;
@@ -594,14 +615,17 @@ export default function EditQuotationPage({ params }: { params: Promise<{ id: st
 
 // === Category-specific builders ===
 
-function KitchenBuilder({ config, onUpdate }: { config: any; onUpdate: (d: string, p: number, e: number) => void }) {
+function KitchenBuilder({ config, governorate, wilayat, onUpdate }: { config: any; governorate: string; wilayat: string; onUpdate: (d: string, p: number, e: number) => void }) {
   const [length, setLength] = useState(4);
   const [unitType, setUnitType] = useState<"2unit" | "3unit">("2unit");
   const [island, setIsland] = useState<"none" | "small" | "large">("none");
+  const [manualBase, setManualBase] = useState(130);
 
   const PORCELAIN_PRICE = config?.porcelainSurcharge || 55;
   const unitMultiplier = unitType === "3unit" ? 3 : 2;
-  const basePrice = config?.basePrice || 18;
+  const autoBase = getKitchenBasePrice(governorate, wilayat);
+  const isManual = autoBase === null;
+  const basePrice = isManual ? manualBase : autoBase;
   const pricePerSqm = (basePrice * unitMultiplier) + PORCELAIN_PRICE;
   const area = Math.round(length * 100) / 100;
 
@@ -613,7 +637,7 @@ function KitchenBuilder({ config, onUpdate }: { config: any; onUpdate: (d: strin
     const unitLabel = unitType === "3unit" ? "3 Unit — ارتفاع 3م" : "2 Unit — ارتفاع 2.6م";
     const desc = `مطبخ MDF - ${unitLabel} - ${length}م`;
     onUpdate(desc, price, extras);
-  }, [length, unitType, island, config, onUpdate]);
+  }, [length, unitType, island, basePrice, config, onUpdate]);
 
   return (
     <div className="space-y-4">
@@ -639,7 +663,7 @@ function KitchenBuilder({ config, onUpdate }: { config: any; onUpdate: (d: strin
       </div>
 
       <div>
-        <label className="block text-sm font-semibold text-gray-600 mb-2">نوع الوحدة</label>
+        <label className="block text-sm font-semibold text-gray-600 mb-2">نوع الوحدة (المطبخ)</label>
         <div className="flex gap-2">
           {([["2unit", "2 Unit — ارتفاع 2.6م"], ["3unit", "3 Unit — ارتفاع 3م"]] as const).map(([k, l]) => (
             <button key={k} onClick={() => setUnitType(k)}
@@ -649,9 +673,23 @@ function KitchenBuilder({ config, onUpdate }: { config: any; onUpdate: (d: strin
             </button>
           ))}
         </div>
-        <p className="text-xs text-gray-400 mt-1">
-          السعر: {basePrice}×{unitMultiplier} + {PORCELAIN_PRICE} (برسلين) = {pricePerSqm.toFixed(3)} ر.ع/م²
+      </div>
+
+      {isManual && (
+        <div>
+          <label className="block text-sm font-semibold text-gray-600 mb-1.5">سعر المتر (OMR)</label>
+          <input type="number" step={1} min={1} value={manualBase}
+            onChange={(e) => setManualBase(Math.max(1, parseInt(e.target.value) || 1))}
+            className="w-full border border-gray-200 rounded px-3 py-2.5 text-sm font-mono-en text-center" />
+          <p className="text-xs text-amber-600 mt-1">{governorate}: سعر يدوي — أدخل سعر المتر</p>
+        </div>
+      )}
+
+      <div className="text-center py-2 bg-gray-50 rounded border border-gray-100">
+        <p className="text-xs text-gray-500">
+          {wilayat || governorate}: {basePrice} × {unitMultiplier} + {PORCELAIN_PRICE} (برسلين) = <span className="font-bold font-mono-en">{pricePerSqm.toFixed(3)}</span> ر.ع/م²
         </p>
+        <p className="text-sm font-bold font-mono-en text-gray-900 mt-1">سعر المتر (OMR) {pricePerSqm.toFixed(3)}</p>
       </div>
 
       <div>
