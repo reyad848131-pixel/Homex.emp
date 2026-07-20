@@ -5,6 +5,7 @@ import { STATUS_MAP } from "@/lib/types";
 import { notFound } from "next/navigation";
 import Link from "next/link";
 import { ArrowRight, Phone, MapPin, Calendar, FileText, User } from "lucide-react";
+import { EditCustomerButton } from "@/components/edit-customer-button";
 
 export default async function CustomerDetailPage({ params }: { params: Promise<{ id: string }> }) {
   const session = await getAuth();
@@ -40,10 +41,15 @@ export default async function CustomerDetailPage({ params }: { params: Promise<{
         <Link href="/customers" className="text-gray-400 hover:text-gray-600 transition-colors">
           <ArrowRight className="w-5 h-5" />
         </Link>
-        <div>
+        <div className="flex-1">
           <h1 className="text-2xl font-bold">{customer.name}</h1>
           <p className="text-sm text-gray-500 mt-0.5">تفاصيل العميل</p>
         </div>
+        <EditCustomerButton customer={{
+          id: customer.id, name: customer.name, phone: customer.phone,
+          phoneCode: customer.phoneCode, governorate: customer.governorate,
+          wilayat: customer.wilayat, address: customer.address,
+        }} />
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-6">
