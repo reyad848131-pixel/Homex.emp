@@ -71,7 +71,7 @@ export default function QuotationsPage() {
       </div>
 
       {/* Filters */}
-      <div className="bg-white border border-gray-200 rounded p-4 mb-4">
+      <div className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded p-4 mb-4">
         <div className="flex flex-col sm:flex-row gap-4">
           <div className="relative flex-1">
             <Search className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
@@ -108,7 +108,7 @@ export default function QuotationsPage() {
       </div>
 
       {/* Table */}
-      <div className="bg-white border border-gray-200 rounded overflow-hidden">
+      <div className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded overflow-hidden">
         {loading ? (
           <div className="p-12 text-center text-gray-400 text-sm">جاري التحميل...</div>
         ) : quotations.length === 0 ? (
@@ -120,7 +120,7 @@ export default function QuotationsPage() {
           <div className="overflow-x-auto">
             <table className="w-full text-sm">
               <thead>
-                <tr className="border-b border-gray-100 bg-gray-50/50">
+                <tr className="border-b border-gray-100 dark:border-gray-700 bg-gray-50/50">
                   <th className="text-right p-3 px-5 text-xs text-gray-400 font-semibold">رقم العرض</th>
                   <th className="text-right p-3 text-xs text-gray-400 font-semibold">العميل</th>
                   <th className="text-right p-3 text-xs text-gray-400 font-semibold">المنطقة</th>

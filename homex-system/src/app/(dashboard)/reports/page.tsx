@@ -150,7 +150,7 @@ export default function ReportsPage() {
           { label: "المعتمد", value: fmtCur(data.summary.totalApproved), icon: TrendingUp, color: "text-emerald-600" },
           { label: "نسبة التحويل", value: `${data.summary.conversionRate}%`, icon: BarChart3, color: "text-purple-600" },
         ].map((card) => (
-          <div key={card.label} className="bg-white border border-gray-200 rounded p-4">
+          <div key={card.label} className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded p-4">
             <div className="flex items-center gap-2 mb-2">
               <card.icon className={cn("w-4 h-4", card.color)} />
               <span className="text-xs text-gray-400 font-bold">{card.label}</span>
@@ -163,18 +163,19 @@ export default function ReportsPage() {
       {/* Charts Row */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
         {/* Status Donut */}
-        <div className="bg-white border border-gray-200 rounded p-5">
+        <div className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded p-5">
           <h2 className="text-sm font-bold text-gray-400 uppercase tracking-wider mb-4">توزيع الحالات</h2>
           <DonutChart segments={[
             { label: "مسودة", value: data.summary.statusCounts.draft || 0, color: "#6b7280" },
             { label: "قيد المراجعة", value: data.summary.statusCounts.pending || 0, color: "#3b82f6" },
             { label: "معتمد", value: data.summary.statusCounts.approved || 0, color: "#16a34a" },
+            { label: "مُعاد للتعديل", value: data.summary.statusCounts.revised || 0, color: "#f97316" },
             { label: "مرفوض", value: data.summary.statusCounts.declined || 0, color: "#dc2626" },
           ]} />
         </div>
 
         {/* Daily Activity */}
-        <div className="bg-white border border-gray-200 rounded p-5">
+        <div className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded p-5">
           <h2 className="text-sm font-bold text-gray-400 uppercase tracking-wider mb-4 flex items-center gap-2">
             <Calendar className="w-4 h-4" /> النشاط اليومي (عدد العروض)
           </h2>
@@ -198,29 +199,49 @@ export default function ReportsPage() {
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
         {/* Employee Performance */}
-        <div className="bg-white border border-gray-200 rounded p-5">
+        <div className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded p-5">
           <h2 className="text-sm font-bold text-gray-400 uppercase tracking-wider mb-4 flex items-center gap-2">
-            <Users className="w-4 h-4" /> أداء الموظفين
+            <Users className="w-4 h-4" /> لوحة أداء الموظفين
           </h2>
-          <div className="space-y-3">
-            {data.employeeStats.map((emp) => (
-              <div key={emp.name} className="flex items-center gap-3">
-                <div className="w-8 h-8 rounded-full bg-gray-900 text-white flex items-center justify-center text-xs font-bold shrink-0">
-                  {emp.name.charAt(0)}
-                </div>
-                <div className="flex-1 min-w-0">
-                  <div className="flex items-center justify-between">
-                    <p className="text-sm font-bold truncate">{emp.name}</p>
-                    <p className="text-sm font-mono-en font-bold">{fmtCur(emp.total)}</p>
+          <div className="space-y-4">
+            {data.employeeStats.map((emp) => {
+              const convRate = emp.count > 0 ? ((emp.approved / emp.count) * 100) : 0;
+              const maxEmpTotal = Math.max(...data.employeeStats.map(e => e.total), 1);
+              return (
+                <div key={emp.name} className="border border-gray-100 rounded-lg p-3">
+                  <div className="flex items-center gap-3 mb-2">
+                    <div className="w-9 h-9 rounded-full bg-gray-900 text-white flex items-center justify-center text-sm font-bold shrink-0">
+                      {emp.name.charAt(0)}
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <p className="text-sm font-bold truncate">{emp.name}</p>
+                      <p className="text-xs text-gray-400">{emp.count} عرض · {emp.approved} معتمد</p>
+                    </div>
+                    <p className="text-sm font-mono-en font-black text-green-600">{fmtCur(emp.total)}</p>
                   </div>
-                  <div className="flex items-center gap-3 text-xs text-gray-400 mt-0.5">
-                    <span>{emp.count} عرض</span>
-                    <span>{emp.approved} معتمد</span>
-                    <span className="font-mono-en">{emp.count > 0 ? ((emp.approved / emp.count) * 100).toFixed(0) : 0}%</span>
+                  <div className="grid grid-cols-2 gap-2">
+                    <div>
+                      <div className="flex items-center justify-between text-xs text-gray-400 mb-1">
+                        <span>الإيرادات</span>
+                        <span className="font-mono-en">{((emp.total / maxEmpTotal) * 100).toFixed(0)}%</span>
+                      </div>
+                      <div className="h-2 bg-gray-100 rounded-full overflow-hidden">
+                        <div className="h-full bg-gray-900 rounded-full" style={{ width: `${(emp.total / maxEmpTotal) * 100}%` }} />
+                      </div>
+                    </div>
+                    <div>
+                      <div className="flex items-center justify-between text-xs text-gray-400 mb-1">
+                        <span>نسبة التحويل</span>
+                        <span className="font-mono-en">{convRate.toFixed(0)}%</span>
+                      </div>
+                      <div className="h-2 bg-gray-100 rounded-full overflow-hidden">
+                        <div className={cn("h-full rounded-full", convRate >= 50 ? "bg-green-500" : convRate >= 25 ? "bg-yellow-500" : "bg-red-500")} style={{ width: `${convRate}%` }} />
+                      </div>
+                    </div>
                   </div>
                 </div>
-              </div>
-            ))}
+              );
+            })}
             {data.employeeStats.length === 0 && (
               <p className="text-sm text-gray-400 text-center py-4">لا توجد بيانات</p>
             )}
@@ -228,7 +249,7 @@ export default function ReportsPage() {
         </div>
 
         {/* Categories */}
-        <div className="bg-white border border-gray-200 rounded p-5">
+        <div className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded p-5">
           <h2 className="text-sm font-bold text-gray-400 uppercase tracking-wider mb-4">الفئات الأكثر طلبا</h2>
           <div className="space-y-3">
             {data.categoryCounts.slice(0, 8).map((cat) => (

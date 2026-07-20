@@ -221,7 +221,7 @@ export default function NewQuotationPage() {
 
       {/* Step 1: Customer Info + Quote Info */}
       {step === 1 && (
-        <div className="bg-white border border-gray-200 rounded p-6 max-w-3xl mx-auto">
+        <div className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded p-6 max-w-3xl mx-auto">
           <h2 className="text-lg font-bold mb-5">بيانات الزبون وعرض السعر</h2>
 
           {/* Row 1: Employee + Quote No + Date */}
@@ -328,7 +328,7 @@ export default function NewQuotationPage() {
       {/* Step 2: Choose Categories */}
       {step === 2 && (
         <div className="max-w-3xl mx-auto">
-          <div className="bg-white border border-gray-200 rounded p-5">
+          <div className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded p-5">
             <div className="mb-4">
               <p className="text-xs text-gray-400 font-semibold uppercase tracking-wide mb-1">الخطوة 2 من 4</p>
               <h2 className="text-lg font-bold">اختر القسم</h2>
@@ -336,7 +336,7 @@ export default function NewQuotationPage() {
             </div>
             {/* Progress Pills */}
             {items.length > 0 && (
-              <div className="flex gap-1.5 flex-wrap mb-4 pb-3 border-b border-gray-100">
+              <div className="flex gap-1.5 flex-wrap mb-4 pb-3 border-b border-gray-100 dark:border-gray-700">
                 {categories.map((cat) => {
                   const count = items.filter((i) => i.categoryId === cat.id).length;
                   if (count === 0) return null;
@@ -382,7 +382,7 @@ export default function NewQuotationPage() {
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
           <div className="lg:col-span-2 space-y-4">
             {/* Selected Category Header */}
-            <div className="bg-white border border-gray-200 rounded p-5">
+            <div className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded p-5">
               <div className="mb-4">
                 <p className="text-xs text-gray-400 font-semibold uppercase tracking-wide mb-1">الخطوة 3 من 4</p>
                 <h2 className="text-lg font-bold">إضافة بنود — {selectedCat?.nameAr}</h2>
@@ -443,7 +443,7 @@ export default function NewQuotationPage() {
 
           {/* Items Summary Sidebar */}
           <div className="space-y-4">
-            <div className="bg-white border border-gray-200 rounded p-5">
+            <div className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded p-5">
               <div className="flex items-center justify-between mb-4">
                 <h2 className="text-base font-bold">البنود المضافة</h2>
                 <span className="bg-gray-100 text-gray-600 text-xs font-bold px-2 py-1 rounded-full">
@@ -507,7 +507,7 @@ export default function NewQuotationPage() {
       {step === 4 && (
         <div className="max-w-3xl mx-auto space-y-4">
           {/* Customer Summary */}
-          <div className="bg-white border border-gray-200 rounded p-5">
+          <div className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded p-5">
             <h2 className="text-base font-bold mb-3">بيانات العميل</h2>
             <div className="grid grid-cols-2 gap-3 text-sm">
               <div><span className="text-gray-400">الاسم:</span> <span className="font-bold">{customer.name}</span></div>
@@ -518,7 +518,7 @@ export default function NewQuotationPage() {
           </div>
 
           {/* Items Table */}
-          <div className="bg-white border border-gray-200 rounded p-5">
+          <div className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded p-5">
             <h2 className="text-base font-bold mb-3">تفاصيل البنود ({items.length})</h2>
             <div className="overflow-x-auto">
               <table className="w-full text-sm">
@@ -550,7 +550,7 @@ export default function NewQuotationPage() {
           </div>
 
           {/* Totals + Options */}
-          <div className="bg-white border border-gray-200 rounded p-5">
+          <div className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded p-5">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               <div>
                 <label className="block text-sm font-semibold text-gray-600 mb-1.5">ملاحظات</label>

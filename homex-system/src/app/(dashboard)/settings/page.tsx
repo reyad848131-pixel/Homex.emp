@@ -71,7 +71,7 @@ export default function SettingsPage() {
       </div>
 
       {/* Logo Upload */}
-      <div className="bg-white border border-gray-200 rounded p-6 mb-6">
+      <div className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded p-6 mb-6">
         <h2 className="text-base font-bold mb-4 flex items-center gap-2">
           <ImageIcon className="w-4 h-4 text-gray-400" />
           شعار الشركة
@@ -105,7 +105,7 @@ export default function SettingsPage() {
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        <div className="bg-white border border-gray-200 rounded p-6">
+        <div className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded p-6">
           <h2 className="text-base font-bold mb-4 flex items-center gap-2">
             <Building2 className="w-4 h-4 text-gray-400" />
             معلومات الشركة
@@ -149,7 +149,7 @@ export default function SettingsPage() {
           </div>
         </div>
 
-        <div className="bg-white border border-gray-200 rounded p-6">
+        <div className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded p-6">
           <h2 className="text-base font-bold mb-4">الإعدادات المالية</h2>
           <div className="space-y-4">
             <div>
@@ -180,7 +180,7 @@ export default function SettingsPage() {
       </div>
 
       {/* Terms & Conditions */}
-      <div className="bg-white border border-gray-200 rounded p-6 mt-6">
+      <div className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded p-6 mt-6">
         <h2 className="text-base font-bold mb-4 flex items-center gap-2">
           <ScrollText className="w-4 h-4 text-gray-400" />
           الشروط والأحكام
@@ -196,7 +196,7 @@ export default function SettingsPage() {
       </div>
 
       {/* Data Management */}
-      <div className="bg-white border border-gray-200 rounded p-6 mt-6">
+      <div className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded p-6 mt-6">
         <h2 className="text-base font-bold mb-4 flex items-center gap-2">
           <Database className="w-4 h-4 text-gray-400" />
           إدارة البيانات

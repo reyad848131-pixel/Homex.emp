@@ -39,7 +39,7 @@ export function CustomersClient({ customers }: { customers: Customer[] }) {
       </div>
 
       {customers.length > 0 && (
-        <div className="bg-white border border-gray-200 rounded p-4 mb-4">
+        <div className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded p-4 mb-4">
           <div className="relative">
             <Search className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
             <input
@@ -54,7 +54,7 @@ export function CustomersClient({ customers }: { customers: Customer[] }) {
       )}
 
       {filtered.length === 0 ? (
-        <div className="bg-white border border-gray-200 rounded p-12 text-center">
+        <div className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded p-12 text-center">
           <Users className="w-12 h-12 text-gray-300 mx-auto mb-3" />
           <p className="text-gray-500 font-semibold">
             {search ? "لا توجد نتائج للبحث" : "لا يوجد عملاء بعد"}
@@ -67,7 +67,7 @@ export function CustomersClient({ customers }: { customers: Customer[] }) {
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
           {filtered.map((c) => (
             <Link href={`/customers/${c.id}`} key={c.id}
-              className="bg-white border border-gray-200 rounded p-5 hover:border-gray-300 transition-colors block">
+              className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded p-5 hover:border-gray-300 transition-colors block">
               <div className="flex items-start justify-between mb-3">
                 <div>
                   <h3 className="font-bold text-gray-900">{c.name}</h3>

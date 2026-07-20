@@ -104,7 +104,7 @@ export default function ProfilePage() {
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        <div className="bg-white border border-gray-200 rounded p-6">
+        <div className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded p-6">
           <h2 className="text-base font-bold mb-4">المعلومات الأساسية</h2>
           <div className="space-y-4">
             <div className="flex items-center gap-4 p-4 bg-gray-50 rounded">
@@ -156,7 +156,7 @@ export default function ProfilePage() {
           </div>
         </div>
 
-        <div className="bg-white border border-gray-200 rounded p-6">
+        <div className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded p-6">
           <h2 className="text-base font-bold mb-4 flex items-center gap-2">
             <Lock className="w-4 h-4 text-gray-400" />
             تغيير كلمة المرور

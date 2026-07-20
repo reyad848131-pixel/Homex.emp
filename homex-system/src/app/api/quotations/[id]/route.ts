@@ -4,7 +4,7 @@ import { prisma } from "@/lib/prisma";
 import { logAction } from "@/lib/audit";
 import { notify, notifyAdmins } from "@/lib/notifications";
 
-const VALID_STATUSES = ["draft", "pending", "approved", "declined"];
+const VALID_STATUSES = ["draft", "pending", "approved", "declined", "revised"];
 
 export async function GET(
   req: NextRequest,
@@ -23,6 +23,7 @@ export async function GET(
         employee: { select: { id: true, name: true, civilId: true } },
         items: { include: { category: true }, orderBy: { sortOrder: "asc" } },
         payments: { include: { recorder: { select: { name: true } } }, orderBy: { paidAt: "desc" } },
+        invoice: { include: { issuer: { select: { name: true } } } },
       },
     });
 
@@ -107,6 +108,12 @@ export async function PATCH(
     const allowedFields: Record<string, any> = {};
     if (body.status) allowedFields.status = body.status;
     if (body.notes !== undefined) allowedFields.notes = body.notes;
+    if (body.statusComment !== undefined) allowedFields.statusComment = body.statusComment;
+
+    if (body.status === "revised") {
+      allowedFields.status = "revised";
+      if (body.statusComment) allowedFields.statusComment = body.statusComment;
+    }
 
     const updated = await prisma.quotation.update({
       where: { id },
@@ -115,20 +122,28 @@ export async function PATCH(
     });
 
     if (body.status) {
-      await logAction(user.id, "status_change", "quotation", id, JSON.stringify({ to: body.status }));
+      await logAction(user.id, "status_change", "quotation", id, JSON.stringify({ to: body.status, comment: body.statusComment || null }));
 
       const statusLabels: Record<string, string> = {
         pending: "قيد المراجعة",
         approved: "معتمد",
         declined: "مرفوض",
+        revised: "مُعاد للتعديل",
       };
       const label = statusLabels[body.status] || body.status;
       const link = `/quotations/${id}`;
 
       if (body.status === "pending") {
         await notifyAdmins("عرض سعر جديد للمراجعة", `${user.name} أرسل عرض سعر ${updated.quoteNumber} للمراجعة`, "info", link);
-      } else if (body.status === "approved" || body.status === "declined") {
-        await notify(updated.employeeId, `عرض السعر ${label}`, `تم ${label === "معتمد" ? "اعتماد" : "رفض"} عرض السعر ${updated.quoteNumber}`, body.status === "approved" ? "success" : "error", link);
+      } else if (body.status === "approved") {
+        const comment = body.statusComment ? ` — "${body.statusComment}"` : "";
+        await notify(updated.employeeId, "عرض السعر معتمد", `تم اعتماد عرض السعر ${updated.quoteNumber}${comment}`, "success", link);
+      } else if (body.status === "declined") {
+        const comment = body.statusComment ? ` — "${body.statusComment}"` : "";
+        await notify(updated.employeeId, "عرض السعر مرفوض", `تم رفض عرض السعر ${updated.quoteNumber}${comment}`, "error", link);
+      } else if (body.status === "revised") {
+        const comment = body.statusComment ? ` — "${body.statusComment}"` : "";
+        await notify(updated.employeeId, "عرض السعر مُعاد للتعديل", `تم إعادة عرض السعر ${updated.quoteNumber} لك للتعديل${comment}`, "warning", link);
       }
     }
 
