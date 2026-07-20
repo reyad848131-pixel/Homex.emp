@@ -72,11 +72,25 @@ export async function PATCH(
         await tx.quoteItem.deleteMany({ where: { quotationId: id } });
 
         const subtotal = body.items.reduce((sum: number, item: any) => sum + (Number(item.lineTotal) || 0), 0);
-        const vatRate = body.vatRate ?? 0.05;
-        const vatAmount = subtotal * vatRate;
-        const total = subtotal + vatAmount;
-        const advancePct = body.advancePct ?? 15;
-        const advanceAmount = total * (advancePct / 100);
+        const vatRate = body.vatRate ?? quotation.vatRate ?? 0.05;
+        const vatAmount = Math.round(subtotal * vatRate * 1000) / 1000;
+        const total = Math.round((subtotal + vatAmount) * 1000) / 1000;
+        const advancePct = body.advancePct ?? quotation.advancePct ?? 15;
+        const advanceAmount = Math.round(total * (advancePct / 100) * 1000) / 1000;
+
+        if (body.customer && body.customerId) {
+          await tx.customer.update({
+            where: { id: body.customerId },
+            data: {
+              name: body.customer.name,
+              phone: body.customer.phone,
+              phoneCode: body.customer.phoneCode || "+968",
+              governorate: body.customer.governorate,
+              wilayat: body.customer.wilayat,
+              ...(body.customer.address !== undefined ? { address: body.customer.address } : {}),
+            },
+          });
+        }
 
         return tx.quotation.update({
           where: { id },
