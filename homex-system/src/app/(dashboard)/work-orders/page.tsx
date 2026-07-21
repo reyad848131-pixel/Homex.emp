@@ -223,17 +223,25 @@ export default function WorkOrdersPage() {
 
   const handleMaterialCycle = (id: string, field: "woodStatus" | "fabricStatus", current: string) => {
     const next = getNextMaterialStatus(current);
-    const patch: Partial<WorkQuotation> = { [field]: next };
+    applyMaterialChange(id, field, next);
+  };
+
+  const handleMaterialSet = (id: string, field: "woodStatus" | "fabricStatus", value: string) => {
+    applyMaterialChange(id, field, value);
+  };
+
+  const applyMaterialChange = (id: string, field: "woodStatus" | "fabricStatus", value: string) => {
+    const patch: Partial<WorkQuotation> = { [field]: value };
     const q = data?.quotations.find((q) => q.id === id);
     if (q && q.workStatus === "needs_preparation") {
-      const woodFinal = field === "woodStatus" ? next : q.woodStatus;
-      const fabricFinal = field === "fabricStatus" ? next : q.fabricStatus;
+      const woodFinal = field === "woodStatus" ? value : q.woodStatus;
+      const fabricFinal = field === "fabricStatus" ? value : q.fabricStatus;
       if (woodFinal === "arrived" && fabricFinal === "arrived") {
         patch.workStatus = "ready_to_execute";
       }
     }
     updateLocal(id, patch);
-    patchApi({ id, [field]: next });
+    patchApi({ id, [field]: value });
   };
 
   const fmtDate = (d: string) => new Date(d).toLocaleDateString("ar-OM", { year: "numeric", month: "short", day: "numeric" });
@@ -502,7 +510,7 @@ export default function WorkOrdersPage() {
                             {Object.entries(MATERIAL_STATUS_MAP).map(([key, s]) => (
                               <button
                                 key={key}
-                                onClick={() => handleMaterialCycle(q.id, "woodStatus", q.woodStatus === key ? (key === "not_ordered" ? "not_ordered" : key === "ordered" ? "not_ordered" : "ordered") : (() => { const ks = Object.keys(MATERIAL_STATUS_MAP); return ks[ks.indexOf(key) - 1] || "not_ordered"; })())}
+                                onClick={() => handleMaterialSet(q.id, "woodStatus", key)}
                                 className={cn(
                                   "px-2.5 py-1 rounded text-[10px] font-bold border transition-all",
                                   q.woodStatus === key
@@ -521,7 +529,7 @@ export default function WorkOrdersPage() {
                             {Object.entries(MATERIAL_STATUS_MAP).map(([key, s]) => (
                               <button
                                 key={key}
-                                onClick={() => handleMaterialCycle(q.id, "fabricStatus", q.fabricStatus === key ? (key === "not_ordered" ? "not_ordered" : key === "ordered" ? "not_ordered" : "ordered") : (() => { const ks = Object.keys(MATERIAL_STATUS_MAP); return ks[ks.indexOf(key) - 1] || "not_ordered"; })())}
+                                onClick={() => handleMaterialSet(q.id, "fabricStatus", key)}
                                 className={cn(
                                   "px-2.5 py-1 rounded text-[10px] font-bold border transition-all",
                                   q.fabricStatus === key
