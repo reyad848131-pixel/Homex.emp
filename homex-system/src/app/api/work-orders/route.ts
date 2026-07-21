@@ -137,13 +137,6 @@ export async function PATCH(req: NextRequest) {
     if (woodStatus !== undefined && validMaterialStatuses.includes(woodStatus)) data.woodStatus = woodStatus;
     if (fabricStatus !== undefined && validMaterialStatuses.includes(fabricStatus)) data.fabricStatus = fabricStatus;
 
-    if (data.woodStatus === "arrived" || data.fabricStatus === "arrived") {
-      const current = { woodStatus: quotation.woodStatus, fabricStatus: quotation.fabricStatus, ...data };
-      if (current.woodStatus === "arrived" && current.fabricStatus === "arrived" && quotation.workStatus === "needs_preparation") {
-        data.workStatus = "ready_to_execute";
-      }
-    }
-
     const updated = await prisma.quotation.update({
       where: { id },
       data,
