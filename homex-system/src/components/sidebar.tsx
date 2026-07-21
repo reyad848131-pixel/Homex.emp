@@ -4,6 +4,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useRouter } from "next/navigation";
 import { cn } from "@/lib/utils";
+import { useI18n, type TranslationKey } from "@/lib/i18n";
 import {
   LayoutDashboard,
   FileText,
@@ -21,34 +22,35 @@ import {
 } from "lucide-react";
 import { useState, useEffect } from "react";
 import { DarkModeToggle } from "@/components/dark-mode-toggle";
+import { LanguageToggle } from "@/components/language-toggle";
 
-const ROLE_LABELS: Record<string, string> = {
-  admin: "مدير النظام",
-  manager: "مدير",
-  sales: "مبيعات",
+const ROLE_KEYS: Record<string, TranslationKey> = {
+  admin: "roleAdmin",
+  manager: "roleManager",
+  sales: "roleSales",
 };
 
 interface SidebarProps {
   user: { name: string; role: string; civilId: string };
 }
 
-const navItems = [
-  { href: "/", label: "لوحة التحكم", icon: LayoutDashboard },
-  { href: "/quotations", label: "عروض الأسعار", icon: FileText },
-  { href: "/quotations/new", label: "عرض سعر جديد", icon: FilePlus },
-  { href: "/customers", label: "العملاء", icon: Users },
+const navItems: Array<{ href: string; labelKey: TranslationKey; icon: any }> = [
+  { href: "/", labelKey: "dashboard", icon: LayoutDashboard },
+  { href: "/quotations", labelKey: "quotations", icon: FileText },
+  { href: "/quotations/new", labelKey: "newQuotation", icon: FilePlus },
+  { href: "/customers", labelKey: "customers", icon: Users },
 ];
 
-const managerItems = [
-  { href: "/work-orders", label: "إدارة الأعمال", icon: Truck },
-  { href: "/reports", label: "التقارير", icon: BarChart3 },
+const managerItems: Array<{ href: string; labelKey: TranslationKey; icon: any }> = [
+  { href: "/work-orders", labelKey: "workOrders", icon: Truck },
+  { href: "/reports", labelKey: "reports", icon: BarChart3 },
 ];
 
-const adminItems = [
-  { href: "/employees", label: "الموظفين", icon: UsersRound },
-  { href: "/categories", label: "الفئات", icon: Layers },
-  { href: "/audit-logs", label: "سجل النشاطات", icon: ScrollText },
-  { href: "/settings", label: "الإعدادات", icon: Settings },
+const adminItems: Array<{ href: string; labelKey: TranslationKey; icon: any }> = [
+  { href: "/employees", labelKey: "employees", icon: UsersRound },
+  { href: "/categories", labelKey: "categories", icon: Layers },
+  { href: "/audit-logs", labelKey: "auditLogs", icon: ScrollText },
+  { href: "/settings", labelKey: "settings", icon: Settings },
 ];
 
 export function Sidebar({ user }: SidebarProps) {
@@ -56,6 +58,7 @@ export function Sidebar({ user }: SidebarProps) {
   const router = useRouter();
   const [mobileOpen, setMobileOpen] = useState(false);
   const [logo, setLogo] = useState("");
+  const { t } = useI18n();
 
   useEffect(() => {
     fetch("/api/logo").then((r) => r.json()).then((d) => setLogo(d.logo || "")).catch(() => {});
@@ -113,7 +116,7 @@ export function Sidebar({ user }: SidebarProps) {
               )}
             >
               <item.icon className="w-[18px] h-[18px]" />
-              {item.label}
+              {t(item.labelKey)}
             </Link>
           );
         })}
@@ -127,17 +130,18 @@ export function Sidebar({ user }: SidebarProps) {
           <Link href="/profile" onClick={() => setMobileOpen(false)} className="flex-1 min-w-0">
             <p className="text-sm font-bold text-gray-900 dark:text-white truncate hover:underline">{user.name}</p>
             <p className="text-[11px] text-gray-400 font-mono-en">
-              {ROLE_LABELS[user.role] || user.role}
+              {ROLE_KEYS[user.role] ? t(ROLE_KEYS[user.role]) : user.role}
             </p>
           </Link>
         </div>
+        <LanguageToggle />
         <DarkModeToggle />
         <button
           onClick={handleLogout}
           className="flex items-center gap-2 w-full px-3 py-2 text-sm text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20 rounded transition-colors font-semibold"
         >
           <LogOut className="w-4 h-4" />
-          تسجيل الخروج
+          {t("logout")}
         </button>
       </div>
     </>
@@ -145,7 +149,6 @@ export function Sidebar({ user }: SidebarProps) {
 
   return (
     <>
-      {/* Mobile toggle */}
       <button
         className="fixed top-4 right-4 z-50 lg:hidden bg-gray-900 text-white p-2 rounded-lg shadow-lg"
         onClick={() => setMobileOpen(!mobileOpen)}
@@ -153,7 +156,6 @@ export function Sidebar({ user }: SidebarProps) {
         {mobileOpen ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5" />}
       </button>
 
-      {/* Mobile overlay */}
       {mobileOpen && (
         <div
           className="fixed inset-0 bg-black/30 z-30 lg:hidden"
@@ -161,7 +163,6 @@ export function Sidebar({ user }: SidebarProps) {
         />
       )}
 
-      {/* Sidebar */}
       <aside
         className={cn(
           "fixed top-0 right-0 h-full w-64 bg-white dark:bg-gray-800 border-l border-gray-200 dark:border-gray-700 flex flex-col z-40 transition-transform",

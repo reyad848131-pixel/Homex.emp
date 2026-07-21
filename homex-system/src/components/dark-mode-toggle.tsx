@@ -2,9 +2,11 @@
 
 import { useState, useEffect } from "react";
 import { Moon, Sun } from "lucide-react";
+import { useI18n } from "@/lib/i18n";
 
 export function DarkModeToggle() {
   const [dark, setDark] = useState(false);
+  const { t } = useI18n();
 
   useEffect(() => {
     const stored = localStorage.getItem("theme");
@@ -32,7 +34,7 @@ export function DarkModeToggle() {
       className="flex items-center gap-2 w-full px-3 py-2 text-sm text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 rounded transition-colors font-semibold"
     >
       {dark ? <Sun className="w-4 h-4" /> : <Moon className="w-4 h-4" />}
-      {dark ? "الوضع الفاتح" : "الوضع الداكن"}
+      {dark ? t("lightMode") : t("darkMode")}
     </button>
   );
 }
