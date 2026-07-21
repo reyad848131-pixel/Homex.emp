@@ -40,7 +40,36 @@ export function UpdateChecker() {
       } catch {}
     };
     window.addEventListener("focus", onFocus);
-    return () => window.removeEventListener("focus", onFocus);
+    window.addEventListener("visibilitychange", () => {
+      if (document.visibilityState === "visible") onFocus();
+    });
+    return () => {
+      window.removeEventListener("focus", onFocus);
+    };
+  }, []);
+
+  useEffect(() => {
+    if (!("serviceWorker" in navigator)) return;
+
+    navigator.serviceWorker.ready.then((reg) => {
+      reg.addEventListener("updatefound", () => {
+        const newWorker = reg.installing;
+        if (!newWorker) return;
+        newWorker.addEventListener("statechange", () => {
+          if (newWorker.state === "activated") {
+            setUpdateAvailable(true);
+          }
+        });
+      });
+
+      reg.update().catch(() => {});
+      const swInterval = setInterval(() => reg.update().catch(() => {}), CHECK_INTERVAL * 2);
+      return () => clearInterval(swInterval);
+    });
+
+    navigator.serviceWorker.addEventListener("controllerchange", () => {
+      setUpdateAvailable(true);
+    });
   }, []);
 
   if (!updateAvailable) return null;
