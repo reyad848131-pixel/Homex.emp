@@ -232,6 +232,16 @@ export default function WorkOrdersPage() {
 
   const applyMaterialChange = (id: string, field: "woodStatus" | "fabricStatus", value: string) => {
     const patch: Partial<WorkQuotation> = { [field]: value };
+    const q = data?.quotations.find((q) => q.id === id);
+    if (q) {
+      const woodFinal = field === "woodStatus" ? value : q.woodStatus;
+      const fabricFinal = field === "fabricStatus" ? value : q.fabricStatus;
+      if (woodFinal === "arrived" && fabricFinal === "arrived") {
+        patch.workStatus = "ready_to_execute";
+      } else if (q.workStatus === "ready_to_execute") {
+        patch.workStatus = "needs_preparation";
+      }
+    }
     updateLocal(id, patch);
     patchApi({ id, [field]: value });
   };
