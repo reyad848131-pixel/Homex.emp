@@ -1,38 +1,47 @@
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useRef } from "react";
 import { RefreshCw } from "lucide-react";
 
 const CHECK_INTERVAL = 60_000;
 
 export function UpdateChecker() {
   const [updateAvailable, setUpdateAvailable] = useState(false);
-  const [initialVersion, setInitialVersion] = useState<string | null>(null);
-
-  const checkVersion = useCallback(async () => {
-    try {
-      const res = await fetch("/api/version", { cache: "no-store" });
-      if (!res.ok) return;
-      const { version } = await res.json();
-      if (!initialVersion) {
-        setInitialVersion(version);
-      } else if (version !== initialVersion) {
-        setUpdateAvailable(true);
-      }
-    } catch {}
-  }, [initialVersion]);
+  const initialVersion = useRef<string | null>(null);
 
   useEffect(() => {
-    checkVersion();
-    const interval = setInterval(checkVersion, CHECK_INTERVAL);
+    const check = async () => {
+      try {
+        const res = await fetch(`/build-id.json?t=${Date.now()}`, { cache: "no-store" });
+        if (!res.ok) return;
+        const { v } = await res.json();
+        if (!initialVersion.current) {
+          initialVersion.current = v;
+        } else if (v !== initialVersion.current) {
+          setUpdateAvailable(true);
+        }
+      } catch {}
+    };
+
+    check();
+    const interval = setInterval(check, CHECK_INTERVAL);
     return () => clearInterval(interval);
-  }, [checkVersion]);
+  }, []);
 
   useEffect(() => {
-    const onFocus = () => checkVersion();
+    const onFocus = async () => {
+      try {
+        const res = await fetch(`/build-id.json?t=${Date.now()}`, { cache: "no-store" });
+        if (!res.ok) return;
+        const { v } = await res.json();
+        if (initialVersion.current && v !== initialVersion.current) {
+          setUpdateAvailable(true);
+        }
+      } catch {}
+    };
     window.addEventListener("focus", onFocus);
     return () => window.removeEventListener("focus", onFocus);
-  }, [checkVersion]);
+  }, []);
 
   if (!updateAvailable) return null;
 

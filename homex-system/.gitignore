@@ -19,3 +19,6 @@ docker-data/
 
 # Backups
 backups/
+
+# Build ID (generated at build time)
+public/build-id.json
