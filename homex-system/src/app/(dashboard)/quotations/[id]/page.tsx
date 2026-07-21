@@ -4,6 +4,7 @@ import { useState, useEffect, use } from "react";
 import { useRouter } from "next/navigation";
 import { STATUS_MAP } from "@/lib/types";
 import { cn } from "@/lib/utils";
+import { useI18n, type TranslationKey } from "@/lib/i18n";
 import {
   ArrowRight, Printer, Trash2, CheckCircle, XCircle, Send,
   Clock, FileText, User, MapPin, Phone, Pencil, Download, Copy, MessageCircle, CalendarDays,
@@ -54,16 +55,28 @@ interface QuotationDetail {
   } | null;
 }
 
-const PAYMENT_METHODS: Record<string, string> = {
-  cash: "نقدي",
-  bank_transfer: "تحويل بنكي",
-  cheque: "شيك",
-  card: "بطاقة",
+const STATUS_KEYS: Record<string, TranslationKey> = {
+  draft: "statusDraft",
+  pending: "statusPending",
+  approved: "statusApproved",
+  sent: "statusSent",
+  accepted: "statusAccepted",
+  revised: "statusRevised",
+  declined: "statusDeclined",
+  cancelled: "statusCancelled",
+};
+
+const PAYMENT_METHOD_KEYS: Record<string, TranslationKey> = {
+  cash: "cash",
+  bank_transfer: "bankTransfer",
+  cheque: "cheque",
+  card: "card",
 };
 
 export default function QuotationDetailPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = use(params);
   const router = useRouter();
+  const { t, locale, dateLocale } = useI18n();
   const [q, setQ] = useState<QuotationDetail | null>(null);
   const [loading, setLoading] = useState(true);
   const [terms, setTerms] = useState("");
@@ -138,7 +151,7 @@ export default function QuotationDetailPage({ params }: { params: Promise<{ id: 
   };
 
   const handleDelete = async () => {
-    if (!confirm("هل أنت متأكد من حذف هذا العرض؟")) return;
+    if (!confirm(t("deleteQuote"))) return;
     const res = await fetch(`/api/quotations/${id}`, { method: "DELETE" });
     if (res.ok) router.push("/quotations");
   };
@@ -157,11 +170,11 @@ export default function QuotationDetailPage({ params }: { params: Promise<{ id: 
   const handleWhatsApp = () => {
     if (!q) return;
     const text = encodeURIComponent(
-      `*عرض سعر - ${q.quoteNumber}*\n` +
-      `العميل: ${q.customer.name}\n` +
-      `الإجمالي: ${fmtCur(q.total)}\n` +
-      `الدفعة المقدمة (${q.advancePct}%): ${fmtCur(q.advanceAmount)}\n\n` +
-      `البنود:\n` +
+      `*${t("quotePrint")} - ${q.quoteNumber}*\n` +
+      `${t("customer")}: ${q.customer.name}\n` +
+      `${t("grandTotal")}: ${fmtCur(q.total)}\n` +
+      `${t("advancePayment")} (${q.advancePct}%): ${fmtCur(q.advanceAmount)}\n\n` +
+      `${t("items")}:\n` +
       q.items.map((item, i) => `${i + 1}. ${item.description} - ${fmtCur(item.lineTotal)}`).join("\n") +
       `\n\n--- Homex ---`
     );
@@ -197,21 +210,21 @@ export default function QuotationDetailPage({ params }: { params: Promise<{ id: 
     } catch {} finally { setPaying(false); }
   };
 
-  if (loading) return <div className="text-center py-20 text-gray-400">جاري التحميل...</div>;
-  if (!q) return <div className="text-center py-20 text-red-500">عرض السعر غير موجود</div>;
+  if (loading) return <div className="text-center py-20 text-gray-400">{t("loading")}</div>;
+  if (!q) return <div className="text-center py-20 text-red-500">{t("quoteNotFound")}</div>;
 
   const status = STATUS_MAP[q.status] || STATUS_MAP.draft;
+  const statusLabel = STATUS_KEYS[q.status] ? t(STATUS_KEYS[q.status]) : status.label;
 
   const groupedItems: Record<string, typeof q.items> = {};
   q.items.forEach((item) => {
-    const cat = item.category.nameAr;
+    const cat = locale === "en" && item.category.nameEn ? item.category.nameEn : item.category.nameAr;
     if (!groupedItems[cat]) groupedItems[cat] = [];
     groupedItems[cat].push(item);
   });
 
   return (
     <>
-      {/* Screen View */}
       <div className="no-print">
         <div className="flex items-center gap-3 mb-6">
           <Link href="/quotations" className="text-gray-400 hover:text-gray-600">
@@ -220,10 +233,10 @@ export default function QuotationDetailPage({ params }: { params: Promise<{ id: 
           <div className="flex-1">
             <h1 className="text-2xl font-bold flex items-center gap-3">
               <span className="font-mono-en">{q.quoteNumber}</span>
-              <span className={`text-xs px-2.5 py-1 rounded-full font-bold ${status.color}`}>{status.label}</span>
+              <span className={`text-xs px-2.5 py-1 rounded-full font-bold ${status.color}`}>{statusLabel}</span>
             </h1>
             <p className="text-sm text-gray-400 mt-1">
-              أنشئ بواسطة {q.employee.name} - {new Date(q.createdAt).toLocaleDateString("ar-OM")}
+              {t("createdBy")} {q.employee.name} - {new Date(q.createdAt).toLocaleDateString(dateLocale)}
             </p>
           </div>
 
@@ -231,7 +244,7 @@ export default function QuotationDetailPage({ params }: { params: Promise<{ id: 
             <button onClick={handlePrint}
               className="flex items-center gap-2 px-4 py-2 border border-gray-200 rounded text-sm font-bold hover:bg-gray-50">
               <Printer className="w-4 h-4" />
-              طباعة
+              {t("print")}
             </button>
             <a href={`/api/quotations/${id}/pdf`} target="_blank" rel="noopener noreferrer"
               className="flex items-center gap-2 px-4 py-2 border border-gray-200 rounded text-sm font-bold hover:bg-gray-50">
@@ -241,25 +254,25 @@ export default function QuotationDetailPage({ params }: { params: Promise<{ id: 
             <button onClick={handleWhatsApp}
               className="flex items-center gap-2 px-4 py-2 border border-green-200 text-green-600 rounded text-sm font-bold hover:bg-green-50">
               <MessageCircle className="w-4 h-4" />
-              واتساب
+              {t("whatsapp")}
             </button>
             <button onClick={handleDuplicate}
               className="flex items-center gap-2 px-4 py-2 border border-gray-200 rounded text-sm font-bold hover:bg-gray-50">
               <Copy className="w-4 h-4" />
-              نسخ
+              {t("duplicate")}
             </button>
             {(q.status === "draft" || q.status === "pending" || q.status === "revised") && (
               <Link href={`/quotations/${id}/edit`}
                 className="flex items-center gap-2 px-4 py-2 border border-gray-200 rounded text-sm font-bold hover:bg-gray-50">
                 <Pencil className="w-4 h-4" />
-                تعديل
+                {t("edit")}
               </Link>
             )}
             {(q.status === "draft" || q.status === "revised") && (
               <button onClick={() => updateStatus("pending")}
                 className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded text-sm font-bold hover:bg-blue-700">
                 <Send className="w-4 h-4" />
-                إرسال للمراجعة
+                {t("sendForReview")}
               </button>
             )}
             {q.status === "pending" && me?.role !== "sales" && (
@@ -267,17 +280,17 @@ export default function QuotationDetailPage({ params }: { params: Promise<{ id: 
                 <button onClick={() => handleStatusAction("approved")}
                   className="flex items-center gap-2 px-4 py-2 bg-green-600 text-white rounded text-sm font-bold hover:bg-green-700">
                   <CheckCircle className="w-4 h-4" />
-                  اعتماد
+                  {t("approve")}
                 </button>
                 <button onClick={() => handleStatusAction("revised")}
                   className="flex items-center gap-2 px-4 py-2 bg-orange-500 text-white rounded text-sm font-bold hover:bg-orange-600">
                   <RotateCcw className="w-4 h-4" />
-                  إعادة للتعديل
+                  {t("returnForEdit")}
                 </button>
                 <button onClick={() => handleStatusAction("declined")}
                   className="flex items-center gap-2 px-4 py-2 bg-red-600 text-white rounded text-sm font-bold hover:bg-red-700">
                   <XCircle className="w-4 h-4" />
-                  رفض
+                  {t("decline")}
                 </button>
               </>
             )}
@@ -285,14 +298,14 @@ export default function QuotationDetailPage({ params }: { params: Promise<{ id: 
               <button onClick={handleCreateInvoice} disabled={creatingInvoice}
                 className="flex items-center gap-2 px-4 py-2 bg-emerald-600 text-white rounded text-sm font-bold hover:bg-emerald-700 disabled:opacity-50">
                 <Receipt className="w-4 h-4" />
-                {creatingInvoice ? "جاري الإصدار..." : "إصدار فاتورة"}
+                {creatingInvoice ? t("issuingInvoice") : t("issueInvoice")}
               </button>
             )}
             {q.invoice && (
               <a href={`/api/invoices/${q.invoice.id}/pdf`} target="_blank" rel="noopener noreferrer"
                 className="flex items-center gap-2 px-4 py-2 border border-emerald-200 text-emerald-600 rounded text-sm font-bold hover:bg-emerald-50">
                 <Receipt className="w-4 h-4" />
-                فاتورة {q.invoice.invoiceNumber}
+                {t("invoice")} {q.invoice.invoiceNumber}
               </a>
             )}
             <button onClick={handleDelete}
@@ -303,10 +316,9 @@ export default function QuotationDetailPage({ params }: { params: Promise<{ id: 
         </div>
 
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-          {/* Customer Info */}
           <div className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded p-5">
             <h2 className="text-sm font-bold text-gray-400 uppercase tracking-wider mb-4 flex items-center gap-2">
-              <User className="w-4 h-4" /> بيانات العميل
+              <User className="w-4 h-4" /> {t("customerInfo")}
             </h2>
             <div className="space-y-3">
               <div>
@@ -324,32 +336,31 @@ export default function QuotationDetailPage({ params }: { params: Promise<{ id: 
             <div className="border-t border-gray-100 mt-4 pt-4 space-y-3">
               <div className="flex items-center gap-2 text-sm text-gray-500">
                 <CalendarDays className="w-4 h-4" />
-                <span>صالح حتى: {q.validUntil ? new Date(q.validUntil).toLocaleDateString("ar-OM") : "—"}</span>
+                <span>{t("validUntil")}: {q.validUntil ? new Date(q.validUntil).toLocaleDateString(dateLocale) : "—"}</span>
               </div>
               {q.deliveryDate && (
                 <div className="flex items-center gap-2 text-sm text-gray-500">
                   <Clock className="w-4 h-4" />
-                  <span>موعد التسليم: {new Date(q.deliveryDate).toLocaleDateString("ar-OM")}</span>
+                  <span>{t("deliveryDate")}: {new Date(q.deliveryDate).toLocaleDateString(dateLocale)}</span>
                 </div>
               )}
             </div>
           </div>
 
-          {/* Items Table */}
           <div className="lg:col-span-2 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded p-5">
             <h2 className="text-sm font-bold text-gray-400 uppercase tracking-wider mb-4 flex items-center gap-2">
-              <FileText className="w-4 h-4" /> تفاصيل البنود ({q.items.length})
+              <FileText className="w-4 h-4" /> {t("itemDetails")} ({q.items.length})
             </h2>
             <div className="overflow-x-auto">
               <table className="w-full text-sm">
                 <thead>
                   <tr className="border-b border-gray-200">
                     <th className="text-right py-2 text-xs text-gray-400 font-semibold">#</th>
-                    <th className="text-right py-2 text-xs text-gray-400 font-semibold">البند</th>
-                    <th className="text-right py-2 text-xs text-gray-400 font-semibold">الكمية</th>
-                    <th className="text-right py-2 text-xs text-gray-400 font-semibold">السعر</th>
-                    <th className="text-right py-2 text-xs text-gray-400 font-semibold">الإضافات</th>
-                    <th className="text-right py-2 text-xs text-gray-400 font-semibold">الإجمالي</th>
+                    <th className="text-right py-2 text-xs text-gray-400 font-semibold">{t("item")}</th>
+                    <th className="text-right py-2 text-xs text-gray-400 font-semibold">{t("quantity")}</th>
+                    <th className="text-right py-2 text-xs text-gray-400 font-semibold">{t("price")}</th>
+                    <th className="text-right py-2 text-xs text-gray-400 font-semibold">{t("extras")}</th>
+                    <th className="text-right py-2 text-xs text-gray-400 font-semibold">{t("total")}</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -376,29 +387,27 @@ export default function QuotationDetailPage({ params }: { params: Promise<{ id: 
               </table>
             </div>
 
-            {/* Totals */}
             <div className="border-t border-gray-200 mt-4 pt-4 space-y-2 max-w-xs mr-auto">
               <div className="flex justify-between text-sm">
-                <span className="text-gray-500">المجموع الفرعي</span>
+                <span className="text-gray-500">{t("subtotal")}</span>
                 <span className="font-bold font-mono-en">{fmtCur(q.subtotal)}</span>
               </div>
               <div className="flex justify-between text-sm">
-                <span className="text-gray-500">ضريبة القيمة المضافة ({(q.vatRate * 100).toFixed(0)}%)</span>
+                <span className="text-gray-500">{t("vat")} ({(q.vatRate * 100).toFixed(0)}%)</span>
                 <span className="font-bold font-mono-en">{fmtCur(q.vatAmount)}</span>
               </div>
               <div className="flex justify-between text-lg pt-2 border-t border-gray-200">
-                <span className="font-bold">الإجمالي</span>
+                <span className="font-bold">{t("grandTotal")}</span>
                 <span className="font-black font-mono-en">{fmtCur(q.total)}</span>
               </div>
               <div className="flex justify-between text-sm">
-                <span className="text-gray-500">الدفعة المقدمة ({q.advancePct}%)</span>
+                <span className="text-gray-500">{t("advancePayment")} ({q.advancePct}%)</span>
                 <span className="font-bold font-mono-en text-green-600">{fmtCur(q.advanceAmount)}</span>
               </div>
             </div>
           </div>
         </div>
 
-        {/* Status Comment Banner */}
         {q.statusComment && (q.status === "declined" || q.status === "revised" || q.status === "approved") && (
           <div className={cn(
             "border rounded p-4 mt-6 flex items-start gap-3",
@@ -415,7 +424,7 @@ export default function QuotationDetailPage({ params }: { params: Promise<{ id: 
                 q.status === "declined" ? "text-red-700" :
                 q.status === "revised" ? "text-orange-700" : "text-green-700"
               )}>
-                {q.status === "declined" ? "سبب الرفض" : q.status === "revised" ? "ملاحظة الإعادة للتعديل" : "ملاحظة الاعتماد"}
+                {q.status === "declined" ? t("declineReason") : q.status === "revised" ? t("revisionNote") : t("approvalNote")}
               </p>
               <p className="text-sm text-gray-700 mt-1">{q.statusComment}</p>
             </div>
@@ -424,14 +433,14 @@ export default function QuotationDetailPage({ params }: { params: Promise<{ id: 
 
         {q.notes && (
           <div className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded p-5 mt-6">
-            <h2 className="text-sm font-bold text-gray-400 mb-2">ملاحظات</h2>
+            <h2 className="text-sm font-bold text-gray-400 mb-2">{t("notes")}</h2>
             <p className="text-sm text-gray-700">{q.notes}</p>
           </div>
         )}
 
         {terms && (
           <div className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded p-5 mt-6">
-            <h2 className="text-sm font-bold text-gray-400 mb-3">الشروط والأحكام</h2>
+            <h2 className="text-sm font-bold text-gray-400 mb-3">{t("termsAndConditions")}</h2>
             <ul className="space-y-1.5">
               {terms.split("\n").filter(Boolean).map((line, i) => (
                 <li key={i} className="flex items-start gap-2 text-sm text-gray-600">
@@ -443,7 +452,6 @@ export default function QuotationDetailPage({ params }: { params: Promise<{ id: 
           </div>
         )}
 
-        {/* Payments Section */}
         {q.status === "approved" && (() => {
           const totalPaid = q.payments.reduce((s, p) => s + p.amount, 0);
           const remaining = q.total - totalPaid;
@@ -452,11 +460,11 @@ export default function QuotationDetailPage({ params }: { params: Promise<{ id: 
             <div className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded mt-6">
               <div className="p-5 border-b border-gray-100 dark:border-gray-700 flex items-center justify-between">
                 <h2 className="text-sm font-bold text-gray-400 uppercase tracking-wider flex items-center gap-2">
-                  <Banknote className="w-4 h-4" /> المدفوعات
+                  <Banknote className="w-4 h-4" /> {t("payments")}
                 </h2>
                 <button onClick={() => setShowPayForm(!showPayForm)}
                   className="flex items-center gap-1 text-sm font-bold text-gray-900 hover:text-gray-600 transition-colors">
-                  <Plus className="w-4 h-4" /> تسجيل دفعة
+                  <Plus className="w-4 h-4" /> {t("recordPayment")}
                 </button>
               </div>
 
@@ -471,15 +479,15 @@ export default function QuotationDetailPage({ params }: { params: Promise<{ id: 
                 </div>
                 <div className="grid grid-cols-3 gap-4 text-center mb-4">
                   <div>
-                    <p className="text-xs text-gray-400">الإجمالي</p>
+                    <p className="text-xs text-gray-400">{t("grandTotal")}</p>
                     <p className="font-bold font-mono-en">{fmtCur(q.total)}</p>
                   </div>
                   <div>
-                    <p className="text-xs text-gray-400">المدفوع</p>
+                    <p className="text-xs text-gray-400">{t("paid")}</p>
                     <p className="font-bold font-mono-en text-green-600">{fmtCur(totalPaid)}</p>
                   </div>
                   <div>
-                    <p className="text-xs text-gray-400">المتبقي</p>
+                    <p className="text-xs text-gray-400">{t("remaining")}</p>
                     <p className="font-bold font-mono-en text-red-600">{fmtCur(remaining)}</p>
                   </div>
                 </div>
@@ -488,34 +496,34 @@ export default function QuotationDetailPage({ params }: { params: Promise<{ id: 
                   <div className="border border-gray-200 rounded p-4 mb-4 space-y-3">
                     <div className="grid grid-cols-2 gap-3">
                       <div>
-                        <label className="block text-xs font-semibold text-gray-500 mb-1">المبلغ *</label>
+                        <label className="block text-xs font-semibold text-gray-500 mb-1">{t("amount")} *</label>
                         <input type="number" step="0.001" min="0.001" max={remaining}
                           value={payAmount} onChange={(e) => setPayAmount(e.target.value)}
                           className="w-full border border-gray-200 rounded px-3 py-2 text-sm font-mono-en"
-                          placeholder={`الحد الأقصى ${remaining.toFixed(3)}`} />
+                          placeholder={`${t("maxAmount")} ${remaining.toFixed(3)}`} />
                       </div>
                       <div>
-                        <label className="block text-xs font-semibold text-gray-500 mb-1">طريقة الدفع</label>
+                        <label className="block text-xs font-semibold text-gray-500 mb-1">{t("paymentMethod")}</label>
                         <select value={payMethod} onChange={(e) => setPayMethod(e.target.value)}
                           className="w-full border border-gray-200 rounded px-3 py-2 text-sm">
-                          {Object.entries(PAYMENT_METHODS).map(([k, v]) => <option key={k} value={k}>{v}</option>)}
+                          {Object.entries(PAYMENT_METHOD_KEYS).map(([k, lk]) => <option key={k} value={k}>{t(lk)}</option>)}
                         </select>
                       </div>
                     </div>
                     <div>
-                      <label className="block text-xs font-semibold text-gray-500 mb-1">رقم المرجع</label>
+                      <label className="block text-xs font-semibold text-gray-500 mb-1">{t("reference")}</label>
                       <input type="text" value={payRef} onChange={(e) => setPayRef(e.target.value)}
-                        className="w-full border border-gray-200 rounded px-3 py-2 text-sm font-mono-en" placeholder="اختياري" />
+                        className="w-full border border-gray-200 rounded px-3 py-2 text-sm font-mono-en" placeholder={t("optional")} />
                     </div>
                     <div>
-                      <label className="block text-xs font-semibold text-gray-500 mb-1">ملاحظات</label>
+                      <label className="block text-xs font-semibold text-gray-500 mb-1">{t("notes")}</label>
                       <input type="text" value={payNotes} onChange={(e) => setPayNotes(e.target.value)}
-                        className="w-full border border-gray-200 rounded px-3 py-2 text-sm" placeholder="اختياري" />
+                        className="w-full border border-gray-200 rounded px-3 py-2 text-sm" placeholder={t("optional")} />
                     </div>
                     <button onClick={handleAddPayment} disabled={paying || !payAmount || Number(payAmount) <= 0}
                       className="w-full flex items-center justify-center gap-2 bg-green-600 text-white px-4 py-2.5 rounded text-sm font-bold hover:bg-green-700 disabled:opacity-50 transition-colors">
                       <CreditCard className="w-4 h-4" />
-                      {paying ? "جاري التسجيل..." : "تسجيل الدفعة"}
+                      {paying ? t("recording") : t("recordPaymentBtn")}
                     </button>
                   </div>
                 )}
@@ -525,28 +533,28 @@ export default function QuotationDetailPage({ params }: { params: Promise<{ id: 
                     <table className="w-full text-sm">
                       <thead>
                         <tr className="border-b border-gray-200">
-                          <th className="text-right py-2 text-xs text-gray-400">المبلغ</th>
-                          <th className="text-right py-2 text-xs text-gray-400">الطريقة</th>
-                          <th className="text-right py-2 text-xs text-gray-400">المرجع</th>
-                          <th className="text-right py-2 text-xs text-gray-400">بواسطة</th>
-                          <th className="text-right py-2 text-xs text-gray-400">التاريخ</th>
+                          <th className="text-right py-2 text-xs text-gray-400">{t("amount")}</th>
+                          <th className="text-right py-2 text-xs text-gray-400">{t("method")}</th>
+                          <th className="text-right py-2 text-xs text-gray-400">{t("reference")}</th>
+                          <th className="text-right py-2 text-xs text-gray-400">{t("by")}</th>
+                          <th className="text-right py-2 text-xs text-gray-400">{t("date")}</th>
                         </tr>
                       </thead>
                       <tbody>
                         {q.payments.map((p) => (
                           <tr key={p.id} className="border-b border-gray-50">
                             <td className="py-2 font-mono-en font-bold text-green-600">{fmtCur(p.amount)}</td>
-                            <td className="py-2 text-gray-500">{PAYMENT_METHODS[p.method] || p.method}</td>
+                            <td className="py-2 text-gray-500">{PAYMENT_METHOD_KEYS[p.method] ? t(PAYMENT_METHOD_KEYS[p.method]) : p.method}</td>
                             <td className="py-2 font-mono-en text-gray-400 text-xs">{p.reference || "—"}</td>
                             <td className="py-2 text-gray-500 text-xs">{p.recorder.name}</td>
-                            <td className="py-2 font-mono-en text-gray-400 text-xs">{new Date(p.paidAt).toLocaleDateString("ar-OM")}</td>
+                            <td className="py-2 font-mono-en text-gray-400 text-xs">{new Date(p.paidAt).toLocaleDateString(dateLocale)}</td>
                           </tr>
                         ))}
                       </tbody>
                     </table>
                   </div>
                 ) : (
-                  <p className="text-sm text-gray-400 text-center py-4">لا توجد دفعات مسجلة</p>
+                  <p className="text-sm text-gray-400 text-center py-4">{t("noPayments")}</p>
                 )}
               </div>
             </div>
@@ -558,23 +566,23 @@ export default function QuotationDetailPage({ params }: { params: Promise<{ id: 
       <div className="hidden print:block p-8" dir="rtl">
         <div className="text-center mb-8 border-b-2 border-gray-900 pb-6">
           <h1 className="text-3xl font-black">HOMEX</h1>
-          <p className="text-sm text-gray-500 mt-1">عرض سعر</p>
+          <p className="text-sm text-gray-500 mt-1">{t("quotePrint")}</p>
           <p className="text-xs text-gray-400 mt-2 font-mono-en">{q.quoteNumber}</p>
         </div>
 
         <div className="grid grid-cols-2 gap-8 mb-8 text-sm">
           <div>
-            <h3 className="font-bold text-gray-500 text-xs uppercase mb-2">بيانات العميل</h3>
+            <h3 className="font-bold text-gray-500 text-xs uppercase mb-2">{t("customerInfo")}</h3>
             <p className="font-bold text-lg">{q.customer.name}</p>
             <p className="text-gray-600">{q.customer.phoneCode} {q.customer.phone}</p>
             <p className="text-gray-600">{q.customer.governorate} - {q.customer.wilayat}</p>
           </div>
           <div className="text-left">
-            <h3 className="font-bold text-gray-500 text-xs uppercase mb-2">تفاصيل العرض</h3>
-            <p>التاريخ: {new Date(q.createdAt).toLocaleDateString("ar-OM")}</p>
-            <p>صالح حتى: {q.validUntil ? new Date(q.validUntil).toLocaleDateString("ar-OM") : "-"}</p>
-            {q.deliveryDate && <p>موعد التسليم: {new Date(q.deliveryDate).toLocaleDateString("ar-OM")}</p>}
-            <p>الموظف: {q.employee.name}</p>
+            <h3 className="font-bold text-gray-500 text-xs uppercase mb-2">{t("quoteDetails")}</h3>
+            <p>{t("date")}: {new Date(q.createdAt).toLocaleDateString(dateLocale)}</p>
+            <p>{t("validUntil")}: {q.validUntil ? new Date(q.validUntil).toLocaleDateString(dateLocale) : "-"}</p>
+            {q.deliveryDate && <p>{t("deliveryDate")}: {new Date(q.deliveryDate).toLocaleDateString(dateLocale)}</p>}
+            <p>{t("employee")}: {q.employee.name}</p>
           </div>
         </div>
 
@@ -582,10 +590,10 @@ export default function QuotationDetailPage({ params }: { params: Promise<{ id: 
           <thead>
             <tr className="bg-gray-900 text-white">
               <th className="text-right p-2 border">#</th>
-              <th className="text-right p-2 border">البند</th>
-              <th className="text-right p-2 border">الكمية</th>
-              <th className="text-right p-2 border">سعر الوحدة</th>
-              <th className="text-right p-2 border">الإجمالي</th>
+              <th className="text-right p-2 border">{t("item")}</th>
+              <th className="text-right p-2 border">{t("quantity")}</th>
+              <th className="text-right p-2 border">{t("unitPrice")}</th>
+              <th className="text-right p-2 border">{t("total")}</th>
             </tr>
           </thead>
           <tbody>
@@ -603,14 +611,14 @@ export default function QuotationDetailPage({ params }: { params: Promise<{ id: 
 
         <div className="flex justify-end">
           <div className="w-64 space-y-1 text-sm">
-            <div className="flex justify-between"><span>المجموع الفرعي</span><span className="font-bold font-mono-en">{fmtCur(q.subtotal)}</span></div>
-            <div className="flex justify-between"><span>ضريبة ({(q.vatRate * 100).toFixed(0)}%)</span><span className="font-mono-en">{fmtCur(q.vatAmount)}</span></div>
+            <div className="flex justify-between"><span>{t("subtotal")}</span><span className="font-bold font-mono-en">{fmtCur(q.subtotal)}</span></div>
+            <div className="flex justify-between"><span>{t("tax")} ({(q.vatRate * 100).toFixed(0)}%)</span><span className="font-mono-en">{fmtCur(q.vatAmount)}</span></div>
             <div className="flex justify-between border-t-2 border-gray-900 pt-2 text-lg">
-              <span className="font-bold">الإجمالي</span>
+              <span className="font-bold">{t("grandTotal")}</span>
               <span className="font-black font-mono-en">{fmtCur(q.total)}</span>
             </div>
             <div className="flex justify-between text-green-700">
-              <span>دفعة مقدمة ({q.advancePct}%)</span>
+              <span>{t("advancePayment")} ({q.advancePct}%)</span>
               <span className="font-bold font-mono-en">{fmtCur(q.advanceAmount)}</span>
             </div>
           </div>
@@ -618,7 +626,7 @@ export default function QuotationDetailPage({ params }: { params: Promise<{ id: 
 
         {terms && (
           <div className="mt-8 pt-4 border-t">
-            <h3 className="font-bold text-sm mb-2">الشروط والأحكام:</h3>
+            <h3 className="font-bold text-sm mb-2">{t("termsAndConditions")}:</h3>
             <ul className="space-y-1 text-xs text-gray-600">
               {terms.split("\n").filter(Boolean).map((line, i) => (
                 <li key={i}>• {line}</li>
@@ -628,36 +636,33 @@ export default function QuotationDetailPage({ params }: { params: Promise<{ id: 
         )}
 
         <div className="mt-12 pt-4 border-t text-center text-xs text-gray-400">
-          <p>Homex - نظام عروض الأسعار الداخلي</p>
+          <p>Homex - Quotation Management System</p>
         </div>
       </div>
 
-      {/* Status Comment Dialog */}
       {showStatusDialog && (
         <div className="fixed inset-0 bg-black/40 z-50 flex items-center justify-center no-print" onClick={() => setShowStatusDialog(null)}>
           <div className="bg-white rounded-lg shadow-xl w-full max-w-md p-6 mx-4" onClick={(e) => e.stopPropagation()}>
             <h3 className="text-lg font-bold mb-1 flex items-center gap-2">
-              {showStatusDialog === "approved" && <><CheckCircle className="w-5 h-5 text-green-600" /> اعتماد عرض السعر</>}
-              {showStatusDialog === "declined" && <><XCircle className="w-5 h-5 text-red-600" /> رفض عرض السعر</>}
-              {showStatusDialog === "revised" && <><RotateCcw className="w-5 h-5 text-orange-500" /> إعادة للتعديل</>}
+              {showStatusDialog === "approved" && <><CheckCircle className="w-5 h-5 text-green-600" /> {t("approveQuote")}</>}
+              {showStatusDialog === "declined" && <><XCircle className="w-5 h-5 text-red-600" /> {t("declineQuote")}</>}
+              {showStatusDialog === "revised" && <><RotateCcw className="w-5 h-5 text-orange-500" /> {t("returnForEditTitle")}</>}
             </h3>
             <p className="text-sm text-gray-500 mb-4">
-              {showStatusDialog === "revised"
-                ? "اكتب ملاحظة للموظف توضح التعديل المطلوب (إلزامي)"
-                : "أضف تعليق أو ملاحظة (اختياري)"}
+              {showStatusDialog === "revised" ? t("revisionRequired") : t("addCommentOptional")}
             </p>
             <textarea
               value={statusComment}
               onChange={(e) => setStatusComment(e.target.value)}
               rows={3}
               className="w-full border border-gray-200 rounded px-3 py-2.5 text-sm mb-4"
-              placeholder={showStatusDialog === "revised" ? "مثال: يرجى تعديل السعر في البند الثاني..." : "أضف ملاحظة..."}
+              placeholder={showStatusDialog === "revised" ? "" : ""}
               autoFocus
             />
             <div className="flex gap-2 justify-end">
               <button onClick={() => setShowStatusDialog(null)}
                 className="px-4 py-2 border border-gray-200 rounded text-sm font-bold hover:bg-gray-50">
-                إلغاء
+                {t("cancel")}
               </button>
               <button onClick={confirmStatusAction}
                 disabled={showStatusDialog === "revised" && !statusComment.trim()}
@@ -667,8 +672,8 @@ export default function QuotationDetailPage({ params }: { params: Promise<{ id: 
                   showStatusDialog === "revised" ? "bg-orange-500 hover:bg-orange-600" :
                   "bg-red-600 hover:bg-red-700"
                 )}>
-                {showStatusDialog === "approved" ? "تأكيد الاعتماد" :
-                 showStatusDialog === "revised" ? "إعادة للتعديل" : "تأكيد الرفض"}
+                {showStatusDialog === "approved" ? t("confirmApprove") :
+                 showStatusDialog === "revised" ? t("returnForEdit") : t("confirmDecline")}
               </button>
             </div>
           </div>
