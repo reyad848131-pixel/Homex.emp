@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { Cairo, Montserrat } from "next/font/google";
 import "./globals.css";
 import { Providers } from "@/components/providers";
+import { UpdateChecker } from "@/components/update-checker";
 
 const cairo = Cairo({
   variable: "--font-cairo",
@@ -44,7 +45,10 @@ export default function RootLayout({
         <script dangerouslySetInnerHTML={{ __html: `try{if(localStorage.getItem("theme")==="dark")document.documentElement.classList.add("dark")}catch(e){}` }} />
       </head>
       <body className="font-cairo antialiased bg-stone-100 dark:bg-gray-900 text-gray-900 dark:text-gray-100 min-h-screen">
-        <Providers>{children}</Providers>
+        <Providers>
+          {children}
+          <UpdateChecker />
+        </Providers>
       </body>
     </html>
   );
