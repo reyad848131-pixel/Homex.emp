@@ -139,7 +139,7 @@ export async function PATCH(req: NextRequest) {
 
     if (data.woodStatus !== undefined || data.fabricStatus !== undefined) {
       const current = { woodStatus: quotation.woodStatus, fabricStatus: quotation.fabricStatus, ...data };
-      if (current.woodStatus === "arrived" && current.fabricStatus === "arrived") {
+      if (current.woodStatus === "arrived" || current.fabricStatus === "arrived") {
         data.workStatus = "ready_to_execute";
       } else if (quotation.workStatus === "ready_to_execute") {
         data.workStatus = "needs_preparation";

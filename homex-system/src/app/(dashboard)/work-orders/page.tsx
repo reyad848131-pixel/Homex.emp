@@ -236,7 +236,7 @@ export default function WorkOrdersPage() {
     if (q) {
       const woodFinal = field === "woodStatus" ? value : q.woodStatus;
       const fabricFinal = field === "fabricStatus" ? value : q.fabricStatus;
-      if (woodFinal === "arrived" && fabricFinal === "arrived") {
+      if (woodFinal === "arrived" || fabricFinal === "arrived") {
         patch.workStatus = "ready_to_execute";
       } else if (q.workStatus === "ready_to_execute") {
         patch.workStatus = "needs_preparation";
