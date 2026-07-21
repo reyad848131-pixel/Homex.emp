@@ -115,7 +115,7 @@ export default function WorkOrdersPage() {
   const debouncedSearch = useDebouncedValue(search);
 
   const now = new Date();
-  const [selectedMonth, setSelectedMonth] = useState<string | null>(`${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}`);
+  const [selectedMonth, setSelectedMonth] = useState<string | null>(null);
 
   const mYear = selectedMonth ? Number(selectedMonth.split("-")[0]) : 0;
   const mMonth = selectedMonth ? Number(selectedMonth.split("-")[1]) : 0;
