@@ -115,16 +115,27 @@ export default function WorkOrdersPage() {
   const debouncedSearch = useDebouncedValue(search);
 
   const now = new Date();
-  const [selectedMonth, setSelectedMonth] = useState(`${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}`);
+  const [selectedMonth, setSelectedMonth] = useState<string | null>(`${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}`);
 
-  const [mYear, mMonth] = selectedMonth.split("-").map(Number);
-  const monthLabel = `${MONTHS_AR[mMonth - 1]} ${mYear}`;
+  const mYear = selectedMonth ? Number(selectedMonth.split("-")[0]) : 0;
+  const mMonth = selectedMonth ? Number(selectedMonth.split("-")[1]) : 0;
+  const monthLabel = selectedMonth ? `${MONTHS_AR[mMonth - 1]} ${mYear}` : "جميع الأشهر";
 
   const prevMonth = () => {
+    if (!selectedMonth) {
+      const n = new Date();
+      setSelectedMonth(`${n.getFullYear()}-${String(n.getMonth() + 1).padStart(2, "0")}`);
+      return;
+    }
     const d = new Date(mYear, mMonth - 2, 1);
     setSelectedMonth(`${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`);
   };
   const nextMonth = () => {
+    if (!selectedMonth) {
+      const n = new Date();
+      setSelectedMonth(`${n.getFullYear()}-${String(n.getMonth() + 1).padStart(2, "0")}`);
+      return;
+    }
     const d = new Date(mYear, mMonth, 1);
     setSelectedMonth(`${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`);
   };
@@ -132,6 +143,7 @@ export default function WorkOrdersPage() {
     const n = new Date();
     setSelectedMonth(`${n.getFullYear()}-${String(n.getMonth() + 1).padStart(2, "0")}`);
   };
+  const showAll = () => setSelectedMonth(null);
 
   const fetchData = useCallback(() => {
     const params = new URLSearchParams();
@@ -141,7 +153,7 @@ export default function WorkOrdersPage() {
     if (debouncedSearch) params.set("search", debouncedSearch);
     if (deliveryFrom) params.set("deliveryFrom", deliveryFrom);
     if (deliveryTo) params.set("deliveryTo", deliveryTo);
-    params.set("month", selectedMonth);
+    if (selectedMonth) params.set("month", selectedMonth);
 
     fetch(`/api/work-orders?${params}`)
       .then((r) => r.json())
@@ -211,17 +223,25 @@ export default function WorkOrdersPage() {
 
   const handleMaterialCycle = (id: string, field: "woodStatus" | "fabricStatus", current: string) => {
     const next = getNextMaterialStatus(current);
-    const patch: Partial<WorkQuotation> = { [field]: next };
+    applyMaterialChange(id, field, next);
+  };
+
+  const handleMaterialSet = (id: string, field: "woodStatus" | "fabricStatus", value: string) => {
+    applyMaterialChange(id, field, value);
+  };
+
+  const applyMaterialChange = (id: string, field: "woodStatus" | "fabricStatus", value: string) => {
+    const patch: Partial<WorkQuotation> = { [field]: value };
     const q = data?.quotations.find((q) => q.id === id);
     if (q && q.workStatus === "needs_preparation") {
-      const woodFinal = field === "woodStatus" ? next : q.woodStatus;
-      const fabricFinal = field === "fabricStatus" ? next : q.fabricStatus;
+      const woodFinal = field === "woodStatus" ? value : q.woodStatus;
+      const fabricFinal = field === "fabricStatus" ? value : q.fabricStatus;
       if (woodFinal === "arrived" && fabricFinal === "arrived") {
         patch.workStatus = "ready_to_execute";
       }
     }
     updateLocal(id, patch);
-    patchApi({ id, [field]: next });
+    patchApi({ id, [field]: value });
   };
 
   const fmtDate = (d: string) => new Date(d).toLocaleDateString("ar-OM", { year: "numeric", month: "short", day: "numeric" });
@@ -252,16 +272,37 @@ export default function WorkOrdersPage() {
       </div>
 
       {/* فلتر الشهر */}
-      <div className="flex items-center justify-center gap-4 mb-4 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg p-3">
+      <div className="flex items-center justify-center gap-3 mb-4 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg p-3 flex-wrap">
         <button onClick={nextMonth} className="p-2 rounded hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors">
           <ChevronRight className="w-5 h-5" />
         </button>
-        <button onClick={goToCurrentMonth} className="text-lg font-bold min-w-[160px] text-center">
+        <button onClick={selectedMonth ? goToCurrentMonth : undefined} className="text-lg font-bold min-w-[160px] text-center">
           {monthLabel}
         </button>
         <button onClick={prevMonth} className="p-2 rounded hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors">
           <ChevronLeft className="w-5 h-5" />
         </button>
+        <div className="flex items-center gap-2">
+          <button
+            onClick={showAll}
+            className={cn(
+              "px-3 py-1.5 rounded text-xs font-bold border transition-all",
+              !selectedMonth
+                ? "bg-gray-900 dark:bg-white text-white dark:text-gray-900 border-gray-900 dark:border-white"
+                : "border-gray-300 dark:border-gray-600 text-gray-500 hover:border-gray-400"
+            )}
+          >
+            الكل
+          </button>
+          {selectedMonth && (
+            <button
+              onClick={goToCurrentMonth}
+              className="px-3 py-1.5 rounded text-xs font-bold border border-gray-300 dark:border-gray-600 text-gray-500 hover:border-gray-400 transition-all"
+            >
+              الشهر الحالي
+            </button>
+          )}
+        </div>
         <span className="text-sm font-bold text-gray-400 font-mono-en">{data.quotations.length} عمل</span>
       </div>
 
@@ -358,7 +399,7 @@ export default function WorkOrdersPage() {
       {data.quotations.length === 0 ? (
         <div className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded p-12 text-center">
           <Truck className="w-12 h-12 text-gray-300 dark:text-gray-600 mx-auto mb-3" />
-          <p className="text-gray-500 font-semibold">لا توجد طلبات في {monthLabel}{activeFilter || alertFilter ? " مطابقة للفلتر" : ""}</p>
+          <p className="text-gray-500 font-semibold">لا توجد طلبات{selectedMonth ? ` في ${monthLabel}` : ""}{activeFilter || alertFilter ? " مطابقة للفلتر" : ""}</p>
         </div>
       ) : (
         <div className="space-y-3">
@@ -469,7 +510,7 @@ export default function WorkOrdersPage() {
                             {Object.entries(MATERIAL_STATUS_MAP).map(([key, s]) => (
                               <button
                                 key={key}
-                                onClick={() => handleMaterialCycle(q.id, "woodStatus", q.woodStatus === key ? (key === "not_ordered" ? "not_ordered" : key === "ordered" ? "not_ordered" : "ordered") : (() => { const ks = Object.keys(MATERIAL_STATUS_MAP); return ks[ks.indexOf(key) - 1] || "not_ordered"; })())}
+                                onClick={() => handleMaterialSet(q.id, "woodStatus", key)}
                                 className={cn(
                                   "px-2.5 py-1 rounded text-[10px] font-bold border transition-all",
                                   q.woodStatus === key
@@ -488,7 +529,7 @@ export default function WorkOrdersPage() {
                             {Object.entries(MATERIAL_STATUS_MAP).map(([key, s]) => (
                               <button
                                 key={key}
-                                onClick={() => handleMaterialCycle(q.id, "fabricStatus", q.fabricStatus === key ? (key === "not_ordered" ? "not_ordered" : key === "ordered" ? "not_ordered" : "ordered") : (() => { const ks = Object.keys(MATERIAL_STATUS_MAP); return ks[ks.indexOf(key) - 1] || "not_ordered"; })())}
+                                onClick={() => handleMaterialSet(q.id, "fabricStatus", key)}
                                 className={cn(
                                   "px-2.5 py-1 rounded text-[10px] font-bold border transition-all",
                                   q.fabricStatus === key
