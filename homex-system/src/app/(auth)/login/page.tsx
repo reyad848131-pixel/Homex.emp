@@ -1,17 +1,20 @@
 "use client";
 
 import { useState } from "react";
+import { useI18n } from "@/lib/i18n";
+import { Globe } from "lucide-react";
 
 export default function LoginPage() {
   const [civilId, setCivilId] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
+  const { t, locale, setLocale, dir } = useI18n();
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!civilId || !password) {
-      setError("أدخل الرقم المدني وكلمة المرور");
+      setError(t("loginError"));
       return;
     }
     setError("");
@@ -29,17 +32,17 @@ export default function LoginPage() {
       if (res.ok && data.ok) {
         window.location.href = "/";
       } else {
-        setError(data.error || "رقم مدني أو كلمة مرور غير صحيحة");
+        setError(data.error || t("invalidCredentials"));
         setLoading(false);
       }
     } catch (e: any) {
-      setError(`خطأ في الاتصال: ${e?.message || String(e)}`);
+      setError(`${t("connectionError")}: ${e?.message || String(e)}`);
       setLoading(false);
     }
   };
 
   return (
-    <div className="min-h-screen bg-[#e7e8e2] flex items-center justify-center p-4" dir="rtl">
+    <div className="min-h-screen bg-[#e7e8e2] flex items-center justify-center p-4" dir={dir}>
       <div className="w-full max-w-md">
         <div className="text-center mb-8">
           <h1 className="text-3xl font-black text-gray-900 tracking-tight">homex</h1>
@@ -56,15 +59,15 @@ export default function LoginPage() {
               </svg>
             </div>
             <p className="text-[11px] tracking-[0.14em] uppercase text-gray-400 mb-2 font-medium">
-              دخول الموظفين
+              {t("employeeLogin")}
             </p>
-            <h2 className="text-xl font-bold text-gray-900">تسجيل الدخول</h2>
-            <p className="text-sm text-gray-500 mt-1">أدخل الرقم المدني وكلمة المرور</p>
+            <h2 className="text-xl font-bold text-gray-900">{t("signIn")}</h2>
+            <p className="text-sm text-gray-500 mt-1">{t("enterCredentials")}</p>
           </div>
 
           <form onSubmit={handleSubmit} className="space-y-4">
             <div>
-              <label className="block text-sm font-semibold text-gray-600 mb-1.5">الرقم المدني</label>
+              <label className="block text-sm font-semibold text-gray-600 mb-1.5">{t("civilId")}</label>
               <input
                 type="text"
                 value={civilId}
@@ -77,7 +80,7 @@ export default function LoginPage() {
             </div>
 
             <div>
-              <label className="block text-sm font-semibold text-gray-600 mb-1.5">كلمة المرور</label>
+              <label className="block text-sm font-semibold text-gray-600 mb-1.5">{t("password")}</label>
               <input
                 type="password"
                 value={password}
@@ -97,9 +100,17 @@ export default function LoginPage() {
               disabled={loading}
               className="w-full bg-gray-900 text-white font-bold py-3.5 rounded hover:bg-gray-800 transition-colors disabled:opacity-50 text-sm"
             >
-              {loading ? "جاري الدخول..." : "دخول"}
+              {loading ? t("loggingIn") : t("login")}
             </button>
           </form>
+
+          <button
+            onClick={() => setLocale(locale === "ar" ? "en" : "ar")}
+            className="flex items-center justify-center gap-2 w-full mt-4 py-2 text-sm text-gray-500 hover:text-gray-900 transition-colors font-semibold"
+          >
+            <Globe className="w-4 h-4" />
+            {t("language")}
+          </button>
         </div>
 
         <p className="text-center text-xs text-gray-400 mt-6 font-mono">

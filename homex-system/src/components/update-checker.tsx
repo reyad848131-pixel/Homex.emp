@@ -2,12 +2,14 @@
 
 import { useState, useEffect, useRef } from "react";
 import { RefreshCw } from "lucide-react";
+import { useI18n } from "@/lib/i18n";
 
 const CHECK_INTERVAL = 60_000;
 
 export function UpdateChecker() {
   const [updateAvailable, setUpdateAvailable] = useState(false);
   const initialVersion = useRef<string | null>(null);
+  const { t } = useI18n();
 
   useEffect(() => {
     const check = async () => {
@@ -81,7 +83,7 @@ export function UpdateChecker() {
         className="pointer-events-auto flex items-center gap-2 px-5 py-3 bg-gray-900 dark:bg-white text-white dark:text-gray-900 rounded-xl shadow-2xl text-sm font-bold animate-bounce hover:scale-105 transition-transform"
       >
         <RefreshCw className="w-4 h-4" />
-        تحديث متاح — اضغط للتحديث
+        {t("updateAvailable")}
       </button>
     </div>
   );
