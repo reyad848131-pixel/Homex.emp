@@ -21,10 +21,18 @@ export async function GET(req: NextRequest) {
     const customer = searchParams.get("customer");
     const deliveryFrom = searchParams.get("deliveryFrom");
     const deliveryTo = searchParams.get("deliveryTo");
+    const month = searchParams.get("month");
 
     const where: any = {
       deliveryDate: { not: null },
     };
+
+    if (month) {
+      const [y, m] = month.split("-").map(Number);
+      const start = new Date(y, m - 1, 1);
+      const end = new Date(y, m, 0, 23, 59, 59, 999);
+      where.deliveryDate = { gte: start, lte: end };
+    }
 
     if (workStatus && VALID_WORK_STATUSES.includes(workStatus)) {
       where.workStatus = workStatus;
@@ -103,7 +111,7 @@ export async function PATCH(req: NextRequest) {
     if (!isAdmin) return NextResponse.json({ error: "Forbidden" }, { status: 403 });
 
     const body = await req.json();
-    const { id, workStatus, hasOrangeAlert, hasRedAlert, workNotes } = body;
+    const { id, workStatus, hasOrangeAlert, hasRedAlert, workNotes, woodStatus, fabricStatus } = body;
 
     if (!id) return NextResponse.json({ error: "Missing id" }, { status: 400 });
 
@@ -111,6 +119,7 @@ export async function PATCH(req: NextRequest) {
     if (!quotation) return NextResponse.json({ error: "Not found" }, { status: 404 });
 
     const data: any = {};
+    const validMaterialStatuses = ["not_ordered", "ordered", "arrived"];
 
     if (workStatus !== undefined) {
       if (workStatus !== null && !VALID_WORK_STATUSES.includes(workStatus)) {
@@ -125,6 +134,15 @@ export async function PATCH(req: NextRequest) {
     if (hasOrangeAlert !== undefined) data.hasOrangeAlert = Boolean(hasOrangeAlert);
     if (hasRedAlert !== undefined) data.hasRedAlert = Boolean(hasRedAlert);
     if (workNotes !== undefined) data.workNotes = workNotes;
+    if (woodStatus !== undefined && validMaterialStatuses.includes(woodStatus)) data.woodStatus = woodStatus;
+    if (fabricStatus !== undefined && validMaterialStatuses.includes(fabricStatus)) data.fabricStatus = fabricStatus;
+
+    if (data.woodStatus === "arrived" || data.fabricStatus === "arrived") {
+      const current = { woodStatus: quotation.woodStatus, fabricStatus: quotation.fabricStatus, ...data };
+      if (current.woodStatus === "arrived" && current.fabricStatus === "arrived" && quotation.workStatus === "needs_preparation") {
+        data.workStatus = "ready_to_execute";
+      }
+    }
 
     const updated = await prisma.quotation.update({
       where: { id },
