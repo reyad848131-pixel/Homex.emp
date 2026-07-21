@@ -443,7 +443,7 @@ export default function WorkOrdersPage() {
                       {itemSummary}{q.items.length > 3 ? ` +${q.items.length - 3}` : ""}
                     </p>
                     {/* حالة المواد */}
-                    {q.workStatus === "needs_preparation" && (
+                    {q.workStatus !== "delivered" && (
                       <div className="flex items-center gap-2 mt-1.5">
                         <MaterialBadge label="أخشاب" status={q.woodStatus} onCycle={() => handleMaterialCycle(q.id, "woodStatus", q.woodStatus)} />
                         <MaterialBadge label="أقمشة" status={q.fabricStatus} onCycle={() => handleMaterialCycle(q.id, "fabricStatus", q.fabricStatus)} />
