@@ -487,6 +487,7 @@ const translations = {
   omr: { ar: "ر.ع", en: "OMR" },
   omrPerSqm: { ar: "ر.ع/م²", en: "OMR/m²" },
   sqmUnit: { ar: "م²", en: "m²" },
+  mUnit: { ar: "م", en: "m" },
 
   // Curtain types
   chiffonOnly: { ar: "شيفون فقط", en: "Chiffon Only" },

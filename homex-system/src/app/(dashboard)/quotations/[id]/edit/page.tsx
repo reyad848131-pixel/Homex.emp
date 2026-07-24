@@ -841,7 +841,7 @@ function CurtainBuilder({ config, onUpdate }: { config: any; onUpdate: (d: strin
         </div>
         {motor === "electric" && (
           <p className="text-xs text-emerald-600 mt-1">
-            {t("motorLabel")}: ({MOTOR_BASE} + {MOTOR_PER_METER} × {width}م = {(MOTOR_BASE + MOTOR_PER_METER * width).toFixed(3)})
+            {t("motorLabel")}: ({MOTOR_BASE} + {MOTOR_PER_METER} × {width}{t("mUnit")} = {(MOTOR_BASE + MOTOR_PER_METER * width).toFixed(3)})
             {motorQty > 1 && ` × ${motorQty} ${t("motorLabel")}`} = {motorSurcharge.toFixed(3)} {t("omr")}
           </p>
         )}
