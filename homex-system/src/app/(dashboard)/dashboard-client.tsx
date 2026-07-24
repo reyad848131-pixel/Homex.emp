@@ -28,6 +28,8 @@ interface DashboardData {
   declinedCount: number;
   revisedCount: number;
   totalRevenue: number;
+  collectedAmount: number;
+  outstandingAmount: number;
   conversionRate: string;
   expiringQuotations: Array<{
     id: string;
@@ -106,6 +108,32 @@ export function DashboardClient({ data }: { data: DashboardData }) {
           </div>
         ))}
       </div>
+
+      {data.totalRevenue > 0 && (() => {
+        const pct = data.totalRevenue > 0 ? Math.min((data.collectedAmount / data.totalRevenue) * 100, 100) : 0;
+        return (
+          <div className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded p-5 mb-6">
+            <h2 className="text-sm font-bold text-gray-400 uppercase tracking-wider mb-4">{t("collectionsSummary")}</h2>
+            <div className="h-3 bg-gray-100 dark:bg-gray-700 rounded-full overflow-hidden mb-4">
+              <div className="h-full bg-green-500 rounded-full transition-all" style={{ width: `${pct}%` }} />
+            </div>
+            <div className="grid grid-cols-3 gap-4 text-center">
+              <div>
+                <p className="text-xs text-gray-400 mb-1">{t("approvedRevenue")}</p>
+                <p className="font-bold font-mono-en text-gray-900 dark:text-white">{formatCurrency(data.totalRevenue, t("omr"))}</p>
+              </div>
+              <div>
+                <p className="text-xs text-gray-400 mb-1">{t("collectedTotal")}</p>
+                <p className="font-bold font-mono-en text-green-600">{formatCurrency(data.collectedAmount, t("omr"))}</p>
+              </div>
+              <div>
+                <p className="text-xs text-gray-400 mb-1">{t("outstandingToCollect")}</p>
+                <p className="font-bold font-mono-en text-red-600">{formatCurrency(data.outstandingAmount, t("omr"))}</p>
+              </div>
+            </div>
+          </div>
+        );
+      })()}
 
       {data.expiringQuotations.length > 0 && (
         <div className="bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-700 rounded p-4 mb-6">

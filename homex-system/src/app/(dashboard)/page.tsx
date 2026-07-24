@@ -1,6 +1,7 @@
 import { getAuth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { STATUS_MAP } from "@/lib/types";
+import { roundMoney } from "@/lib/utils";
 import { DashboardClient } from "./dashboard-client";
 
 export default async function DashboardPage() {
@@ -16,7 +17,7 @@ export default async function DashboardPage() {
 
   const sevenDaysFromNow = new Date(now.getTime() + 7 * 24 * 60 * 60 * 1000);
 
-  const [totalQuotes, totalCustomers, quotations, monthlyQuotes, statusGroupBy, expiringQuotations, revenueAgg] = await Promise.all([
+  const [totalQuotes, totalCustomers, quotations, monthlyQuotes, statusGroupBy, expiringQuotations, revenueAgg, collectedAgg] = await Promise.all([
     prisma.quotation.count({ where: whereClause }),
     prisma.customer.count({ where: isAdmin ? {} : { createdBy: userId } }),
     prisma.quotation.findMany({
@@ -45,6 +46,10 @@ export default async function DashboardPage() {
       where: { ...whereClause, status: "approved" },
       _sum: { total: true },
     }),
+    prisma.payment.aggregate({
+      where: { quotation: { ...whereClause, status: "approved" } },
+      _sum: { amount: true },
+    }),
   ]);
 
   const statusMap = Object.fromEntries(statusGroupBy.map((s) => [s.status, s._count]));
@@ -55,6 +60,8 @@ export default async function DashboardPage() {
   const revisedCount = statusMap.revised || 0;
 
   const totalRevenue = revenueAgg._sum.total || 0;
+  const collectedAmount = roundMoney(collectedAgg._sum.amount || 0);
+  const outstandingAmount = roundMoney(Math.max(totalRevenue - collectedAmount, 0));
   const conversionRate = totalQuotes > 0 ? ((approvedCount / totalQuotes) * 100).toFixed(0) : "0";
 
   const data = {
@@ -69,6 +76,8 @@ export default async function DashboardPage() {
     declinedCount,
     revisedCount,
     totalRevenue,
+    collectedAmount,
+    outstandingAmount,
     conversionRate,
     expiringQuotations: expiringQuotations.map((q) => ({
       id: q.id,
