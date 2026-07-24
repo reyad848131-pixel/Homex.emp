@@ -4,9 +4,10 @@ import { useState, useEffect } from "react";
 import { BarChart3, TrendingUp, Users, MapPin, FileText, Calendar } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { STATUS_MAP } from "@/lib/types";
+import { useI18n } from "@/lib/i18n";
 
-function BarChartSVG({ data, height = 200 }: { data: Array<{ label: string; value: number }>; height?: number }) {
-  if (data.length === 0) return <p className="text-sm text-gray-400 text-center py-8">لا توجد بيانات</p>;
+function BarChartSVG({ data, height = 200, noDataText }: { data: Array<{ label: string; value: number }>; height?: number; noDataText: string }) {
+  if (data.length === 0) return <p className="text-sm text-gray-400 text-center py-8">{noDataText}</p>;
   const maxVal = Math.max(...data.map((d) => d.value), 1);
   const barWidth = Math.max(12, Math.min(40, (600 / data.length) - 4));
   const chartWidth = data.length * (barWidth + 4);
@@ -35,9 +36,9 @@ function BarChartSVG({ data, height = 200 }: { data: Array<{ label: string; valu
   );
 }
 
-function DonutChart({ segments, size = 160 }: { segments: Array<{ label: string; value: number; color: string }>; size?: number }) {
+function DonutChart({ segments, size = 160, totalLabel }: { segments: Array<{ label: string; value: number; color: string }>; size?: number; totalLabel: string }) {
   const total = segments.reduce((s, seg) => s + seg.value, 0);
-  if (total === 0) return <p className="text-sm text-gray-400 text-center py-8">لا توجد بيانات</p>;
+  if (total === 0) return <p className="text-sm text-gray-400 text-center py-8">{totalLabel}</p>;
   const r = size / 2 - 10;
   const cx = size / 2;
   const cy = size / 2;
@@ -65,7 +66,7 @@ function DonutChart({ segments, size = 160 }: { segments: Array<{ label: string;
         })}
         <circle cx={cx} cy={cy} r={r * 0.55} fill="white" />
         <text x={cx} y={cy - 4} textAnchor="middle" className="fill-gray-900 text-lg font-black">{total}</text>
-        <text x={cx} y={cy + 12} textAnchor="middle" className="fill-gray-400 text-[9px]">إجمالي</text>
+        <text x={cx} y={cy + 12} textAnchor="middle" className="fill-gray-400 text-[9px]">{totalLabel}</text>
       </svg>
       <div className="space-y-2">
         {segments.filter((s) => s.value > 0).map((seg, i) => (
@@ -98,8 +99,9 @@ export default function ReportsPage() {
   const [data, setData] = useState<ReportData | null>(null);
   const [period, setPeriod] = useState("month");
   const [loading, setLoading] = useState(true);
+  const { t } = useI18n();
 
-  const fmtCur = (n: number | string) => `${Number(n).toFixed(3)} ر.ع`;
+  const fmtCur = (n: number | string) => `${Number(n).toFixed(3)} ${t("omr")}`;
 
   useEffect(() => {
     setLoading(true);
@@ -109,8 +111,8 @@ export default function ReportsPage() {
       .finally(() => setLoading(false));
   }, [period]);
 
-  if (loading) return <div className="text-center py-20 text-gray-400">جاري التحميل...</div>;
-  if (!data) return <div className="text-center py-20 text-red-500">خطأ في تحميل التقارير</div>;
+  if (loading) return <div className="text-center py-20 text-gray-400">{t("loading")}</div>;
+  if (!data) return <div className="text-center py-20 text-red-500">{t("reportError")}</div>;
 
   const maxCatTotal = Math.max(...data.categoryCounts.map((c) => c.total), 1);
   const maxGov = Math.max(...data.governorateCounts.map((g) => g.count), 1);
@@ -120,14 +122,14 @@ export default function ReportsPage() {
       <div className="flex items-center justify-between mb-6">
         <h1 className="text-2xl font-bold flex items-center gap-2">
           <BarChart3 className="w-6 h-6" />
-          التقارير
+          {t("reportsTitle")}
         </h1>
         <div className="flex gap-1 bg-gray-100 rounded p-0.5">
-          {[
-            { key: "week", label: "أسبوع" },
-            { key: "month", label: "شهر" },
-            { key: "year", label: "سنة" },
-          ].map((p) => (
+          {([
+            { key: "week", tKey: "weekPeriod" as const },
+            { key: "month", tKey: "monthPeriod" as const },
+            { key: "year", tKey: "yearPeriod" as const },
+          ]).map((p) => (
             <button
               key={p.key}
               onClick={() => setPeriod(p.key)}
@@ -136,19 +138,18 @@ export default function ReportsPage() {
                 period === p.key ? "bg-white shadow text-gray-900" : "text-gray-500 hover:text-gray-700"
               )}
             >
-              {p.label}
+              {t(p.tKey)}
             </button>
           ))}
         </div>
       </div>
 
-      {/* Summary Cards */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
         {[
-          { label: "إجمالي العروض", value: data.summary.totalQuotations, icon: FileText, color: "text-blue-600" },
-          { label: "إجمالي الإيرادات", value: fmtCur(data.summary.totalRevenue), icon: TrendingUp, color: "text-green-600" },
-          { label: "المعتمد", value: fmtCur(data.summary.totalApproved), icon: TrendingUp, color: "text-emerald-600" },
-          { label: "نسبة التحويل", value: `${data.summary.conversionRate}%`, icon: BarChart3, color: "text-purple-600" },
+          { label: t("totalQuotations"), value: data.summary.totalQuotations, icon: FileText, color: "text-blue-600" },
+          { label: t("totalRevenue"), value: fmtCur(data.summary.totalRevenue), icon: TrendingUp, color: "text-green-600" },
+          { label: t("approvedAmount"), value: fmtCur(data.summary.totalApproved), icon: TrendingUp, color: "text-emerald-600" },
+          { label: t("conversionRate"), value: `${data.summary.conversionRate}%`, icon: BarChart3, color: "text-purple-600" },
         ].map((card) => (
           <div key={card.label} className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded p-4">
             <div className="flex items-center gap-2 mb-2">
@@ -160,48 +161,43 @@ export default function ReportsPage() {
         ))}
       </div>
 
-      {/* Charts Row */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
-        {/* Status Donut */}
         <div className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded p-5">
-          <h2 className="text-sm font-bold text-gray-400 uppercase tracking-wider mb-4">توزيع الحالات</h2>
-          <DonutChart segments={[
-            { label: "مسودة", value: data.summary.statusCounts.draft || 0, color: "#6b7280" },
-            { label: "قيد المراجعة", value: data.summary.statusCounts.pending || 0, color: "#3b82f6" },
-            { label: "معتمد", value: data.summary.statusCounts.approved || 0, color: "#16a34a" },
-            { label: "مُعاد للتعديل", value: data.summary.statusCounts.revised || 0, color: "#f97316" },
-            { label: "مرفوض", value: data.summary.statusCounts.declined || 0, color: "#dc2626" },
+          <h2 className="text-sm font-bold text-gray-400 uppercase tracking-wider mb-4">{t("statusDistribution")}</h2>
+          <DonutChart totalLabel={t("totalCount")} segments={[
+            { label: t("draftStatus"), value: data.summary.statusCounts.draft || 0, color: "#6b7280" },
+            { label: t("pendingReview"), value: data.summary.statusCounts.pending || 0, color: "#3b82f6" },
+            { label: t("approved"), value: data.summary.statusCounts.approved || 0, color: "#16a34a" },
+            { label: t("returnedForEdit"), value: data.summary.statusCounts.revised || 0, color: "#f97316" },
+            { label: t("declinedStatus"), value: data.summary.statusCounts.declined || 0, color: "#dc2626" },
           ]} />
         </div>
 
-        {/* Daily Activity */}
         <div className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded p-5">
           <h2 className="text-sm font-bold text-gray-400 uppercase tracking-wider mb-4 flex items-center gap-2">
-            <Calendar className="w-4 h-4" /> النشاط اليومي (عدد العروض)
+            <Calendar className="w-4 h-4" /> {t("dailyActivity")}
           </h2>
-          <BarChartSVG data={data.dailyData.map((d) => ({
+          <BarChartSVG noDataText={t("noData")} data={data.dailyData.map((d) => ({
             label: d.date.slice(5),
             value: d.count,
           }))} />
         </div>
       </div>
 
-      {/* Daily Revenue Chart */}
       <div className="bg-white border border-gray-200 rounded p-5 mb-6">
         <h2 className="text-sm font-bold text-gray-400 uppercase tracking-wider mb-4 flex items-center gap-2">
-          <TrendingUp className="w-4 h-4" /> الإيرادات اليومية (ر.ع)
+          <TrendingUp className="w-4 h-4" /> {t("dailyRevenue")} ({t("omr")})
         </h2>
-        <BarChartSVG data={data.dailyData.map((d) => ({
+        <BarChartSVG noDataText={t("noData")} data={data.dailyData.map((d) => ({
           label: d.date.slice(5),
           value: Math.round(d.total),
         }))} />
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
-        {/* Employee Performance */}
         <div className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded p-5">
           <h2 className="text-sm font-bold text-gray-400 uppercase tracking-wider mb-4 flex items-center gap-2">
-            <Users className="w-4 h-4" /> لوحة أداء الموظفين
+            <Users className="w-4 h-4" /> {t("employeePerformance")}
           </h2>
           <div className="space-y-4">
             {data.employeeStats.map((emp) => {
@@ -215,14 +211,14 @@ export default function ReportsPage() {
                     </div>
                     <div className="flex-1 min-w-0">
                       <p className="text-sm font-bold truncate">{emp.name}</p>
-                      <p className="text-xs text-gray-400">{emp.count} عرض · {emp.approved} معتمد</p>
+                      <p className="text-xs text-gray-400">{emp.count} {t("quoteWord")} · {emp.approved} {t("approvedWord")}</p>
                     </div>
                     <p className="text-sm font-mono-en font-black text-green-600">{fmtCur(emp.total)}</p>
                   </div>
                   <div className="grid grid-cols-2 gap-2">
                     <div>
                       <div className="flex items-center justify-between text-xs text-gray-400 mb-1">
-                        <span>الإيرادات</span>
+                        <span>{t("revenueLabel")}</span>
                         <span className="font-mono-en">{((emp.total / maxEmpTotal) * 100).toFixed(0)}%</span>
                       </div>
                       <div className="h-2 bg-gray-100 rounded-full overflow-hidden">
@@ -231,7 +227,7 @@ export default function ReportsPage() {
                     </div>
                     <div>
                       <div className="flex items-center justify-between text-xs text-gray-400 mb-1">
-                        <span>نسبة التحويل</span>
+                        <span>{t("conversionRate")}</span>
                         <span className="font-mono-en">{convRate.toFixed(0)}%</span>
                       </div>
                       <div className="h-2 bg-gray-100 rounded-full overflow-hidden">
@@ -243,20 +239,19 @@ export default function ReportsPage() {
               );
             })}
             {data.employeeStats.length === 0 && (
-              <p className="text-sm text-gray-400 text-center py-4">لا توجد بيانات</p>
+              <p className="text-sm text-gray-400 text-center py-4">{t("noData")}</p>
             )}
           </div>
         </div>
 
-        {/* Categories */}
         <div className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded p-5">
-          <h2 className="text-sm font-bold text-gray-400 uppercase tracking-wider mb-4">الفئات الأكثر طلبا</h2>
+          <h2 className="text-sm font-bold text-gray-400 uppercase tracking-wider mb-4">{t("topCategories")}</h2>
           <div className="space-y-3">
             {data.categoryCounts.slice(0, 8).map((cat) => (
               <div key={cat.name}>
                 <div className="flex items-center justify-between mb-1">
                   <span className="text-sm font-semibold">{cat.name}</span>
-                  <span className="text-xs text-gray-400 font-mono-en">{cat.count} بند - {fmtCur(cat.total)}</span>
+                  <span className="text-xs text-gray-400 font-mono-en">{cat.count} {t("itemWord")} - {fmtCur(cat.total)}</span>
                 </div>
                 <div className="h-2 bg-gray-100 rounded-full overflow-hidden">
                   <div
@@ -267,16 +262,15 @@ export default function ReportsPage() {
               </div>
             ))}
             {data.categoryCounts.length === 0 && (
-              <p className="text-sm text-gray-400 text-center py-4">لا توجد بيانات</p>
+              <p className="text-sm text-gray-400 text-center py-4">{t("noData")}</p>
             )}
           </div>
         </div>
       </div>
 
-      {/* Governorate Distribution */}
       <div className="bg-white border border-gray-200 rounded p-5">
         <h2 className="text-sm font-bold text-gray-400 uppercase tracking-wider mb-4 flex items-center gap-2">
-          <MapPin className="w-4 h-4" /> توزيع المحافظات
+          <MapPin className="w-4 h-4" /> {t("governorateDistribution")}
         </h2>
         <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3">
           {data.governorateCounts.map((gov) => (
@@ -292,7 +286,7 @@ export default function ReportsPage() {
             </div>
           ))}
           {data.governorateCounts.length === 0 && (
-            <p className="text-sm text-gray-400 text-center py-4 col-span-full">لا توجد بيانات</p>
+            <p className="text-sm text-gray-400 text-center py-4 col-span-full">{t("noData")}</p>
           )}
         </div>
       </div>

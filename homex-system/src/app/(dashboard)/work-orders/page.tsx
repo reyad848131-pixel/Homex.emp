@@ -38,7 +38,7 @@ interface WorkQuotation {
   fabricStatus: string;
   customer: { name: string; phone: string; phoneCode: string; governorate: string; wilayat: string };
   employee: { name: string };
-  items: Array<{ description: string; quantity: number; category: { nameAr: string } }>;
+  items: Array<{ description: string; quantity: number; category: { nameAr: string; nameEn: string } }>;
 }
 
 const MATERIAL_STATUS_KEYS: Record<string, { labelKey: TranslationKey; color: string }> = {
@@ -423,7 +423,7 @@ export default function WorkOrdersPage() {
             const ws = q.workStatus ? WORK_STATUS_MAP[q.workStatus] : null;
             const wsKey = q.workStatus ? WORK_STATUS_KEYS[q.workStatus] : null;
             const isExpanded = expandedId === q.id;
-            const itemSummary = q.items.slice(0, 3).map((it) => it.category.nameAr).join("، ");
+            const itemSummary = q.items.slice(0, 3).map((it) => locale === "en" ? it.category.nameEn : it.category.nameAr).join(locale === "ar" ? "، " : ", ");
 
             return (
               <div
@@ -500,7 +500,7 @@ export default function WorkOrdersPage() {
                       <div>
                         <p className="text-xs text-gray-400 font-bold mb-1">{t("orderDetails")}</p>
                         <p className="text-xs text-gray-500">{t("employee")}: {q.employee.name}</p>
-                        <p className="text-xs text-gray-500">{t("total")}: <span className="font-mono-en font-bold">{q.total.toFixed(3)} ر.ع</span></p>
+                        <p className="text-xs text-gray-500">{t("total")}: <span className="font-mono-en font-bold">{q.total.toFixed(3)} {t("omr")}</span></p>
                         <p className="text-xs text-gray-500">{t("itemCount")}: {q.items.length}</p>
                       </div>
                     </div>

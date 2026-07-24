@@ -3,8 +3,21 @@ import { getAuth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { logAction } from "@/lib/audit";
 import { notify, notifyAdmins } from "@/lib/notifications";
+import { computeQuoteTotals } from "@/lib/quote-calc";
+import { parseBody, updateQuotationItemsSchema } from "@/lib/schemas";
 
 const VALID_STATUSES = ["draft", "pending", "approved", "declined", "revised"];
+
+// Once a quotation is invoiced, has recorded payments, or the customer has
+// accepted it, its priced items and existence are frozen for financial
+// integrity — they must not be edited or deleted.
+function isFinanciallyLocked(q: {
+  status: string;
+  invoice?: { id: string } | null;
+  _count?: { payments: number };
+}): boolean {
+  return !!q.invoice || (q._count?.payments ?? 0) > 0 || q.status === "accepted";
+}
 
 export async function GET(
   req: NextRequest,
@@ -51,11 +64,23 @@ export async function PATCH(
     const { id } = await params;
     const body = await req.json();
 
-    const quotation = await prisma.quotation.findUnique({ where: { id } });
+    const quotation = await prisma.quotation.findUnique({
+      where: { id },
+      include: { invoice: { select: { id: true } }, _count: { select: { payments: true } } },
+    });
     if (!quotation) return NextResponse.json({ error: "Not found" }, { status: 404 });
 
     if (user.role === "sales" && quotation.employeeId !== user.id) {
       return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+    }
+
+    // A quotation is financially frozen once it is invoiced, has payments, or
+    // the customer accepted it — its priced items can no longer be changed.
+    if (body.items && isFinanciallyLocked(quotation)) {
+      return NextResponse.json(
+        { error: "لا يمكن تعديل بنود عرض معتمد أو مفوتر أو له دفعات", code: "locked" },
+        { status: 409 }
+      );
     }
 
     if (body.status) {
@@ -68,15 +93,18 @@ export async function PATCH(
     }
 
     if (body.items) {
+      const parsed = parseBody(updateQuotationItemsSchema, body);
+      if (!parsed.ok) return NextResponse.json({ error: parsed.error, code: "invalid" }, { status: 400 });
+
       const result = await prisma.$transaction(async (tx) => {
         await tx.quoteItem.deleteMany({ where: { quotationId: id } });
 
-        const subtotal = body.items.reduce((sum: number, item: any) => sum + (Number(item.lineTotal) || 0), 0);
-        const vatRate = body.vatRate ?? quotation.vatRate ?? 0.05;
-        const vatAmount = Math.round(subtotal * vatRate * 1000) / 1000;
-        const total = Math.round((subtotal + vatAmount) * 1000) / 1000;
-        const advancePct = body.advancePct ?? quotation.advancePct ?? 15;
-        const advanceAmount = Math.round(total * (advancePct / 100) * 1000) / 1000;
+        // Recompute every monetary field server-side — never trust client totals.
+        const totals = computeQuoteTotals(
+          body.items,
+          body.vatRate ?? quotation.vatRate ?? 0.05,
+          body.advancePct ?? quotation.advancePct ?? 15
+        );
 
         if (body.customer && body.customerId) {
           await tx.customer.update({
@@ -95,7 +123,12 @@ export async function PATCH(
         return tx.quotation.update({
           where: { id },
           data: {
-            subtotal, vatRate, vatAmount, total, advancePct, advanceAmount,
+            subtotal: totals.subtotal,
+            vatRate: totals.vatRate,
+            vatAmount: totals.vatAmount,
+            total: totals.total,
+            advancePct: totals.advancePct,
+            advanceAmount: totals.advanceAmount,
             notes: body.notes,
             customerId: body.customerId,
             ...(body.deliveryDate !== undefined ? {
@@ -103,15 +136,15 @@ export async function PATCH(
               ...(body.deliveryDate && !quotation.workStatus ? { workStatus: "needs_preparation" } : {}),
             } : {}),
             items: {
-              create: body.items.map((item: any, idx: number) => ({
+              create: totals.items.map((item) => ({
                 categoryId: item.categoryId,
                 description: item.description,
-                details: item.details ? JSON.stringify(item.details) : null,
+                details: item.details,
                 quantity: item.quantity,
                 unitPrice: item.unitPrice,
-                extras: item.extras || 0,
+                extras: item.extras,
                 lineTotal: item.lineTotal,
-                sortOrder: idx,
+                sortOrder: item.sortOrder,
               })),
             },
           },
@@ -182,11 +215,21 @@ export async function DELETE(
     const user = session.user as any;
     const { id } = await params;
 
-    const quotation = await prisma.quotation.findUnique({ where: { id } });
+    const quotation = await prisma.quotation.findUnique({
+      where: { id },
+      include: { invoice: { select: { id: true } }, _count: { select: { payments: true } } },
+    });
     if (!quotation) return NextResponse.json({ error: "Not found" }, { status: 404 });
 
     if (user.role === "sales" && quotation.employeeId !== user.id) {
       return NextResponse.json({ error: "Insufficient permissions" }, { status: 403 });
+    }
+
+    if (isFinanciallyLocked(quotation)) {
+      return NextResponse.json(
+        { error: "لا يمكن حذف عرض معتمد أو مفوتر أو له دفعات", code: "locked" },
+        { status: 409 }
+      );
     }
 
     await prisma.quotation.delete({ where: { id } });

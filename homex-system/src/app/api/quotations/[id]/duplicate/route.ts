@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getAuth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
-import { generateQuoteNumber } from "@/lib/utils";
+import { generateQuoteNumber, withUniqueRetry } from "@/lib/utils";
 import { logAction } from "@/lib/audit";
 
 export async function POST(
@@ -26,7 +26,7 @@ export async function POST(
     return NextResponse.json({ error: "Forbidden" }, { status: 403 });
   }
 
-  const quotation = await prisma.quotation.create({
+  const quotation = await withUniqueRetry(async () => prisma.quotation.create({
     data: {
       quoteNumber: await generateQuoteNumber(prisma),
       customerId: original.customerId,
@@ -53,7 +53,7 @@ export async function POST(
         })),
       },
     },
-  });
+  }));
 
   await logAction(user.id, "duplicate", "quotation", quotation.id, `from:${id}`);
   return NextResponse.json(quotation, { status: 201 });

@@ -11,6 +11,18 @@ export default function LoginPage() {
   const [loading, setLoading] = useState(false);
   const { t, locale, setLocale, dir } = useI18n();
 
+  const messageFor = (data: { code?: string; error?: string; retryAfter?: number; remaining?: number }) => {
+    if (data.code === "locked") {
+      const mins = data.retryAfter ?? 15;
+      return `${t("accountLocked")}. ${t("tryAfterMinutes")} ${mins} ${t("minutesUnitShort")}`;
+    }
+    if (data.code === "invalid" && typeof data.remaining === "number" && data.remaining > 0) {
+      return `${t("invalidCredentials")} — ${data.remaining} ${t("attemptsRemainingBefore")}`;
+    }
+    if (data.code === "invalid") return t("invalidCredentials");
+    return data.error || t("invalidCredentials");
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!civilId || !password) {
@@ -32,7 +44,7 @@ export default function LoginPage() {
       if (res.ok && data.ok) {
         window.location.href = "/";
       } else {
-        setError(data.error || t("invalidCredentials"));
+        setError(messageFor(data));
         setLoading(false);
       }
     } catch (e: any) {

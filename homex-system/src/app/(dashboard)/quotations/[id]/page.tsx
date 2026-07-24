@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { STATUS_MAP } from "@/lib/types";
 import { cn } from "@/lib/utils";
 import { useI18n, type TranslationKey } from "@/lib/i18n";
+import { useToast } from "@/components/toast";
 import {
   ArrowRight, Printer, Trash2, CheckCircle, XCircle, Send,
   Clock, FileText, User, MapPin, Phone, Pencil, Download, Copy, MessageCircle, CalendarDays,
@@ -77,6 +78,7 @@ export default function QuotationDetailPage({ params }: { params: Promise<{ id: 
   const { id } = use(params);
   const router = useRouter();
   const { t, locale, dateLocale } = useI18n();
+  const toast = useToast();
   const [q, setQ] = useState<QuotationDetail | null>(null);
   const [loading, setLoading] = useState(true);
   const [terms, setTerms] = useState("");
@@ -91,7 +93,7 @@ export default function QuotationDetailPage({ params }: { params: Promise<{ id: 
   const [creatingInvoice, setCreatingInvoice] = useState(false);
   const [me, setMe] = useState<{ id: string; role: string } | null>(null);
 
-  const fmtCur = (n: number) => `${n.toFixed(3)} ر.ع`;
+  const fmtCur = (n: number) => `${n.toFixed(3)} ${t("omr")}`;
 
   useEffect(() => {
     fetch(`/api/quotations/${id}`)
@@ -120,6 +122,10 @@ export default function QuotationDetailPage({ params }: { params: Promise<{ id: 
       setQ((prev) => prev ? { ...prev, status: data.status, statusComment: data.statusComment } : prev);
       setShowStatusDialog(null);
       setStatusComment("");
+      toast.success(t("statusUpdatedSuccess"));
+    } else {
+      const err = await res.json().catch(() => ({}));
+      toast.error(err.error || t("operationFailed"));
     }
   };
 
@@ -146,14 +152,26 @@ export default function QuotationDetailPage({ params }: { params: Promise<{ id: 
       if (res.ok) {
         const invoice = await res.json();
         setQ((prev) => prev ? { ...prev, invoice: { ...invoice, issuer: { name: "" } } } : prev);
+        toast.success(t("invoiceIssuedSuccess"));
+      } else {
+        const err = await res.json().catch(() => ({}));
+        toast.error(err.error || t("operationFailed"));
       }
-    } catch {} finally { setCreatingInvoice(false); }
+    } catch {
+      toast.error(t("serverConnectionError"));
+    } finally { setCreatingInvoice(false); }
   };
 
   const handleDelete = async () => {
     if (!confirm(t("deleteQuote"))) return;
     const res = await fetch(`/api/quotations/${id}`, { method: "DELETE" });
-    if (res.ok) router.push("/quotations");
+    if (res.ok) {
+      toast.success(t("deletedSuccess"));
+      router.push("/quotations");
+    } else {
+      const err = await res.json().catch(() => ({}));
+      toast.error(err.error || t("deleteFailed"));
+    }
   };
 
   const handlePrint = () => window.print();
@@ -164,6 +182,9 @@ export default function QuotationDetailPage({ params }: { params: Promise<{ id: 
     if (res.ok) {
       const data = await res.json();
       router.push(`/quotations/${data.id}/edit`);
+    } else {
+      const err = await res.json().catch(() => ({}));
+      toast.error(err.error || t("operationFailed"));
     }
   };
 
@@ -206,8 +227,14 @@ export default function QuotationDetailPage({ params }: { params: Promise<{ id: 
         setPayRef("");
         setPayNotes("");
         setShowPayForm(false);
+        toast.success(t("paymentAddedSuccess"));
+      } else {
+        const err = await res.json().catch(() => ({}));
+        toast.error(err.error || t("operationFailed"));
       }
-    } catch {} finally { setPaying(false); }
+    } catch {
+      toast.error(t("serverConnectionError"));
+    } finally { setPaying(false); }
   };
 
   if (loading) return <div className="text-center py-20 text-gray-400">{t("loading")}</div>;
@@ -308,10 +335,12 @@ export default function QuotationDetailPage({ params }: { params: Promise<{ id: 
                 {t("invoice")} {q.invoice.invoiceNumber}
               </a>
             )}
-            <button onClick={handleDelete}
-              className="flex items-center gap-2 px-4 py-2 border border-red-200 text-red-600 rounded text-sm font-bold hover:bg-red-50">
-              <Trash2 className="w-4 h-4" />
-            </button>
+            {!(q.invoice || q.payments.length > 0 || q.status === "accepted") && (
+              <button onClick={handleDelete}
+                className="flex items-center gap-2 px-4 py-2 border border-red-200 text-red-600 rounded text-sm font-bold hover:bg-red-50">
+                <Trash2 className="w-4 h-4" />
+              </button>
+            )}
           </div>
         </div>
 

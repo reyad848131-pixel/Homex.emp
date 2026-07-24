@@ -1,33 +1,42 @@
 import { NextRequest, NextResponse } from "next/server";
-import { prisma } from "@/lib/prisma";
-import bcrypt from "bcryptjs";
 import { encode } from "next-auth/jwt";
+import { verifyCredentials } from "@/lib/login-guard";
 
 export async function POST(req: NextRequest) {
   try {
     const { civilId, password } = await req.json();
 
     if (!civilId || !password) {
-      return NextResponse.json({ error: "أدخل الرقم المدني وكلمة المرور" }, { status: 400 });
+      return NextResponse.json(
+        { error: "أدخل الرقم المدني وكلمة المرور", code: "missing" },
+        { status: 400 }
+      );
     }
 
-    const employee = await prisma.employee.findUnique({
-      where: { civilId },
-    });
+    const result = await verifyCredentials(civilId, password);
 
-    if (!employee || !employee.isActive) {
-      return NextResponse.json({ error: "رقم مدني أو كلمة مرور غير صحيحة" }, { status: 401 });
+    if (!result.ok) {
+      if (result.code === "locked") {
+        return NextResponse.json(
+          {
+            error: "تم قفل الحساب مؤقتاً بسبب محاولات دخول خاطئة كثيرة",
+            code: "locked",
+            retryAfter: result.retryAfter,
+          },
+          { status: 429 }
+        );
+      }
+      return NextResponse.json(
+        {
+          error: "رقم مدني أو كلمة مرور غير صحيحة",
+          code: "invalid",
+          ...(result.remaining !== undefined ? { remaining: result.remaining } : {}),
+        },
+        { status: 401 }
+      );
     }
 
-    const valid = await bcrypt.compare(password, employee.password);
-    if (!valid) {
-      return NextResponse.json({ error: "رقم مدني أو كلمة مرور غير صحيحة" }, { status: 401 });
-    }
-
-    await prisma.employee.update({
-      where: { id: employee.id },
-      data: { lastLogin: new Date() },
-    }).catch(() => {});
+    const employee = result.employee;
 
     const isSecure = process.env.VERCEL === "1" ||
       req.headers.get("x-forwarded-proto") === "https" ||
@@ -61,6 +70,6 @@ export async function POST(req: NextRequest) {
     return response;
   } catch (err: any) {
     console.error("Login error:", err);
-    return NextResponse.json({ error: "خطأ في السيرفر" }, { status: 500 });
+    return NextResponse.json({ error: "خطأ في السيرفر", code: "server" }, { status: 500 });
   }
 }

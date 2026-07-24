@@ -2,6 +2,8 @@ import { NextRequest, NextResponse } from "next/server";
 import { getAuth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { logAction } from "@/lib/audit";
+import { parseBody, paymentSchema } from "@/lib/schemas";
+import { roundMoney } from "@/lib/utils";
 
 export async function POST(req: NextRequest) {
   try {
@@ -9,12 +11,9 @@ export async function POST(req: NextRequest) {
     if (!session) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
     const user = session.user as any;
-    const body = await req.json();
-    const { quotationId, amount, method, reference, notes } = body;
-
-    if (!quotationId || !amount || amount <= 0) {
-      return NextResponse.json({ error: "بيانات الدفعة غير صحيحة" }, { status: 400 });
-    }
+    const parsed = parseBody(paymentSchema, await req.json());
+    if (!parsed.ok) return NextResponse.json({ error: parsed.error, code: "invalid" }, { status: 400 });
+    const { quotationId, amount, method, reference, notes } = parsed.data;
 
     const quotation = await prisma.quotation.findUnique({
       where: { id: quotationId },
@@ -27,15 +26,15 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: "Forbidden" }, { status: 403 });
     }
 
-    const totalPaid = quotation.payments.reduce((s, p) => s + p.amount, 0);
-    if (totalPaid + amount > quotation.total) {
+    const totalPaid = quotation.payments.reduce((s, p) => roundMoney(s + p.amount), 0);
+    if (roundMoney(totalPaid + amount) > roundMoney(quotation.total)) {
       return NextResponse.json({ error: "المبلغ يتجاوز المتبقي" }, { status: 400 });
     }
 
     const payment = await prisma.payment.create({
       data: {
         quotationId,
-        amount,
+        amount: roundMoney(amount),
         method: method || "cash",
         reference: reference || null,
         notes: notes || null,

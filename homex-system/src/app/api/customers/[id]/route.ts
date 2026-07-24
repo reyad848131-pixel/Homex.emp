@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { getAuth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { logAction } from "@/lib/audit";
+import { parseBody, customerUpdateSchema } from "@/lib/schemas";
 
 export async function PATCH(
   req: NextRequest,
@@ -21,11 +22,13 @@ export async function PATCH(
       return NextResponse.json({ error: "Forbidden" }, { status: 403 });
     }
 
-    const body = await req.json();
-    const data: Record<string, any> = {};
+    const parsed = parseBody(customerUpdateSchema, await req.json());
+    if (!parsed.ok) return NextResponse.json({ error: parsed.error, code: "invalid" }, { status: 400 });
+    const body = parsed.data;
 
-    if (body.name?.trim()) data.name = body.name.trim();
-    if (body.phone?.trim()) data.phone = body.phone.trim();
+    const data: Record<string, any> = {};
+    if (body.name) data.name = body.name;
+    if (body.phone) data.phone = body.phone;
     if (body.phoneCode) data.phoneCode = body.phoneCode;
     if (body.governorate) data.governorate = body.governorate;
     if (body.wilayat) data.wilayat = body.wilayat;

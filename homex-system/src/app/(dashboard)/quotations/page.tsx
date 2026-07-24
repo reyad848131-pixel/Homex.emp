@@ -44,7 +44,7 @@ export default function QuotationsPage() {
   const debouncedSearch = useDebouncedValue(search);
   const { t, dateLocale } = useI18n();
 
-  const fmtCur = (n: number) => `${n.toFixed(3)} ر.ع`;
+  const fmtCur = (n: number) => `${n.toFixed(3)} ${t("omr")}`;
 
   useEffect(() => {
     setPage(1);

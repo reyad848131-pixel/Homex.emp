@@ -1,9 +1,11 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getAuth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
-import { generateQuoteNumber } from "@/lib/utils";
+import { generateQuoteNumber, withUniqueRetry } from "@/lib/utils";
 import { logAction } from "@/lib/audit";
 import { getSettings } from "@/lib/settings";
+import { computeQuoteTotals } from "@/lib/quote-calc";
+import { parseBody, createQuotationSchema } from "@/lib/schemas";
 
 export async function GET(req: NextRequest) {
   try {
@@ -60,16 +62,10 @@ export async function POST(req: NextRequest) {
 
   try {
     const user = session.user as any;
-    const body = await req.json();
+    const parsed = parseBody(createQuotationSchema, await req.json());
+    if (!parsed.ok) return NextResponse.json({ error: parsed.error, code: "invalid" }, { status: 400 });
 
-    const { customer: customerData, items, notes, advancePct, deliveryDate } = body;
-
-    if (!customerData?.name || !customerData?.phone || !customerData?.governorate || !customerData?.wilayat) {
-      return NextResponse.json({ error: "بيانات العميل غير مكتملة" }, { status: 400 });
-    }
-    if (!items || items.length === 0) {
-      return NextResponse.json({ error: "يجب إضافة بند واحد على الأقل" }, { status: 400 });
-    }
+    const { customer: customerData, items, notes, advancePct, deliveryDate } = parsed.data;
 
     let customer = await prisma.customer.findFirst({
       where: { phone: customerData.phone, createdBy: user.id },
@@ -95,43 +91,42 @@ export async function POST(req: NextRequest) {
     const validityDays = parseInt(cfg.quote_validity_days || "30") || 30;
     const finalAdvancePct = advancePct ?? defaultAdvance;
 
-    const subtotal = items.reduce((sum: number, item: any) => sum + (item.lineTotal || 0), 0);
-    const vatAmount = Math.round(subtotal * vatRate * 1000) / 1000;
-    const total = Math.round((subtotal + vatAmount) * 1000) / 1000;
-    const advanceAmount = Math.round(total * (finalAdvancePct / 100) * 1000) / 1000;
+    // Recompute every monetary field server-side — never trust client totals.
+    const totals = computeQuoteTotals(items, vatRate, finalAdvancePct);
 
-    const quoteNumber = await generateQuoteNumber(prisma);
-
-    const quotation = await prisma.quotation.create({
+    const quotation = await withUniqueRetry(async () => {
+      const quoteNumber = await generateQuoteNumber(prisma);
+      return prisma.quotation.create({
       data: {
         quoteNumber,
         customer: { connect: { id: customer.id } },
         employee: { connect: { id: user.id } },
         status: "draft",
-        subtotal,
-        vatRate,
-        vatAmount,
-        total,
-        advancePct: finalAdvancePct,
-        advanceAmount,
+        subtotal: totals.subtotal,
+        vatRate: totals.vatRate,
+        vatAmount: totals.vatAmount,
+        total: totals.total,
+        advancePct: totals.advancePct,
+        advanceAmount: totals.advanceAmount,
         notes,
         deliveryDate: deliveryDate ? new Date(deliveryDate) : null,
         workStatus: deliveryDate ? "needs_preparation" : null,
         validUntil: new Date(Date.now() + validityDays * 24 * 60 * 60 * 1000),
         items: {
-          create: items.map((item: any, idx: number) => ({
+          create: totals.items.map((item) => ({
             category: { connect: { id: item.categoryId } },
             description: item.description,
-            details: item.details ? JSON.stringify(item.details) : null,
+            details: item.details,
             quantity: item.quantity,
             unitPrice: item.unitPrice,
-            extras: item.extras || 0,
+            extras: item.extras,
             lineTotal: item.lineTotal,
-            sortOrder: idx,
+            sortOrder: item.sortOrder,
           })),
         },
       },
       include: { customer: true, items: true },
+      });
     });
 
     await logAction(user.id, "create", "quotation", quotation.id).catch(() => {});

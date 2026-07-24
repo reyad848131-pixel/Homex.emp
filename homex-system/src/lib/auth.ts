@@ -2,8 +2,7 @@ import { type NextAuthOptions } from "next-auth";
 import CredentialsProvider from "next-auth/providers/credentials";
 import { decode } from "next-auth/jwt";
 import { cookies } from "next/headers";
-import bcrypt from "bcryptjs";
-import { prisma } from "./prisma";
+import { verifyCredentials } from "./login-guard";
 
 export const authOptions: NextAuthOptions = {
   secret: process.env.NEXTAUTH_SECRET,
@@ -18,20 +17,11 @@ export const authOptions: NextAuthOptions = {
         try {
           if (!credentials?.civilId || !credentials?.password) return null;
 
-          const employee = await prisma.employee.findUnique({
-            where: { civilId: credentials.civilId },
-          });
+          // Shared brute-force-protected verification (lockout + attempt tracking).
+          const result = await verifyCredentials(credentials.civilId, credentials.password);
+          if (!result.ok) return null;
 
-          if (!employee || !employee.isActive) return null;
-
-          const valid = await bcrypt.compare(credentials.password, employee.password);
-          if (!valid) return null;
-
-          await prisma.employee.update({
-            where: { id: employee.id },
-            data: { lastLogin: new Date() },
-          }).catch(() => {});
-
+          const employee = result.employee;
           return {
             id: employee.id,
             name: employee.name,

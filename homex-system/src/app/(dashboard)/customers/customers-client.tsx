@@ -3,6 +3,7 @@
 import { useState } from "react";
 import Link from "next/link";
 import { Users, Phone, MapPin, Search } from "lucide-react";
+import { useI18n } from "@/lib/i18n";
 
 interface Customer {
   id: string;
@@ -17,6 +18,7 @@ interface Customer {
 
 export function CustomersClient({ customers }: { customers: Customer[] }) {
   const [search, setSearch] = useState("");
+  const { t } = useI18n();
 
   const filtered = customers.filter((c) => {
     if (!search) return true;
@@ -33,8 +35,8 @@ export function CustomersClient({ customers }: { customers: Customer[] }) {
     <div>
       <div className="flex items-center justify-between mb-6">
         <div>
-          <h1 className="text-2xl font-bold">العملاء</h1>
-          <p className="text-sm text-gray-500 mt-1">{customers.length} عميل</p>
+          <h1 className="text-2xl font-bold">{t("customersTitle")}</h1>
+          <p className="text-sm text-gray-500 mt-1">{customers.length} {t("customerCount")}</p>
         </div>
       </div>
 
@@ -47,7 +49,7 @@ export function CustomersClient({ customers }: { customers: Customer[] }) {
               value={search}
               onChange={(e) => setSearch(e.target.value)}
               className="w-full border border-gray-200 rounded pr-10 pl-3 py-2.5 text-sm"
-              placeholder="بحث بالاسم، الهاتف، أو المنطقة..."
+              placeholder={t("searchCustomers")}
             />
           </div>
         </div>
@@ -57,10 +59,10 @@ export function CustomersClient({ customers }: { customers: Customer[] }) {
         <div className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded p-12 text-center">
           <Users className="w-12 h-12 text-gray-300 mx-auto mb-3" />
           <p className="text-gray-500 font-semibold">
-            {search ? "لا توجد نتائج للبحث" : "لا يوجد عملاء بعد"}
+            {search ? t("noSearchResults") : t("noCustomersYet")}
           </p>
           {!search && (
-            <p className="text-sm text-gray-400 mt-1">سيتم إضافة العملاء تلقائياً عند إنشاء عروض الأسعار</p>
+            <p className="text-sm text-gray-400 mt-1">{t("customersAutoAdd")}</p>
           )}
         </div>
       ) : (
@@ -71,10 +73,10 @@ export function CustomersClient({ customers }: { customers: Customer[] }) {
               <div className="flex items-start justify-between mb-3">
                 <div>
                   <h3 className="font-bold text-gray-900">{c.name}</h3>
-                  <p className="text-xs text-gray-400 mt-0.5">بواسطة {c.creatorName}</p>
+                  <p className="text-xs text-gray-400 mt-0.5">{t("createdBy")} {c.creatorName}</p>
                 </div>
                 <span className="bg-gray-100 text-gray-600 text-xs font-bold px-2 py-1 rounded-full">
-                  {c.quotationCount} عروض
+                  {c.quotationCount} {t("quotesCount")}
                 </span>
               </div>
               <div className="space-y-2 text-sm text-gray-500">

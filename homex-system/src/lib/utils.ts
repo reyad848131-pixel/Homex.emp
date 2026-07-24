@@ -5,8 +5,39 @@ export function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs));
 }
 
-export function formatCurrency(amount: number): string {
-  return `${amount.toFixed(3)} ر.ع`;
+/**
+ * Rounds a monetary amount to 3 decimal places (Omani Rial precision).
+ * Central helper so every money calculation rounds identically and float
+ * drift cannot accumulate across additions.
+ */
+export function roundMoney(n: number): number {
+  return Math.round((Number(n) || 0) * 1000) / 1000;
+}
+
+export function formatCurrency(amount: number, currency = "ر.ع"): string {
+  return `${roundMoney(amount).toFixed(3)} ${currency}`;
+}
+
+/**
+ * Runs `fn`, retrying when it fails with a Prisma unique-constraint violation
+ * (P2002). Used to make sequential number generation (quote/invoice numbers)
+ * safe against concurrent creates that would otherwise collide.
+ */
+export async function withUniqueRetry<T>(
+  fn: (attempt: number) => Promise<T>,
+  attempts = 5
+): Promise<T> {
+  let lastError: unknown;
+  for (let i = 0; i < attempts; i++) {
+    try {
+      return await fn(i);
+    } catch (e: any) {
+      lastError = e;
+      if (e?.code === "P2002" && i < attempts - 1) continue;
+      throw e;
+    }
+  }
+  throw lastError;
 }
 
 export async function generateQuoteNumber(prisma: any): Promise<string> {
