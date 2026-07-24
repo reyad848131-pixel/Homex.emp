@@ -59,6 +59,27 @@ export const updateQuotationItemsSchema = z.object({
   deliveryDate: z.string().nullish(),
 });
 
+export const ROLES = ["admin", "manager", "sales"] as const;
+
+export const employeeCreateSchema = z.object({
+  name: z.string().trim().min(1),
+  civilId: z.string().trim().min(1),
+  phone: z.string().trim().nullish(),
+  role: z.enum(ROLES).default("sales"),
+  password: z.string().min(6, "كلمة المرور يجب أن تكون 6 أحرف على الأقل"),
+});
+
+export const employeeUpdateSchema = z
+  .object({
+    name: z.string().trim().min(1),
+    phone: z.string().trim().nullish(),
+    role: z.enum(ROLES),
+    isActive: z.boolean(),
+    password: z.string().min(6, "كلمة المرور يجب أن تكون 6 أحرف على الأقل"),
+  })
+  .partial()
+  .refine((v) => Object.keys(v).length > 0, { message: "No fields to update" });
+
 export const paymentSchema = z.object({
   quotationId: z.string().min(1),
   amount: z.coerce.number().positive("مبلغ الدفعة غير صحيح"),

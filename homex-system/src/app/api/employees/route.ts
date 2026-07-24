@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { getAuth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { logAction } from "@/lib/audit";
+import { parseBody, employeeCreateSchema } from "@/lib/schemas";
 import bcrypt from "bcryptjs";
 
 export async function GET() {
@@ -39,12 +40,9 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: "Admin only" }, { status: 403 });
     }
 
-    const body = await req.json();
-    const { name, civilId, phone, role, password } = body;
-
-    if (!name || !civilId || !password) {
-      return NextResponse.json({ error: "Missing required fields" }, { status: 400 });
-    }
+    const parsed = parseBody(employeeCreateSchema, await req.json());
+    if (!parsed.ok) return NextResponse.json({ error: parsed.error, code: "invalid" }, { status: 400 });
+    const { name, civilId, phone, role, password } = parsed.data;
 
     const existing = await prisma.employee.findUnique({ where: { civilId } });
     if (existing) {
@@ -53,7 +51,7 @@ export async function POST(req: NextRequest) {
 
     const hashedPassword = await bcrypt.hash(password, 10);
     const employee = await prisma.employee.create({
-      data: { name, civilId, phone: phone || null, role: role || "sales", password: hashedPassword },
+      data: { name, civilId, phone: phone || null, role, password: hashedPassword },
       select: { id: true, name: true, civilId: true, phone: true, role: true, isActive: true },
     });
 
