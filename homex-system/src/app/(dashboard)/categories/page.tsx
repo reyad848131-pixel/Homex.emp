@@ -3,6 +3,7 @@
 import { useState, useEffect } from "react";
 import { Layers, Plus, Pencil, Trash2, X, Check, RotateCcw } from "lucide-react";
 import { useI18n, type TranslationKey } from "@/lib/i18n";
+import { useToast } from "@/components/toast";
 
 interface Category {
   id: string;
@@ -35,6 +36,7 @@ export default function CategoriesPage() {
   const [form, setForm] = useState(emptyForm);
   const [saving, setSaving] = useState(false);
   const { t, locale } = useI18n();
+  const toast = useToast();
 
   const load = () => {
     setLoading(true);
@@ -72,21 +74,33 @@ export default function CategoriesPage() {
     const url = editingId ? `/api/categories/${editingId}` : "/api/categories";
     const method = editingId ? "PUT" : "POST";
 
-    await fetch(url, {
+    const res = await fetch(url, {
       method,
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(form),
     });
 
     setSaving(false);
-    resetForm();
-    load();
+    if (res.ok) {
+      toast.success(t("savedSuccess"));
+      resetForm();
+      load();
+    } else {
+      const err = await res.json().catch(() => ({}));
+      toast.error(err.error || t("operationFailed"));
+    }
   };
 
   const handleDelete = async (id: string) => {
     if (!confirm(t("confirmDelete"))) return;
-    await fetch(`/api/categories/${id}`, { method: "DELETE" });
-    load();
+    const res = await fetch(`/api/categories/${id}`, { method: "DELETE" });
+    if (res.ok) {
+      toast.success(t("deletedSuccess"));
+      load();
+    } else {
+      const err = await res.json().catch(() => ({}));
+      toast.error(err.error || t("deleteFailed"));
+    }
   };
 
   const handleReactivate = async (c: Category) => {

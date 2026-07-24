@@ -431,6 +431,13 @@ const translations = {
   saveFailed: { ar: "فشل حفظ العرض. حاول مرة أخرى.", en: "Failed to save. Try again." },
   saveEditsFailed: { ar: "فشل حفظ التعديلات. حاول مرة أخرى.", en: "Failed to save changes. Try again." },
   serverConnectionError: { ar: "خطأ في الاتصال بالسيرفر. تأكد من اتصال الإنترنت.", en: "Server connection error. Check your internet." },
+  savedSuccess: { ar: "تم الحفظ بنجاح", en: "Saved successfully" },
+  deletedSuccess: { ar: "تم الحذف بنجاح", en: "Deleted successfully" },
+  deleteFailed: { ar: "تعذّر الحذف", en: "Delete failed" },
+  statusUpdatedSuccess: { ar: "تم تحديث الحالة", en: "Status updated" },
+  paymentAddedSuccess: { ar: "تم تسجيل الدفعة", en: "Payment recorded" },
+  invoiceIssuedSuccess: { ar: "تم إصدار الفاتورة", en: "Invoice issued" },
+  operationFailed: { ar: "تعذّر تنفيذ العملية", en: "Operation failed" },
   previewBtn: { ar: "معاينة", en: "Preview" },
   deliveryDateLabel: { ar: "موعد التسليم", en: "Delivery Date" },
 

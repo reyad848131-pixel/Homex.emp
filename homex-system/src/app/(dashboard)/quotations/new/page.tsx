@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { GOVERNORATES } from "@/lib/types";
 import { cn } from "@/lib/utils";
 import { useI18n } from "@/lib/i18n";
+import { useToast } from "@/components/toast";
 import {
   ChefHat, DoorOpen, Lamp, Blinds, Sparkles, BedDouble,
   Layers, Tv, Monitor, Sofa, WashingMachine, Plus,
@@ -72,6 +73,7 @@ interface CustomerData {
 export default function NewQuotationPage() {
   const router = useRouter();
   const { t, locale } = useI18n();
+  const toast = useToast();
   const [step, setStep] = useState(1);
   const [categories, setCategories] = useState<Category[]>([]);
   const [selectedCat, setSelectedCat] = useState<Category | null>(null);
@@ -181,13 +183,16 @@ export default function NewQuotationPage() {
       });
       if (res.ok) {
         const data = await res.json();
+        toast.success(t("savedSuccess"));
         router.push(`/quotations/${data.id}`);
       } else {
         const err = await res.json().catch(() => ({}));
         setSaveError(err.error || t("saveFailed"));
+        toast.error(err.error || t("saveFailed"));
       }
     } catch {
       setSaveError(t("serverConnectionError"));
+      toast.error(t("serverConnectionError"));
     } finally {
       setSaving(false);
     }
