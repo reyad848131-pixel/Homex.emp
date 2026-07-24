@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getAuth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
+import { roundMoney } from "@/lib/utils";
 
 export async function GET(req: NextRequest) {
   try {
@@ -45,13 +46,13 @@ export async function GET(req: NextRequest) {
 
   for (const q of quotations) {
     statusCounts[q.status] = (statusCounts[q.status] || 0) + 1;
-    totalRevenue += q.total;
-    if (q.status === "approved") totalApproved += q.total;
+    totalRevenue = roundMoney(totalRevenue + q.total);
+    if (q.status === "approved") totalApproved = roundMoney(totalApproved + q.total);
 
     const empKey = q.employee.name;
     if (!employeeStats[empKey]) employeeStats[empKey] = { name: empKey, count: 0, total: 0, approved: 0 };
     employeeStats[empKey].count++;
-    employeeStats[empKey].total += q.total;
+    employeeStats[empKey].total = roundMoney(employeeStats[empKey].total + q.total);
     if (q.status === "approved") employeeStats[empKey].approved++;
 
     const gov = q.customer.governorate;
@@ -60,13 +61,13 @@ export async function GET(req: NextRequest) {
     const day = q.createdAt.toISOString().split("T")[0];
     if (!dailyData[day]) dailyData[day] = { count: 0, total: 0 };
     dailyData[day].count++;
-    dailyData[day].total += q.total;
+    dailyData[day].total = roundMoney(dailyData[day].total + q.total);
 
     for (const item of q.items) {
       const catName = item.category.nameAr;
       if (!categoryCounts[catName]) categoryCounts[catName] = { name: catName, count: 0, total: 0 };
       categoryCounts[catName].count++;
-      categoryCounts[catName].total += item.lineTotal;
+      categoryCounts[catName].total = roundMoney(categoryCounts[catName].total + item.lineTotal);
     }
   }
 

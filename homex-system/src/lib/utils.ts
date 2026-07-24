@@ -5,8 +5,17 @@ export function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs));
 }
 
+/**
+ * Rounds a monetary amount to 3 decimal places (Omani Rial precision).
+ * Central helper so every money calculation rounds identically and float
+ * drift cannot accumulate across additions.
+ */
+export function roundMoney(n: number): number {
+  return Math.round((Number(n) || 0) * 1000) / 1000;
+}
+
 export function formatCurrency(amount: number, currency = "ر.ع"): string {
-  return `${amount.toFixed(3)} ${currency}`;
+  return `${roundMoney(amount).toFixed(3)} ${currency}`;
 }
 
 /**

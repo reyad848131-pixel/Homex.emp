@@ -2,7 +2,9 @@
 // (POST /api/quotations) and edit (PATCH /api/quotations/[id]) routes so the
 // server never trusts monetary totals sent by the client.
 
-const round3 = (n: number) => Math.round(n * 1000) / 1000;
+import { roundMoney } from "./utils";
+
+const round3 = roundMoney;
 
 const num = (v: unknown, fallback = 0): number => {
   const n = typeof v === "string" ? parseFloat(v) : (v as number);
