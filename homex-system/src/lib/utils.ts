@@ -9,6 +9,28 @@ export function formatCurrency(amount: number, currency = "ر.ع"): string {
   return `${amount.toFixed(3)} ${currency}`;
 }
 
+/**
+ * Runs `fn`, retrying when it fails with a Prisma unique-constraint violation
+ * (P2002). Used to make sequential number generation (quote/invoice numbers)
+ * safe against concurrent creates that would otherwise collide.
+ */
+export async function withUniqueRetry<T>(
+  fn: (attempt: number) => Promise<T>,
+  attempts = 5
+): Promise<T> {
+  let lastError: unknown;
+  for (let i = 0; i < attempts; i++) {
+    try {
+      return await fn(i);
+    } catch (e: any) {
+      lastError = e;
+      if (e?.code === "P2002" && i < attempts - 1) continue;
+      throw e;
+    }
+  }
+  throw lastError;
+}
+
 export async function generateQuoteNumber(prisma: any): Promise<string> {
   const now = new Date();
   const y = now.getFullYear().toString().slice(-2);

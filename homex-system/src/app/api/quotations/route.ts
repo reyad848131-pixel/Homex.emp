@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getAuth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
-import { generateQuoteNumber } from "@/lib/utils";
+import { generateQuoteNumber, withUniqueRetry } from "@/lib/utils";
 import { logAction } from "@/lib/audit";
 import { getSettings } from "@/lib/settings";
 import { computeQuoteTotals } from "@/lib/quote-calc";
@@ -94,9 +94,9 @@ export async function POST(req: NextRequest) {
     // Recompute every monetary field server-side — never trust client totals.
     const totals = computeQuoteTotals(items, vatRate, finalAdvancePct);
 
-    const quoteNumber = await generateQuoteNumber(prisma);
-
-    const quotation = await prisma.quotation.create({
+    const quotation = await withUniqueRetry(async () => {
+      const quoteNumber = await generateQuoteNumber(prisma);
+      return prisma.quotation.create({
       data: {
         quoteNumber,
         customer: { connect: { id: customer.id } },
@@ -126,6 +126,7 @@ export async function POST(req: NextRequest) {
         },
       },
       include: { customer: true, items: true },
+      });
     });
 
     await logAction(user.id, "create", "quotation", quotation.id).catch(() => {});
