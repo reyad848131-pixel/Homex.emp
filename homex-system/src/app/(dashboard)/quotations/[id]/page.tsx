@@ -308,10 +308,12 @@ export default function QuotationDetailPage({ params }: { params: Promise<{ id: 
                 {t("invoice")} {q.invoice.invoiceNumber}
               </a>
             )}
-            <button onClick={handleDelete}
-              className="flex items-center gap-2 px-4 py-2 border border-red-200 text-red-600 rounded text-sm font-bold hover:bg-red-50">
-              <Trash2 className="w-4 h-4" />
-            </button>
+            {!(q.invoice || q.payments.length > 0 || q.status === "accepted") && (
+              <button onClick={handleDelete}
+                className="flex items-center gap-2 px-4 py-2 border border-red-200 text-red-600 rounded text-sm font-bold hover:bg-red-50">
+                <Trash2 className="w-4 h-4" />
+              </button>
+            )}
           </div>
         </div>
 

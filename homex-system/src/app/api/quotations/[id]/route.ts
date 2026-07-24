@@ -7,6 +7,17 @@ import { computeQuoteTotals } from "@/lib/quote-calc";
 
 const VALID_STATUSES = ["draft", "pending", "approved", "declined", "revised"];
 
+// Once a quotation is invoiced, has recorded payments, or the customer has
+// accepted it, its priced items and existence are frozen for financial
+// integrity — they must not be edited or deleted.
+function isFinanciallyLocked(q: {
+  status: string;
+  invoice?: { id: string } | null;
+  _count?: { payments: number };
+}): boolean {
+  return !!q.invoice || (q._count?.payments ?? 0) > 0 || q.status === "accepted";
+}
+
 export async function GET(
   req: NextRequest,
   { params }: { params: Promise<{ id: string }> }
@@ -52,11 +63,23 @@ export async function PATCH(
     const { id } = await params;
     const body = await req.json();
 
-    const quotation = await prisma.quotation.findUnique({ where: { id } });
+    const quotation = await prisma.quotation.findUnique({
+      where: { id },
+      include: { invoice: { select: { id: true } }, _count: { select: { payments: true } } },
+    });
     if (!quotation) return NextResponse.json({ error: "Not found" }, { status: 404 });
 
     if (user.role === "sales" && quotation.employeeId !== user.id) {
       return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+    }
+
+    // A quotation is financially frozen once it is invoiced, has payments, or
+    // the customer accepted it — its priced items can no longer be changed.
+    if (body.items && isFinanciallyLocked(quotation)) {
+      return NextResponse.json(
+        { error: "لا يمكن تعديل بنود عرض معتمد أو مفوتر أو له دفعات", code: "locked" },
+        { status: 409 }
+      );
     }
 
     if (body.status) {
@@ -188,11 +211,21 @@ export async function DELETE(
     const user = session.user as any;
     const { id } = await params;
 
-    const quotation = await prisma.quotation.findUnique({ where: { id } });
+    const quotation = await prisma.quotation.findUnique({
+      where: { id },
+      include: { invoice: { select: { id: true } }, _count: { select: { payments: true } } },
+    });
     if (!quotation) return NextResponse.json({ error: "Not found" }, { status: 404 });
 
     if (user.role === "sales" && quotation.employeeId !== user.id) {
       return NextResponse.json({ error: "Insufficient permissions" }, { status: 403 });
+    }
+
+    if (isFinanciallyLocked(quotation)) {
+      return NextResponse.json(
+        { error: "لا يمكن حذف عرض معتمد أو مفوتر أو له دفعات", code: "locked" },
+        { status: 409 }
+      );
     }
 
     await prisma.quotation.delete({ where: { id } });
