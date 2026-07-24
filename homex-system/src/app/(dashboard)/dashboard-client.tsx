@@ -100,7 +100,7 @@ export function DashboardClient({ data }: { data: DashboardData }) {
         ))}
       </div>
 
-      <div className="grid grid-cols-5 gap-3 mb-6">
+      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3 mb-6">
         {statusCards.map((s) => (
           <div key={s.labelKey} className={`border rounded p-3 text-center ${s.color}`}>
             <p className="text-2xl font-black font-mono-en">{s.count}</p>
