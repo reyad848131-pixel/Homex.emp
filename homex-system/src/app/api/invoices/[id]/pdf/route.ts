@@ -16,6 +16,7 @@ export async function GET(
     const session = await getAuth();
     if (!session) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
+    const user = session.user as any;
     const { id } = await params;
     const invoice = await prisma.invoice.findUnique({
       where: { id },
@@ -33,6 +34,11 @@ export async function GET(
     });
 
     if (!invoice) return NextResponse.json({ error: "Not found" }, { status: 404 });
+
+    // A sales rep may only access invoices for their own quotations (IDOR guard).
+    if (user.role === "sales" && invoice.quotation.employeeId !== user.id) {
+      return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+    }
 
     const q = invoice.quotation;
     const s = await getSettings();
