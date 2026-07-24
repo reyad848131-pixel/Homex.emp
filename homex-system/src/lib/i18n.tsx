@@ -35,6 +35,10 @@ const translations = {
   loggingIn: { ar: "جاري الدخول...", en: "Logging in..." },
   loginError: { ar: "أدخل الرقم المدني وكلمة المرور", en: "Enter civil ID and password" },
   invalidCredentials: { ar: "رقم مدني أو كلمة مرور غير صحيحة", en: "Invalid civil ID or password" },
+  accountLocked: { ar: "تم قفل الحساب مؤقتاً بسبب محاولات دخول خاطئة كثيرة", en: "Account temporarily locked due to too many failed attempts" },
+  tryAfterMinutes: { ar: "حاول مرة أخرى بعد", en: "Try again in" },
+  minutesUnitShort: { ar: "دقيقة", en: "min" },
+  attemptsRemainingBefore: { ar: "محاولات متبقية قبل قفل الحساب", en: "attempts remaining before lockout" },
   connectionError: { ar: "خطأ في الاتصال", en: "Connection error" },
 
   // Dashboard
