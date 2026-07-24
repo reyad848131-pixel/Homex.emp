@@ -8,6 +8,7 @@ import { cn } from "@/lib/utils";
 import { useDebouncedValue } from "@/lib/hooks";
 import { useI18n, type TranslationKey } from "@/lib/i18n";
 import { EmptyState } from "@/components/empty-state";
+import { TableSkeleton } from "@/components/skeleton";
 
 const STATUS_KEYS: Record<string, TranslationKey> = {
   all: "statusAll",
@@ -124,7 +125,7 @@ export default function QuotationsPage() {
 
       <div className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded overflow-hidden">
         {loading ? (
-          <div className="p-12 text-center text-gray-400 text-sm">{t("loading")}</div>
+          <TableSkeleton rows={8} />
         ) : quotations.length === 0 ? (
           <EmptyState
             icon={FileText}

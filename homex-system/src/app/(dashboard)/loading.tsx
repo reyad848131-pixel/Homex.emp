@@ -1,15 +1,22 @@
-"use client";
-
-import { useI18n } from "@/lib/i18n";
+import { CardsSkeleton, Skeleton, TableSkeleton } from "@/components/skeleton";
 
 export default function Loading() {
-  const { t } = useI18n();
-
   return (
-    <div className="flex items-center justify-center min-h-[60vh]">
-      <div className="flex flex-col items-center gap-3">
-        <div className="w-8 h-8 border-3 border-neutral-200 border-t-neutral-900 rounded-full animate-spin" />
-        <p className="text-sm text-neutral-500">{t("loading")}</p>
+    <div>
+      <div className="flex items-center justify-between mb-6">
+        <Skeleton className="h-8 w-48" />
+        <Skeleton className="h-10 w-36 rounded" />
+      </div>
+      <div className="mb-6">
+        <CardsSkeleton count={4} />
+      </div>
+      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3 mb-6">
+        {Array.from({ length: 5 }).map((_, i) => (
+          <Skeleton key={i} className="h-16 rounded" />
+        ))}
+      </div>
+      <div className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded">
+        <TableSkeleton rows={6} />
       </div>
     </div>
   );

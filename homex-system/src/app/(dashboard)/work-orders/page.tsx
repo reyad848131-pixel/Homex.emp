@@ -6,6 +6,7 @@ import { cn } from "@/lib/utils";
 import { WORK_STATUS_MAP } from "@/lib/types";
 import { useDebouncedValue } from "@/lib/hooks";
 import { useI18n, useTranslatedMonths, type TranslationKey } from "@/lib/i18n";
+import { TableSkeleton, CardsSkeleton } from "@/components/skeleton";
 import {
   Truck,
   Search,
@@ -263,7 +264,14 @@ export default function WorkOrdersPage() {
   const fmtDate = (d: string) => new Date(d).toLocaleDateString(dateLocale, { year: "numeric", month: "short", day: "numeric" });
 
   if (loading && !data) {
-    return <div className="text-center py-20 text-gray-400">{t("loading")}</div>;
+    return (
+      <div className="space-y-4">
+        <CardsSkeleton count={4} />
+        <div className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded">
+          <TableSkeleton rows={6} />
+        </div>
+      </div>
+    );
   }
 
   if (!data) {
