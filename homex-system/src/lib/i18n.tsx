@@ -342,6 +342,12 @@ const translations = {
   exportQuotations: { ar: "تصدير العروض (CSV)", en: "Export Quotations (CSV)" },
   exportCustomers: { ar: "تصدير العملاء (CSV)", en: "Export Customers (CSV)" },
   backupData: { ar: "نسخة احتياطية", en: "Backup" },
+  autoBackups: { ar: "النسخ الاحتياطية التلقائية", en: "Automatic Backups" },
+  autoBackupInfo: { ar: "نسخة تلقائية يومياً، يُحتفظ بآخر 14 نسخة", en: "A daily automatic snapshot; the last 14 are kept" },
+  noBackupsYet: { ar: "لا توجد نسخ محفوظة بعد", en: "No saved backups yet" },
+  backupAuto: { ar: "تلقائي", en: "Auto" },
+  backupManual: { ar: "يدوي", en: "Manual" },
+  downloadLabel: { ar: "تحميل", en: "Download" },
 
   // Profile
   profileTitle: { ar: "الملف الشخصي", en: "Profile" },

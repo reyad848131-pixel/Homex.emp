@@ -198,3 +198,14 @@ model Settings {
 
   @@map("settings")
 }
+
+model Backup {
+  id        String   @id @default(cuid())
+  data      String
+  size      Int      @default(0)
+  source    String   @default("auto")
+  createdAt DateTime @default(now()) @map("created_at")
+
+  @@index([createdAt])
+  @@map("backups")
+}
