@@ -4,6 +4,7 @@ import { useState } from "react";
 import Link from "next/link";
 import { Users, Phone, MapPin, Search } from "lucide-react";
 import { useI18n } from "@/lib/i18n";
+import { EmptyState } from "@/components/empty-state";
 
 interface Customer {
   id: string;
@@ -56,14 +57,12 @@ export function CustomersClient({ customers }: { customers: Customer[] }) {
       )}
 
       {filtered.length === 0 ? (
-        <div className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded p-12 text-center">
-          <Users className="w-12 h-12 text-gray-300 mx-auto mb-3" />
-          <p className="text-gray-500 font-semibold">
-            {search ? t("noSearchResults") : t("noCustomersYet")}
-          </p>
-          {!search && (
-            <p className="text-sm text-gray-400 mt-1">{t("customersAutoAdd")}</p>
-          )}
+        <div className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded">
+          <EmptyState
+            icon={Users}
+            title={search ? t("noSearchResults") : t("noCustomersYet")}
+            description={!search ? t("customersAutoAdd") : undefined}
+          />
         </div>
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">

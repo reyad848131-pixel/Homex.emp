@@ -7,6 +7,7 @@ import { Search, FilePlus, FileText, Calendar } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useDebouncedValue } from "@/lib/hooks";
 import { useI18n, type TranslationKey } from "@/lib/i18n";
+import { EmptyState } from "@/components/empty-state";
 
 const STATUS_KEYS: Record<string, TranslationKey> = {
   all: "statusAll",
@@ -125,10 +126,12 @@ export default function QuotationsPage() {
         {loading ? (
           <div className="p-12 text-center text-gray-400 text-sm">{t("loading")}</div>
         ) : quotations.length === 0 ? (
-          <div className="p-12 text-center">
-            <FileText className="w-12 h-12 text-gray-300 mx-auto mb-3" />
-            <p className="text-gray-500 font-semibold">{t("noResults")}</p>
-          </div>
+          <EmptyState
+            icon={FileText}
+            title={t("noResults")}
+            actionLabel={t("newQuotation")}
+            actionHref="/quotations/new"
+          />
         ) : (
           <div className="overflow-x-auto">
             <table className="w-full text-sm">
