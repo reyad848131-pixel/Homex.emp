@@ -5,6 +5,7 @@ import { generateQuoteNumber } from "@/lib/utils";
 import { logAction } from "@/lib/audit";
 import { getSettings } from "@/lib/settings";
 import { computeQuoteTotals } from "@/lib/quote-calc";
+import { parseBody, createQuotationSchema } from "@/lib/schemas";
 
 export async function GET(req: NextRequest) {
   try {
@@ -61,16 +62,10 @@ export async function POST(req: NextRequest) {
 
   try {
     const user = session.user as any;
-    const body = await req.json();
+    const parsed = parseBody(createQuotationSchema, await req.json());
+    if (!parsed.ok) return NextResponse.json({ error: parsed.error, code: "invalid" }, { status: 400 });
 
-    const { customer: customerData, items, notes, advancePct, deliveryDate } = body;
-
-    if (!customerData?.name || !customerData?.phone || !customerData?.governorate || !customerData?.wilayat) {
-      return NextResponse.json({ error: "بيانات العميل غير مكتملة" }, { status: 400 });
-    }
-    if (!items || items.length === 0) {
-      return NextResponse.json({ error: "يجب إضافة بند واحد على الأقل" }, { status: 400 });
-    }
+    const { customer: customerData, items, notes, advancePct, deliveryDate } = parsed.data;
 
     let customer = await prisma.customer.findFirst({
       where: { phone: customerData.phone, createdBy: user.id },

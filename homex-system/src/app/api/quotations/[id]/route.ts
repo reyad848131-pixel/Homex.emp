@@ -4,6 +4,7 @@ import { prisma } from "@/lib/prisma";
 import { logAction } from "@/lib/audit";
 import { notify, notifyAdmins } from "@/lib/notifications";
 import { computeQuoteTotals } from "@/lib/quote-calc";
+import { parseBody, updateQuotationItemsSchema } from "@/lib/schemas";
 
 const VALID_STATUSES = ["draft", "pending", "approved", "declined", "revised"];
 
@@ -92,6 +93,9 @@ export async function PATCH(
     }
 
     if (body.items) {
+      const parsed = parseBody(updateQuotationItemsSchema, body);
+      if (!parsed.ok) return NextResponse.json({ error: parsed.error, code: "invalid" }, { status: 400 });
+
       const result = await prisma.$transaction(async (tx) => {
         await tx.quoteItem.deleteMany({ where: { quotationId: id } });
 
