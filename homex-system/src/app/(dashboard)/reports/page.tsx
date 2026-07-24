@@ -101,7 +101,7 @@ export default function ReportsPage() {
   const [loading, setLoading] = useState(true);
   const { t } = useI18n();
 
-  const fmtCur = (n: number | string) => `${Number(n).toFixed(3)} ر.ع`;
+  const fmtCur = (n: number | string) => `${Number(n).toFixed(3)} ${t("omr")}`;
 
   useEffect(() => {
     setLoading(true);
@@ -186,7 +186,7 @@ export default function ReportsPage() {
 
       <div className="bg-white border border-gray-200 rounded p-5 mb-6">
         <h2 className="text-sm font-bold text-gray-400 uppercase tracking-wider mb-4 flex items-center gap-2">
-          <TrendingUp className="w-4 h-4" /> {t("dailyRevenue")} (ر.ع)
+          <TrendingUp className="w-4 h-4" /> {t("dailyRevenue")} ({t("omr")})
         </h2>
         <BarChartSVG noDataText={t("noData")} data={data.dailyData.map((d) => ({
           label: d.date.slice(5),

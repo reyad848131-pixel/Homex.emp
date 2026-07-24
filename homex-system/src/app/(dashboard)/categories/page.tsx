@@ -161,7 +161,7 @@ export default function CategoriesPage() {
               </select>
             </div>
             <div>
-              <label className="block text-sm font-semibold text-gray-600 mb-1.5">{t("basePrice")} (ر.ع)</label>
+              <label className="block text-sm font-semibold text-gray-600 mb-1.5">{t("basePrice")} ({t("omr")})</label>
               <input
                 type="number" step="0.001" min="0" value={form.basePrice}
                 onChange={(e) => setForm({ ...form, basePrice: e.target.value })}

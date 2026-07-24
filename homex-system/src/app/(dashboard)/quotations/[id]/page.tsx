@@ -91,7 +91,7 @@ export default function QuotationDetailPage({ params }: { params: Promise<{ id: 
   const [creatingInvoice, setCreatingInvoice] = useState(false);
   const [me, setMe] = useState<{ id: string; role: string } | null>(null);
 
-  const fmtCur = (n: number) => `${n.toFixed(3)} ر.ع`;
+  const fmtCur = (n: number) => `${n.toFixed(3)} ${t("omr")}`;
 
   useEffect(() => {
     fetch(`/api/quotations/${id}`)

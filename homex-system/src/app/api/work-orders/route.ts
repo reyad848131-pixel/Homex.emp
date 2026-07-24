@@ -71,7 +71,7 @@ export async function GET(req: NextRequest) {
         include: {
           customer: true,
           employee: { select: { name: true } },
-          items: { include: { category: { select: { nameAr: true } } }, orderBy: { sortOrder: "asc" } },
+          items: { include: { category: { select: { nameAr: true, nameEn: true } } }, orderBy: { sortOrder: "asc" } },
         },
         orderBy: { deliveryDate: "asc" },
       }),

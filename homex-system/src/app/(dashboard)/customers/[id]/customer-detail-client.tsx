@@ -43,7 +43,7 @@ interface CustomerData {
 
 export function CustomerDetailClient({ data }: { data: CustomerData }) {
   const { t, dateLocale } = useI18n();
-  const fmtCur = (n: number) => `${n.toFixed(3)} ر.ع`;
+  const fmtCur = (n: number) => `${n.toFixed(3)} ${t("omr")}`;
 
   return (
     <div>

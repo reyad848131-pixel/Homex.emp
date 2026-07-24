@@ -483,6 +483,26 @@ const translations = {
   perDoor: { ar: "ر.ع/باب", en: "OMR/door" },
   motorLabel: { ar: "موتور", en: "Motor" },
 
+  // Currency & Units
+  omr: { ar: "ر.ع", en: "OMR" },
+  omrPerSqm: { ar: "ر.ع/م²", en: "OMR/m²" },
+  sqmUnit: { ar: "م²", en: "m²" },
+
+  // Curtain types
+  chiffonOnly: { ar: "شيفون فقط", en: "Chiffon Only" },
+  blackoutType: { ar: "بلاك آوت", en: "Blackout" },
+  chiffonBlackout: { ar: "شيفون + بلاك آوت", en: "Chiffon + Blackout" },
+
+  // Kitchen unit types
+  unit3Label: { ar: "3 Unit — ارتفاع 3م", en: "3 Unit — Height 3m" },
+  unit2Label: { ar: "2 Unit — ارتفاع 2.6م", en: "2 Unit — Height 2.6m" },
+
+  // Cladding types
+  chipboardAlt: { ar: "بديل التشيبورد", en: "Chipboard Alternative" },
+
+  // Nightstand types
+  roundType: { ar: "دائري", en: "Round" },
+
   // Notifications
   notificationsTitle: { ar: "الإشعارات", en: "Notifications" },
   readAll: { ar: "قراءة الكل", en: "Read All" },

@@ -131,7 +131,7 @@ export default function EditQuotationPage({ params }: { params: Promise<{ id: st
   const vat = Math.round(subtotal * vatRate * 1000) / 1000;
   const total = Math.round((subtotal + vat) * 1000) / 1000;
   const advance = Math.round(total * (advancePct / 100) * 1000) / 1000;
-  const fmtCur = (n: number) => `${n.toFixed(3)} ر.ع`;
+  const fmtCur = (n: number) => `${n.toFixed(3)} ${t("omr")}`;
 
   const resetBuilder = useCallback(() => {
     setBuilderDesc(""); setBuilderQty(1); setBuilderPrice(0); setBuilderExtras(0);
@@ -288,12 +288,12 @@ export default function EditQuotationPage({ params }: { params: Promise<{ id: st
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
             <div>
               <label className="block text-sm font-semibold text-gray-600 mb-1.5">{t("advanceAmountLabel")}</label>
-              <input type="text" value={total > 0 ? fmtCur(advance) : "0.000 ر.ع"} readOnly
+              <input type="text" value={total > 0 ? fmtCur(advance) : `0.000 ${t("omr")}`} readOnly
                 className="w-full border border-gray-200 rounded px-3 py-2.5 text-sm bg-gray-50 text-gray-500 font-mono-en" />
             </div>
             <div>
               <label className="block text-sm font-semibold text-gray-600 mb-1.5">{t("remainingAmountLabel")}</label>
-              <input type="text" value={total > 0 ? fmtCur(total - advance) : "0.000 ر.ع"} readOnly
+              <input type="text" value={total > 0 ? fmtCur(total - advance) : `0.000 ${t("omr")}`} readOnly
                 className="w-full border border-gray-200 rounded px-3 py-2.5 text-sm bg-gray-50 text-gray-500 font-mono-en" />
             </div>
           </div>
@@ -642,7 +642,7 @@ function KitchenBuilder({ config, governorate, wilayat, onUpdate }: { config: an
   useEffect(() => {
     const price = area * pricePerSqm;
     const extras = island !== "none" ? ISLAND_PRICES[island] : 0;
-    const unitLabel = unitType === "3unit" ? "3 Unit — ارتفاع 3م" : "2 Unit — ارتفاع 2.6م";
+    const unitLabel = unitType === "3unit" ? t("unit3Label") : t("unit2Label");
     const desc = `مطبخ MDF - ${unitLabel} - ${length}م`;
     onUpdate(desc, price, extras);
   }, [length, unitType, island, basePrice, config, onUpdate]);
@@ -666,14 +666,14 @@ function KitchenBuilder({ config, governorate, wilayat, onUpdate }: { config: an
         <div className="mt-2 text-center py-2 bg-gray-50 rounded border border-gray-100">
           <span className="text-sm text-gray-600">{t("areaLabel")}: </span>
           <span className="font-bold font-mono-en text-gray-900">{area.toFixed(2)}</span>
-          <span className="text-sm text-gray-600"> م²</span>
+          <span className="text-sm text-gray-600"> {t("sqmUnit")}</span>
         </div>
       </div>
 
       <div>
         <label className="block text-sm font-semibold text-gray-600 mb-2">{t("unitTypeKitchen")}</label>
         <div className="flex gap-2">
-          {([["2unit", "2 Unit — ارتفاع 2.6م"], ["3unit", "3 Unit — ارتفاع 3م"]] as const).map(([k, l]) => (
+          {([["2unit", t("unit2Label")], ["3unit", t("unit3Label")]] as const).map(([k, l]) => (
             <button key={k} onClick={() => setUnitType(k)}
               className={cn("flex-1 py-2.5 rounded text-sm font-bold border transition-colors",
                 unitType === k ? "bg-gray-900 text-white border-gray-900" : "bg-white border-gray-200 text-gray-600")}>
@@ -695,7 +695,7 @@ function KitchenBuilder({ config, governorate, wilayat, onUpdate }: { config: an
 
       <div className="text-center py-2 bg-gray-50 rounded border border-gray-100">
         <p className="text-xs text-gray-500">
-          {wilayat || governorate}: {basePrice} × {unitMultiplier} + {PORCELAIN_PRICE} ({t("porcelain")}) = <span className="font-bold font-mono-en">{pricePerSqm.toFixed(3)}</span> ر.ع/م²
+          {wilayat || governorate}: {basePrice} × {unitMultiplier} + {PORCELAIN_PRICE} ({t("porcelain")}) = <span className="font-bold font-mono-en">{pricePerSqm.toFixed(3)}</span> {t("omrPerSqm")}
         </p>
         <p className="text-sm font-bold font-mono-en text-gray-900 mt-1">{t("pricePerMeterLabel")} (OMR) {pricePerSqm.toFixed(3)}</p>
       </div>
@@ -717,7 +717,7 @@ function KitchenBuilder({ config, governorate, wilayat, onUpdate }: { config: an
         </div>
         {island !== "none" && (
           <p className="text-xs text-emerald-600 mt-1">
-            {island === "large" ? t("largeIsland") : t("smallIsland")}: {ISLAND_PRICES[island].toFixed(3)} ر.ع ({t("addedAsExtras")})
+            {island === "large" ? t("largeIsland") : t("smallIsland")}: {ISLAND_PRICES[island].toFixed(3)} {t("omr")} ({t("addedAsExtras")})
           </p>
         )}
       </div>
@@ -774,7 +774,7 @@ function CabinetBuilder({ config, onUpdate }: { config: any; onUpdate: (d: strin
             className="w-full border border-gray-200 rounded px-3 py-2.5 text-sm font-mono-en text-center" />
         </div>
         <div>
-          <label className="block text-sm font-semibold text-gray-600 mb-1.5">{t("ledLighting")} ({config.led || 25} ر.ع)</label>
+          <label className="block text-sm font-semibold text-gray-600 mb-1.5">{t("ledLighting")} ({config.led || 25} {t("omr")})</label>
           <input type="number" min={0} value={leds} onChange={(e) => setLeds(parseInt(e.target.value) || 0)}
             className="w-full border border-gray-200 rounded px-3 py-2.5 text-sm font-mono-en text-center" />
         </div>
@@ -792,9 +792,9 @@ function CurtainBuilder({ config, onUpdate }: { config: any; onUpdate: (d: strin
   const [height, setHeight] = useState(2);
 
   const TYPES: Record<string, { label: string; price: number }> = {
-    chiffon: { label: "شيفون فقط", price: 9 },
-    blackout: { label: "بلاك آوت", price: 9 },
-    combo: { label: "شيفون + بلاك آوت", price: 12.5 },
+    chiffon: { label: t("chiffonOnly"), price: 9 },
+    blackout: { label: t("blackoutType"), price: 9 },
+    combo: { label: t("chiffonBlackout"), price: 12.5 },
     roll: { label: "Roll", price: 15 },
   };
 
@@ -825,7 +825,7 @@ function CurtainBuilder({ config, onUpdate }: { config: any; onUpdate: (d: strin
             </button>
           ))}
         </div>
-        <p className="text-xs text-gray-400 mt-1">{TYPES[type]?.label}: {TYPES[type]?.price.toFixed(3)} ر.ع/م²</p>
+        <p className="text-xs text-gray-400 mt-1">{TYPES[type]?.label}: {TYPES[type]?.price.toFixed(3)} {t("omrPerSqm")}</p>
       </div>
 
       <div>
@@ -842,7 +842,7 @@ function CurtainBuilder({ config, onUpdate }: { config: any; onUpdate: (d: strin
         {motor === "electric" && (
           <p className="text-xs text-emerald-600 mt-1">
             {t("motorLabel")}: ({MOTOR_BASE} + {MOTOR_PER_METER} × {width}م = {(MOTOR_BASE + MOTOR_PER_METER * width).toFixed(3)})
-            {motorQty > 1 && ` × ${motorQty} ${t("motorLabel")}`} = {motorSurcharge.toFixed(3)} ر.ع
+            {motorQty > 1 && ` × ${motorQty} ${t("motorLabel")}`} = {motorSurcharge.toFixed(3)} {t("omr")}
           </p>
         )}
       </div>
@@ -890,7 +890,7 @@ function CurtainBuilder({ config, onUpdate }: { config: any; onUpdate: (d: strin
         <div className="mt-2 text-center py-2 bg-gray-50 rounded border border-gray-100">
           <span className="text-sm text-gray-600">{t("areaLabel")}: </span>
           <span className="font-bold font-mono-en text-gray-900">{area.toFixed(2)}</span>
-          <span className="text-sm text-gray-600"> م²</span>
+          <span className="text-sm text-gray-600"> {t("sqmUnit")}</span>
         </div>
       </div>
     </div>
@@ -939,14 +939,14 @@ function BedBuilder({ config, onUpdate }: { config: any; onUpdate: (d: string, p
               className={cn("py-2 rounded text-xs font-bold border transition-colors",
                 size === s ? "bg-gray-900 text-white border-gray-900" : "bg-white border-gray-200 text-gray-600")}>
               {s}
-              <span className="block text-[10px] font-mono-en mt-0.5">{BED_PRICES[type]?.[s]} ر.ع</span>
+              <span className="block text-[10px] font-mono-en mt-0.5">{BED_PRICES[type]?.[s]} {t("omr")}</span>
             </button>
           ))}
         </div>
       </div>
       <label className="flex items-center gap-2 text-sm font-semibold cursor-pointer">
         <input type="checkbox" checked={lighting} onChange={(e) => setLighting(e.target.checked)} className="rounded" />
-        {t("lightingLabel")} (+{config.lighting || 20} ر.ع)
+        {t("lightingLabel")} (+{config.lighting || 20} {t("omr")})
       </label>
     </div>
   );
@@ -962,7 +962,7 @@ function CladdingBuilder({ config, onUpdate }: { config: any; onUpdate: (d: stri
 
   const TYPES: Record<string, { label: string; price: number }> = {
     type1: { label: "Milamin", price: config?.types?.type1 || 45 },
-    type2: { label: "بديل التشيبورد", price: config?.types?.type2 || 27 },
+    type2: { label: t("chipboardAlt"), price: config?.types?.type2 || 27 },
   };
   const LIGHT_PRICE = config?.lightPrice || 20;
 
@@ -989,7 +989,7 @@ function CladdingBuilder({ config, onUpdate }: { config: any; onUpdate: (d: stri
             </button>
           ))}
         </div>
-        <p className="text-xs text-gray-400 mt-1">{TYPES[type]?.label}: {TYPES[type]?.price.toFixed(3)} ر.ع/م²</p>
+        <p className="text-xs text-gray-400 mt-1">{TYPES[type]?.label}: {TYPES[type]?.price.toFixed(3)} {t("omrPerSqm")}</p>
       </div>
 
       <div>
@@ -1027,7 +1027,7 @@ function CladdingBuilder({ config, onUpdate }: { config: any; onUpdate: (d: stri
         <div className="mt-2 text-center py-2 bg-gray-50 rounded border border-gray-100">
           <span className="text-sm text-gray-600">{t("areaLabel")}: </span>
           <span className="font-bold font-mono-en text-gray-900">{area.toFixed(2)}</span>
-          <span className="text-sm text-gray-600"> م²</span>
+          <span className="text-sm text-gray-600"> {t("sqmUnit")}</span>
         </div>
       </div>
 
@@ -1049,7 +1049,7 @@ function CladdingBuilder({ config, onUpdate }: { config: any; onUpdate: (d: stri
               onChange={(e) => setLightCount(Math.max(1, parseInt(e.target.value) || 1))}
               className="w-full border border-gray-200 rounded px-3 py-2 text-sm font-mono-en text-center" />
             <p className="text-xs text-emerald-600 mt-1">
-              {lightCount} × {LIGHT_PRICE.toFixed(3)} ر.ع = {lightSurcharge.toFixed(3)} ر.ع
+              {lightCount} × {LIGHT_PRICE.toFixed(3)} {t("omr")} = {lightSurcharge.toFixed(3)} {t("omr")}
             </p>
           </div>
         )}
@@ -1064,7 +1064,7 @@ function SofaBuilder({ config, onUpdate }: { config: any; onUpdate: (d: string, 
   const [price, setPrice] = useState(config.standard?.min || 80);
 
   useEffect(() => {
-    const typeLabel = type === "wooden" ? "خشبي" : "عادي";
+    const typeLabel = type === "wooden" ? t("woodenType") : t("standardType");
     const desc = `طقم جلوس ${typeLabel}`;
     onUpdate(desc, price, 0);
   }, [type, price, onUpdate]);
@@ -1086,11 +1086,11 @@ function SofaBuilder({ config, onUpdate }: { config: any; onUpdate: (d: string, 
         </div>
       </div>
       <div>
-        <label className="block text-sm font-semibold text-gray-600 mb-1.5">{t("price")} ({range.min} - {range.max} ر.ع)</label>
+        <label className="block text-sm font-semibold text-gray-600 mb-1.5">{t("price")} ({range.min} - {range.max} {t("omr")})</label>
         <input type="range" min={range.min} max={range.max} value={price}
           onChange={(e) => setPrice(parseInt(e.target.value))}
           className="w-full accent-gray-900" />
-        <p className="text-center text-lg font-black font-mono-en mt-2">{price} ر.ع</p>
+        <p className="text-center text-lg font-black font-mono-en mt-2">{price} {t("omr")}</p>
       </div>
     </div>
   );
@@ -1105,7 +1105,7 @@ function NightstandBuilder({ config, onUpdate }: { config: any; onUpdate: (d: st
   const [customPrice, setCustomPrice] = useState(30);
 
   useEffect(() => {
-    const typeLabel = type === "round" ? "دائري" : "عادي";
+    const typeLabel = type === "round" ? t("roundType") : t("standardType");
     if (mode === "fixed") {
       const price = config[type] || (type === "round" ? 50 : 30);
       onUpdate(`كومودينو ${typeLabel}`, price, 0);
@@ -1140,7 +1140,7 @@ function NightstandBuilder({ config, onUpdate }: { config: any; onUpdate: (d: st
           ))}
         </div>
         {mode === "fixed" && (
-          <p className="text-xs text-gray-400 mt-2 font-mono-en">{t("price")}: {config[type] || (type === "round" ? 50 : 30)} ر.ع</p>
+          <p className="text-xs text-gray-400 mt-2 font-mono-en">{t("price")}: {config[type] || (type === "round" ? 50 : 30)} {t("omr")}</p>
         )}
       </div>
       {mode === "custom" && (
@@ -1205,7 +1205,7 @@ function DressingBuilder({ config, onUpdate }: { config: any; onUpdate: (d: stri
         </div>
         {lighting && (
           <div className="mt-3">
-            <label className="block text-sm font-semibold text-gray-600 mb-1.5">{t("lightingsCount")} ({config.lighting || 20} ر.ع)</label>
+            <label className="block text-sm font-semibold text-gray-600 mb-1.5">{t("lightingsCount")} ({config.lighting || 20} {t("omr")})</label>
             <input type="number" min={1} value={lightCount} onChange={(e) => setLightCount(Math.max(1, parseInt(e.target.value) || 1))}
               className="w-full border border-gray-200 rounded px-3 py-2.5 text-sm font-mono-en text-center" />
           </div>
@@ -1254,7 +1254,7 @@ function LaundryBuilder({ config, onUpdate }: { config: any; onUpdate: (d: strin
         </div>
         {lighting && (
           <div className="mt-3">
-            <label className="block text-sm font-semibold text-gray-600 mb-1.5">{t("lightingsCount")} ({config.lighting || 20} ر.ع)</label>
+            <label className="block text-sm font-semibold text-gray-600 mb-1.5">{t("lightingsCount")} ({config.lighting || 20} {t("omr")})</label>
             <input type="number" min={1} value={lightCount} onChange={(e) => setLightCount(Math.max(1, parseInt(e.target.value) || 1))}
               className="w-full border border-gray-200 rounded px-3 py-2.5 text-sm font-mono-en text-center" />
           </div>
@@ -1328,7 +1328,7 @@ function GenericBuilder({ cat, onUpdate }: { cat: Category; onUpdate: (d: string
       {config?.lighting && (
         <label className="flex items-center gap-2 text-sm font-semibold cursor-pointer">
           <input type="checkbox" checked={lighting} onChange={(e) => setLighting(e.target.checked)} className="rounded" />
-          {t("lightingLabel")} (+{config.lighting} ر.ع)
+          {t("lightingLabel")} (+{config.lighting} {t("omr")})
         </label>
       )}
     </div>

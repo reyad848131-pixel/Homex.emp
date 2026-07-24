@@ -60,7 +60,7 @@ export function DashboardClient({ data }: { data: DashboardData }) {
     <div>
       <div className="flex items-center justify-between mb-6">
         <div>
-          <h1 className="text-2xl font-bold">{t("welcome")}، {data.userName}</h1>
+          <h1 className="text-2xl font-bold">{t("welcome")}{locale === "ar" ? "،" : ","} {data.userName}</h1>
           <p className="text-sm text-gray-500 mt-1">{t("activitySummary")}</p>
         </div>
         <Link
