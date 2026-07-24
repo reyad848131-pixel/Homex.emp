@@ -8,7 +8,9 @@ export async function GET() {
     const session = await getAuth();
     if (!session) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     const settings = await getSettings();
-    return NextResponse.json(settings);
+    const res = NextResponse.json(settings);
+    res.headers.set("Cache-Control", "private, max-age=30, stale-while-revalidate=120");
+    return res;
   } catch {
     return NextResponse.json({ error: "Server error" }, { status: 500 });
   }

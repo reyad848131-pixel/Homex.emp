@@ -16,12 +16,19 @@ export async function GET(req: NextRequest) {
       include: { _count: { select: { items: true } } },
     });
 
-    return NextResponse.json(
+    const res = NextResponse.json(
       categories.map((c) => ({
         ...c,
         config: c.config ? JSON.parse(c.config) : {},
       }))
     );
+    // Categories rarely change and are fetched on every quotation builder load;
+    // cache them briefly in the browser so repeat navigation is instant. The
+    // admin management view (all=true) is always served fresh.
+    if (!showAll) {
+      res.headers.set("Cache-Control", "private, max-age=60, stale-while-revalidate=300");
+    }
+    return res;
   } catch {
     return NextResponse.json({ error: "Server error" }, { status: 500 });
   }

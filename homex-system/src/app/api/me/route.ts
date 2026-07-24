@@ -6,10 +6,12 @@ export async function GET() {
   if (!session) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
   const user = session.user as any;
-  return NextResponse.json({
+  const res = NextResponse.json({
     id: user.id,
     name: user.name,
     role: user.role,
     civilId: user.civilId,
   });
+  res.headers.set("Cache-Control", "private, max-age=30, stale-while-revalidate=120");
+  return res;
 }
