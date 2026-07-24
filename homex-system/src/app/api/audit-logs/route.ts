@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getAuth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
+import { parseIntParam } from "@/lib/utils";
 
 export async function GET(req: NextRequest) {
   try {
@@ -13,8 +14,8 @@ export async function GET(req: NextRequest) {
     }
 
   const { searchParams } = new URL(req.url);
-  const page = parseInt(searchParams.get("page") || "1");
-  const limit = Math.min(parseInt(searchParams.get("limit") || "30"), 100);
+  const page = parseIntParam(searchParams.get("page"), 1);
+  const limit = parseIntParam(searchParams.get("limit"), 30, 1, 100);
   const entity = searchParams.get("entity");
 
   const where: any = {};

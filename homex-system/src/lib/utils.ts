@@ -14,6 +14,22 @@ export function roundMoney(n: number): number {
   return Math.round((Number(n) || 0) * 1000) / 1000;
 }
 
+/**
+ * Parses an integer query param safely, clamping to [min, max] and falling
+ * back to `fallback` for missing/NaN input. Prevents malformed pagination
+ * params (e.g. ?page=abc) from producing NaN and crashing Prisma queries.
+ */
+export function parseIntParam(
+  value: string | null | undefined,
+  fallback: number,
+  min = 1,
+  max = Number.MAX_SAFE_INTEGER
+): number {
+  const n = parseInt(String(value ?? ""), 10);
+  if (!Number.isFinite(n)) return fallback;
+  return Math.min(Math.max(n, min), max);
+}
+
 export function formatCurrency(amount: number, currency = "ر.ع"): string {
   return `${roundMoney(amount).toFixed(3)} ${currency}`;
 }

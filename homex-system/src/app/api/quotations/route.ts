@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getAuth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
-import { generateQuoteNumber, withUniqueRetry } from "@/lib/utils";
+import { generateQuoteNumber, withUniqueRetry, parseIntParam } from "@/lib/utils";
 import { logAction } from "@/lib/audit";
 import { getSettings } from "@/lib/settings";
 import { computeQuoteTotals } from "@/lib/quote-calc";
@@ -18,8 +18,8 @@ export async function GET(req: NextRequest) {
   const { searchParams } = new URL(req.url);
   const status = searchParams.get("status");
   const search = searchParams.get("search");
-  const page = parseInt(searchParams.get("page") || "1");
-  const limit = Math.min(parseInt(searchParams.get("limit") || "20"), 100);
+  const page = parseIntParam(searchParams.get("page"), 1);
+  const limit = parseIntParam(searchParams.get("limit"), 20, 1, 100);
 
   const dateFrom = searchParams.get("dateFrom");
   const dateTo = searchParams.get("dateTo");
