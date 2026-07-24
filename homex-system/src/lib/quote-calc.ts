@@ -1,0 +1,94 @@
+// Server-side quotation math. Single source of truth used by both the create
+// (POST /api/quotations) and edit (PATCH /api/quotations/[id]) routes so the
+// server never trusts monetary totals sent by the client.
+
+const round3 = (n: number) => Math.round(n * 1000) / 1000;
+
+const num = (v: unknown, fallback = 0): number => {
+  const n = typeof v === "string" ? parseFloat(v) : (v as number);
+  return Number.isFinite(n) ? n : fallback;
+};
+
+export interface RawItem {
+  categoryId: string;
+  description?: string;
+  details?: unknown;
+  quantity?: unknown;
+  unitPrice?: unknown;
+  extras?: unknown;
+  lineTotal?: unknown;
+  [key: string]: unknown;
+}
+
+export interface SanitizedItem {
+  categoryId: string;
+  description: string;
+  details: string | null;
+  quantity: number;
+  unitPrice: number;
+  extras: number;
+  lineTotal: number;
+  sortOrder: number;
+}
+
+/**
+ * Sanitizes and RE-COMPUTES a single line item. The incoming `lineTotal` is
+ * ignored and derived from quantity/unitPrice/extras, so a tampered total sent
+ * from the client cannot lower (or inflate) the amount that gets stored.
+ */
+export function sanitizeItem(item: RawItem, sortOrder: number): SanitizedItem {
+  const quantity = Math.max(1, Math.round(num(item.quantity, 1)));
+  const unitPrice = Math.max(0, num(item.unitPrice, 0));
+  const extras = Math.max(0, num(item.extras, 0));
+  const lineTotal = round3(quantity * unitPrice + extras);
+
+  return {
+    categoryId: item.categoryId,
+    description: typeof item.description === "string" ? item.description : "",
+    details: item.details != null ? JSON.stringify(item.details) : null,
+    quantity,
+    unitPrice: round3(unitPrice),
+    extras: round3(extras),
+    lineTotal,
+    sortOrder,
+  };
+}
+
+export interface QuoteTotals {
+  items: SanitizedItem[];
+  subtotal: number;
+  vatRate: number;
+  vatAmount: number;
+  total: number;
+  advancePct: number;
+  advanceAmount: number;
+}
+
+/**
+ * Recomputes every monetary field of a quotation from its raw items plus the
+ * VAT rate and advance percentage. All totals are derived here — never taken
+ * from the request body.
+ */
+export function computeQuoteTotals(
+  rawItems: RawItem[],
+  vatRate: number,
+  advancePct: number
+): QuoteTotals {
+  const items = rawItems.map((it, idx) => sanitizeItem(it, idx));
+  const subtotal = round3(items.reduce((sum, it) => sum + it.lineTotal, 0));
+  const safeVatRate = Math.max(0, num(vatRate, 0.05));
+  const vatAmount = round3(subtotal * safeVatRate);
+  const total = round3(subtotal + vatAmount);
+  const safeAdvancePct = Math.min(100, Math.max(0, num(advancePct, 15)));
+  const advanceAmount = round3(total * (safeAdvancePct / 100));
+
+  return {
+    items,
+    subtotal,
+    vatRate: safeVatRate,
+    vatAmount,
+    total,
+    advancePct: safeAdvancePct,
+    advanceAmount,
+  };
+}

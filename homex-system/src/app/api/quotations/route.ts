@@ -4,6 +4,7 @@ import { prisma } from "@/lib/prisma";
 import { generateQuoteNumber } from "@/lib/utils";
 import { logAction } from "@/lib/audit";
 import { getSettings } from "@/lib/settings";
+import { computeQuoteTotals } from "@/lib/quote-calc";
 
 export async function GET(req: NextRequest) {
   try {
@@ -95,10 +96,8 @@ export async function POST(req: NextRequest) {
     const validityDays = parseInt(cfg.quote_validity_days || "30") || 30;
     const finalAdvancePct = advancePct ?? defaultAdvance;
 
-    const subtotal = items.reduce((sum: number, item: any) => sum + (item.lineTotal || 0), 0);
-    const vatAmount = Math.round(subtotal * vatRate * 1000) / 1000;
-    const total = Math.round((subtotal + vatAmount) * 1000) / 1000;
-    const advanceAmount = Math.round(total * (finalAdvancePct / 100) * 1000) / 1000;
+    // Recompute every monetary field server-side — never trust client totals.
+    const totals = computeQuoteTotals(items, vatRate, finalAdvancePct);
 
     const quoteNumber = await generateQuoteNumber(prisma);
 
@@ -108,26 +107,26 @@ export async function POST(req: NextRequest) {
         customer: { connect: { id: customer.id } },
         employee: { connect: { id: user.id } },
         status: "draft",
-        subtotal,
-        vatRate,
-        vatAmount,
-        total,
-        advancePct: finalAdvancePct,
-        advanceAmount,
+        subtotal: totals.subtotal,
+        vatRate: totals.vatRate,
+        vatAmount: totals.vatAmount,
+        total: totals.total,
+        advancePct: totals.advancePct,
+        advanceAmount: totals.advanceAmount,
         notes,
         deliveryDate: deliveryDate ? new Date(deliveryDate) : null,
         workStatus: deliveryDate ? "needs_preparation" : null,
         validUntil: new Date(Date.now() + validityDays * 24 * 60 * 60 * 1000),
         items: {
-          create: items.map((item: any, idx: number) => ({
+          create: totals.items.map((item) => ({
             category: { connect: { id: item.categoryId } },
             description: item.description,
-            details: item.details ? JSON.stringify(item.details) : null,
+            details: item.details,
             quantity: item.quantity,
             unitPrice: item.unitPrice,
-            extras: item.extras || 0,
+            extras: item.extras,
             lineTotal: item.lineTotal,
-            sortOrder: idx,
+            sortOrder: item.sortOrder,
           })),
         },
       },

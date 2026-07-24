@@ -3,6 +3,7 @@ import { getAuth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { logAction } from "@/lib/audit";
 import { notify, notifyAdmins } from "@/lib/notifications";
+import { computeQuoteTotals } from "@/lib/quote-calc";
 
 const VALID_STATUSES = ["draft", "pending", "approved", "declined", "revised"];
 
@@ -71,12 +72,12 @@ export async function PATCH(
       const result = await prisma.$transaction(async (tx) => {
         await tx.quoteItem.deleteMany({ where: { quotationId: id } });
 
-        const subtotal = body.items.reduce((sum: number, item: any) => sum + (Number(item.lineTotal) || 0), 0);
-        const vatRate = body.vatRate ?? quotation.vatRate ?? 0.05;
-        const vatAmount = Math.round(subtotal * vatRate * 1000) / 1000;
-        const total = Math.round((subtotal + vatAmount) * 1000) / 1000;
-        const advancePct = body.advancePct ?? quotation.advancePct ?? 15;
-        const advanceAmount = Math.round(total * (advancePct / 100) * 1000) / 1000;
+        // Recompute every monetary field server-side — never trust client totals.
+        const totals = computeQuoteTotals(
+          body.items,
+          body.vatRate ?? quotation.vatRate ?? 0.05,
+          body.advancePct ?? quotation.advancePct ?? 15
+        );
 
         if (body.customer && body.customerId) {
           await tx.customer.update({
@@ -95,7 +96,12 @@ export async function PATCH(
         return tx.quotation.update({
           where: { id },
           data: {
-            subtotal, vatRate, vatAmount, total, advancePct, advanceAmount,
+            subtotal: totals.subtotal,
+            vatRate: totals.vatRate,
+            vatAmount: totals.vatAmount,
+            total: totals.total,
+            advancePct: totals.advancePct,
+            advanceAmount: totals.advanceAmount,
             notes: body.notes,
             customerId: body.customerId,
             ...(body.deliveryDate !== undefined ? {
@@ -103,15 +109,15 @@ export async function PATCH(
               ...(body.deliveryDate && !quotation.workStatus ? { workStatus: "needs_preparation" } : {}),
             } : {}),
             items: {
-              create: body.items.map((item: any, idx: number) => ({
+              create: totals.items.map((item) => ({
                 categoryId: item.categoryId,
                 description: item.description,
-                details: item.details ? JSON.stringify(item.details) : null,
+                details: item.details,
                 quantity: item.quantity,
                 unitPrice: item.unitPrice,
-                extras: item.extras || 0,
+                extras: item.extras,
                 lineTotal: item.lineTotal,
-                sortOrder: idx,
+                sortOrder: item.sortOrder,
               })),
             },
           },
