@@ -5,8 +5,8 @@ export function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs));
 }
 
-export function formatCurrency(amount: number): string {
-  return `${amount.toFixed(3)} ر.ع`;
+export function formatCurrency(amount: number, currency = "ر.ع"): string {
+  return `${amount.toFixed(3)} ${currency}`;
 }
 
 export async function generateQuoteNumber(prisma: any): Promise<string> {

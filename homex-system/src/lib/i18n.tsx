@@ -118,8 +118,10 @@ const translations = {
   loading: { ar: "جاري التحميل...", en: "Loading..." },
   dataError: { ar: "خطأ في تحميل البيانات", en: "Error loading data" },
   pageNotFound: { ar: "الصفحة غير موجودة", en: "Page Not Found" },
+  pageNotFoundDesc: { ar: "عذراً، الصفحة التي تبحث عنها غير موجودة أو تم نقلها.", en: "Sorry, the page you are looking for does not exist or has been moved." },
   returnHome: { ar: "العودة للرئيسية", en: "Return Home" },
   unexpectedError: { ar: "حدث خطأ غير متوقع", en: "An unexpected error occurred" },
+  errorPageDesc: { ar: "عذراً، حدث خطأ أثناء تحميل الصفحة. يرجى المحاولة مرة أخرى.", en: "Sorry, an error occurred while loading the page. Please try again." },
   retry: { ar: "إعادة المحاولة", en: "Retry" },
 
   // Quotation List

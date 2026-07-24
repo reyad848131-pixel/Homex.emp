@@ -5,6 +5,17 @@ import { useI18n, type TranslationKey } from "@/lib/i18n";
 import { formatCurrency } from "@/lib/utils";
 import { FileText, FilePlus, Users, TrendingUp, Clock, ArrowUpRight, AlertTriangle } from "lucide-react";
 
+const STATUS_KEYS: Record<string, TranslationKey> = {
+  draft: "statusDraft",
+  pending: "statusPending",
+  approved: "statusApproved",
+  sent: "statusSent",
+  accepted: "statusAccepted",
+  revised: "statusRevised",
+  declined: "statusDeclined",
+  cancelled: "statusCancelled",
+};
+
 interface DashboardData {
   userName: string;
   isAdmin: boolean;
@@ -44,7 +55,7 @@ export function DashboardClient({ data }: { data: DashboardData }) {
   const stats = [
     { labelKey: "totalQuotations" as TranslationKey, value: data.totalQuotes, sub: `${data.monthlyQuotes} ${t("thisMonth")}`, icon: FileText, color: "bg-blue-50 text-blue-600" },
     { labelKey: "customers" as TranslationKey, value: data.totalCustomers, sub: null, icon: Users, color: "bg-green-50 text-green-600" },
-    { labelKey: "approvedRevenue" as TranslationKey, value: formatCurrency(data.totalRevenue), sub: `${data.conversionRate}% ${t("conversionRate")}`, icon: TrendingUp, color: "bg-purple-50 text-purple-600" },
+    { labelKey: "approvedRevenue" as TranslationKey, value: formatCurrency(data.totalRevenue, t("omr")), sub: `${data.conversionRate}% ${t("conversionRate")}`, icon: TrendingUp, color: "bg-purple-50 text-purple-600" },
     { labelKey: "underReview" as TranslationKey, value: data.pendingCount, sub: `${data.draftCount} ${t("draft")}`, icon: Clock, color: "bg-yellow-50 text-yellow-600" },
   ];
 
@@ -164,11 +175,11 @@ export function DashboardClient({ data }: { data: DashboardData }) {
                     {data.isAdmin && <td className="p-3 text-gray-500 text-xs">{q.employeeName}</td>}
                     <td className="p-3">
                       <span className={`inline-block px-2.5 py-1 rounded-full text-xs font-bold ${q.statusColor}`}>
-                        {q.statusLabel}
+                        {STATUS_KEYS[q.status] ? t(STATUS_KEYS[q.status]) : q.statusLabel}
                       </span>
                     </td>
                     <td className="p-3 font-mono-en text-gray-400 text-xs">{q.itemCount}</td>
-                    <td className="p-3 font-mono-en font-bold text-gray-900 dark:text-white">{formatCurrency(q.total)}</td>
+                    <td className="p-3 font-mono-en font-bold text-gray-900 dark:text-white">{formatCurrency(q.total, t("omr"))}</td>
                     <td className="p-3 text-gray-400 font-mono-en text-xs">
                       {new Date(q.createdAt).toLocaleDateString(dateLocale)}
                     </td>
