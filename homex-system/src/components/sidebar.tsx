@@ -153,7 +153,7 @@ export function Sidebar({ user }: SidebarProps) {
     <>
       <button
         className={cn(
-          "fixed top-4 z-50 lg:hidden bg-gray-900 text-white p-2 rounded-lg shadow-lg",
+          "fixed top-4 z-50 lg:hidden bg-gray-900 text-white p-2 rounded-lg shadow-lg no-print",
           isRTL ? "right-4" : "left-4"
         )}
         onClick={() => setMobileOpen(!mobileOpen)}
@@ -170,7 +170,7 @@ export function Sidebar({ user }: SidebarProps) {
 
       <aside
         className={cn(
-          "fixed top-0 h-full w-64 bg-white dark:bg-gray-800 flex flex-col z-40 transition-transform",
+          "fixed top-0 h-full w-64 bg-white dark:bg-gray-800 flex flex-col z-40 transition-transform no-print",
           isRTL
             ? "right-0 border-l border-gray-200 dark:border-gray-700 max-lg:translate-x-full"
             : "left-0 border-r border-gray-200 dark:border-gray-700 max-lg:-translate-x-full",

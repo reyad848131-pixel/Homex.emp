@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { BarChart3, TrendingUp, Users, MapPin, FileText, Calendar } from "lucide-react";
+import { BarChart3, TrendingUp, Users, MapPin, FileText, Calendar, Printer } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { STATUS_MAP } from "@/lib/types";
 import { useI18n } from "@/lib/i18n";
@@ -124,23 +124,32 @@ export default function ReportsPage() {
           <BarChart3 className="w-6 h-6" />
           {t("reportsTitle")}
         </h1>
-        <div className="flex gap-1 bg-gray-100 rounded p-0.5">
-          {([
-            { key: "week", tKey: "weekPeriod" as const },
-            { key: "month", tKey: "monthPeriod" as const },
-            { key: "year", tKey: "yearPeriod" as const },
-          ]).map((p) => (
-            <button
-              key={p.key}
-              onClick={() => setPeriod(p.key)}
-              className={cn(
-                "px-3 py-1.5 rounded text-sm font-bold transition-colors",
-                period === p.key ? "bg-white shadow text-gray-900" : "text-gray-500 hover:text-gray-700"
-              )}
-            >
-              {t(p.tKey)}
-            </button>
-          ))}
+        <div className="flex items-center gap-2 no-print">
+          <div className="flex gap-1 bg-gray-100 dark:bg-gray-700 rounded p-0.5">
+            {([
+              { key: "week", tKey: "weekPeriod" as const },
+              { key: "month", tKey: "monthPeriod" as const },
+              { key: "year", tKey: "yearPeriod" as const },
+            ]).map((p) => (
+              <button
+                key={p.key}
+                onClick={() => setPeriod(p.key)}
+                className={cn(
+                  "px-3 py-1.5 rounded text-sm font-bold transition-colors",
+                  period === p.key ? "bg-white dark:bg-gray-900 shadow text-gray-900 dark:text-white" : "text-gray-500 hover:text-gray-700 dark:hover:text-gray-300"
+                )}
+              >
+                {t(p.tKey)}
+              </button>
+            ))}
+          </div>
+          <button
+            onClick={() => window.print()}
+            className="flex items-center gap-2 px-3 py-1.5 border border-gray-200 dark:border-gray-700 rounded text-sm font-bold hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors"
+          >
+            <Printer className="w-4 h-4" />
+            {t("print")}
+          </button>
         </div>
       </div>
 

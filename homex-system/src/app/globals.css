@@ -58,6 +58,10 @@ input:focus, select:focus, textarea:focus {
   .no-print {
     display: none !important;
   }
+  /* Sidebar is hidden when printing — reclaim its reserved margin. */
+  main {
+    margin-inline: 0 !important;
+  }
 }
 
 @keyframes toastIn {
