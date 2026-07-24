@@ -3,6 +3,7 @@
 import { useState, useEffect, useRef } from "react";
 import { Bell } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { useI18n } from "@/lib/i18n";
 import Link from "next/link";
 
 interface Notification {
@@ -20,6 +21,7 @@ export function NotificationBell() {
   const [notifications, setNotifications] = useState<Notification[]>([]);
   const [unreadCount, setUnreadCount] = useState(0);
   const ref = useRef<HTMLDivElement>(null);
+  const { t, locale, dir } = useI18n();
 
   const fetchNotifications = () => {
     fetch("/api/notifications")
@@ -83,11 +85,16 @@ export function NotificationBell() {
   const timeAgo = (dateStr: string) => {
     const diff = Date.now() - new Date(dateStr).getTime();
     const mins = Math.floor(diff / 60000);
-    if (mins < 1) return "الآن";
-    if (mins < 60) return `منذ ${mins} د`;
+    if (mins < 1) return t("now");
+    if (mins < 60) {
+      return locale === "ar" ? `${t("ago")} ${mins} ${t("minutesAgo")}` : `${mins}${t("minutesAgo")}`;
+    }
     const hours = Math.floor(mins / 60);
-    if (hours < 24) return `منذ ${hours} س`;
-    return `منذ ${Math.floor(hours / 24)} ي`;
+    if (hours < 24) {
+      return locale === "ar" ? `${t("ago")} ${hours} ${t("hoursAgo")}` : `${hours}${t("hoursAgo")}`;
+    }
+    const days = Math.floor(hours / 24);
+    return locale === "ar" ? `${t("ago")} ${days} ${t("daysAgo")}` : `${days}${t("daysAgo")}`;
   };
 
   const typeColor: Record<string, string> = {
@@ -112,19 +119,22 @@ export function NotificationBell() {
       </button>
 
       {open && (
-        <div className="absolute left-0 top-full mt-2 w-80 bg-white border border-gray-200 rounded-lg shadow-xl z-50">
-          <div className="flex items-center justify-between p-3 border-b border-gray-100">
-            <h3 className="font-bold text-sm">الإشعارات</h3>
+        <div className={cn(
+          "absolute top-full mt-2 w-80 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg shadow-xl z-50",
+          dir === "rtl" ? "left-0" : "right-0"
+        )}>
+          <div className="flex items-center justify-between p-3 border-b border-gray-100 dark:border-gray-700">
+            <h3 className="font-bold text-sm">{t("notificationsTitle")}</h3>
             {unreadCount > 0 && (
               <button onClick={markAllRead} className="text-xs text-blue-600 hover:text-blue-800 font-semibold">
-                قراءة الكل
+                {t("readAll")}
               </button>
             )}
           </div>
 
           <div className="max-h-80 overflow-y-auto">
             {notifications.length === 0 ? (
-              <p className="text-center text-sm text-gray-400 py-8">لا توجد إشعارات</p>
+              <p className="text-center text-sm text-gray-400 py-8">{t("noNotifications")}</p>
             ) : (
               notifications.map((n) => {
                 const inner = (
@@ -132,8 +142,8 @@ export function NotificationBell() {
                     key={n.id}
                     onClick={() => !n.isRead && markRead(n.id)}
                     className={cn(
-                      "p-3 border-b border-gray-50 hover:bg-gray-50 cursor-pointer transition-colors",
-                      !n.isRead && "bg-blue-50/50"
+                      "p-3 border-b border-gray-50 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-700 cursor-pointer transition-colors",
+                      !n.isRead && "bg-blue-50/50 dark:bg-blue-900/20"
                     )}
                   >
                     <div className="flex items-start gap-2">

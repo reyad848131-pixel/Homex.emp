@@ -58,7 +58,9 @@ export function Sidebar({ user }: SidebarProps) {
   const router = useRouter();
   const [mobileOpen, setMobileOpen] = useState(false);
   const [logo, setLogo] = useState("");
-  const { t } = useI18n();
+  const { t, dir } = useI18n();
+
+  const isRTL = dir === "rtl";
 
   useEffect(() => {
     fetch("/api/logo").then((r) => r.json()).then((d) => setLogo(d.logo || "")).catch(() => {});
@@ -150,7 +152,10 @@ export function Sidebar({ user }: SidebarProps) {
   return (
     <>
       <button
-        className="fixed top-4 right-4 z-50 lg:hidden bg-gray-900 text-white p-2 rounded-lg shadow-lg"
+        className={cn(
+          "fixed top-4 z-50 lg:hidden bg-gray-900 text-white p-2 rounded-lg shadow-lg",
+          isRTL ? "right-4" : "left-4"
+        )}
         onClick={() => setMobileOpen(!mobileOpen)}
       >
         {mobileOpen ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5" />}
@@ -165,8 +170,10 @@ export function Sidebar({ user }: SidebarProps) {
 
       <aside
         className={cn(
-          "fixed top-0 right-0 h-full w-64 bg-white dark:bg-gray-800 border-l border-gray-200 dark:border-gray-700 flex flex-col z-40 transition-transform",
-          "max-lg:translate-x-full",
+          "fixed top-0 h-full w-64 bg-white dark:bg-gray-800 flex flex-col z-40 transition-transform",
+          isRTL
+            ? "right-0 border-l border-gray-200 dark:border-gray-700 max-lg:translate-x-full"
+            : "left-0 border-r border-gray-200 dark:border-gray-700 max-lg:-translate-x-full",
           mobileOpen && "max-lg:translate-x-0"
         )}
       >

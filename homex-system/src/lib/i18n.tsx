@@ -483,6 +483,16 @@ const translations = {
   perDoor: { ar: "ر.ع/باب", en: "OMR/door" },
   motorLabel: { ar: "موتور", en: "Motor" },
 
+  // Notifications
+  notificationsTitle: { ar: "الإشعارات", en: "Notifications" },
+  readAll: { ar: "قراءة الكل", en: "Read All" },
+  noNotifications: { ar: "لا توجد إشعارات", en: "No notifications" },
+  now: { ar: "الآن", en: "Now" },
+  minutesAgo: { ar: "د", en: "m ago" },
+  hoursAgo: { ar: "س", en: "h ago" },
+  daysAgo: { ar: "ي", en: "d ago" },
+  ago: { ar: "منذ", en: "" },
+
   // Months
   january: { ar: "يناير", en: "January" },
   february: { ar: "فبراير", en: "February" },
