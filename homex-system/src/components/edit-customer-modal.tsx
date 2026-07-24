@@ -4,6 +4,7 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { GOVERNORATES } from "@/lib/types";
 import { X, Save } from "lucide-react";
+import { useI18n } from "@/lib/i18n";
 
 interface Props {
   customer: {
@@ -20,6 +21,7 @@ interface Props {
 
 export function EditCustomerModal({ customer, onClose }: Props) {
   const router = useRouter();
+  const { t } = useI18n();
   const [form, setForm] = useState({
     name: customer.name,
     phone: customer.phone,
@@ -35,7 +37,7 @@ export function EditCustomerModal({ customer, onClose }: Props) {
 
   const handleSave = async () => {
     if (!form.name.trim() || !form.phone.trim()) {
-      setError("الاسم ورقم الهاتف مطلوبان");
+      setError(t("namePhoneRequired"));
       return;
     }
     setSaving(true);
@@ -51,10 +53,10 @@ export function EditCustomerModal({ customer, onClose }: Props) {
         onClose();
       } else {
         const data = await res.json();
-        setError(data.error || "حدث خطأ");
+        setError(data.error || t("errorOccurred"));
       }
     } catch {
-      setError("خطأ في الاتصال");
+      setError(t("connectionError"));
     } finally {
       setSaving(false);
     }
@@ -64,7 +66,7 @@ export function EditCustomerModal({ customer, onClose }: Props) {
     <div className="fixed inset-0 bg-black/40 z-50 flex items-center justify-center p-4" onClick={onClose}>
       <div className="bg-white rounded-lg w-full max-w-lg" onClick={(e) => e.stopPropagation()}>
         <div className="flex items-center justify-between p-5 border-b border-gray-100">
-          <h2 className="text-lg font-bold">تعديل بيانات العميل</h2>
+          <h2 className="text-lg font-bold">{t("editCustomerInfo")}</h2>
           <button onClick={onClose} className="text-gray-400 hover:text-gray-600">
             <X className="w-5 h-5" />
           </button>
@@ -72,13 +74,13 @@ export function EditCustomerModal({ customer, onClose }: Props) {
 
         <div className="p-5 space-y-4">
           <div>
-            <label className="block text-sm font-semibold text-gray-600 mb-1.5">الاسم *</label>
+            <label className="block text-sm font-semibold text-gray-600 mb-1.5">{t("nameLabel")} *</label>
             <input type="text" value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })}
               className="w-full border border-gray-200 rounded px-3 py-2.5 text-sm" />
           </div>
 
           <div>
-            <label className="block text-sm font-semibold text-gray-600 mb-1.5">رقم الهاتف *</label>
+            <label className="block text-sm font-semibold text-gray-600 mb-1.5">{t("phoneNumber")} *</label>
             <div className="flex gap-2">
               <select value={form.phoneCode} onChange={(e) => setForm({ ...form, phoneCode: e.target.value })}
                 className="border border-gray-200 rounded px-2 py-2.5 text-sm w-24 font-mono-en">
@@ -95,28 +97,28 @@ export function EditCustomerModal({ customer, onClose }: Props) {
 
           <div className="grid grid-cols-2 gap-4">
             <div>
-              <label className="block text-sm font-semibold text-gray-600 mb-1.5">المحافظة</label>
+              <label className="block text-sm font-semibold text-gray-600 mb-1.5">{t("governorate")}</label>
               <select value={form.governorate}
                 onChange={(e) => setForm({ ...form, governorate: e.target.value, wilayat: "" })}
                 className="w-full border border-gray-200 rounded px-3 py-2.5 text-sm">
-                <option value="">اختر</option>
+                <option value="">{t("choose")}</option>
                 {Object.keys(GOVERNORATES).map((g) => <option key={g} value={g}>{g}</option>)}
               </select>
             </div>
             <div>
-              <label className="block text-sm font-semibold text-gray-600 mb-1.5">الولاية</label>
+              <label className="block text-sm font-semibold text-gray-600 mb-1.5">{t("wilayat")}</label>
               <select value={form.wilayat} onChange={(e) => setForm({ ...form, wilayat: e.target.value })}
                 className="w-full border border-gray-200 rounded px-3 py-2.5 text-sm" disabled={!form.governorate}>
-                <option value="">اختر</option>
+                <option value="">{t("choose")}</option>
                 {wilayats.map((w) => <option key={w} value={w}>{w}</option>)}
               </select>
             </div>
           </div>
 
           <div>
-            <label className="block text-sm font-semibold text-gray-600 mb-1.5">العنوان</label>
+            <label className="block text-sm font-semibold text-gray-600 mb-1.5">{t("addressLabel")}</label>
             <input type="text" value={form.address} onChange={(e) => setForm({ ...form, address: e.target.value })}
-              className="w-full border border-gray-200 rounded px-3 py-2.5 text-sm" placeholder="اختياري" />
+              className="w-full border border-gray-200 rounded px-3 py-2.5 text-sm" placeholder={t("optional")} />
           </div>
 
           {error && <p className="text-red-600 text-sm font-medium">{error}</p>}
@@ -126,11 +128,11 @@ export function EditCustomerModal({ customer, onClose }: Props) {
           <button onClick={handleSave} disabled={saving}
             className="flex-1 flex items-center justify-center gap-2 bg-gray-900 text-white px-4 py-2.5 rounded text-sm font-bold hover:bg-gray-800 disabled:opacity-50 transition-colors">
             <Save className="w-4 h-4" />
-            {saving ? "جاري الحفظ..." : "حفظ التعديلات"}
+            {saving ? t("savingText") : t("saveChanges")}
           </button>
           <button onClick={onClose}
             className="px-4 py-2.5 border border-gray-200 rounded text-sm font-bold hover:bg-gray-50 transition-colors">
-            إلغاء
+            {t("cancel")}
           </button>
         </div>
       </div>

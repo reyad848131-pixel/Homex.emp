@@ -3,6 +3,7 @@
 import { useState, useEffect } from "react";
 import { ScrollText } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { useI18n, type TranslationKey } from "@/lib/i18n";
 
 interface AuditEntry {
   id: string;
@@ -14,18 +15,18 @@ interface AuditEntry {
   employee: { name: string };
 }
 
-const ACTION_LABELS: Record<string, string> = {
-  create: "إنشاء",
-  update: "تعديل",
-  delete: "حذف",
-  status_change: "تغيير حالة",
+const ACTION_KEYS: Record<string, TranslationKey> = {
+  create: "actionCreate",
+  update: "actionUpdate",
+  delete: "actionDelete",
+  status_change: "actionStatusChange",
 };
 
-const ENTITY_LABELS: Record<string, string> = {
-  quotation: "عرض سعر",
-  employee: "موظف",
-  settings: "إعدادات",
-  customer: "عميل",
+const ENTITY_KEYS: Record<string, TranslationKey> = {
+  quotation: "entityQuotation",
+  employee: "entityEmployee",
+  settings: "entitySettings",
+  customer: "entityCustomer",
 };
 
 const ACTION_COLORS: Record<string, string> = {
@@ -39,6 +40,7 @@ export default function AuditLogsPage() {
   const [data, setData] = useState<{ logs: AuditEntry[]; total: number; totalPages: number }>({ logs: [], total: 0, totalPages: 0 });
   const [page, setPage] = useState(1);
   const [entity, setEntity] = useState("");
+  const { t, dateLocale } = useI18n();
 
   useEffect(() => {
     const params = new URLSearchParams({ page: String(page), limit: "30" });
@@ -52,16 +54,16 @@ export default function AuditLogsPage() {
         <div>
           <h1 className="text-2xl font-bold flex items-center gap-2">
             <ScrollText className="w-6 h-6" />
-            سجل النشاطات
+            {t("auditLogsTitle")}
           </h1>
-          <p className="text-sm text-gray-500 mt-1">{data.total} سجل</p>
+          <p className="text-sm text-gray-500 mt-1">{data.total} {t("logCount")}</p>
         </div>
         <select value={entity} onChange={(e) => { setEntity(e.target.value); setPage(1); }}
           className="border border-gray-200 rounded px-3 py-2 text-sm">
-          <option value="">جميع الأنواع</option>
-          <option value="quotation">عروض الأسعار</option>
-          <option value="employee">الموظفين</option>
-          <option value="settings">الإعدادات</option>
+          <option value="">{t("allTypes")}</option>
+          <option value="quotation">{t("quotationsType")}</option>
+          <option value="employee">{t("employeesType")}</option>
+          <option value="settings">{t("settingsType")}</option>
         </select>
       </div>
 
@@ -69,32 +71,32 @@ export default function AuditLogsPage() {
         {data.logs.length === 0 ? (
           <div className="p-12 text-center text-gray-400">
             <ScrollText className="w-10 h-10 mx-auto mb-2 opacity-50" />
-            <p className="font-semibold">لا توجد سجلات</p>
+            <p className="font-semibold">{t("noLogs")}</p>
           </div>
         ) : (
           <table className="w-full text-sm">
             <thead>
               <tr className="border-b border-gray-200 bg-gray-50">
-                <th className="text-right p-3 px-5 text-xs text-gray-400 font-semibold">التاريخ</th>
-                <th className="text-right p-3 text-xs text-gray-400 font-semibold">الموظف</th>
-                <th className="text-right p-3 text-xs text-gray-400 font-semibold">الإجراء</th>
-                <th className="text-right p-3 text-xs text-gray-400 font-semibold">النوع</th>
-                <th className="text-right p-3 text-xs text-gray-400 font-semibold">التفاصيل</th>
+                <th className="text-right p-3 px-5 text-xs text-gray-400 font-semibold">{t("date")}</th>
+                <th className="text-right p-3 text-xs text-gray-400 font-semibold">{t("employee")}</th>
+                <th className="text-right p-3 text-xs text-gray-400 font-semibold">{t("actionCol")}</th>
+                <th className="text-right p-3 text-xs text-gray-400 font-semibold">{t("typeCol")}</th>
+                <th className="text-right p-3 text-xs text-gray-400 font-semibold">{t("detailsCol")}</th>
               </tr>
             </thead>
             <tbody>
               {data.logs.map((log) => (
                 <tr key={log.id} className="border-b border-gray-50 hover:bg-gray-50">
                   <td className="p-3 px-5 text-xs text-gray-400 font-mono-en whitespace-nowrap">
-                    {new Date(log.createdAt).toLocaleString("ar-OM", { dateStyle: "short", timeStyle: "short" })}
+                    {new Date(log.createdAt).toLocaleString(dateLocale, { dateStyle: "short", timeStyle: "short" })}
                   </td>
                   <td className="p-3 font-semibold">{log.employee.name}</td>
                   <td className="p-3">
                     <span className={cn("text-xs font-bold px-2 py-1 rounded-full", ACTION_COLORS[log.action] || "bg-gray-100 text-gray-600")}>
-                      {ACTION_LABELS[log.action] || log.action}
+                      {ACTION_KEYS[log.action] ? t(ACTION_KEYS[log.action]) : log.action}
                     </span>
                   </td>
-                  <td className="p-3 text-gray-600">{ENTITY_LABELS[log.entity] || log.entity}</td>
+                  <td className="p-3 text-gray-600">{ENTITY_KEYS[log.entity] ? t(ENTITY_KEYS[log.entity]) : log.entity}</td>
                   <td className="p-3 text-xs text-gray-400 max-w-xs truncate">{log.details || "-"}</td>
                 </tr>
               ))}
@@ -106,10 +108,10 @@ export default function AuditLogsPage() {
       {data.totalPages > 1 && (
         <div className="flex items-center justify-center gap-2 mt-4">
           <button onClick={() => setPage((p) => Math.max(1, p - 1))} disabled={page === 1}
-            className="px-3 py-1.5 border border-gray-200 rounded text-sm font-bold disabled:opacity-30">السابق</button>
+            className="px-3 py-1.5 border border-gray-200 rounded text-sm font-bold disabled:opacity-30">{t("previous")}</button>
           <span className="text-sm text-gray-500 font-mono-en">{page} / {data.totalPages}</span>
           <button onClick={() => setPage((p) => Math.min(data.totalPages, p + 1))} disabled={page === data.totalPages}
-            className="px-3 py-1.5 border border-gray-200 rounded text-sm font-bold disabled:opacity-30">التالي</button>
+            className="px-3 py-1.5 border border-gray-200 rounded text-sm font-bold disabled:opacity-30">{t("next")}</button>
         </div>
       )}
     </div>
