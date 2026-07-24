@@ -360,7 +360,7 @@ const translations = {
   confirmNewPassword: { ar: "تأكيد كلمة المرور الجديدة", en: "Confirm New Password" },
   enterPasswords: { ar: "أدخل كلمة المرور الحالية والجديدة", en: "Enter current and new password" },
   passwordMismatch: { ar: "كلمة المرور الجديدة غير متطابقة", en: "New password doesn't match" },
-  passwordTooShort: { ar: "كلمة المرور يجب أن تكون 4 أحرف على الأقل", en: "Password must be at least 4 characters" },
+  passwordTooShort: { ar: "كلمة المرور يجب أن تكون 6 أحرف على الأقل", en: "Password must be at least 6 characters" },
   passwordChanged: { ar: "تم تغيير كلمة المرور بنجاح", en: "Password changed successfully" },
   changingPassword: { ar: "جاري التغيير...", en: "Changing..." },
   done: { ar: "تم", en: "Done" },

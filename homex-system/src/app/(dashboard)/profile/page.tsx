@@ -68,7 +68,7 @@ export default function ProfilePage() {
       setPasswordError(t("passwordMismatch"));
       return;
     }
-    if (newPassword.length < 4) {
+    if (newPassword.length < 6) {
       setPasswordError(t("passwordTooShort"));
       return;
     }

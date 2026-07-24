@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getAuth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
+import { parseBody, changePasswordSchema } from "@/lib/schemas";
 import bcrypt from "bcryptjs";
 
 export async function GET() {
@@ -29,22 +30,18 @@ export async function PUT(req: NextRequest) {
     const body = await req.json();
 
     if (body.action === "change-password") {
-      if (!body.currentPassword || !body.newPassword) {
-        return NextResponse.json({ error: "كلمة المرور مطلوبة" }, { status: 400 });
-      }
-      if (body.newPassword.length < 4) {
-        return NextResponse.json({ error: "كلمة المرور يجب أن تكون 4 أحرف على الأقل" }, { status: 400 });
-      }
+      const parsed = parseBody(changePasswordSchema, body);
+      if (!parsed.ok) return NextResponse.json({ error: parsed.error, code: "invalid" }, { status: 400 });
 
       const employee = await prisma.employee.findUnique({ where: { id: user.id } });
       if (!employee) return NextResponse.json({ error: "Not found" }, { status: 404 });
 
-      const valid = await bcrypt.compare(body.currentPassword, employee.password);
+      const valid = await bcrypt.compare(parsed.data.currentPassword, employee.password);
       if (!valid) {
         return NextResponse.json({ error: "كلمة المرور الحالية غير صحيحة" }, { status: 400 });
       }
 
-      const hashed = await bcrypt.hash(body.newPassword, 10);
+      const hashed = await bcrypt.hash(parsed.data.newPassword, 10);
       await prisma.employee.update({
         where: { id: user.id },
         data: { password: hashed },
