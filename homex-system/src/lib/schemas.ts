@@ -80,6 +80,12 @@ export const employeeUpdateSchema = z
   .partial()
   .refine((v) => Object.keys(v).length > 0, { message: "No fields to update" });
 
+export const changePasswordSchema = z.object({
+  action: z.literal("change-password"),
+  currentPassword: z.string().min(1),
+  newPassword: z.string().min(6, "كلمة المرور يجب أن تكون 6 أحرف على الأقل"),
+});
+
 export const paymentSchema = z.object({
   quotationId: z.string().min(1),
   amount: z.coerce.number().positive("مبلغ الدفعة غير صحيح"),

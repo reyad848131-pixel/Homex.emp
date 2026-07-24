@@ -11,11 +11,22 @@ export default function SettingsPage() {
   const [logo, setLogo] = useState("");
   const [uploadingLogo, setUploadingLogo] = useState(false);
   const fileRef = useRef<HTMLInputElement>(null);
-  const { t } = useI18n();
+  const { t, dateLocale } = useI18n();
+
+  type BackupRow = { id: string; size: number; source: string; createdAt: string };
+  const [backups, setBackups] = useState<BackupRow[]>([]);
+
+  const loadBackups = () => {
+    fetch("/api/backup?list=true")
+      .then((r) => (r.ok ? r.json() : { backups: [] }))
+      .then((d) => setBackups(d.backups || []))
+      .catch(() => {});
+  };
 
   useEffect(() => {
     fetch("/api/settings").then((r) => r.json()).then(setSettings);
     fetch("/api/logo").then((r) => r.json()).then((d) => setLogo(d.logo || ""));
+    loadBackups();
   }, []);
 
   const handleLogoUpload = async (file: File) => {
@@ -215,6 +226,38 @@ export default function SettingsPage() {
             <Download className="w-4 h-4 text-purple-600" />
             {t("backupData")}
           </a>
+        </div>
+
+        <div className="mt-6 pt-5 border-t border-gray-100 dark:border-gray-700">
+          <div className="flex items-center justify-between mb-1">
+            <h3 className="text-sm font-bold">{t("autoBackups")}</h3>
+            <span className="text-xs text-gray-400">{backups.length}/14</span>
+          </div>
+          <p className="text-xs text-gray-400 mb-3">{t("autoBackupInfo")}</p>
+          {backups.length === 0 ? (
+            <p className="text-xs text-gray-400 py-3 text-center">{t("noBackupsYet")}</p>
+          ) : (
+            <ul className="divide-y divide-gray-100 dark:divide-gray-700">
+              {backups.map((b) => (
+                <li key={b.id} className="flex items-center justify-between py-2.5 text-sm">
+                  <div className="flex items-center gap-2">
+                    <span className="font-mono-en text-gray-700 dark:text-gray-300">
+                      {new Date(b.createdAt).toLocaleString(dateLocale, { dateStyle: "medium", timeStyle: "short" })}
+                    </span>
+                    <span className={`text-[10px] px-1.5 py-0.5 rounded font-bold ${b.source === "auto" ? "bg-blue-50 text-blue-600" : "bg-gray-100 text-gray-500"}`}>
+                      {b.source === "auto" ? t("backupAuto") : t("backupManual")}
+                    </span>
+                    <span className="text-xs text-gray-400 font-mono-en">{(b.size / 1024).toFixed(0)} KB</span>
+                  </div>
+                  <a href={`/api/backup?id=${b.id}`} download
+                    className="flex items-center gap-1 text-xs font-bold text-purple-600 hover:underline">
+                    <Download className="w-3.5 h-3.5" />
+                    {t("downloadLabel")}
+                  </a>
+                </li>
+              ))}
+            </ul>
+          )}
         </div>
       </div>
     </div>

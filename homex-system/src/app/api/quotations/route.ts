@@ -42,7 +42,11 @@ export async function GET(req: NextRequest) {
   const [quotations, total] = await Promise.all([
     prisma.quotation.findMany({
       where,
-      include: { customer: true, employee: { select: { name: true } }, _count: { select: { items: true } } },
+      include: {
+        customer: { select: { name: true, phone: true, governorate: true } },
+        employee: { select: { name: true } },
+        _count: { select: { items: true } },
+      },
       orderBy: { createdAt: "desc" },
       skip: (page - 1) * limit,
       take: limit,

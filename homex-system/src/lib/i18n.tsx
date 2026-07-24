@@ -342,6 +342,12 @@ const translations = {
   exportQuotations: { ar: "تصدير العروض (CSV)", en: "Export Quotations (CSV)" },
   exportCustomers: { ar: "تصدير العملاء (CSV)", en: "Export Customers (CSV)" },
   backupData: { ar: "نسخة احتياطية", en: "Backup" },
+  autoBackups: { ar: "النسخ الاحتياطية التلقائية", en: "Automatic Backups" },
+  autoBackupInfo: { ar: "نسخة تلقائية يومياً، يُحتفظ بآخر 14 نسخة", en: "A daily automatic snapshot; the last 14 are kept" },
+  noBackupsYet: { ar: "لا توجد نسخ محفوظة بعد", en: "No saved backups yet" },
+  backupAuto: { ar: "تلقائي", en: "Auto" },
+  backupManual: { ar: "يدوي", en: "Manual" },
+  downloadLabel: { ar: "تحميل", en: "Download" },
 
   // Profile
   profileTitle: { ar: "الملف الشخصي", en: "Profile" },
@@ -354,7 +360,7 @@ const translations = {
   confirmNewPassword: { ar: "تأكيد كلمة المرور الجديدة", en: "Confirm New Password" },
   enterPasswords: { ar: "أدخل كلمة المرور الحالية والجديدة", en: "Enter current and new password" },
   passwordMismatch: { ar: "كلمة المرور الجديدة غير متطابقة", en: "New password doesn't match" },
-  passwordTooShort: { ar: "كلمة المرور يجب أن تكون 4 أحرف على الأقل", en: "Password must be at least 4 characters" },
+  passwordTooShort: { ar: "كلمة المرور يجب أن تكون 6 أحرف على الأقل", en: "Password must be at least 6 characters" },
   passwordChanged: { ar: "تم تغيير كلمة المرور بنجاح", en: "Password changed successfully" },
   changingPassword: { ar: "جاري التغيير...", en: "Changing..." },
   done: { ar: "تم", en: "Done" },
