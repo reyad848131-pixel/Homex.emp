@@ -69,7 +69,7 @@ export async function GET(req: NextRequest) {
       prisma.quotation.findMany({
         where,
         include: {
-          customer: true,
+          customer: { select: { name: true, phone: true, phoneCode: true, governorate: true, wilayat: true } },
           employee: { select: { name: true } },
           items: { include: { category: { select: { nameAr: true, nameEn: true } } }, orderBy: { sortOrder: "asc" } },
         },
