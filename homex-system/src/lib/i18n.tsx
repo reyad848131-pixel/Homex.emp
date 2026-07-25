@@ -77,6 +77,10 @@ const translations = {
   // Work Orders
   workOrdersTitle: { ar: "إدارة الأعمال والتسليم", en: "Work Orders & Delivery" },
   allMonths: { ar: "جميع الأشهر", en: "All Months" },
+  wholeYear: { ar: "كل السنة", en: "Whole Year" },
+  wholeMonth: { ar: "كل الشهر", en: "Whole Month" },
+  weekLabel: { ar: "الأسبوع", en: "Week" },
+  weekShort: { ar: "أ", en: "W" },
   all: { ar: "الكل", en: "All" },
   currentMonth: { ar: "الشهر الحالي", en: "Current Month" },
   work: { ar: "عمل", en: "orders" },

@@ -7,6 +7,7 @@ import { WORK_STATUS_MAP } from "@/lib/types";
 import { useDebouncedValue } from "@/lib/hooks";
 import { useI18n, useTranslatedMonths, type TranslationKey } from "@/lib/i18n";
 import { TableSkeleton, CardsSkeleton } from "@/components/skeleton";
+import { DateDrillNav, type DateRange } from "@/components/date-drill-nav";
 import {
   Truck,
   Search,
@@ -127,38 +128,14 @@ export default function WorkOrdersPage() {
   const debouncedSearch = useDebouncedValue(search);
 
   const { t, locale, dateLocale } = useI18n();
-  const months = useTranslatedMonths();
+  const [navLabel, setNavLabel] = useState<string>(t("allMonths"));
 
-  const now = new Date();
-  const [selectedMonth, setSelectedMonth] = useState<string | null>(null);
-
-  const mYear = selectedMonth ? Number(selectedMonth.split("-")[0]) : 0;
-  const mMonth = selectedMonth ? Number(selectedMonth.split("-")[1]) : 0;
-  const monthLabel = selectedMonth ? `${months[mMonth - 1]} ${mYear}` : t("allMonths");
-
-  const prevMonth = () => {
-    if (!selectedMonth) {
-      const n = new Date();
-      setSelectedMonth(`${n.getFullYear()}-${String(n.getMonth() + 1).padStart(2, "0")}`);
-      return;
-    }
-    const d = new Date(mYear, mMonth - 2, 1);
-    setSelectedMonth(`${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`);
-  };
-  const nextMonth = () => {
-    if (!selectedMonth) {
-      const n = new Date();
-      setSelectedMonth(`${n.getFullYear()}-${String(n.getMonth() + 1).padStart(2, "0")}`);
-      return;
-    }
-    const d = new Date(mYear, mMonth, 1);
-    setSelectedMonth(`${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`);
-  };
-  const goToCurrentMonth = () => {
-    const n = new Date();
-    setSelectedMonth(`${n.getFullYear()}-${String(n.getMonth() + 1).padStart(2, "0")}`);
-  };
-  const showAll = () => setSelectedMonth(null);
+  // The hierarchical date navigator drives the delivery-date range.
+  const handleDateNav = useCallback((range: DateRange | null, label: string) => {
+    setDeliveryFrom(range?.from || "");
+    setDeliveryTo(range?.to || "");
+    setNavLabel(label);
+  }, []);
 
   const fetchData = useCallback(() => {
     const params = new URLSearchParams();
@@ -168,14 +145,13 @@ export default function WorkOrdersPage() {
     if (debouncedSearch) params.set("search", debouncedSearch);
     if (deliveryFrom) params.set("deliveryFrom", deliveryFrom);
     if (deliveryTo) params.set("deliveryTo", deliveryTo);
-    if (selectedMonth) params.set("month", selectedMonth);
 
     fetch(`/api/work-orders?${params}`)
       .then((r) => r.json())
       .then(setData)
       .catch(() => {})
       .finally(() => setLoading(false));
-  }, [activeFilter, alertFilter, debouncedSearch, deliveryFrom, deliveryTo, selectedMonth]);
+  }, [activeFilter, alertFilter, debouncedSearch, deliveryFrom, deliveryTo]);
 
   useEffect(() => {
     setLoading(true);
@@ -294,37 +270,10 @@ export default function WorkOrdersPage() {
         </button>
       </div>
 
-      <div className="flex items-center justify-center gap-3 mb-4 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg p-3 flex-wrap">
-        <button onClick={nextMonth} className="p-2 rounded hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors">
-          <ChevronRight className="w-5 h-5" />
-        </button>
-        <button onClick={selectedMonth ? goToCurrentMonth : undefined} className="text-lg font-bold min-w-[160px] text-center">
-          {monthLabel}
-        </button>
-        <button onClick={prevMonth} className="p-2 rounded hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors">
-          <ChevronLeft className="w-5 h-5" />
-        </button>
-        <div className="flex items-center gap-2">
-          <button
-            onClick={showAll}
-            className={cn(
-              "px-3 py-1.5 rounded text-xs font-bold border transition-all",
-              !selectedMonth
-                ? "bg-gray-900 dark:bg-white text-white dark:text-gray-900 border-gray-900 dark:border-white"
-                : "border-gray-300 dark:border-gray-600 text-gray-500 hover:border-gray-400"
-            )}
-          >
-            {t("all")}
-          </button>
-          {selectedMonth && (
-            <button
-              onClick={goToCurrentMonth}
-              className="px-3 py-1.5 rounded text-xs font-bold border border-gray-300 dark:border-gray-600 text-gray-500 hover:border-gray-400 transition-all"
-            >
-              {t("currentMonth")}
-            </button>
-          )}
-        </div>
+      <DateDrillNav onChange={handleDateNav} />
+
+      <div className="flex items-center justify-between mb-4 px-1">
+        <span className="text-sm font-bold text-gray-700 dark:text-gray-200">{navLabel}</span>
         <span className="text-sm font-bold text-gray-400 font-mono-en">{data.quotations.length} {t("work")}</span>
       </div>
 
@@ -420,7 +369,7 @@ export default function WorkOrdersPage() {
         <div className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded p-12 text-center">
           <Truck className="w-12 h-12 text-gray-300 dark:text-gray-600 mx-auto mb-3" />
           <p className="text-gray-500 font-semibold">
-            {t("noOrders")}{selectedMonth ? ` ${monthLabel}` : ""}{activeFilter || alertFilter ? ` ${t("matchingFilter")}` : ""}
+            {t("noOrders")}{(deliveryFrom || deliveryTo) ? ` — ${navLabel}` : ""}{activeFilter || alertFilter ? ` ${t("matchingFilter")}` : ""}
           </p>
         </div>
       ) : (
