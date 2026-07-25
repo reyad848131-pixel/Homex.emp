@@ -226,6 +226,11 @@ export default function SettingsPage() {
             <Download className="w-4 h-4 text-purple-600" />
             {t("backupData")}
           </a>
+          <a href="/api/export/xlsx" download
+            className="flex items-center justify-center gap-2 px-4 py-3 border border-gray-200 rounded text-sm font-bold hover:bg-gray-50 transition-colors">
+            <FileSpreadsheet className="w-4 h-4 text-emerald-600" />
+            {t("exportExcel")}
+          </a>
         </div>
 
         <div className="mt-6 pt-5 border-t border-gray-100 dark:border-gray-700">
