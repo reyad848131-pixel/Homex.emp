@@ -2,7 +2,12 @@ import { getAuth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { STATUS_MAP } from "@/lib/types";
 import { roundMoney } from "@/lib/utils";
+import { getSettings } from "@/lib/settings";
 import { DashboardClient } from "./dashboard-client";
+import { ReadinessBanner } from "@/components/readiness-banner";
+
+// Essential company settings that should be filled before quoting.
+const READINESS_KEYS = ["company_name", "company_logo", "company_phone", "vat_rate", "terms_conditions"];
 
 export default async function DashboardPage() {
   const session = await getAuth();
@@ -11,6 +16,11 @@ export default async function DashboardPage() {
 
   const isAdmin = role === "admin" || role === "manager";
   const whereClause = isAdmin ? {} : { employeeId: userId };
+
+  // Only admins configure settings, so only they see the readiness nudge.
+  const missingSettings = role === "admin"
+    ? await getSettings().then((s) => READINESS_KEYS.filter((k) => !s[k] || !String(s[k]).trim()))
+    : [];
 
   const now = new Date();
   const monthStart = new Date(now.getFullYear(), now.getMonth(), 1);
@@ -102,5 +112,10 @@ export default async function DashboardPage() {
     }),
   };
 
-  return <DashboardClient data={data} />;
+  return (
+    <>
+      <ReadinessBanner missing={missingSettings} />
+      <DashboardClient data={data} />
+    </>
+  );
 }
