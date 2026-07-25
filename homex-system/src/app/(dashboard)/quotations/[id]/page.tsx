@@ -19,9 +19,6 @@ interface QuotationDetail {
   status: string;
   statusComment: string | null;
   subtotal: number;
-  discountType: string;
-  discountValue: number;
-  discountAmount: number;
   vatRate: number;
   vatAmount: number;
   total: number;
@@ -424,12 +421,6 @@ export default function QuotationDetailPage({ params }: { params: Promise<{ id: 
                 <span className="text-gray-500">{t("subtotal")}</span>
                 <span className="font-bold font-mono-en">{fmtCur(q.subtotal)}</span>
               </div>
-              {q.discountAmount > 0 && (
-                <div className="flex justify-between text-sm text-green-600">
-                  <span>{t("discountLabel")}{q.discountType === "percent" ? ` (${q.discountValue}%)` : ""}</span>
-                  <span className="font-bold font-mono-en">− {fmtCur(q.discountAmount)}</span>
-                </div>
-              )}
               <div className="flex justify-between text-sm">
                 <span className="text-gray-500">{t("vat")} ({(q.vatRate * 100).toFixed(0)}%)</span>
                 <span className="font-bold font-mono-en">{fmtCur(q.vatAmount)}</span>
@@ -650,7 +641,6 @@ export default function QuotationDetailPage({ params }: { params: Promise<{ id: 
         <div className="flex justify-end">
           <div className="w-64 space-y-1 text-sm">
             <div className="flex justify-between"><span>{t("subtotal")}</span><span className="font-bold font-mono-en">{fmtCur(q.subtotal)}</span></div>
-            {q.discountAmount > 0 && (<div className="flex justify-between text-green-600"><span>{t("discountLabel")}{q.discountType === "percent" ? ` (${q.discountValue}%)` : ""}</span><span className="font-mono-en">− {fmtCur(q.discountAmount)}</span></div>)}
             <div className="flex justify-between"><span>{t("tax")} ({(q.vatRate * 100).toFixed(0)}%)</span><span className="font-mono-en">{fmtCur(q.vatAmount)}</span></div>
             <div className="flex justify-between border-t-2 border-gray-900 pt-2 text-lg">
               <span className="font-bold">{t("grandTotal")}</span>

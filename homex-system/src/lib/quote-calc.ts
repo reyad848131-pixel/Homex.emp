@@ -56,17 +56,9 @@ export function sanitizeItem(item: RawItem, sortOrder: number): SanitizedItem {
   };
 }
 
-export interface Discount {
-  type?: string; // "percent" | "amount"
-  value?: unknown;
-}
-
 export interface QuoteTotals {
   items: SanitizedItem[];
   subtotal: number;
-  discountType: string;
-  discountValue: number;
-  discountAmount: number;
   vatRate: number;
   vatAmount: number;
   total: number;
@@ -76,42 +68,25 @@ export interface QuoteTotals {
 
 /**
  * Recomputes every monetary field of a quotation from its raw items plus the
- * VAT rate, advance percentage, and an optional discount. The discount is
- * applied to the subtotal before VAT. All totals are derived here — never
- * taken from the request body.
+ * VAT rate and advance percentage. All totals are derived here — never taken
+ * from the request body.
  */
 export function computeQuoteTotals(
   rawItems: RawItem[],
   vatRate: number,
-  advancePct: number,
-  discount?: Discount
+  advancePct: number
 ): QuoteTotals {
   const items = rawItems.map((it, idx) => sanitizeItem(it, idx));
   const subtotal = round3(items.reduce((sum, it) => sum + it.lineTotal, 0));
-
-  // Discount on the subtotal (percent of subtotal, or a fixed amount), clamped
-  // so it can never be negative or exceed the subtotal.
-  const discountType = discount?.type === "amount" ? "amount" : "percent";
-  const discountValue = Math.max(0, num(discount?.value, 0));
-  const rawDiscount =
-    discountType === "amount"
-      ? discountValue
-      : subtotal * (Math.min(discountValue, 100) / 100);
-  const discountAmount = round3(Math.min(Math.max(rawDiscount, 0), subtotal));
-  const discountedSubtotal = round3(subtotal - discountAmount);
-
   const safeVatRate = Math.max(0, num(vatRate, 0.05));
-  const vatAmount = round3(discountedSubtotal * safeVatRate);
-  const total = round3(discountedSubtotal + vatAmount);
+  const vatAmount = round3(subtotal * safeVatRate);
+  const total = round3(subtotal + vatAmount);
   const safeAdvancePct = Math.min(100, Math.max(0, num(advancePct, 15)));
   const advanceAmount = round3(total * (safeAdvancePct / 100));
 
   return {
     items,
     subtotal,
-    discountType,
-    discountValue: round3(discountValue),
-    discountAmount,
     vatRate: safeVatRate,
     vatAmount,
     total,

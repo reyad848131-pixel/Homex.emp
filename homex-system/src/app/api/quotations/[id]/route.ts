@@ -103,11 +103,7 @@ export async function PATCH(
         const totals = computeQuoteTotals(
           body.items,
           body.vatRate ?? quotation.vatRate ?? 0.05,
-          body.advancePct ?? quotation.advancePct ?? 15,
-          {
-            type: body.discountType ?? quotation.discountType,
-            value: body.discountValue ?? quotation.discountValue,
-          }
+          body.advancePct ?? quotation.advancePct ?? 15
         );
 
         if (body.customer && body.customerId) {
@@ -128,9 +124,6 @@ export async function PATCH(
           where: { id },
           data: {
             subtotal: totals.subtotal,
-            discountType: totals.discountType,
-            discountValue: totals.discountValue,
-            discountAmount: totals.discountAmount,
             vatRate: totals.vatRate,
             vatAmount: totals.vatAmount,
             total: totals.total,

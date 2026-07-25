@@ -538,11 +538,6 @@ export async function GET(
             <td colspan="4" class="t-label">الإجمالي</td>
             <td class="t-value">${fmtCur(quotation.subtotal)}</td>
           </tr>
-          ${quotation.discountAmount > 0 ? `
-          <tr class="totals-row">
-            <td colspan="4" class="t-label">الخصم${quotation.discountType === "percent" ? ` ${quotation.discountValue}%` : ""}</td>
-            <td class="t-value">- ${fmtCur(quotation.discountAmount)}</td>
-          </tr>` : ""}
           <tr class="totals-row">
             <td colspan="4" class="t-label">ضريبة القيمة المضافة ${(quotation.vatRate * 100).toFixed(0)}%</td>
             <td class="t-value">${fmtCur(quotation.vatAmount)}</td>
