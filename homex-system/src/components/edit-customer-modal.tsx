@@ -83,7 +83,7 @@ export function EditCustomerModal({ customer, onClose }: Props) {
             <label className="block text-sm font-semibold text-gray-600 mb-1.5">{t("phoneNumber")} *</label>
             <div className="flex gap-2">
               <select value={form.phoneCode} onChange={(e) => setForm({ ...form, phoneCode: e.target.value })}
-                className="field w-24 shrink-0 px-2 font-mono-en">
+                className="field w-28 shrink-0 font-mono-en">
                 <option value="+968">+968</option>
                 <option value="+971">+971</option>
                 <option value="+966">+966</option>

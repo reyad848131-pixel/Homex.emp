@@ -38,17 +38,41 @@ input:focus, select:focus, textarea:focus {
     border: 1px solid #e5e7eb;            /* gray-200 */
     border-radius: 0.5rem;                /* rounded-lg */
     font-size: 0.875rem;                  /* text-sm */
+    line-height: 1.25rem;
     padding-inline: 0.75rem;              /* px-3 */
+    /* Strip the native iOS/Safari look so date & number inputs honour our
+       height instead of sizing themselves to their content (which made them
+       taller/shorter than text inputs and broke the grid alignment). */
+    -webkit-appearance: none;
+    -moz-appearance: none;
+    appearance: none;
+    background-clip: padding-box;
     transition: border-color .15s ease, background-color .15s ease, box-shadow .15s ease;
   }
   .field,
-  .field-ro { height: 2.75rem; }          /* h-11 — uniform single-line height */
+  .field-ro {
+    height: 2.75rem;                      /* h-11 — uniform single-line height */
+    padding-block: 0;
+  }
   .field { background: #ffffff; }
   .field-ro { background: #f9fafb; color: #6b7280; } /* gray-50 / gray-500 */
   .field-textarea {
     padding-block: 0.625rem;              /* py-2.5 */
     background: #ffffff;
     resize: vertical;
+  }
+
+  /* Keep native date/number controls vertically centred and same height. */
+  .field::-webkit-date-and-time-value { text-align: inherit; margin: 0; }
+  .field::-webkit-datetime-edit { padding: 0; }
+  .field::-webkit-inner-spin-button,
+  .field::-webkit-outer-spin-button { -webkit-appearance: none; margin: 0; }
+  /* Restore the dropdown affordance the appearance reset removes on selects. */
+  select.field {
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='%239ca3af' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'%3E%3C/polyline%3E%3C/svg%3E");
+    background-repeat: no-repeat;
+    background-position: left 0.75rem center;
+    padding-left: 2.25rem;
   }
 
   .dark .field,

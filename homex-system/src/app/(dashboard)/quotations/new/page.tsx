@@ -397,7 +397,7 @@ export default function NewQuotationPage() {
               <label className="block text-sm font-semibold text-gray-600 mb-1.5">{t("phoneReq")}</label>
               <div className="flex gap-2">
                 <select value={customer.phoneCode} onChange={(e) => setCustomer({ ...customer, phoneCode: e.target.value })}
-                  className={cn(fieldBase, "w-24 shrink-0 px-2 font-mono-en")}>
+                  className={cn(fieldBase, "w-28 shrink-0 font-mono-en")}>
                   <option value="+968">+968</option>
                   <option value="+971">+971</option>
                   <option value="+966">+966</option>
