@@ -3,6 +3,10 @@
     {
       "path": "/api/cron/backup",
       "schedule": "0 2 * * *"
+    },
+    {
+      "path": "/api/cron/expiry-check",
+      "schedule": "0 5 * * *"
     }
   ]
 }
