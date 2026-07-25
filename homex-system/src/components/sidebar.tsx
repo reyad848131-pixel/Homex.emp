@@ -88,7 +88,7 @@ export function Sidebar({ user }: SidebarProps) {
 
   const content = (
     <>
-      <div className="p-5 border-b border-gray-200 dark:border-gray-700">
+      <div className="p-5 border-b border-gray-200 dark:border-gray-700 shrink-0">
         {logo ? (
           <div className="flex items-center gap-3">
             <img src={logo} alt="Logo" className="w-10 h-10 object-contain" />
@@ -109,7 +109,7 @@ export function Sidebar({ user }: SidebarProps) {
         )}
       </div>
 
-      <nav className="flex-1 p-3 space-y-1">
+      <nav className="flex-1 min-h-0 overflow-y-auto p-3 space-y-1">
         {items.map((item) => {
           const isActive = pathname === item.href ||
             (item.href !== "/" && pathname.startsWith(item.href));
@@ -132,7 +132,7 @@ export function Sidebar({ user }: SidebarProps) {
         })}
       </nav>
 
-      <div className="p-4 border-t border-gray-200 dark:border-gray-700">
+      <div className="p-4 border-t border-gray-200 dark:border-gray-700 shrink-0">
         <div className="flex items-center gap-3 mb-3">
           <div className="w-9 h-9 rounded-full bg-gray-900 dark:bg-gray-600 text-white flex items-center justify-center text-sm font-bold">
             {user.name.charAt(0)}
