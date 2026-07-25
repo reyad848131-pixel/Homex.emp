@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useMemo } from "react";
+import { useState, useEffect, useMemo, useCallback } from "react";
 import { ChevronLeft, ChevronRight, CalendarDays } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useI18n, useTranslatedMonths } from "@/lib/i18n";
@@ -11,82 +11,65 @@ export interface DateRange {
 }
 
 const pad = (n: number) => String(n).padStart(2, "0");
-const ymd = (d: Date) => `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
 
-// Calendar weeks for a month, starting on Saturday (Gulf convention).
-function monthWeeks(year: number, month0: number): { date: Date; inMonth: boolean }[][] {
-  const first = new Date(year, month0, 1);
-  const startCol = (first.getDay() + 1) % 7; // Sat = 0
-  const gridStart = new Date(year, month0, 1 - startCol);
-  const weeks: { date: Date; inMonth: boolean }[][] = [];
-  const cursor = new Date(gridStart);
-  for (let w = 0; w < 6; w++) {
-    const row: { date: Date; inMonth: boolean }[] = [];
-    for (let d = 0; d < 7; d++) {
-      row.push({ date: new Date(cursor), inMonth: cursor.getMonth() === month0 });
-      cursor.setDate(cursor.getDate() + 1);
-    }
-    weeks.push(row);
-    // Stop once we've passed the month and completed a week.
-    if (cursor.getMonth() !== month0 && cursor > new Date(year, month0 + 1, 0)) break;
-  }
-  return weeks;
+// Each month is split into exactly 4 business weeks:
+// week 1: days 1–7, week 2: 8–14, week 3: 15–21, week 4: 22–end of month.
+function monthWeeks(year: number, month0: number): { from: number; to: number }[] {
+  const lastDay = new Date(year, month0 + 1, 0).getDate();
+  return [
+    { from: 1, to: 7 },
+    { from: 8, to: 14 },
+    { from: 15, to: 21 },
+    { from: 22, to: lastDay },
+  ];
 }
 
 /**
- * Hierarchical date navigator: pick a Year → then a Month → then narrow to a
- * specific Week or Day. Emits the resulting delivery-date range (or null for
- * "all time") plus a human-readable label.
+ * Hierarchical date navigator: pick a Year → then a Month → then narrow to one
+ * of the month's four weeks or to a specific day. Emits the resulting
+ * delivery-date range (or null for "all time") plus a readable label.
  */
 export function DateDrillNav({
   onChange,
 }: {
   onChange: (range: DateRange | null, label: string) => void;
 }) {
-  const { t, locale } = useI18n();
+  const { t } = useI18n();
   const months = useTranslatedMonths();
   const now = new Date();
+  const todayKey = `${now.getFullYear()}-${pad(now.getMonth() + 1)}-${pad(now.getDate())}`;
 
   const [year, setYear] = useState<number | null>(null);
   const [month0, setMonth0] = useState<number | null>(null); // 0-11
-  const [week, setWeek] = useState<number | null>(null);
-  const [day, setDay] = useState<string | null>(null); // YYYY-MM-DD
+  const [week, setWeek] = useState<number | null>(null);      // 0-3
+  const [day, setDay] = useState<number | null>(null);        // 1-31
   const [yearBase, setYearBase] = useState(now.getFullYear());
-
-  const weekdayLabels = locale === "en"
-    ? ["Sa", "Su", "Mo", "Tu", "We", "Th", "Fr"]
-    : ["س", "ح", "ن", "ث", "ر", "خ", "ج"];
 
   const weeks = useMemo(
     () => (year !== null && month0 !== null ? monthWeeks(year, month0) : []),
     [year, month0]
   );
 
-  // Derive range + label from the current selection and notify the parent.
+  const dayStr = useCallback(
+    (d: number) => `${year}-${pad((month0 ?? 0) + 1)}-${pad(d)}`,
+    [year, month0]
+  );
+
   useEffect(() => {
-    if (year === null) {
-      onChange(null, t("allMonths"));
-      return;
-    }
-    if (month0 === null) {
-      onChange({ from: `${year}-01-01`, to: `${year}-12-31` }, String(year));
-      return;
-    }
+    if (year === null) { onChange(null, t("allMonths")); return; }
+    if (month0 === null) { onChange({ from: `${year}-01-01`, to: `${year}-12-31` }, String(year)); return; }
     const monthName = months[month0];
-    if (day) {
-      const d = new Date(day + "T00:00:00");
-      onChange({ from: day, to: day }, `${year} › ${monthName} › ${d.getDate()}`);
+    if (day !== null) {
+      onChange({ from: dayStr(day), to: dayStr(day) }, `${year} › ${monthName} › ${day}`);
       return;
     }
     if (week !== null && weeks[week]) {
-      const row = weeks[week];
-      const from = ymd(row[0].date);
-      const to = ymd(row[6].date);
-      onChange({ from, to }, `${year} › ${monthName} › ${t("weekLabel")} ${week + 1}`);
+      const w = weeks[week];
+      onChange({ from: dayStr(w.from), to: dayStr(w.to) }, `${year} › ${monthName} › ${t("weekLabel")} ${week + 1}`);
       return;
     }
-    const last = new Date(year, month0 + 1, 0);
-    onChange({ from: `${year}-${pad(month0 + 1)}-01`, to: ymd(last) }, `${monthName} ${year}`);
+    const last = new Date(year, month0 + 1, 0).getDate();
+    onChange({ from: dayStr(1), to: dayStr(last) }, `${monthName} ${year}`);
   }, [year, month0, week, day, weeks]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const chip = (active: boolean) =>
@@ -110,13 +93,11 @@ export function DateDrillNav({
       {/* Years */}
       <div className="flex items-center gap-2">
         <CalendarDays className="w-4 h-4 text-gray-400 shrink-0" />
-        <button onClick={() => { reset("all"); }}
-          className={cn(chip(year === null), "px-3 py-1.5 shrink-0")}>
+        <button onClick={() => reset("all")} className={cn(chip(year === null), "px-3 py-1.5 shrink-0")}>
           {t("allMonths")}
         </button>
         <div className="w-px h-6 bg-gray-200 dark:bg-gray-700 shrink-0" />
-        <button onClick={() => setYearBase((y) => y - 1)}
-          className="p-1.5 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 shrink-0" aria-label="prev years">
+        <button onClick={() => setYearBase((y) => y - 1)} className="p-1.5 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 shrink-0" aria-label="prev years">
           <ChevronRight className="w-4 h-4" />
         </button>
         <div className="flex gap-1.5 overflow-x-auto flex-1 justify-center">
@@ -127,8 +108,7 @@ export function DateDrillNav({
             </button>
           ))}
         </div>
-        <button onClick={() => setYearBase((y) => y + 1)}
-          className="p-1.5 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 shrink-0" aria-label="next years">
+        <button onClick={() => setYearBase((y) => y + 1)} className="p-1.5 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 shrink-0" aria-label="next years">
           <ChevronLeft className="w-4 h-4" />
         </button>
       </div>
@@ -136,8 +116,7 @@ export function DateDrillNav({
       {/* Months */}
       {year !== null && (
         <div className="mt-3 pt-3 border-t border-gray-100 dark:border-gray-700 flex flex-wrap gap-1.5">
-          <button onClick={() => reset("year")}
-            className={cn(chip(month0 === null), "px-3 py-1.5")}>
+          <button onClick={() => reset("year")} className={cn(chip(month0 === null), "px-3 py-1.5")}>
             {t("wholeYear")}
           </button>
           {months.map((m, i) => (
@@ -149,60 +128,39 @@ export function DateDrillNav({
         </div>
       )}
 
-      {/* Weeks + Days (mini calendar) */}
+      {/* 4 weeks + days */}
       {year !== null && month0 !== null && (
-        <div className="mt-3 pt-3 border-t border-gray-100 dark:border-gray-700">
-          <button onClick={() => reset("month")}
-            className={cn(chip(week === null && !day), "px-3 py-1.5 mb-2")}>
+        <div className="mt-3 pt-3 border-t border-gray-100 dark:border-gray-700 space-y-1.5">
+          <button onClick={() => reset("month")} className={cn(chip(week === null && day === null), "px-3 py-1.5 mb-1")}>
             {t("wholeMonth")}
           </button>
-          <div className="overflow-x-auto">
-            <table className="w-full text-center select-none">
-              <thead>
-                <tr className="text-[11px] text-gray-400">
-                  <th className="w-10"></th>
-                  {weekdayLabels.map((w, i) => <th key={i} className="py-1 font-semibold">{w}</th>)}
-                </tr>
-              </thead>
-              <tbody>
-                {weeks.map((row, wi) => {
-                  const weekActive = week === wi && !day;
+          {weeks.map((w, wi) => (
+            <div key={wi} className="flex items-center gap-2">
+              <button onClick={() => { setWeek(wi); setDay(null); }}
+                className={cn(chip(week === wi && day === null), "px-2.5 py-2 text-xs shrink-0 w-24 text-center leading-tight")}>
+                {t("weekLabel")} {wi + 1}
+                <span className="block text-[10px] opacity-70 font-mono-en">{w.from}–{w.to}</span>
+              </button>
+              <div className="flex flex-wrap gap-1">
+                {Array.from({ length: w.to - w.from + 1 }, (_, k) => w.from + k).map((d) => {
+                  const active = day === d;
+                  const isToday = dayStr(d) === todayKey;
                   return (
-                    <tr key={wi}>
-                      <td className="pe-1">
-                        <button onClick={() => { setWeek(wi); setDay(null); }}
-                          className={cn(chip(weekActive), "w-9 h-8 text-[11px] font-bold")}
-                          title={`${t("weekLabel")} ${wi + 1}`}>
-                          {t("weekShort")}{wi + 1}
-                        </button>
-                      </td>
-                      {row.map(({ date, inMonth }, di) => {
-                        const key = ymd(date);
-                        const isToday = key === ymd(now);
-                        const active = day === key;
-                        return (
-                          <td key={di} className="p-0.5">
-                            <button onClick={() => { setDay(active ? null : key); if (!active) setWeek(null); }}
-                              className={cn(
-                                "w-9 h-8 rounded-lg text-xs font-bold border transition-all",
-                                active
-                                  ? "bg-gray-900 dark:bg-white text-white dark:text-gray-900 border-gray-900 dark:border-white"
-                                  : inMonth
-                                    ? "bg-white dark:bg-gray-800 border-transparent hover:border-gray-300 dark:hover:border-gray-600 text-gray-700 dark:text-gray-200"
-                                    : "bg-transparent border-transparent text-gray-300 dark:text-gray-600",
-                                isToday && !active && "ring-1 ring-blue-400"
-                              )}>
-                              {date.getDate()}
-                            </button>
-                          </td>
-                        );
-                      })}
-                    </tr>
+                    <button key={d} onClick={() => { setDay(active ? null : d); setWeek(null); }}
+                      className={cn(
+                        "w-8 h-8 rounded-lg text-xs font-bold border transition-all",
+                        active
+                          ? "bg-gray-900 dark:bg-white text-white dark:text-gray-900 border-gray-900 dark:border-white"
+                          : "bg-white dark:bg-gray-800 border-gray-200 dark:border-gray-700 text-gray-700 dark:text-gray-200 hover:border-gray-400 dark:hover:border-gray-500",
+                        isToday && !active && "ring-1 ring-blue-400"
+                      )}>
+                      {d}
+                    </button>
                   );
                 })}
-              </tbody>
-            </table>
-          </div>
+              </div>
+            </div>
+          ))}
         </div>
       )}
     </div>
