@@ -94,6 +94,12 @@ export default function NewQuotationPage() {
 
   const fmtCur = (n: number) => `${n.toFixed(3)} ${t("omr")}`;
 
+  // Shared form-control styles so every input/select/date/number field lines up
+  // at the same height and shape (iPad renders date/number inputs shorter
+  // otherwise). Editable vs read-only vs numeric-centered variants.
+  const fieldBase = "w-full h-11 border border-gray-200 dark:border-gray-700 rounded-lg px-3 text-sm bg-white dark:bg-gray-800 focus:outline-none focus:ring-2 focus:ring-gray-900/10 dark:focus:ring-white/10 focus:border-gray-400 transition-colors";
+  const fieldRO = "w-full h-11 border border-gray-200 dark:border-gray-700 rounded-lg px-3 text-sm bg-gray-50 dark:bg-gray-900/40 text-gray-500";
+
   const resetBuilder = useCallback(() => {
     setBuilderDesc("");
     setBuilderQty(1);
@@ -335,18 +341,16 @@ export default function NewQuotationPage() {
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
             <div>
               <label className="block text-sm font-semibold text-gray-600 mb-1.5">{t("employeeNameLabel")}</label>
-              <input type="text" value={employeeName} readOnly
-                className="w-full border border-gray-200 rounded px-3 py-2.5 text-sm bg-gray-50 text-gray-500" />
+              <input type="text" value={employeeName} readOnly className={fieldRO} />
             </div>
             <div>
               <label className="block text-sm font-semibold text-gray-600 mb-1.5">{t("quoteNumberLabel")}</label>
-              <input type="text" value={t("autoOnSave")} readOnly
-                className="w-full border border-gray-200 rounded px-3 py-2.5 text-sm bg-gray-50 text-gray-400 font-mono-en" />
+              <input type="text" value={t("autoOnSave")} readOnly className={cn(fieldRO, "font-mono-en text-gray-400")} />
             </div>
             <div>
               <label className="block text-sm font-semibold text-gray-600 mb-1.5">{t("dateLabel")}</label>
               <input type="date" value={quoteDate} onChange={(e) => setQuoteDate(e.target.value)}
-                className="w-full border border-gray-200 rounded px-3 py-2.5 text-sm font-mono-en" />
+                className={cn(fieldBase, "font-mono-en")} />
             </div>
           </div>
 
@@ -354,18 +358,18 @@ export default function NewQuotationPage() {
             <div>
               <label className="block text-sm font-semibold text-gray-600 mb-1.5">{t("deliveryDateLabel")}</label>
               <input type="date" value={deliveryDate} onChange={(e) => setDeliveryDate(e.target.value)}
-                className="w-full border border-gray-200 rounded px-3 py-2.5 text-sm font-mono-en" />
+                className={cn(fieldBase, "font-mono-en")} />
             </div>
             <div>
               <label className="block text-sm font-semibold text-gray-600 mb-1.5">{t("advancePctLabel")}</label>
               <input type="number" min={0} max={100} value={advancePct}
                 onChange={(e) => setAdvancePct(Math.min(100, Math.max(0, parseInt(e.target.value) || 0)))}
-                className="w-full border border-gray-200 rounded px-3 py-2.5 text-sm font-mono-en text-center" />
+                className={cn(fieldBase, "font-mono-en text-center")} />
             </div>
             <div>
               <label className="block text-sm font-semibold text-gray-600 mb-1.5">{t("remainingPctLabel")}</label>
               <input type="text" value={`${100 - advancePct}%`} readOnly
-                className="w-full border border-gray-200 rounded px-3 py-2.5 text-sm bg-gray-50 text-gray-500 font-mono-en text-center" />
+                className={cn(fieldRO, "font-mono-en text-center")} />
             </div>
           </div>
 
@@ -373,12 +377,12 @@ export default function NewQuotationPage() {
             <div>
               <label className="block text-sm font-semibold text-gray-600 mb-1.5">{t("advanceAmountLabel")}</label>
               <input type="text" value={total > 0 ? fmtCur(advance) : `0.000 ${t("omr")}`} readOnly
-                className="w-full border border-gray-200 rounded px-3 py-2.5 text-sm bg-gray-50 text-gray-500 font-mono-en" />
+                className={cn(fieldRO, "font-mono-en")} />
             </div>
             <div>
               <label className="block text-sm font-semibold text-gray-600 mb-1.5">{t("remainingAmountLabel")}</label>
               <input type="text" value={total > 0 ? fmtCur(total - advance) : `0.000 ${t("omr")}`} readOnly
-                className="w-full border border-gray-200 rounded px-3 py-2.5 text-sm bg-gray-50 text-gray-500 font-mono-en" />
+                className={cn(fieldRO, "font-mono-en")} />
             </div>
           </div>
 
@@ -388,20 +392,20 @@ export default function NewQuotationPage() {
             <div>
               <label className="block text-sm font-semibold text-gray-600 mb-1.5">{t("customerNameReq")}</label>
               <input type="text" value={customer.name} onChange={(e) => setCustomer({ ...customer, name: e.target.value })}
-                className="w-full border border-gray-200 rounded px-3 py-2.5 text-sm" placeholder={t("customerNamePlaceholder")} />
+                className={fieldBase} placeholder={t("customerNamePlaceholder")} />
             </div>
             <div>
               <label className="block text-sm font-semibold text-gray-600 mb-1.5">{t("phoneReq")}</label>
               <div className="flex gap-2">
                 <select value={customer.phoneCode} onChange={(e) => setCustomer({ ...customer, phoneCode: e.target.value })}
-                  className="border border-gray-200 rounded px-2 py-2.5 text-sm w-24 font-mono-en">
+                  className={cn(fieldBase, "w-24 shrink-0 px-2 font-mono-en")}>
                   <option value="+968">+968</option>
                   <option value="+971">+971</option>
                   <option value="+966">+966</option>
                 </select>
                 <input type="tel" value={customer.phone} onChange={(e) => setCustomer({ ...customer, phone: e.target.value.replace(/\D/g, "").slice(0, 8) })}
                   pattern="[0-9]{8}" maxLength={8}
-                  className="flex-1 border border-gray-200 rounded px-3 py-2.5 text-sm font-mono-en" placeholder="9XXXXXXX" />
+                  className={cn(fieldBase, "flex-1 min-w-0 font-mono-en")} placeholder="9XXXXXXX" />
               </div>
             </div>
           </div>
@@ -410,7 +414,7 @@ export default function NewQuotationPage() {
             <div>
               <label className="block text-sm font-semibold text-gray-600 mb-1.5">{t("governorateReq")}</label>
               <select value={customer.governorate} onChange={(e) => setCustomer({ ...customer, governorate: e.target.value, wilayat: "" })}
-                className="w-full border border-gray-200 rounded px-3 py-2.5 text-sm">
+                className={fieldBase}>
                 <option value="">{t("chooseGovernorate")}</option>
                 {Object.keys(GOVERNORATES).map((g) => <option key={g} value={g}>{g}</option>)}
               </select>
@@ -418,7 +422,7 @@ export default function NewQuotationPage() {
             <div>
               <label className="block text-sm font-semibold text-gray-600 mb-1.5">{t("wilayatReq")}</label>
               <select value={customer.wilayat} onChange={(e) => setCustomer({ ...customer, wilayat: e.target.value })}
-                className="w-full border border-gray-200 rounded px-3 py-2.5 text-sm" disabled={!customer.governorate}>
+                className={cn(fieldBase, "disabled:opacity-60 disabled:bg-gray-50 dark:disabled:bg-gray-900/40")} disabled={!customer.governorate}>
                 <option value="">{t("chooseWilayat")}</option>
                 {wilayats.map((w) => <option key={w} value={w}>{w}</option>)}
               </select>
