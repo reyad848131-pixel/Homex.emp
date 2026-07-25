@@ -113,7 +113,7 @@ export async function PATCH(req: NextRequest) {
 
     const body = await req.json();
     const { id, workStatus, hasOrangeAlert, hasRedAlert, workNotes, woodStatus, fabricStatus,
-      deliveryDriver, apptConfirmed, deliveryDate, deliveryTime } = body;
+      deliveryDriver, apptConfirmed, deliveryDate, deliveryTime, deliveryLocation } = body;
 
     if (!id) return NextResponse.json({ error: "Missing id" }, { status: 400 });
 
@@ -137,6 +137,7 @@ export async function PATCH(req: NextRequest) {
     if (hasRedAlert !== undefined) data.hasRedAlert = Boolean(hasRedAlert);
     if (workNotes !== undefined) data.workNotes = workNotes;
     if (deliveryDriver !== undefined) data.deliveryDriver = deliveryDriver || null;
+    if (deliveryLocation !== undefined) data.deliveryLocation = (typeof deliveryLocation === "string" ? deliveryLocation.trim() : "") || null;
     if (apptConfirmed !== undefined) data.apptConfirmed = Boolean(apptConfirmed);
     if (deliveryDate !== undefined) data.deliveryDate = deliveryDate ? new Date(deliveryDate) : null;
     if (deliveryTime !== undefined) data.deliveryTime = deliveryTime || null;

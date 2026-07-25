@@ -96,6 +96,9 @@ model Quotation {
   // Delivery-schedule fields: assigned driver/team name and whether the
   // delivery appointment was confirmed with the customer.
   deliveryDriver String?  @map("delivery_driver")
+  // Exact delivery location (a Google Maps link or "lat,lng" the customer
+  // sends and customer-service pastes in), so the driver opens the exact pin.
+  deliveryLocation String? @map("delivery_location")
   apptConfirmed Boolean   @default(false) @map("appt_confirmed")
   hasOrangeAlert Boolean  @default(false) @map("has_orange_alert")
   hasRedAlert    Boolean  @default(false) @map("has_red_alert")

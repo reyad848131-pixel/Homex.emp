@@ -19,6 +19,7 @@ interface DeliveryQuotation {
   deliveryDate: string;
   deliveryTime: string | null;
   deliveryDriver: string | null;
+  deliveryLocation: string | null;
   apptConfirmed: boolean;
   workNotes: string | null;
   customer: { name: string; phone: string; phoneCode: string; governorate: string; wilayat: string; address: string | null };
@@ -56,6 +57,8 @@ export default function DeliverySchedulePage() {
   const [reschedId, setReschedId] = useState<string | null>(null);
   const [reschedDate, setReschedDate] = useState("");
   const [reschedTime, setReschedTime] = useState("");
+  const [locEditId, setLocEditId] = useState<string | null>(null);
+  const [locValue, setLocValue] = useState("");
 
   const fetchData = useCallback(() => {
     setRows(null);
@@ -157,6 +160,21 @@ export default function DeliverySchedulePage() {
     const query = [q.customer.address, q.customer.wilayat, q.customer.governorate, "Oman"].filter(Boolean).join(", ");
     return `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(query)}`;
   };
+
+  // An exact location the customer sent: use a pasted URL as-is, otherwise
+  // treat the value as coordinates/text and build a maps query from it.
+  const preciseHref = (loc: string) =>
+    loc.trim().startsWith("http") ? loc.trim() : `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(loc.trim())}`;
+
+  const openLocEditor = (q: DeliveryQuotation) => { setLocEditId(q.id); setLocValue(q.deliveryLocation || ""); };
+  const saveLocation = () => {
+    if (!locEditId) return;
+    const id = locEditId;
+    const val = locValue.trim();
+    setLocEditId(null);
+    patch(id, { deliveryLocation: val }, { deliveryLocation: val || null });
+  };
+  const clearLocation = (id: string) => patch(id, { deliveryLocation: "" }, { deliveryLocation: null });
 
   // Apply "today only" filter, then bucket.
   const visible = useMemo(() => {
@@ -343,9 +361,15 @@ export default function DeliverySchedulePage() {
                         <a href={waLink(q)} target="_blank" rel="noopener noreferrer" className="no-print inline-flex items-center gap-1.5 px-3 h-9 rounded-lg bg-green-600 text-white text-xs font-bold hover:bg-green-700 transition-colors">
                           <MessageCircle className="w-3.5 h-3.5" /> {t("whatsappAction")}
                         </a>
-                        <a href={mapsLink(q)} target="_blank" rel="noopener noreferrer" className="no-print inline-flex items-center gap-1.5 px-3 h-9 rounded-lg border border-gray-200 dark:border-gray-700 text-gray-600 dark:text-gray-300 text-xs font-bold hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors">
-                          <MapPin className="w-3.5 h-3.5" /> {t("openMaps")}
-                        </a>
+                        {q.deliveryLocation ? (
+                          <a href={preciseHref(q.deliveryLocation)} target="_blank" rel="noopener noreferrer" className="no-print inline-flex items-center gap-1.5 px-3 h-9 rounded-lg bg-rose-600 text-white text-xs font-bold hover:bg-rose-700 transition-colors">
+                            <MapPin className="w-3.5 h-3.5" /> {t("preciseLocation")}
+                          </a>
+                        ) : (
+                          <a href={mapsLink(q)} target="_blank" rel="noopener noreferrer" className="no-print inline-flex items-center gap-1.5 px-3 h-9 rounded-lg border border-gray-200 dark:border-gray-700 text-gray-600 dark:text-gray-300 text-xs font-bold hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors">
+                            <MapPin className="w-3.5 h-3.5" /> {t("openMaps")}
+                          </a>
+                        )}
                       </div>
 
                       {/* Items */}
@@ -384,6 +408,12 @@ export default function DeliverySchedulePage() {
                               className="inline-flex items-center gap-1.5 px-3 h-9 rounded-lg border border-gray-200 dark:border-gray-700 text-gray-600 dark:text-gray-300 text-xs font-bold hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors">
                               <CalendarDays className="w-3.5 h-3.5" /> {t("reschedule")}
                             </button>
+                            <button onClick={() => openLocEditor(q)}
+                              className={cn("inline-flex items-center gap-1.5 px-3 h-9 rounded-lg border text-xs font-bold transition-colors",
+                                q.deliveryLocation ? "bg-rose-50 border-rose-300 text-rose-600 dark:bg-rose-900/20 dark:border-rose-800 dark:text-rose-300"
+                                  : "bg-white dark:bg-gray-800 border-gray-200 dark:border-gray-700 text-gray-600 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700")}>
+                              <MapPin className="w-3.5 h-3.5" /> {q.deliveryLocation ? t("preciseLocation") : t("addLocation")}
+                            </button>
                           </div>
 
                           {reschedId === q.id && (
@@ -394,6 +424,20 @@ export default function DeliverySchedulePage() {
                                 <Check className="w-3.5 h-3.5" /> {t("saveAppt")}
                               </button>
                               <button onClick={() => setReschedId(null)} className="px-3 h-9 text-xs font-bold text-gray-500">{t("cancel")}</button>
+                            </div>
+                          )}
+
+                          {locEditId === q.id && (
+                            <div className="flex flex-wrap items-center gap-2 p-2 rounded-lg bg-gray-50 dark:bg-gray-700/50">
+                              <input type="url" value={locValue} onChange={(e) => setLocValue(e.target.value)} dir="ltr" autoFocus
+                                className="field flex-1 min-w-[200px] h-9 font-mono-en text-xs" placeholder={t("pasteLocation")} />
+                              <button onClick={saveLocation} className="inline-flex items-center gap-1 px-3 h-9 rounded-lg bg-gray-900 dark:bg-white dark:text-gray-900 text-white text-xs font-bold">
+                                <Check className="w-3.5 h-3.5" /> {t("saveAppt")}
+                              </button>
+                              {q.deliveryLocation && (
+                                <button onClick={() => { clearLocation(q.id); setLocEditId(null); }} className="px-3 h-9 text-xs font-bold text-red-500">{t("clearLocation")}</button>
+                              )}
+                              <button onClick={() => setLocEditId(null)} className="px-3 h-9 text-xs font-bold text-gray-500">{t("cancel")}</button>
                             </div>
                           )}
                         </div>
