@@ -7,19 +7,9 @@ import { computeQuoteTotals } from "@/lib/quote-calc";
 import { parseBody, updateQuotationItemsSchema } from "@/lib/schemas";
 import { roundMoney } from "@/lib/utils";
 import { getSetting } from "@/lib/settings";
+import { isFinanciallyLocked, newTotalBelowPaid, canSetStatus } from "@/lib/quote-rules";
 
 const VALID_STATUSES = ["draft", "pending", "approved", "declined", "revised"];
-
-// Once a quotation is invoiced, has recorded payments, or the customer has
-// accepted it, its priced items and existence are frozen for financial
-// integrity — they must not be edited or deleted.
-function isFinanciallyLocked(q: {
-  status: string;
-  invoice?: { id: string } | null;
-  _count?: { payments: number };
-}): boolean {
-  return !!q.invoice || (q._count?.payments ?? 0) > 0 || q.status === "accepted";
-}
 
 export async function GET(
   req: NextRequest,
@@ -101,7 +91,7 @@ export async function PATCH(
         body.vatRate ?? quotation.vatRate ?? 0.05,
         body.advancePct ?? quotation.advancePct ?? 15
       );
-      if (roundMoney(newTotals.total) < paid) {
+      if (newTotalBelowPaid(newTotals.total, paid)) {
         return NextResponse.json(
           { error: `الإجمالي الجديد (${roundMoney(newTotals.total).toFixed(3)}) أقل من المبلغ المدفوع (${paid.toFixed(3)})`, code: "below_paid" },
           { status: 400 }
@@ -113,16 +103,10 @@ export async function PATCH(
       if (!VALID_STATUSES.includes(body.status)) {
         return NextResponse.json({ error: "Invalid status" }, { status: 400 });
       }
-      if (user.role === "sales") {
-        if (body.status === "declined") {
-          return NextResponse.json({ error: "Insufficient permissions" }, { status: 403 });
-        }
-        if (body.status === "approved") {
-          const selfApprove = (await getSetting("allow_self_approve", "false")) === "true";
-          if (!selfApprove) {
-            return NextResponse.json({ error: "Insufficient permissions" }, { status: 403 });
-          }
-        }
+      const selfApprove = (await getSetting("allow_self_approve", "false")) === "true";
+      const decision = canSetStatus({ role: user.role, status: body.status, selfApprove });
+      if (!decision.ok) {
+        return NextResponse.json({ error: "Insufficient permissions" }, { status: 403 });
       }
     }
 
