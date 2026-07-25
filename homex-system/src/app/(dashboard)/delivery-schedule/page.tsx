@@ -117,6 +117,7 @@ export default function DeliverySchedulePage() {
   };
 
   const revertToQueue = (id: string) => {
+    if (!confirm(t("confirmReturnToQueue"))) return;
     setRows((prev) => (prev ? prev.filter((r) => r.id !== id) : prev));
     fetch("/api/work-orders", {
       method: "PATCH", headers: { "Content-Type": "application/json" },
@@ -449,8 +450,8 @@ export default function DeliverySchedulePage() {
                           <FileText className="w-3.5 h-3.5" /> {t("openOriginalQuote")}
                         </Link>
                         {isDelivered ? (
-                          <button onClick={() => revertToQueue(q.id)} className="no-print inline-flex items-center gap-1.5 px-3 h-9 rounded-lg border border-gray-200 dark:border-gray-700 text-gray-600 dark:text-gray-300 text-xs font-bold hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors">
-                            <RotateCcw className="w-3.5 h-3.5" /> {t("tabQueue")}
+                          <button onClick={() => revertToQueue(q.id)} className="no-print inline-flex items-center gap-1.5 px-4 h-10 rounded-lg border border-amber-300 dark:border-amber-700 bg-amber-50 dark:bg-amber-900/20 text-amber-700 dark:text-amber-300 text-sm font-bold hover:bg-amber-100 dark:hover:bg-amber-900/40 transition-colors">
+                            <RotateCcw className="w-4 h-4" /> {t("returnToQueue")}
                           </button>
                         ) : (
                           <button onClick={() => markDelivered(q)} disabled={busyId === q.id}

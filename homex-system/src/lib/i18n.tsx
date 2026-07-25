@@ -165,6 +165,8 @@ const translations = {
   collectPrompt: { ar: "المتبقّي {amount}. هل حصّلته الآن نقداً؟ (موافق = تسجيل دفعة كاملة)", en: "Remaining {amount}. Collected now in cash? (OK = record full payment)" },
   noDeliveredYet: { ar: "لا يوجد طلبات تم توصيلها بعد", en: "No delivered orders yet" },
   deliveredOn: { ar: "تم التوصيل", en: "Delivered" },
+  returnToQueue: { ar: "إرجاع لقائمة التوصيل", en: "Return to queue" },
+  confirmReturnToQueue: { ar: "إرجاع الطلب إلى قائمة التوصيل مرة أخرى؟", en: "Return this order to the delivery queue?" },
   deliverySheetTitle: { ar: "كشف التوصيل", en: "Delivery Sheet" },
   waGreeting: { ar: "مرحباً", en: "Hello" },
   waReadyMsg: { ar: "طلبكم جاهز للتوصيل", en: "Your order is ready for delivery" },
