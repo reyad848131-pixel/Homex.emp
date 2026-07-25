@@ -20,6 +20,9 @@ const translations = {
   logout: { ar: "تسجيل الخروج", en: "Logout" },
   lightMode: { ar: "الوضع الفاتح", en: "Light Mode" },
   darkMode: { ar: "الوضع الداكن", en: "Dark Mode" },
+  autoMode: { ar: "تلقائي (حسب الجهاز)", en: "Auto (system)" },
+  lightModeOn: { ar: "فاتح", en: "Light" },
+  darkModeOn: { ar: "داكن", en: "Dark" },
 
   // Roles
   roleAdmin: { ar: "مدير النظام", en: "System Admin" },

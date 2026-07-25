@@ -42,7 +42,7 @@ export default function RootLayout({
       <head>
         <meta name="theme-color" content="#171717" />
         <link rel="apple-touch-icon" href="/icons/icon-192.png" />
-        <script dangerouslySetInnerHTML={{ __html: `try{if(localStorage.getItem("theme")==="dark")document.documentElement.classList.add("dark")}catch(e){}` }} />
+        <script dangerouslySetInnerHTML={{ __html: `try{var t=localStorage.getItem("theme");if(t==="dark"||((t===null||t==="auto")&&window.matchMedia("(prefers-color-scheme: dark)").matches))document.documentElement.classList.add("dark")}catch(e){}` }} />
       </head>
       <body className="font-cairo antialiased bg-gray-100 dark:bg-gray-950 text-gray-900 dark:text-gray-100 min-h-screen">
         <Providers>
