@@ -57,6 +57,8 @@ const WORK_STATUS_KEYS: Record<string, TranslationKey> = {
   completed: "completed",
   ready_for_delivery: "readyForDelivery",
   delivered: "delivered",
+  ready_for_install: "readyForInstall",
+  installed: "installedLabel",
 };
 
 function getDaysRemaining(deliveryDate: string): number {
@@ -542,6 +544,28 @@ export default function WorkOrdersPage() {
                           className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-teal-600 hover:bg-teal-700 text-white text-xs font-bold transition-colors"
                         >
                           <Check className="w-3.5 h-3.5" /> {t("markDelivered")}
+                        </button>
+                      </div>
+                    )}
+                    {q.workStatus === "delivered" && (
+                      <button
+                        onClick={() => handleStatusChange(q.id, "ready_for_install")}
+                        className="w-full flex items-center justify-center gap-2 px-4 py-2.5 rounded-lg bg-indigo-600 hover:bg-indigo-700 text-white text-sm font-bold transition-colors shadow-sm"
+                      >
+                        <Package className="w-4 h-4" />
+                        {t("moveToInstall")}
+                      </button>
+                    )}
+                    {q.workStatus === "ready_for_install" && (
+                      <div className="flex items-center justify-between gap-3 px-4 py-2.5 rounded-lg bg-indigo-50 dark:bg-indigo-900/20 border border-indigo-200 dark:border-indigo-800">
+                        <span className="flex items-center gap-2 text-sm font-bold text-indigo-700 dark:text-indigo-300">
+                          <Package className="w-4 h-4" /> {t("readyForInstall")}
+                        </span>
+                        <button
+                          onClick={() => handleStatusChange(q.id, "installed")}
+                          className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-bold transition-colors"
+                        >
+                          <Check className="w-3.5 h-3.5" /> {t("markInstalled")}
                         </button>
                       </div>
                     )}

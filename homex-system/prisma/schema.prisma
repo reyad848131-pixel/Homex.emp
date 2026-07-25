@@ -100,6 +100,13 @@ model Quotation {
   // sends and customer-service pastes in), so the driver opens the exact pin.
   deliveryLocation String? @map("delivery_location")
   apptConfirmed Boolean   @default(false) @map("appt_confirmed")
+  // Actual delivery moment (set when marked delivered) — powers on-time KPIs.
+  deliveredAt   DateTime? @map("delivered_at")
+  // Installation stage: assigned technician + scheduled date/time + done moment.
+  installTechnician String? @map("install_technician")
+  installDate   DateTime? @map("install_date")
+  installTime   String?   @map("install_time")
+  installedAt   DateTime? @map("installed_at")
   hasOrangeAlert Boolean  @default(false) @map("has_orange_alert")
   hasRedAlert    Boolean  @default(false) @map("has_red_alert")
   workNotes     String?   @map("work_notes")
@@ -113,6 +120,7 @@ model Quotation {
   items    QuoteItem[]
   payments Payment[]
   invoice  Invoice?
+  serviceRequests ServiceRequest[]
 
   @@index([employeeId])
   @@index([customerId])
@@ -121,6 +129,27 @@ model Quotation {
   @@index([deliveryDate])
   @@index([workStatus])
   @@map("quotations")
+}
+
+// After-sales return / maintenance visits raised against a delivered order.
+model ServiceRequest {
+  id            String    @id @default(cuid())
+  quotationId   String    @map("quotation_id")
+  type          String    @default("maintenance") // "return" | "maintenance"
+  reason        String?
+  status        String    @default("open")        // open | scheduled | resolved
+  scheduledDate DateTime? @map("scheduled_date")
+  technician    String?
+  notes         String?
+  createdBy     String    @map("created_by")
+  createdAt     DateTime  @default(now()) @map("created_at")
+  resolvedAt    DateTime? @map("resolved_at")
+
+  quotation Quotation @relation(fields: [quotationId], references: [id])
+
+  @@index([status])
+  @@index([quotationId])
+  @@map("service_requests")
 }
 
 model Invoice {

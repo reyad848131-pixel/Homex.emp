@@ -59,6 +59,12 @@ export default function DeliverySchedulePage() {
   const [reschedTime, setReschedTime] = useState("");
   const [locEditId, setLocEditId] = useState<string | null>(null);
   const [locValue, setLocValue] = useState("");
+  const [stats, setStats] = useState<Record<string, number | null> | null>(null);
+
+  const loadStats = useCallback(() => {
+    fetch("/api/delivery-stats").then((r) => (r.ok ? r.json() : null)).then(setStats).catch(() => {});
+  }, []);
+  useEffect(() => { loadStats(); }, [loadStats]);
 
   const fetchData = useCallback(() => {
     setRows(null);
@@ -113,7 +119,7 @@ export default function DeliverySchedulePage() {
       });
     } catch {
       fetchData();
-    } finally { setBusyId(null); }
+    } finally { setBusyId(null); loadStats(); }
   };
 
   const revertToQueue = (id: string) => {
@@ -232,6 +238,25 @@ export default function DeliverySchedulePage() {
           </span>
         </div>
       </div>
+
+      {/* KPI strip */}
+      {stats && (
+        <div className="no-print grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-2.5 mb-5">
+          {[
+            { label: t("kpiThisWeek"), value: stats.queueThisWeek ?? 0, tone: "text-teal-600 dark:text-teal-400" },
+            { label: t("kpiOverdue"), value: stats.queueOverdue ?? 0, tone: "text-red-600 dark:text-red-400" },
+            { label: t("kpiToCollect"), value: fmtCur(Number(stats.toCollect || 0)), tone: "text-amber-600 dark:text-amber-400", small: true },
+            { label: t("kpiOnTime"), value: stats.onTimePct === null ? "—" : `${stats.onTimePct}%`, tone: "text-emerald-600 dark:text-emerald-400" },
+            { label: t("kpiInstallQueue"), value: stats.installQueue ?? 0, tone: "text-indigo-600 dark:text-indigo-400" },
+            { label: t("kpiOpenServices"), value: stats.openServices ?? 0, tone: "text-purple-600 dark:text-purple-400" },
+          ].map((k, i) => (
+            <div key={i} className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl px-3 py-2.5">
+              <p className="text-[11px] text-gray-400 font-semibold mb-1 leading-tight">{k.label}</p>
+              <p className={cn("font-black font-mono-en", k.small ? "text-sm" : "text-xl", k.tone)}>{k.value}</p>
+            </div>
+          ))}
+        </div>
+      )}
 
       {/* Tabs + controls (hidden when printing) */}
       <div className="no-print space-y-3 mb-5">

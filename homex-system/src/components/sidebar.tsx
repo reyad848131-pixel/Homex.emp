@@ -20,6 +20,8 @@ import {
   X,
   Truck,
   CalendarClock,
+  Wrench,
+  LifeBuoy,
   AlertTriangle,
 } from "lucide-react";
 import { useState, useEffect } from "react";
@@ -46,6 +48,8 @@ const navItems: Array<{ href: string; labelKey: TranslationKey; icon: any }> = [
 const managerItems: Array<{ href: string; labelKey: TranslationKey; icon: any }> = [
   { href: "/work-orders", labelKey: "workOrders", icon: Truck },
   { href: "/delivery-schedule", labelKey: "deliverySchedule", icon: CalendarClock },
+  { href: "/installation-schedule", labelKey: "installSchedule", icon: Wrench },
+  { href: "/service-requests", labelKey: "serviceRequests", icon: LifeBuoy },
   { href: "/reports", labelKey: "reports", icon: BarChart3 },
 ];
 
