@@ -19,6 +19,7 @@ import {
   Menu,
   X,
   Truck,
+  AlertTriangle,
 } from "lucide-react";
 import { useState, useEffect } from "react";
 import { DarkModeToggle } from "@/components/dark-mode-toggle";
@@ -50,6 +51,7 @@ const adminItems: Array<{ href: string; labelKey: TranslationKey; icon: any }> =
   { href: "/employees", labelKey: "employees", icon: UsersRound },
   { href: "/categories", labelKey: "categories", icon: Layers },
   { href: "/audit-logs", labelKey: "auditLogs", icon: ScrollText },
+  { href: "/error-logs", labelKey: "errorLogs", icon: AlertTriangle },
   { href: "/settings", labelKey: "settings", icon: Settings },
 ];
 

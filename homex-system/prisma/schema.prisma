@@ -205,6 +205,20 @@ model Settings {
   @@map("settings")
 }
 
+model ErrorLog {
+  id        String   @id @default(cuid())
+  message   String
+  digest    String?
+  path      String?
+  method    String?
+  routeType String?  @map("route_type")
+  stack     String?
+  createdAt DateTime @default(now()) @map("created_at")
+
+  @@index([createdAt])
+  @@map("error_logs")
+}
+
 model Backup {
   id        String   @id @default(cuid())
   data      String
