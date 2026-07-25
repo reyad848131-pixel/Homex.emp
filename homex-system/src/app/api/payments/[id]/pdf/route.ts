@@ -3,6 +3,7 @@ import { getAuth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { getSettings } from "@/lib/settings";
 import { roundMoney } from "@/lib/utils";
+import { pdfToolbar } from "@/lib/pdf-shell";
 
 function esc(str: string | null | undefined): string {
   if (!str) return "";
@@ -105,6 +106,7 @@ export async function GET(
 </style>
 </head>
 <body>
+  ${pdfToolbar(`/quotations/${q.id}`)}
   <div class="receipt">
     <div class="top">
       ${companyLogo ? `<img src="${esc(companyLogo)}" alt="">` : ""}
@@ -151,8 +153,6 @@ export async function GET(
     <div class="foot">هذا السند بمثابة إيصال رسمي باستلام المبلغ المذكور أعلاه — ${esc(companyName)}</div>
   </div>
 
-  <div class="noprint"><button onclick="window.print()">🖨️ طباعة / حفظ PDF</button></div>
-  <script>window.addEventListener("load",function(){setTimeout(function(){window.print()},400)});</script>
 </body>
 </html>`;
 

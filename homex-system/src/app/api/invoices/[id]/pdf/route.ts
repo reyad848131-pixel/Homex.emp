@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { getAuth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { getSettings } from "@/lib/settings";
+import { pdfToolbar } from "@/lib/pdf-shell";
 
 function esc(str: string | null | undefined): string {
   if (!str) return "";
@@ -99,6 +100,7 @@ export async function GET(
   </style>
 </head>
 <body>
+  ${pdfToolbar(`/quotations/${q.id}`)}
   <div class="page">
     <div class="header">
       <div class="header-accent"></div>

@@ -7,6 +7,7 @@
 import { useState, useEffect } from "react";
 import { useI18n } from "@/lib/i18n";
 import { cn } from "@/lib/utils";
+import { curtainMinCount } from "@/lib/order-rules";
 
 export interface Category {
   id: string;
@@ -200,13 +201,19 @@ function CabinetBuilder({ config, onUpdate }: { config: any; onUpdate: (d: strin
   );
 }
 
-function CurtainBuilder({ config, onUpdate }: { config: any; onUpdate: (d: string, p: number, e: number) => void }) {
+function CurtainBuilder({ config, wilayat, onUpdate }: { config: any; wilayat: string; onUpdate: (d: string, p: number, e: number) => void }) {
   const { t } = useI18n();
+  const minCount = curtainMinCount(wilayat);
   const [type, setType] = useState("chiffon");
   const [motor, setMotor] = useState<"manual" | "electric">("manual");
-  const [count, setCount] = useState(8);
+  const [count, setCount] = useState(minCount);
   const [width, setWidth] = useState(2);
   const [height, setHeight] = useState(2);
+
+  // Keep the count at or above the wilayat minimum (e.g. if the wilayat changes).
+  useEffect(() => {
+    setCount((c) => Math.max(c, minCount));
+  }, [minCount]);
 
   const TYPES: Record<string, { label: string; price: number }> = {
     chiffon: { label: t("chiffonOnly"), price: 9 },
@@ -266,10 +273,10 @@ function CurtainBuilder({ config, onUpdate }: { config: any; onUpdate: (d: strin
 
       <div>
         <label className="block text-sm font-semibold text-gray-600 mb-1.5">{t("curtainCount")}</label>
-        <input type="number" min={1} step={1} value={count}
-          onChange={(e) => setCount(Math.max(1, parseInt(e.target.value) || 1))}
+        <input type="number" min={minCount} step={1} value={count}
+          onChange={(e) => setCount(Math.max(minCount, parseInt(e.target.value) || minCount))}
           className="w-full border border-gray-200 rounded px-3 py-2.5 text-sm font-mono-en text-center" />
-        <p className="text-xs text-gray-400 mt-1">{t("curtainMinHint")}</p>
+        <p className="text-xs text-amber-600 mt-1 font-semibold">{t("curtainMinPrefix")}: {minCount} {t("curtainsUnit")}</p>
       </div>
 
       <div>
@@ -325,14 +332,16 @@ function BedBuilder({ config, onUpdate }: { config: any; onUpdate: (d: string, p
   const [type, setType] = useState("wood");
   const [size, setSize] = useState("180x200");
   const [lighting, setLighting] = useState(false);
+  const [wantsLegs, setWantsLegs] = useState(false);
 
   useEffect(() => {
     const price = BED_PRICES[type]?.[size] || 160;
     const extras = lighting ? (config.lighting || 20) : 0;
     const typeLabel = type === "wood" ? "خشب" : "قماش";
-    const desc = `سرير ${typeLabel} - ${size} سم`;
+    // "مع أرجل" is informational only — it never changes price or extras.
+    const desc = `سرير ${typeLabel} - ${size} سم${wantsLegs ? " - مع أرجل" : ""}`;
     onUpdate(desc, price, extras);
-  }, [type, size, lighting, config, onUpdate]);
+  }, [type, size, lighting, wantsLegs, config, onUpdate]);
 
   return (
     <div className="space-y-4">
@@ -364,6 +373,10 @@ function BedBuilder({ config, onUpdate }: { config: any; onUpdate: (d: string, p
       <label className="flex items-center gap-2 text-sm font-semibold cursor-pointer">
         <input type="checkbox" checked={lighting} onChange={(e) => setLighting(e.target.checked)} className="rounded" />
         {t("lightingLabel")} (+{config.lighting || 20} {t("omr")})
+      </label>
+      <label className="flex items-center gap-2 text-sm font-semibold cursor-pointer">
+        <input type="checkbox" checked={wantsLegs} onChange={(e) => setWantsLegs(e.target.checked)} className="rounded" />
+        {t("bedLegsLabel")}
       </label>
     </div>
   );
@@ -520,16 +533,19 @@ function NightstandBuilder({ config, onUpdate }: { config: any; onUpdate: (d: st
   const [customLength, setCustomLength] = useState(50);
   const [customWidth, setCustomWidth] = useState(50);
   const [customPrice, setCustomPrice] = useState(30);
+  const [wantsLegs, setWantsLegs] = useState(false);
 
   useEffect(() => {
     const typeLabel = type === "round" ? t("roundType") : t("standardType");
+    // "مع أرجل" is informational only — it never changes the price.
+    const legs = wantsLegs ? " - مع أرجل" : "";
     if (mode === "fixed") {
       const price = config[type] || (type === "round" ? 50 : 30);
-      onUpdate(`كومودينو ${typeLabel}`, price, 0);
+      onUpdate(`كومودينو ${typeLabel}${legs}`, price, 0);
     } else {
-      onUpdate(`كومودينو ${typeLabel} - ${customLength}×${customWidth} سم`, customPrice, 0);
+      onUpdate(`كومودينو ${typeLabel} - ${customLength}×${customWidth} سم${legs}`, customPrice, 0);
     }
-  }, [type, mode, customLength, customWidth, customPrice, config, onUpdate]);
+  }, [type, mode, customLength, customWidth, customPrice, wantsLegs, config, onUpdate]);
 
   return (
     <div className="space-y-4">
@@ -579,6 +595,10 @@ function NightstandBuilder({ config, onUpdate }: { config: any; onUpdate: (d: st
           </div>
         </div>
       )}
+      <label className="flex items-center gap-2 text-sm font-semibold cursor-pointer">
+        <input type="checkbox" checked={wantsLegs} onChange={(e) => setWantsLegs(e.target.checked)} className="rounded" />
+        {t("nightstandLegsLabel")}
+      </label>
     </div>
   );
 }
@@ -778,7 +798,7 @@ export function CategoryBuilder({
     case "nightstand":
       return <NightstandBuilder config={config} onUpdate={onUpdate} />;
     case "curtains":
-      return <CurtainBuilder config={config} onUpdate={onUpdate} />;
+      return <CurtainBuilder config={config} wilayat={wilayat} onUpdate={onUpdate} />;
     case "dressing-table":
       return <DressingBuilder config={config} onUpdate={onUpdate} />;
     case "bed":
