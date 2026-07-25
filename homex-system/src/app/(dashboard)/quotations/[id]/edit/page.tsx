@@ -10,7 +10,7 @@ import { CategoryBuilder, type Category } from "@/components/quote-builders";
 import {
   ChefHat, DoorOpen, Lamp, Blinds, Sparkles, BedDouble,
   Layers, Tv, Monitor, Sofa, WashingMachine, Plus,
-  Trash2, ShoppingCart, ArrowLeft, ArrowRight, Save, Check, Eye,
+  Trash2, ShoppingCart, ArrowLeft, ArrowRight, Save, Check, Eye, Pencil,
 } from "lucide-react";
 import Link from "next/link";
 
@@ -131,6 +131,16 @@ export default function EditQuotationPage({ params }: { params: Promise<{ id: st
   };
 
   const removeItem = (itemId: string) => setItems((prev) => prev.filter((i) => i.id !== itemId));
+
+  const [editingId, setEditingId] = useState<string | null>(null);
+  const updateItem = (id: string, patch: Partial<LineItem>) => {
+    setItems((prev) => prev.map((it) => {
+      if (it.id !== id) return it;
+      const next = { ...it, ...patch };
+      next.lineTotal = Math.max(1, next.quantity) * Math.max(0, next.unitPrice) + Math.max(0, next.extras);
+      return next;
+    }));
+  };
 
   const canProceed = (s: number) => {
     if (s === 1) return customer.name && customer.phone && /^\d{8}$/.test(customer.phone) && customer.governorate && customer.wilayat;
@@ -437,23 +447,65 @@ export default function EditQuotationPage({ params }: { params: Promise<{ id: st
               ) : (
                 <div className="space-y-2 max-h-96 overflow-y-auto">
                   {items.map((item) => (
-                    <div key={item.id} className="border border-gray-100 rounded p-3 group hover:border-gray-300 transition-colors">
-                      <div className="flex items-start justify-between gap-2">
-                        <div className="flex-1 min-w-0">
-                          <p className="text-xs text-gray-400 font-semibold">{itemCatName(item)}</p>
-                          <p className="text-sm font-bold text-gray-900 dark:text-white truncate">{item.description}</p>
-                          <p className="text-xs text-gray-500 mt-1 font-mono-en">
-                            {item.quantity} x {fmtCur(item.unitPrice)}
-                            {item.extras > 0 && ` + ${fmtCur(item.extras)}`}
-                          </p>
+                    <div key={item.id} className="border border-gray-100 dark:border-gray-700 rounded p-3 hover:border-gray-300 transition-colors">
+                      {editingId === item.id ? (
+                        <div className="space-y-2">
+                          <input value={item.description}
+                            onChange={(e) => updateItem(item.id, { description: e.target.value })}
+                            className="w-full border border-gray-200 rounded px-2 py-1.5 text-sm font-bold" />
+                          <div className="grid grid-cols-3 gap-2">
+                            <div>
+                              <label className="block text-[10px] text-gray-400 mb-0.5">{t("quantity")}</label>
+                              <input type="number" min={1} value={item.quantity}
+                                onChange={(e) => updateItem(item.id, { quantity: Math.max(1, parseInt(e.target.value) || 1) })}
+                                className="w-full border border-gray-200 rounded px-2 py-1.5 text-sm font-mono-en text-center" />
+                            </div>
+                            <div>
+                              <label className="block text-[10px] text-gray-400 mb-0.5">{t("unitPriceShort")}</label>
+                              <input type="number" min={0} step="0.001" value={item.unitPrice}
+                                onChange={(e) => updateItem(item.id, { unitPrice: Math.max(0, parseFloat(e.target.value) || 0) })}
+                                className="w-full border border-gray-200 rounded px-2 py-1.5 text-sm font-mono-en text-center" />
+                            </div>
+                            <div>
+                              <label className="block text-[10px] text-gray-400 mb-0.5">{t("extrasShort")}</label>
+                              <input type="number" min={0} step="0.001" value={item.extras}
+                                onChange={(e) => updateItem(item.id, { extras: Math.max(0, parseFloat(e.target.value) || 0) })}
+                                className="w-full border border-gray-200 rounded px-2 py-1.5 text-sm font-mono-en text-center" />
+                            </div>
+                          </div>
+                          <div className="flex items-center justify-between pt-1">
+                            <span className="text-sm font-black font-mono-en">{fmtCur(item.lineTotal)}</span>
+                            <button onClick={() => setEditingId(null)}
+                              className="flex items-center gap-1 px-3 py-1.5 bg-gray-900 text-white rounded text-xs font-bold hover:bg-gray-800">
+                              <Check className="w-3.5 h-3.5" /> {t("done")}
+                            </button>
+                          </div>
                         </div>
-                        <div className="text-left flex-shrink-0">
-                          <p className="text-sm font-black font-mono-en">{fmtCur(item.lineTotal)}</p>
-                          <button onClick={() => removeItem(item.id)} className="text-red-400 hover:text-red-600 opacity-0 group-hover:opacity-100 transition-opacity mt-1">
-                            <Trash2 className="w-3.5 h-3.5" />
-                          </button>
+                      ) : (
+                        <div className="flex items-start justify-between gap-2">
+                          <div className="flex-1 min-w-0">
+                            <p className="text-xs text-gray-400 font-semibold">{itemCatName(item)}</p>
+                            <p className="text-sm font-bold text-gray-900 dark:text-white">{item.description}</p>
+                            <p className="text-xs text-gray-500 mt-1 font-mono-en">
+                              {item.quantity} x {fmtCur(item.unitPrice)}
+                              {item.extras > 0 && ` + ${fmtCur(item.extras)}`}
+                            </p>
+                          </div>
+                          <div className="flex flex-col items-end flex-shrink-0 gap-1.5">
+                            <p className="text-sm font-black font-mono-en">{fmtCur(item.lineTotal)}</p>
+                            <div className="flex items-center gap-1">
+                              <button onClick={() => setEditingId(item.id)}
+                                className="p-1.5 rounded border border-gray-200 dark:border-gray-700 text-gray-500 hover:text-gray-900 dark:hover:text-white hover:border-gray-400" aria-label={t("edit")}>
+                                <Pencil className="w-3.5 h-3.5" />
+                              </button>
+                              <button onClick={() => removeItem(item.id)}
+                                className="p-1.5 rounded border border-red-200 text-red-500 hover:text-red-700 hover:border-red-400" aria-label={t("deleteAction")}>
+                                <Trash2 className="w-3.5 h-3.5" />
+                              </button>
+                            </div>
+                          </div>
                         </div>
-                      </div>
+                      )}
                     </div>
                   ))}
                 </div>
