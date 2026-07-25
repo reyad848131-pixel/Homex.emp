@@ -3,6 +3,7 @@ import { getAuth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { VALID_WORK_STATUSES } from "@/lib/types";
 import { logAction } from "@/lib/audit";
+import { getWorkOrders } from "@/lib/work-orders-list";
 
 export async function GET(req: NextRequest) {
   try {
@@ -14,89 +15,18 @@ export async function GET(req: NextRequest) {
     if (!isAdmin) return NextResponse.json({ error: "Forbidden" }, { status: 403 });
 
     const { searchParams } = new URL(req.url);
-    const workStatus = searchParams.get("workStatus");
-    const hasOrange = searchParams.get("hasOrange");
-    const hasRed = searchParams.get("hasRed");
-    const search = searchParams.get("search");
-    const customer = searchParams.get("customer");
-    const deliveryFrom = searchParams.get("deliveryFrom");
-    const deliveryTo = searchParams.get("deliveryTo");
-    const month = searchParams.get("month");
+    const result = await getWorkOrders({
+      workStatus: searchParams.get("workStatus"),
+      hasOrange: searchParams.get("hasOrange") === "true",
+      hasRed: searchParams.get("hasRed") === "true",
+      search: searchParams.get("search"),
+      customer: searchParams.get("customer"),
+      deliveryFrom: searchParams.get("deliveryFrom"),
+      deliveryTo: searchParams.get("deliveryTo"),
+      month: searchParams.get("month"),
+    });
 
-    const where: any = {
-      deliveryDate: { not: null },
-    };
-
-    if (month) {
-      const [y, m] = month.split("-").map(Number);
-      const start = new Date(y, m - 1, 1);
-      const end = new Date(y, m, 0, 23, 59, 59, 999);
-      where.deliveryDate = { gte: start, lte: end };
-    }
-
-    if (workStatus && VALID_WORK_STATUSES.includes(workStatus)) {
-      where.workStatus = workStatus;
-    }
-
-    if (hasOrange === "true") {
-      where.hasOrangeAlert = true;
-    }
-
-    if (hasRed === "true") {
-      where.hasRedAlert = true;
-    }
-
-    if (search) {
-      where.OR = [
-        { quoteNumber: { contains: search, mode: "insensitive" } },
-        { customer: { name: { contains: search, mode: "insensitive" } } },
-      ];
-    }
-
-    if (customer) {
-      where.customer = { ...where.customer, name: { contains: customer, mode: "insensitive" } };
-    }
-
-    if (deliveryFrom || deliveryTo) {
-      where.deliveryDate = { ...where.deliveryDate };
-      if (deliveryFrom) where.deliveryDate.gte = new Date(deliveryFrom);
-      if (deliveryTo) where.deliveryDate.lte = new Date(deliveryTo + "T23:59:59.999Z");
-    }
-
-    const deliveryWhere = { deliveryDate: { not: null } } as const;
-
-    const [quotations, statusCounts, totalWithDelivery, orangeCount, redCount] = await Promise.all([
-      prisma.quotation.findMany({
-        where,
-        include: {
-          customer: { select: { name: true, phone: true, phoneCode: true, governorate: true, wilayat: true, address: true } },
-          employee: { select: { name: true } },
-          items: { include: { category: { select: { nameAr: true, nameEn: true } } }, orderBy: { sortOrder: "asc" } },
-          payments: { select: { amount: true } },
-        },
-        orderBy: [{ deliveryDate: "asc" }, { deliveryTime: "asc" }],
-      }),
-      prisma.quotation.groupBy({
-        by: ["workStatus"],
-        where: deliveryWhere,
-        _count: true,
-      }),
-      prisma.quotation.count({ where: deliveryWhere }),
-      prisma.quotation.count({ where: { ...deliveryWhere, hasOrangeAlert: true } }),
-      prisma.quotation.count({ where: { ...deliveryWhere, hasRedAlert: true } }),
-    ]);
-
-    const counts: Record<string, number> = {
-      total: totalWithDelivery,
-      orange: orangeCount,
-      red: redCount,
-    };
-    for (const sc of statusCounts) {
-      if (sc.workStatus) counts[sc.workStatus] = sc._count;
-    }
-    counts.no_status = totalWithDelivery - statusCounts.reduce((s, c) => s + (c.workStatus ? c._count : 0), 0);
-
-    return NextResponse.json({ quotations, counts });
+    return NextResponse.json(result);
   } catch {
     return NextResponse.json({ error: "Server error" }, { status: 500 });
   }
