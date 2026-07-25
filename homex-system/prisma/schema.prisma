@@ -93,6 +93,10 @@ model Quotation {
   validUntil    DateTime? @map("valid_until")
   expiryNotified Boolean  @default(false) @map("expiry_notified")
   workStatus    String?   @map("work_status")
+  // Delivery-schedule fields: assigned driver/team name and whether the
+  // delivery appointment was confirmed with the customer.
+  deliveryDriver String?  @map("delivery_driver")
+  apptConfirmed Boolean   @default(false) @map("appt_confirmed")
   hasOrangeAlert Boolean  @default(false) @map("has_orange_alert")
   hasRedAlert    Boolean  @default(false) @map("has_red_alert")
   workNotes     String?   @map("work_notes")

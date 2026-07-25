@@ -69,9 +69,10 @@ export async function GET(req: NextRequest) {
       prisma.quotation.findMany({
         where,
         include: {
-          customer: { select: { name: true, phone: true, phoneCode: true, governorate: true, wilayat: true } },
+          customer: { select: { name: true, phone: true, phoneCode: true, governorate: true, wilayat: true, address: true } },
           employee: { select: { name: true } },
           items: { include: { category: { select: { nameAr: true, nameEn: true } } }, orderBy: { sortOrder: "asc" } },
+          payments: { select: { amount: true } },
         },
         orderBy: [{ deliveryDate: "asc" }, { deliveryTime: "asc" }],
       }),
@@ -111,7 +112,8 @@ export async function PATCH(req: NextRequest) {
     if (!isAdmin) return NextResponse.json({ error: "Forbidden" }, { status: 403 });
 
     const body = await req.json();
-    const { id, workStatus, hasOrangeAlert, hasRedAlert, workNotes, woodStatus, fabricStatus } = body;
+    const { id, workStatus, hasOrangeAlert, hasRedAlert, workNotes, woodStatus, fabricStatus,
+      deliveryDriver, apptConfirmed, deliveryDate, deliveryTime } = body;
 
     if (!id) return NextResponse.json({ error: "Missing id" }, { status: 400 });
 
@@ -134,6 +136,10 @@ export async function PATCH(req: NextRequest) {
     if (hasOrangeAlert !== undefined) data.hasOrangeAlert = Boolean(hasOrangeAlert);
     if (hasRedAlert !== undefined) data.hasRedAlert = Boolean(hasRedAlert);
     if (workNotes !== undefined) data.workNotes = workNotes;
+    if (deliveryDriver !== undefined) data.deliveryDriver = deliveryDriver || null;
+    if (apptConfirmed !== undefined) data.apptConfirmed = Boolean(apptConfirmed);
+    if (deliveryDate !== undefined) data.deliveryDate = deliveryDate ? new Date(deliveryDate) : null;
+    if (deliveryTime !== undefined) data.deliveryTime = deliveryTime || null;
     if (woodStatus !== undefined && validMaterialStatuses.includes(woodStatus)) data.woodStatus = woodStatus;
     if (fabricStatus !== undefined && validMaterialStatuses.includes(fabricStatus)) data.fabricStatus = fabricStatus;
 
