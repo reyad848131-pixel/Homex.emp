@@ -10,7 +10,7 @@ import { CategoryBuilder, type Category } from "@/components/quote-builders";
 import {
   ChefHat, DoorOpen, Lamp, Blinds, Sparkles, BedDouble,
   Layers, Tv, Monitor, Sofa, WashingMachine, Plus,
-  Trash2, ShoppingCart, ArrowLeft, ArrowRight, Save, Check, Eye, Pencil, X,
+  Trash2, ShoppingCart, ArrowLeft, ArrowRight, Save, Check, Eye, Pencil, X, ShieldAlert,
 } from "lucide-react";
 import Link from "next/link";
 
@@ -63,6 +63,8 @@ export default function EditQuotationPage({ params }: { params: Promise<{ id: st
   const [builderDetails, setBuilderDetails] = useState<Record<string, any>>({});
   const [editingItemId, setEditingItemId] = useState<string | null>(null);
   const [builderInitial, setBuilderInitial] = useState<Record<string, any> | undefined>(undefined);
+  const [locked, setLocked] = useState(false);
+  const [editReason, setEditReason] = useState("");
 
   useEffect(() => {
     Promise.all([
@@ -87,6 +89,9 @@ export default function EditQuotationPage({ params }: { params: Promise<{ id: st
       setNotes(q.notes || "");
       setDeliveryDate(q.deliveryDate ? new Date(q.deliveryDate).toISOString().split("T")[0] : "");
       setDeliveryTime(q.deliveryTime || "");
+      // A financially-locked quote can only be edited by a manager (server-
+      // enforced) and requires a justification captured below.
+      setLocked(!!q.invoice || (q.payments?.length ?? 0) > 0 || q.status === "accepted");
       setItems(
         (q.items || []).map((item: any) => ({
           id: item.id,
@@ -184,6 +189,11 @@ export default function EditQuotationPage({ params }: { params: Promise<{ id: st
   };
 
   const handleSave = async () => {
+    if (locked && !editReason.trim()) {
+      setSaveError(t("editReasonRequired"));
+      setStep(4);
+      return;
+    }
     setSaving(true);
     setSaveError("");
     try {
@@ -199,6 +209,7 @@ export default function EditQuotationPage({ params }: { params: Promise<{ id: st
           vatRate,
           deliveryDate: deliveryDate || null,
           deliveryTime: deliveryTime || null,
+          ...(locked ? { editReason: editReason.trim() } : {}),
         }),
       });
       if (res.ok) {
@@ -246,6 +257,17 @@ export default function EditQuotationPage({ params }: { params: Promise<{ id: st
         </Link>
         <h1 className="text-2xl font-bold">{t("editQuotation")} <span className="font-mono-en text-gray-400">{quoteNumber}</span></h1>
       </div>
+
+      {locked && (
+        <div className="max-w-3xl mx-auto mb-5 rounded-lg bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 p-4">
+          <p className="flex items-center gap-2 text-sm font-bold text-amber-800 dark:text-amber-200 mb-2">
+            <ShieldAlert className="w-4 h-4" /> {t("managerEditWarning")}
+          </p>
+          <label className="block text-xs font-semibold text-amber-800 dark:text-amber-200 mb-1">{t("editReasonLabel")}</label>
+          <input type="text" value={editReason} onChange={(e) => setEditReason(e.target.value)}
+            className="field" placeholder={t("editReasonPlaceholder")} />
+        </div>
+      )}
 
       <div className="flex items-center gap-2 mb-8 max-w-2xl mx-auto">
         {steps.map((s, i) => (

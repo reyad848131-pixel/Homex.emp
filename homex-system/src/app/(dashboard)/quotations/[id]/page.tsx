@@ -25,6 +25,8 @@ interface QuotationDetail {
   advancePct: number;
   advanceAmount: number;
   notes: string | null;
+  managerEditNote: string | null;
+  managerEditedAt: string | null;
   validUntil: string | null;
   deliveryDate: string | null;
   createdAt: string;
@@ -92,6 +94,7 @@ export default function QuotationDetailPage({ params }: { params: Promise<{ id: 
   const [statusComment, setStatusComment] = useState("");
   const [creatingInvoice, setCreatingInvoice] = useState(false);
   const [me, setMe] = useState<{ id: string; role: string } | null>(null);
+  const [selfApprove, setSelfApprove] = useState(false);
 
   const fmtCur = (n: number) => `${n.toFixed(3)} ${t("omr")}`;
 
@@ -103,7 +106,7 @@ export default function QuotationDetailPage({ params }: { params: Promise<{ id: 
       .finally(() => setLoading(false));
     fetch("/api/settings")
       .then((r) => r.json())
-      .then((s) => setTerms(s.terms_conditions || ""))
+      .then((s) => { setTerms(s.terms_conditions || ""); setSelfApprove(s.allow_self_approve === "true"); })
       .catch(() => {});
     fetch("/api/me")
       .then((r) => r.json())
@@ -288,11 +291,16 @@ export default function QuotationDetailPage({ params }: { params: Promise<{ id: 
               <Copy className="w-4 h-4" />
               {t("duplicate")}
             </button>
-            {(q.status === "draft" || q.status === "pending" || q.status === "revised") && (
+            {(q.status === "draft" || q.status === "pending" || q.status === "revised" || me?.role !== "sales") && (
               <Link href={`/quotations/${id}/edit`}
-                className="flex items-center gap-2 px-4 py-2 border border-gray-200 rounded text-sm font-bold hover:bg-gray-50">
+                className={cn(
+                  "flex items-center gap-2 px-4 py-2 border rounded text-sm font-bold hover:bg-gray-50",
+                  (q.invoice || q.payments.length > 0 || q.status === "accepted") && me?.role !== "sales"
+                    ? "border-amber-300 text-amber-700 bg-amber-50 dark:bg-amber-900/20"
+                    : "border-gray-200"
+                )}>
                 <Pencil className="w-4 h-4" />
-                {t("edit")}
+                {(q.invoice || q.payments.length > 0 || q.status === "accepted") && me?.role !== "sales" ? t("managerEditLocked") : t("edit")}
               </Link>
             )}
             {(q.status === "draft" || q.status === "revised") && (
@@ -300,6 +308,13 @@ export default function QuotationDetailPage({ params }: { params: Promise<{ id: 
                 className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded text-sm font-bold hover:bg-blue-700">
                 <Send className="w-4 h-4" />
                 {t("sendForReview")}
+              </button>
+            )}
+            {selfApprove && me?.role === "sales" && (q.status === "draft" || q.status === "pending" || q.status === "revised") && (
+              <button onClick={() => updateStatus("approved")}
+                className="flex items-center gap-2 px-4 py-2 bg-green-600 text-white rounded text-sm font-bold hover:bg-green-700">
+                <CheckCircle className="w-4 h-4" />
+                {t("selfApproveBtn")}
               </button>
             )}
             {q.status === "pending" && me?.role !== "sales" && (
@@ -456,6 +471,16 @@ export default function QuotationDetailPage({ params }: { params: Promise<{ id: 
                 {q.status === "declined" ? t("declineReason") : q.status === "revised" ? t("revisionNote") : t("approvalNote")}
               </p>
               <p className="text-sm text-gray-700 mt-1">{q.statusComment}</p>
+            </div>
+          </div>
+        )}
+
+        {q.managerEditedAt && (
+          <div className="border rounded p-4 mt-6 flex items-start gap-3 bg-amber-50 dark:bg-amber-900/20 border-amber-200 dark:border-amber-800">
+            <AlertCircle className="w-5 h-5 mt-0.5 flex-shrink-0 text-amber-500" />
+            <div>
+              <p className="text-sm font-bold text-amber-700 dark:text-amber-300">{t("managerEditedBadge")}</p>
+              {q.managerEditNote && <p className="text-sm text-gray-700 dark:text-gray-300 mt-1">{q.managerEditNote}</p>}
             </div>
           </div>
         )}

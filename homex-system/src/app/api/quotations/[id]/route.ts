@@ -5,6 +5,8 @@ import { logAction } from "@/lib/audit";
 import { notify, notifyAdmins } from "@/lib/notifications";
 import { computeQuoteTotals } from "@/lib/quote-calc";
 import { parseBody, updateQuotationItemsSchema } from "@/lib/schemas";
+import { roundMoney } from "@/lib/utils";
+import { getSetting } from "@/lib/settings";
 
 const VALID_STATUSES = ["draft", "pending", "approved", "declined", "revised"];
 
@@ -74,21 +76,53 @@ export async function PATCH(
       return NextResponse.json({ error: "Forbidden" }, { status: 403 });
     }
 
+    const isManager = user.role === "admin" || user.role === "manager";
+    const locked = isFinanciallyLocked(quotation);
+
     // A quotation is financially frozen once it is invoiced, has payments, or
-    // the customer accepted it — its priced items can no longer be changed.
-    if (body.items && isFinanciallyLocked(quotation)) {
-      return NextResponse.json(
-        { error: "لا يمكن تعديل بنود عرض معتمد أو مفوتر أو له دفعات", code: "locked" },
-        { status: 409 }
+    // the customer accepted it. Sales can never touch a locked quote; a
+    // manager/admin may override it (e.g. the customer requested a change) but
+    // must supply a justification, and the new total can't drop below what the
+    // customer already paid.
+    if (body.items && locked) {
+      if (!isManager) {
+        return NextResponse.json(
+          { error: "لا يمكن تعديل بنود عرض معتمد أو مفوتر أو له دفعات", code: "locked" },
+          { status: 409 }
+        );
+      }
+      if (!body.editReason || !String(body.editReason).trim()) {
+        return NextResponse.json({ error: "سبب التعديل مطلوب لتعديل عرض مفوتر", code: "reason_required" }, { status: 400 });
+      }
+      const paidAgg = await prisma.payment.aggregate({ where: { quotationId: id }, _sum: { amount: true } });
+      const paid = roundMoney(paidAgg._sum.amount || 0);
+      const newTotals = computeQuoteTotals(
+        body.items,
+        body.vatRate ?? quotation.vatRate ?? 0.05,
+        body.advancePct ?? quotation.advancePct ?? 15
       );
+      if (roundMoney(newTotals.total) < paid) {
+        return NextResponse.json(
+          { error: `الإجمالي الجديد (${roundMoney(newTotals.total).toFixed(3)}) أقل من المبلغ المدفوع (${paid.toFixed(3)})`, code: "below_paid" },
+          { status: 400 }
+        );
+      }
     }
 
     if (body.status) {
       if (!VALID_STATUSES.includes(body.status)) {
         return NextResponse.json({ error: "Invalid status" }, { status: 400 });
       }
-      if (user.role === "sales" && ["approved", "declined"].includes(body.status)) {
-        return NextResponse.json({ error: "Insufficient permissions" }, { status: 403 });
+      if (user.role === "sales") {
+        if (body.status === "declined") {
+          return NextResponse.json({ error: "Insufficient permissions" }, { status: 403 });
+        }
+        if (body.status === "approved") {
+          const selfApprove = (await getSetting("allow_self_approve", "false")) === "true";
+          if (!selfApprove) {
+            return NextResponse.json({ error: "Insufficient permissions" }, { status: 403 });
+          }
+        }
       }
     }
 
@@ -131,6 +165,10 @@ export async function PATCH(
             advanceAmount: totals.advanceAmount,
             notes: body.notes,
             customerId: body.customerId,
+            ...(locked && isManager ? {
+              managerEditNote: String(body.editReason).trim(),
+              managerEditedAt: new Date(),
+            } : {}),
             ...(body.deliveryDate !== undefined ? {
               deliveryDate: body.deliveryDate ? new Date(body.deliveryDate) : null,
               deliveryTime: body.deliveryDate ? (body.deliveryTime || null) : null,
@@ -153,7 +191,21 @@ export async function PATCH(
         });
       });
 
-      await logAction(user.id, "update", "quotation", id, "full_edit");
+      if (locked && isManager) {
+        await logAction(user.id, "manager_override_edit", "quotation", id, String(body.editReason).trim());
+        // Tell the quote owner their (locked) quotation was changed by a manager.
+        if (result.employeeId !== user.id) {
+          await notify(
+            result.employeeId,
+            "تعديل على عرض مقفل",
+            `عدّل ${user.name} عرض السعر ${result.quoteNumber} بعد الفوترة/الدفع — السبب: "${String(body.editReason).trim()}"`,
+            "warning",
+            `/quotations/${id}`
+          ).catch(() => {});
+        }
+      } else {
+        await logAction(user.id, "update", "quotation", id, "full_edit");
+      }
       return NextResponse.json(result);
     }
 

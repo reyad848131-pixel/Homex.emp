@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect, useRef } from "react";
-import { Settings, Save, Building2, Download, Database, FileSpreadsheet, ScrollText, Upload, Trash2, ImageIcon } from "lucide-react";
+import { Settings, Save, Building2, Download, Database, FileSpreadsheet, ScrollText, Upload, Trash2, ImageIcon, ShieldCheck } from "lucide-react";
 import { useI18n } from "@/lib/i18n";
 
 export default function SettingsPage() {
@@ -114,6 +114,22 @@ export default function SettingsPage() {
             <p className="text-xs text-gray-400">{t("logoHint")}</p>
           </div>
         </div>
+      </div>
+
+      <div className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded p-6 mb-6">
+        <h2 className="text-base font-bold mb-4 flex items-center gap-2">
+          <ShieldCheck className="w-4 h-4 text-gray-400" />
+          {t("workflowSettings")}
+        </h2>
+        <label className="flex items-start gap-3 cursor-pointer">
+          <input type="checkbox" checked={settings.allow_self_approve === "true"}
+            onChange={(e) => update("allow_self_approve", e.target.checked ? "true" : "false")}
+            className="mt-1 w-4 h-4 rounded" />
+          <span>
+            <span className="block text-sm font-bold text-gray-800 dark:text-gray-100">{t("allowSelfApprove")}</span>
+            <span className="block text-xs text-gray-500 mt-0.5">{t("allowSelfApproveHint")}</span>
+          </span>
+        </label>
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
