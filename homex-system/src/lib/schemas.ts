@@ -41,12 +41,18 @@ export const quoteItemSchema = z.object({
   lineTotal: z.coerce.number().finite().optional(),
 });
 
+const discountFields = {
+  discountType: z.enum(["percent", "amount"]).optional(),
+  discountValue: z.coerce.number().min(0).optional(),
+};
+
 export const createQuotationSchema = z.object({
   customer: customerSchema,
   items: z.array(quoteItemSchema).min(1, "يجب إضافة بند واحد على الأقل"),
   notes: z.string().nullish(),
   advancePct: z.coerce.number().min(0).max(100).optional(),
   deliveryDate: z.string().nullish(),
+  ...discountFields,
 });
 
 export const updateQuotationItemsSchema = z.object({
@@ -57,6 +63,7 @@ export const updateQuotationItemsSchema = z.object({
   advancePct: z.coerce.number().min(0).max(100).optional(),
   notes: z.string().nullish(),
   deliveryDate: z.string().nullish(),
+  ...discountFields,
 });
 
 export const ROLES = ["admin", "manager", "sales"] as const;

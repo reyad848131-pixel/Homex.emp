@@ -63,3 +63,32 @@ describe("computeQuoteTotals", () => {
     expect(totals.vatAmount).toBe(5); // 99.999 * 0.05 = 4.99995 -> 5.000
   });
 });
+
+describe("computeQuoteTotals — discount", () => {
+  const items = [{ categoryId: "c1", quantity: 1, unitPrice: 200, extras: 0 }];
+
+  it("applies a percentage discount before VAT", () => {
+    const t = computeQuoteTotals(items, 0.05, 15, { type: "percent", value: 10 });
+    expect(t.discountAmount).toBe(20); // 10% of 200
+    expect(t.vatAmount).toBe(9); // (200-20) * 5%
+    expect(t.total).toBe(189); // 180 + 9
+  });
+
+  it("applies a fixed-amount discount", () => {
+    const t = computeQuoteTotals(items, 0.05, 15, { type: "amount", value: 50 });
+    expect(t.discountAmount).toBe(50);
+    expect(t.total).toBe(157.5); // (200-50) * 1.05
+  });
+
+  it("never lets the discount exceed the subtotal", () => {
+    const t = computeQuoteTotals(items, 0.05, 15, { type: "amount", value: 9999 });
+    expect(t.discountAmount).toBe(200);
+    expect(t.total).toBe(0);
+  });
+
+  it("defaults to no discount when omitted", () => {
+    const t = computeQuoteTotals(items, 0.05, 15);
+    expect(t.discountAmount).toBe(0);
+    expect(t.total).toBe(210);
+  });
+});

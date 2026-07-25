@@ -44,6 +44,8 @@ export default function EditQuotationPage({ params }: { params: Promise<{ id: st
   const [saveError, setSaveError] = useState("");
   const [advancePct, setAdvancePct] = useState(15);
   const [vatRate, setVatRate] = useState(0.05);
+  const [discountType, setDiscountType] = useState<"percent" | "amount">("percent");
+  const [discountValue, setDiscountValue] = useState(0);
   const [notes, setNotes] = useState("");
   const [customerId, setCustomerId] = useState("");
   const [quoteNumber, setQuoteNumber] = useState("");
@@ -80,6 +82,8 @@ export default function EditQuotationPage({ params }: { params: Promise<{ id: st
       });
       setAdvancePct(q.advancePct ?? 15);
       setVatRate(q.vatRate ?? 0.05);
+      setDiscountType(q.discountType === "amount" ? "amount" : "percent");
+      setDiscountValue(q.discountValue ?? 0);
       setNotes(q.notes || "");
       setDeliveryDate(q.deliveryDate ? new Date(q.deliveryDate).toISOString().split("T")[0] : "");
       setItems(
@@ -105,8 +109,11 @@ export default function EditQuotationPage({ params }: { params: Promise<{ id: st
 
   const wilayats = customer.governorate ? GOVERNORATES[customer.governorate] || [] : [];
   const subtotal = items.reduce((s, i) => s + i.lineTotal, 0);
-  const vat = Math.round(subtotal * vatRate * 1000) / 1000;
-  const total = Math.round((subtotal + vat) * 1000) / 1000;
+  const discountRaw = discountType === "amount" ? discountValue : subtotal * (Math.min(discountValue, 100) / 100);
+  const discount = Math.round(Math.min(Math.max(discountRaw, 0), subtotal) * 1000) / 1000;
+  const discountedSubtotal = subtotal - discount;
+  const vat = Math.round(discountedSubtotal * vatRate * 1000) / 1000;
+  const total = Math.round((discountedSubtotal + vat) * 1000) / 1000;
   const advance = Math.round(total * (advancePct / 100) * 1000) / 1000;
   const fmtCur = (n: number) => `${n.toFixed(3)} ${t("omr")}`;
 
@@ -153,6 +160,8 @@ export default function EditQuotationPage({ params }: { params: Promise<{ id: st
           notes,
           advancePct,
           vatRate,
+          discountType,
+          discountValue,
           deliveryDate: deliveryDate || null,
         }),
       });
@@ -256,6 +265,21 @@ export default function EditQuotationPage({ params }: { params: Promise<{ id: st
               <label className="block text-sm font-semibold text-gray-600 mb-1.5">{t("remainingPctLabel")}</label>
               <input type="text" value={`${100 - advancePct}%`} readOnly
                 className="w-full border border-gray-200 rounded px-3 py-2.5 text-sm bg-gray-50 text-gray-500 font-mono-en text-center" />
+            </div>
+          </div>
+
+          <div className="mb-6">
+            <label className="block text-sm font-semibold text-gray-600 mb-1.5">{t("discountLabel")}</label>
+            <div className="flex gap-2">
+              <select value={discountType} onChange={(e) => setDiscountType(e.target.value as "percent" | "amount")}
+                className="border border-gray-200 rounded px-3 py-2.5 text-sm bg-white">
+                <option value="percent">{t("discountPercentOpt")}</option>
+                <option value="amount">{t("discountAmountOpt")}</option>
+              </select>
+              <input type="number" min={0} step="0.001" value={discountValue || ""}
+                onChange={(e) => setDiscountValue(Math.max(0, parseFloat(e.target.value) || 0))}
+                placeholder="0"
+                className="flex-1 border border-gray-200 rounded px-3 py-2.5 text-sm font-mono-en text-center" />
             </div>
           </div>
 
@@ -461,6 +485,7 @@ export default function EditQuotationPage({ params }: { params: Promise<{ id: st
               {items.length > 0 && (
                 <div className="border-t border-gray-100 mt-4 pt-4 space-y-2">
                   <div className="flex justify-between text-sm"><span className="text-gray-500">{t("subtotal")}</span><span className="font-bold font-mono-en">{fmtCur(subtotal)}</span></div>
+                  {discount > 0 && (<div className="flex justify-between text-sm text-green-600"><span>{t("discountLabel")}{discountType === "percent" ? ` (${discountValue}%)` : ""}</span><span className="font-bold font-mono-en">− {fmtCur(discount)}</span></div>)}
                   <div className="flex justify-between text-sm"><span className="text-gray-500">{t("vat")} ({(vatRate * 100).toFixed(0)}%)</span><span className="font-bold font-mono-en">{fmtCur(vat)}</span></div>
                   <div className="flex justify-between text-base pt-2 border-t border-gray-200"><span className="font-bold">{t("grandTotal")}</span><span className="font-black font-mono-en text-lg">{fmtCur(total)}</span></div>
                 </div>
@@ -535,6 +560,7 @@ export default function EditQuotationPage({ params }: { params: Promise<{ id: st
 
             <div className="bg-gray-900 text-white rounded p-5 mt-5">
               <div className="flex justify-between items-center mb-3"><span className="text-gray-400 text-sm">{t("subtotal")}</span><span className="font-bold font-mono-en">{fmtCur(subtotal)}</span></div>
+              {discount > 0 && (<div className="flex justify-between items-center mb-3 text-green-400"><span className="text-sm">{t("discountLabel")}{discountType === "percent" ? ` (${discountValue}%)` : ""}</span><span className="font-bold font-mono-en">− {fmtCur(discount)}</span></div>)}
               <div className="flex justify-between items-center mb-3"><span className="text-gray-400 text-sm">{t("vat")} ({(vatRate * 100).toFixed(0)}%)</span><span className="font-bold font-mono-en">{fmtCur(vat)}</span></div>
               <div className="flex justify-between items-center pt-3 border-t border-gray-700"><span className="font-bold text-lg">{t("finalTotal")}</span><span className="text-2xl font-black font-mono-en">{fmtCur(total)}</span></div>
               <div className="flex justify-between items-center mt-2"><span className="text-gray-400 text-sm">{t("advancePayment")} ({advancePct}%)</span><span className="font-bold font-mono-en text-green-400">{fmtCur(advance)}</span></div>

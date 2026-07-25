@@ -51,6 +51,8 @@ export default function NewQuotationPage() {
   const [saving, setSaving] = useState(false);
   const [advancePct, setAdvancePct] = useState(15);
   const [vatRate, setVatRate] = useState(0.05);
+  const [discountType, setDiscountType] = useState<"percent" | "amount">("percent");
+  const [discountValue, setDiscountValue] = useState(0);
   const [notes, setNotes] = useState("");
   const [employeeName, setEmployeeName] = useState("");
   const [quoteDate, setQuoteDate] = useState(() => new Date().toISOString().split("T")[0]);
@@ -82,8 +84,11 @@ export default function NewQuotationPage() {
   const wilayats = customer.governorate ? GOVERNORATES[customer.governorate] || [] : [];
 
   const subtotal = items.reduce((s, i) => s + i.lineTotal, 0);
-  const vat = subtotal * vatRate;
-  const total = subtotal + vat;
+  const discountRaw = discountType === "amount" ? discountValue : subtotal * (Math.min(discountValue, 100) / 100);
+  const discount = Math.min(Math.max(discountRaw, 0), subtotal);
+  const discountedSubtotal = subtotal - discount;
+  const vat = discountedSubtotal * vatRate;
+  const total = discountedSubtotal + vat;
   const advance = total * (advancePct / 100);
 
   const fmtCur = (n: number) => `${n.toFixed(3)} ${t("omr")}`;
@@ -147,6 +152,8 @@ export default function NewQuotationPage() {
           notes,
           advancePct,
           vatRate,
+          discountType,
+          discountValue,
           quoteDate,
           deliveryDate,
         }),
@@ -254,6 +261,21 @@ export default function NewQuotationPage() {
               <label className="block text-sm font-semibold text-gray-600 mb-1.5">{t("remainingPctLabel")}</label>
               <input type="text" value={`${100 - advancePct}%`} readOnly
                 className="w-full border border-gray-200 rounded px-3 py-2.5 text-sm bg-gray-50 text-gray-500 font-mono-en text-center" />
+            </div>
+          </div>
+
+          <div className="mb-6">
+            <label className="block text-sm font-semibold text-gray-600 mb-1.5">{t("discountLabel")}</label>
+            <div className="flex gap-2">
+              <select value={discountType} onChange={(e) => setDiscountType(e.target.value as "percent" | "amount")}
+                className="border border-gray-200 rounded px-3 py-2.5 text-sm bg-white">
+                <option value="percent">{t("discountPercentOpt")}</option>
+                <option value="amount">{t("discountAmountOpt")}</option>
+              </select>
+              <input type="number" min={0} step="0.001" value={discountValue || ""}
+                onChange={(e) => setDiscountValue(Math.max(0, parseFloat(e.target.value) || 0))}
+                placeholder="0"
+                className="flex-1 border border-gray-200 rounded px-3 py-2.5 text-sm font-mono-en text-center" />
             </div>
           </div>
 
@@ -474,6 +496,12 @@ export default function NewQuotationPage() {
                     <span className="text-gray-500">{t("subtotal")}</span>
                     <span className="font-bold font-mono-en">{fmtCur(subtotal)}</span>
                   </div>
+                  {discount > 0 && (
+                    <div className="flex justify-between text-sm text-green-600">
+                      <span>{t("discountLabel")}{discountType === "percent" ? ` (${discountValue}%)` : ""}</span>
+                      <span className="font-bold font-mono-en">− {fmtCur(discount)}</span>
+                    </div>
+                  )}
                   <div className="flex justify-between text-sm">
                     <span className="text-gray-500">{t("vat")} ({(vatRate * 100).toFixed(0)}%)</span>
                     <span className="font-bold font-mono-en">{fmtCur(vat)}</span>
@@ -562,6 +590,12 @@ export default function NewQuotationPage() {
                 <span className="text-gray-400 text-sm">{t("subtotal")}</span>
                 <span className="font-bold font-mono-en">{fmtCur(subtotal)}</span>
               </div>
+              {discount > 0 && (
+                <div className="flex justify-between items-center mb-3 text-green-400">
+                  <span className="text-sm">{t("discountLabel")}{discountType === "percent" ? ` (${discountValue}%)` : ""}</span>
+                  <span className="font-bold font-mono-en">− {fmtCur(discount)}</span>
+                </div>
+              )}
               <div className="flex justify-between items-center mb-3">
                 <span className="text-gray-400 text-sm">{t("vat")} ({(vatRate * 100).toFixed(0)}%)</span>
                 <span className="font-bold font-mono-en">{fmtCur(vat)}</span>

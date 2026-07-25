@@ -69,7 +69,7 @@ export async function POST(req: NextRequest) {
     const parsed = parseBody(createQuotationSchema, await req.json());
     if (!parsed.ok) return NextResponse.json({ error: parsed.error, code: "invalid" }, { status: 400 });
 
-    const { customer: customerData, items, notes, advancePct, deliveryDate } = parsed.data;
+    const { customer: customerData, items, notes, advancePct, deliveryDate, discountType, discountValue } = parsed.data;
 
     let customer = await prisma.customer.findFirst({
       where: { phone: customerData.phone, createdBy: user.id },
@@ -96,7 +96,10 @@ export async function POST(req: NextRequest) {
     const finalAdvancePct = advancePct ?? defaultAdvance;
 
     // Recompute every monetary field server-side — never trust client totals.
-    const totals = computeQuoteTotals(items, vatRate, finalAdvancePct);
+    const totals = computeQuoteTotals(items, vatRate, finalAdvancePct, {
+      type: discountType,
+      value: discountValue,
+    });
 
     const quotation = await withUniqueRetry(async () => {
       const quoteNumber = await generateQuoteNumber(prisma);
@@ -107,6 +110,9 @@ export async function POST(req: NextRequest) {
         employee: { connect: { id: user.id } },
         status: "draft",
         subtotal: totals.subtotal,
+        discountType: totals.discountType,
+        discountValue: totals.discountValue,
+        discountAmount: totals.discountAmount,
         vatRate: totals.vatRate,
         vatAmount: totals.vatAmount,
         total: totals.total,
