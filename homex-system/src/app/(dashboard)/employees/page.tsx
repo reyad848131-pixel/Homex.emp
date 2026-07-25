@@ -116,22 +116,22 @@ export default function EmployeesPage() {
             <div>
               <label className="block text-sm font-semibold text-gray-600 mb-1.5">{t("nameLabel")} *</label>
               <input type="text" value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })}
-                className="w-full border border-gray-200 rounded px-3 py-2.5 text-sm" />
+                className="field" />
             </div>
             <div>
               <label className="block text-sm font-semibold text-gray-600 mb-1.5">{t("civilIdLabel")} *</label>
               <input type="text" value={form.civilId} onChange={(e) => setForm({ ...form, civilId: e.target.value })}
-                className="w-full border border-gray-200 rounded px-3 py-2.5 text-sm font-mono-en" disabled={!!editId} />
+                className="field font-mono-en disabled:opacity-60 disabled:bg-gray-50 dark:disabled:bg-gray-900/40" disabled={!!editId} />
             </div>
             <div>
               <label className="block text-sm font-semibold text-gray-600 mb-1.5">{t("phone")}</label>
               <input type="tel" value={form.phone} onChange={(e) => setForm({ ...form, phone: e.target.value })}
-                className="w-full border border-gray-200 rounded px-3 py-2.5 text-sm font-mono-en" />
+                className="field font-mono-en" />
             </div>
             <div>
               <label className="block text-sm font-semibold text-gray-600 mb-1.5">{t("role")}</label>
               <select value={form.role} onChange={(e) => setForm({ ...form, role: e.target.value })}
-                className="w-full border border-gray-200 rounded px-3 py-2.5 text-sm">
+                className="field">
                 <option value="sales">{t("roleSales")}</option>
                 <option value="manager">{t("roleManager")}</option>
                 <option value="admin">{t("roleAdmin")}</option>
@@ -142,7 +142,7 @@ export default function EmployeesPage() {
                 {editId ? t("newPasswordOptional") : `${t("password")} *`}
               </label>
               <input type="password" value={form.password} onChange={(e) => setForm({ ...form, password: e.target.value })}
-                className="w-full border border-gray-200 rounded px-3 py-2.5 text-sm" />
+                className="field" />
             </div>
           </div>
           {error && <p className="text-red-600 text-sm mt-3 font-semibold">{error}</p>}

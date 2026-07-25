@@ -113,9 +113,9 @@ export default function EditQuotationPage({ params }: { params: Promise<{ id: st
   const advance = Math.round(total * (advancePct / 100) * 1000) / 1000;
   const fmtCur = (n: number) => `${n.toFixed(3)} ${t("omr")}`;
 
-  // Shared form-control styles so every field lines up at the same height/shape.
-  const fieldBase = "w-full h-11 border border-gray-200 dark:border-gray-700 rounded-lg px-3 text-sm bg-white dark:bg-gray-800 focus:outline-none focus:ring-2 focus:ring-gray-900/10 dark:focus:ring-white/10 focus:border-gray-400 transition-colors";
-  const fieldRO = "w-full h-11 border border-gray-200 dark:border-gray-700 rounded-lg px-3 text-sm bg-gray-50 dark:bg-gray-900/40 text-gray-500";
+  // Shared form-control classes (defined once in globals.css).
+  const fieldBase = "field";
+  const fieldRO = "field-ro";
 
   const resetBuilder = useCallback(() => {
     setBuilderDesc(""); setBuilderQty(1); setBuilderPrice(0); setBuilderExtras(0);
@@ -454,7 +454,7 @@ export default function EditQuotationPage({ params }: { params: Promise<{ id: st
                     <div>
                       <label className="block text-sm font-semibold text-gray-600 mb-1.5">{t("quantity")}</label>
                       <input type="number" min={1} value={builderQty} onChange={(e) => setBuilderQty(Math.max(1, parseInt(e.target.value) || 1))}
-                        className="w-full border border-gray-200 rounded px-3 py-2.5 text-sm text-center font-mono-en" />
+                        className="field text-center font-mono-en" />
                     </div>
                     <div className="flex items-end">
                       <div className="bg-gray-100 rounded px-4 py-2.5 text-center w-full">
@@ -582,7 +582,7 @@ export default function EditQuotationPage({ params }: { params: Promise<{ id: st
               <div>
                 <label className="block text-sm font-semibold text-gray-600 mb-1.5">{t("notes")}</label>
                 <textarea value={notes} onChange={(e) => setNotes(e.target.value)}
-                  className="w-full border border-gray-200 rounded px-3 py-2.5 text-sm resize-none" rows={2} placeholder={t("notesPlaceholder")} />
+                  className="field-textarea resize-none" rows={2} placeholder={t("notesPlaceholder")} />
               </div>
               <div className="space-y-2 text-sm">
                 <div className="flex justify-between">

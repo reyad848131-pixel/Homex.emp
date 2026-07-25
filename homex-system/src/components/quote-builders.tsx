@@ -112,7 +112,7 @@ function KitchenBuilder({ config, governorate, wilayat, onUpdate, initial }: { c
           <label className="block text-sm font-semibold text-gray-600 mb-1.5">{t("pricePerMeterLabel")} (OMR)</label>
           <input type="number" step={1} min={1} value={manualBase}
             onChange={(e) => setManualBase(Math.max(1, parseInt(e.target.value) || 1))}
-            className="w-full border border-gray-200 rounded px-3 py-2.5 text-sm font-mono-en text-center" />
+            className="field font-mono-en text-center" />
           <p className="text-xs text-amber-600 mt-1">{governorate}: {t("manualPriceHint")}</p>
         </div>
       )}
@@ -183,24 +183,24 @@ function CabinetBuilder({ config, onUpdate, initial }: { config: any; onUpdate: 
         <div>
           <label className="block text-sm font-semibold text-gray-600 mb-1.5">{t("widthM")}</label>
           <input type="number" step={0.1} min={0.5} value={width} onChange={(e) => setWidth(parseFloat(e.target.value) || 0.5)}
-            className="w-full border border-gray-200 rounded px-3 py-2.5 text-sm font-mono-en text-center" />
+            className="field font-mono-en text-center" />
         </div>
         <div>
           <label className="block text-sm font-semibold text-gray-600 mb-1.5">{t("heightM")}</label>
           <input type="number" step={0.1} min={0.5} value={height} onChange={(e) => setHeight(parseFloat(e.target.value) || 0.5)}
-            className="w-full border border-gray-200 rounded px-3 py-2.5 text-sm font-mono-en text-center" />
+            className="field font-mono-en text-center" />
         </div>
       </div>
       <div className="grid grid-cols-2 gap-4">
         <div>
           <label className="block text-sm font-semibold text-gray-600 mb-1.5">{t("glassDoors")} ({config.glassDoor || 60} {t("perDoor")})</label>
           <input type="number" min={0} value={glassDoors} onChange={(e) => setGlassDoors(parseInt(e.target.value) || 0)}
-            className="w-full border border-gray-200 rounded px-3 py-2.5 text-sm font-mono-en text-center" />
+            className="field font-mono-en text-center" />
         </div>
         <div>
           <label className="block text-sm font-semibold text-gray-600 mb-1.5">{t("ledLighting")} ({config.led || 25} {t("omr")})</label>
           <input type="number" min={0} value={leds} onChange={(e) => setLeds(parseInt(e.target.value) || 0)}
-            className="w-full border border-gray-200 rounded px-3 py-2.5 text-sm font-mono-en text-center" />
+            className="field font-mono-en text-center" />
         </div>
       </div>
     </div>
@@ -281,7 +281,7 @@ function CurtainBuilder({ config, wilayat, onUpdate, initial }: { config: any; w
         <label className="block text-sm font-semibold text-gray-600 mb-1.5">{t("curtainCount")}</label>
         <input type="number" min={minCount} step={1} value={count}
           onChange={(e) => setCount(Math.max(minCount, parseInt(e.target.value) || minCount))}
-          className="w-full border border-gray-200 rounded px-3 py-2.5 text-sm font-mono-en text-center" />
+          className="field font-mono-en text-center" />
         <p className="text-xs text-amber-600 mt-1 font-semibold">{t("curtainMinPrefix")}: {minCount} {t("curtainsUnit")}</p>
       </div>
 
@@ -588,17 +588,17 @@ function NightstandBuilder({ config, onUpdate, initial }: { config: any; onUpdat
           <div>
             <label className="block text-sm font-semibold text-gray-600 mb-1.5">{t("lengthCm")}</label>
             <input type="number" min={1} value={customLength} onChange={(e) => setCustomLength(parseInt(e.target.value) || 1)}
-              className="w-full border border-gray-200 rounded px-3 py-2.5 text-sm font-mono-en text-center" />
+              className="field font-mono-en text-center" />
           </div>
           <div>
             <label className="block text-sm font-semibold text-gray-600 mb-1.5">{t("widthCm")}</label>
             <input type="number" min={1} value={customWidth} onChange={(e) => setCustomWidth(parseInt(e.target.value) || 1)}
-              className="w-full border border-gray-200 rounded px-3 py-2.5 text-sm font-mono-en text-center" />
+              className="field font-mono-en text-center" />
           </div>
           <div>
             <label className="block text-sm font-semibold text-gray-600 mb-1.5">{t("priceOMR")}</label>
             <input type="number" min={0} step={0.5} value={customPrice} onChange={(e) => setCustomPrice(parseFloat(e.target.value) || 0)}
-              className="w-full border border-gray-200 rounded px-3 py-2.5 text-sm font-mono-en text-center" />
+              className="field font-mono-en text-center" />
           </div>
         </div>
       )}
@@ -651,7 +651,7 @@ function DressingBuilder({ config, onUpdate, initial }: { config: any; onUpdate:
           <div className="mt-3">
             <label className="block text-sm font-semibold text-gray-600 mb-1.5">{t("lightingsCount")} ({config.lighting || 20} {t("omr")})</label>
             <input type="number" min={1} value={lightCount} onChange={(e) => setLightCount(Math.max(1, parseInt(e.target.value) || 1))}
-              className="w-full border border-gray-200 rounded px-3 py-2.5 text-sm font-mono-en text-center" />
+              className="field font-mono-en text-center" />
           </div>
         )}
       </div>
@@ -700,7 +700,7 @@ function LaundryBuilder({ config, onUpdate, initial }: { config: any; onUpdate: 
           <div className="mt-3">
             <label className="block text-sm font-semibold text-gray-600 mb-1.5">{t("lightingsCount")} ({config.lighting || 20} {t("omr")})</label>
             <input type="number" min={1} value={lightCount} onChange={(e) => setLightCount(Math.max(1, parseInt(e.target.value) || 1))}
-              className="w-full border border-gray-200 rounded px-3 py-2.5 text-sm font-mono-en text-center" />
+              className="field font-mono-en text-center" />
           </div>
         )}
       </div>
@@ -739,7 +739,7 @@ function GenericBuilder({ cat, onUpdate, initial }: { cat: Category; onUpdate: B
       <div>
         <label className="block text-sm font-semibold text-gray-600 mb-1.5">{t("itemDescriptionLabel")}</label>
         <input type="text" value={desc} onChange={(e) => setDesc(e.target.value)}
-          className="w-full border border-gray-200 rounded px-3 py-2.5 text-sm"
+          className="field"
           placeholder={`${cat.nameAr} - ${t("itemDescriptionLabel")}`} />
       </div>
 
@@ -747,7 +747,7 @@ function GenericBuilder({ cat, onUpdate, initial }: { cat: Category; onUpdate: B
         <div>
           <label className="block text-sm font-semibold text-gray-600 mb-1.5">{t("priceOMR")}</label>
           <input type="number" step={0.5} min={0} value={price} onChange={(e) => setPrice(parseFloat(e.target.value) || 0)}
-            className="w-full border border-gray-200 rounded px-3 py-2.5 text-sm font-mono-en text-center" />
+            className="field font-mono-en text-center" />
         </div>
       ) : (
         <div className="grid grid-cols-2 gap-4">
@@ -756,13 +756,13 @@ function GenericBuilder({ cat, onUpdate, initial }: { cat: Category; onUpdate: B
               {cat.pricingType === "per_meter" ? t("lengthM") : t("widthM")}
             </label>
             <input type="number" step={0.1} min={0.5} value={width} onChange={(e) => setWidth(parseFloat(e.target.value) || 0.5)}
-              className="w-full border border-gray-200 rounded px-3 py-2.5 text-sm font-mono-en text-center" />
+              className="field font-mono-en text-center" />
           </div>
           {cat.pricingType === "per_sqm" && (
             <div>
               <label className="block text-sm font-semibold text-gray-600 mb-1.5">{t("heightM")}</label>
               <input type="number" step={0.1} min={0.5} value={height} onChange={(e) => setHeight(parseFloat(e.target.value) || 0.5)}
-                className="w-full border border-gray-200 rounded px-3 py-2.5 text-sm font-mono-en text-center" />
+                className="field font-mono-en text-center" />
             </div>
           )}
         </div>

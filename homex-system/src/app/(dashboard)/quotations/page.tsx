@@ -92,7 +92,7 @@ export default function QuotationsPage() {
           <div className="relative flex-1">
             <Search className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
             <input type="text" value={search} onChange={(e) => setSearch(e.target.value)}
-              className="w-full border border-gray-200 rounded pr-10 pl-3 py-2.5 text-sm"
+              className="field pr-10 pl-3"
               placeholder={t("searchQuotations")} />
           </div>
           <div className="flex gap-1.5 flex-wrap">
@@ -111,10 +111,10 @@ export default function QuotationsPage() {
           <Calendar className="w-4 h-4 text-gray-400 shrink-0" />
           <div className="flex items-center gap-2 flex-1">
             <input type="date" value={dateFrom} onChange={(e) => setDateFrom(e.target.value)}
-              className="border border-gray-200 rounded px-3 py-1.5 text-sm font-mono-en flex-1" />
+              className="field font-mono-en flex-1 min-w-0" />
             <span className="text-xs text-gray-400">{t("to")}</span>
             <input type="date" value={dateTo} onChange={(e) => setDateTo(e.target.value)}
-              className="border border-gray-200 rounded px-3 py-1.5 text-sm font-mono-en flex-1" />
+              className="field font-mono-en flex-1 min-w-0" />
           </div>
           {(dateFrom || dateTo) && (
             <button onClick={() => { setDateFrom(""); setDateTo(""); }}

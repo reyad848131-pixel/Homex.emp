@@ -126,37 +126,37 @@ export default function SettingsPage() {
             <div>
               <label className="block text-sm font-semibold text-gray-600 mb-1.5">{t("companyName")}</label>
               <input type="text" value={settings.company_name || ""} onChange={(e) => update("company_name", e.target.value)}
-                className="w-full border border-gray-200 rounded px-3 py-2.5 text-sm" placeholder="Homex" />
+                className="field" placeholder="Homex" />
             </div>
             <div>
               <label className="block text-sm font-semibold text-gray-600 mb-1.5">{t("companySubtitle")}</label>
               <input type="text" value={settings.company_subtitle || ""} onChange={(e) => update("company_subtitle", e.target.value)}
-                className="w-full border border-gray-200 rounded px-3 py-2.5 text-sm" />
+                className="field" />
             </div>
             <div>
               <label className="block text-sm font-semibold text-gray-600 mb-1.5">{t("companyFactory")}</label>
               <input type="text" value={settings.company_factory || ""} onChange={(e) => update("company_factory", e.target.value)}
-                className="w-full border border-gray-200 rounded px-3 py-2.5 text-sm" />
+                className="field" />
             </div>
             <div>
               <label className="block text-sm font-semibold text-gray-600 mb-1.5">{t("companyPhone")}</label>
               <input type="tel" value={settings.company_phone || ""} onChange={(e) => update("company_phone", e.target.value)}
-                className="w-full border border-gray-200 rounded px-3 py-2.5 text-sm font-mono-en" placeholder="+968 XXXXXXXX" />
+                className="field font-mono-en" placeholder="+968 XXXXXXXX" />
             </div>
             <div>
               <label className="block text-sm font-semibold text-gray-600 mb-1.5">{t("companyAddress")}</label>
               <input type="text" value={settings.company_address || ""} onChange={(e) => update("company_address", e.target.value)}
-                className="w-full border border-gray-200 rounded px-3 py-2.5 text-sm" />
+                className="field" />
             </div>
             <div>
               <label className="block text-sm font-semibold text-gray-600 mb-1.5">{t("commercialReg")}</label>
               <input type="text" value={settings.company_cr || ""} onChange={(e) => update("company_cr", e.target.value)}
-                className="w-full border border-gray-200 rounded px-3 py-2.5 text-sm font-mono-en" />
+                className="field font-mono-en" />
             </div>
             <div>
               <label className="block text-sm font-semibold text-gray-600 mb-1.5">{t("companyWebsite")}</label>
               <input type="url" value={settings.company_website || ""} onChange={(e) => update("company_website", e.target.value)}
-                className="w-full border border-gray-200 rounded px-3 py-2.5 text-sm font-mono-en" dir="ltr" />
+                className="field font-mono-en" dir="ltr" />
             </div>
           </div>
         </div>
@@ -168,24 +168,24 @@ export default function SettingsPage() {
               <label className="block text-sm font-semibold text-gray-600 mb-1.5">{t("vatRate")}</label>
               <input type="number" step={0.1} min={0} max={100} value={settings.vat_rate || "5"}
                 onChange={(e) => update("vat_rate", e.target.value)}
-                className="w-full border border-gray-200 rounded px-3 py-2.5 text-sm font-mono-en" />
+                className="field font-mono-en" />
             </div>
             <div>
               <label className="block text-sm font-semibold text-gray-600 mb-1.5">{t("advancePercent")}</label>
               <input type="number" step={1} min={0} max={100} value={settings.advance_pct || "15"}
                 onChange={(e) => update("advance_pct", e.target.value)}
-                className="w-full border border-gray-200 rounded px-3 py-2.5 text-sm font-mono-en" />
+                className="field font-mono-en" />
             </div>
             <div>
               <label className="block text-sm font-semibold text-gray-600 mb-1.5">{t("quoteValidity")}</label>
               <input type="number" min={1} value={settings.quote_validity_days || "30"}
                 onChange={(e) => update("quote_validity_days", e.target.value)}
-                className="w-full border border-gray-200 rounded px-3 py-2.5 text-sm font-mono-en" />
+                className="field font-mono-en" />
             </div>
             <div>
               <label className="block text-sm font-semibold text-gray-600 mb-1.5">{t("currencyLabel")}</label>
               <input type="text" value={settings.currency || "ر.ع"} onChange={(e) => update("currency", e.target.value)}
-                className="w-full border border-gray-200 rounded px-3 py-2.5 text-sm" />
+                className="field" />
             </div>
           </div>
         </div>
@@ -201,7 +201,7 @@ export default function SettingsPage() {
           value={settings.terms_conditions || ""}
           onChange={(e) => update("terms_conditions", e.target.value)}
           rows={8}
-          className="w-full border border-gray-200 rounded px-3 py-2.5 text-sm leading-relaxed"
+          className="field-textarea leading-relaxed"
         />
       </div>
 

@@ -143,13 +143,13 @@ export default function ProfilePage() {
                   type="tel"
                   value={phone}
                   onChange={(e) => { setPhone(e.target.value); setPhoneSaved(false); }}
-                  className="flex-1 border border-gray-200 rounded px-3 py-2.5 text-sm font-mono-en"
+                  className="field flex-1 min-w-0 font-mono-en"
                   placeholder="+968 XXXXXXXX"
                 />
                 <button
                   onClick={handleSavePhone}
                   disabled={savingPhone}
-                  className="flex items-center gap-1.5 bg-gray-900 text-white px-4 py-2.5 rounded text-sm font-bold hover:bg-gray-800 disabled:opacity-50 transition-colors"
+                  className="flex items-center gap-1.5 bg-gray-900 text-white px-4 h-11 rounded-lg text-sm font-bold hover:bg-gray-800 disabled:opacity-50 transition-colors shrink-0"
                 >
                   {phoneSaved ? <Check className="w-4 h-4" /> : <Save className="w-4 h-4" />}
                   {savingPhone ? "..." : phoneSaved ? t("done") : t("save")}
@@ -171,7 +171,7 @@ export default function ProfilePage() {
                 type="password"
                 value={currentPassword}
                 onChange={(e) => setCurrentPassword(e.target.value)}
-                className="w-full border border-gray-200 rounded px-3 py-2.5 text-sm"
+                className="field"
                 autoComplete="current-password"
               />
             </div>
@@ -181,7 +181,7 @@ export default function ProfilePage() {
                 type="password"
                 value={newPassword}
                 onChange={(e) => setNewPassword(e.target.value)}
-                className="w-full border border-gray-200 rounded px-3 py-2.5 text-sm"
+                className="field"
                 autoComplete="new-password"
               />
             </div>
@@ -191,7 +191,7 @@ export default function ProfilePage() {
                 type="password"
                 value={confirmPassword}
                 onChange={(e) => setConfirmPassword(e.target.value)}
-                className="w-full border border-gray-200 rounded px-3 py-2.5 text-sm"
+                className="field"
                 autoComplete="new-password"
               />
             </div>

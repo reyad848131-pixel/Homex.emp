@@ -64,8 +64,8 @@ export function EditCustomerModal({ customer, onClose }: Props) {
 
   return (
     <div className="fixed inset-0 bg-black/40 z-50 flex items-center justify-center p-4" onClick={onClose}>
-      <div className="bg-white rounded-lg w-full max-w-lg" onClick={(e) => e.stopPropagation()}>
-        <div className="flex items-center justify-between p-5 border-b border-gray-100">
+      <div className="bg-white dark:bg-gray-800 rounded-lg w-full max-w-lg" onClick={(e) => e.stopPropagation()}>
+        <div className="flex items-center justify-between p-5 border-b border-gray-100 dark:border-gray-700">
           <h2 className="text-lg font-bold">{t("editCustomerInfo")}</h2>
           <button onClick={onClose} className="text-gray-400 hover:text-gray-600">
             <X className="w-5 h-5" />
@@ -76,14 +76,14 @@ export function EditCustomerModal({ customer, onClose }: Props) {
           <div>
             <label className="block text-sm font-semibold text-gray-600 mb-1.5">{t("nameLabel")} *</label>
             <input type="text" value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })}
-              className="w-full border border-gray-200 rounded px-3 py-2.5 text-sm" />
+              className="field" />
           </div>
 
           <div>
             <label className="block text-sm font-semibold text-gray-600 mb-1.5">{t("phoneNumber")} *</label>
             <div className="flex gap-2">
               <select value={form.phoneCode} onChange={(e) => setForm({ ...form, phoneCode: e.target.value })}
-                className="border border-gray-200 rounded px-2 py-2.5 text-sm w-24 font-mono-en">
+                className="field w-24 shrink-0 px-2 font-mono-en">
                 <option value="+968">+968</option>
                 <option value="+971">+971</option>
                 <option value="+966">+966</option>
@@ -91,7 +91,7 @@ export function EditCustomerModal({ customer, onClose }: Props) {
               <input type="tel" value={form.phone}
                 onChange={(e) => setForm({ ...form, phone: e.target.value.replace(/\D/g, "").slice(0, 8) })}
                 pattern="[0-9]{8}" maxLength={8}
-                className="flex-1 border border-gray-200 rounded px-3 py-2.5 text-sm font-mono-en" placeholder="9XXXXXXX" />
+                className="field flex-1 min-w-0 font-mono-en" placeholder="9XXXXXXX" />
             </div>
           </div>
 
@@ -100,7 +100,7 @@ export function EditCustomerModal({ customer, onClose }: Props) {
               <label className="block text-sm font-semibold text-gray-600 mb-1.5">{t("governorate")}</label>
               <select value={form.governorate}
                 onChange={(e) => setForm({ ...form, governorate: e.target.value, wilayat: "" })}
-                className="w-full border border-gray-200 rounded px-3 py-2.5 text-sm">
+                className="field">
                 <option value="">{t("choose")}</option>
                 {Object.keys(GOVERNORATES).map((g) => <option key={g} value={g}>{g}</option>)}
               </select>
@@ -108,7 +108,7 @@ export function EditCustomerModal({ customer, onClose }: Props) {
             <div>
               <label className="block text-sm font-semibold text-gray-600 mb-1.5">{t("wilayat")}</label>
               <select value={form.wilayat} onChange={(e) => setForm({ ...form, wilayat: e.target.value })}
-                className="w-full border border-gray-200 rounded px-3 py-2.5 text-sm" disabled={!form.governorate}>
+                className="field disabled:opacity-60 disabled:bg-gray-50 dark:disabled:bg-gray-900/40" disabled={!form.governorate}>
                 <option value="">{t("choose")}</option>
                 {wilayats.map((w) => <option key={w} value={w}>{w}</option>)}
               </select>
@@ -118,13 +118,13 @@ export function EditCustomerModal({ customer, onClose }: Props) {
           <div>
             <label className="block text-sm font-semibold text-gray-600 mb-1.5">{t("addressLabel")}</label>
             <input type="text" value={form.address} onChange={(e) => setForm({ ...form, address: e.target.value })}
-              className="w-full border border-gray-200 rounded px-3 py-2.5 text-sm" placeholder={t("optional")} />
+              className="field" placeholder={t("optional")} />
           </div>
 
           {error && <p className="text-red-600 text-sm font-medium">{error}</p>}
         </div>
 
-        <div className="flex gap-3 p-5 border-t border-gray-100">
+        <div className="flex gap-3 p-5 border-t border-gray-100 dark:border-gray-700">
           <button onClick={handleSave} disabled={saving}
             className="flex-1 flex items-center justify-center gap-2 bg-gray-900 text-white px-4 py-2.5 rounded text-sm font-bold hover:bg-gray-800 disabled:opacity-50 transition-colors">
             <Save className="w-4 h-4" />

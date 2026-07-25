@@ -59,7 +59,7 @@ export default function AuditLogsPage() {
           <p className="text-sm text-gray-500 mt-1">{data.total} {t("logCount")}</p>
         </div>
         <select value={entity} onChange={(e) => { setEntity(e.target.value); setPage(1); }}
-          className="border border-gray-200 rounded px-3 py-2 text-sm">
+          className="field w-auto">
           <option value="">{t("allTypes")}</option>
           <option value="quotation">{t("quotationsType")}</option>
           <option value="employee">{t("employeesType")}</option>

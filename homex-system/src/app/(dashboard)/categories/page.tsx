@@ -146,28 +146,28 @@ export default function CategoriesPage() {
               <label className="block text-sm font-semibold text-gray-600 mb-1.5">{t("nameAr")}</label>
               <input
                 type="text" value={form.nameAr} onChange={(e) => setForm({ ...form, nameAr: e.target.value })}
-                className="w-full border border-gray-200 rounded px-3 py-2.5 text-sm"
+                className="field"
               />
             </div>
             <div>
               <label className="block text-sm font-semibold text-gray-600 mb-1.5">{t("nameEn")}</label>
               <input
                 type="text" value={form.nameEn} onChange={(e) => setForm({ ...form, nameEn: e.target.value })}
-                className="w-full border border-gray-200 rounded px-3 py-2.5 text-sm font-mono-en"
+                className="field font-mono-en"
               />
             </div>
             <div>
               <label className="block text-sm font-semibold text-gray-600 mb-1.5">{t("iconEmoji")}</label>
               <input
                 type="text" value={form.icon} onChange={(e) => setForm({ ...form, icon: e.target.value })}
-                className="w-full border border-gray-200 rounded px-3 py-2.5 text-sm text-center text-xl"
+                className="field text-center text-xl"
               />
             </div>
             <div>
               <label className="block text-sm font-semibold text-gray-600 mb-1.5">{t("pricingType")}</label>
               <select
                 value={form.pricingType} onChange={(e) => setForm({ ...form, pricingType: e.target.value })}
-                className="w-full border border-gray-200 rounded px-3 py-2.5 text-sm bg-white"
+                className="field"
               >
                 {PRICING_VALUES.map((v) => (
                   <option key={v} value={v}>{t(PRICING_TYPE_KEYS[v])}</option>
@@ -179,7 +179,7 @@ export default function CategoriesPage() {
               <input
                 type="number" step="0.001" min="0" value={form.basePrice}
                 onChange={(e) => setForm({ ...form, basePrice: e.target.value })}
-                className="w-full border border-gray-200 rounded px-3 py-2.5 text-sm font-mono-en" placeholder="0.000"
+                className="field font-mono-en" placeholder="0.000"
               />
             </div>
             <div>
@@ -187,7 +187,7 @@ export default function CategoriesPage() {
               <input
                 type="number" min="0" value={form.sortOrder}
                 onChange={(e) => setForm({ ...form, sortOrder: e.target.value })}
-                className="w-full border border-gray-200 rounded px-3 py-2.5 text-sm font-mono-en" placeholder="0"
+                className="field font-mono-en" placeholder="0"
               />
             </div>
             <div className="sm:col-span-2 lg:col-span-3 flex gap-3">

@@ -528,13 +528,13 @@ export default function QuotationDetailPage({ params }: { params: Promise<{ id: 
                         <label className="block text-xs font-semibold text-gray-500 mb-1">{t("amount")} *</label>
                         <input type="number" step="0.001" min="0.001" max={remaining}
                           value={payAmount} onChange={(e) => setPayAmount(e.target.value)}
-                          className="w-full border border-gray-200 rounded px-3 py-2 text-sm font-mono-en"
+                          className="field font-mono-en"
                           placeholder={`${t("maxAmount")} ${remaining.toFixed(3)}`} />
                       </div>
                       <div>
                         <label className="block text-xs font-semibold text-gray-500 mb-1">{t("paymentMethod")}</label>
                         <select value={payMethod} onChange={(e) => setPayMethod(e.target.value)}
-                          className="w-full border border-gray-200 rounded px-3 py-2 text-sm">
+                          className="field">
                           {Object.entries(PAYMENT_METHOD_KEYS).map(([k, lk]) => <option key={k} value={k}>{t(lk)}</option>)}
                         </select>
                       </div>
@@ -542,12 +542,12 @@ export default function QuotationDetailPage({ params }: { params: Promise<{ id: 
                     <div>
                       <label className="block text-xs font-semibold text-gray-500 mb-1">{t("reference")}</label>
                       <input type="text" value={payRef} onChange={(e) => setPayRef(e.target.value)}
-                        className="w-full border border-gray-200 rounded px-3 py-2 text-sm font-mono-en" placeholder={t("optional")} />
+                        className="field font-mono-en" placeholder={t("optional")} />
                     </div>
                     <div>
                       <label className="block text-xs font-semibold text-gray-500 mb-1">{t("notes")}</label>
                       <input type="text" value={payNotes} onChange={(e) => setPayNotes(e.target.value)}
-                        className="w-full border border-gray-200 rounded px-3 py-2 text-sm" placeholder={t("optional")} />
+                        className="field" placeholder={t("optional")} />
                     </div>
                     <button onClick={handleAddPayment} disabled={paying || !payAmount || Number(payAmount) <= 0}
                       className="w-full flex items-center justify-center gap-2 bg-green-600 text-white px-4 py-2.5 rounded text-sm font-bold hover:bg-green-700 disabled:opacity-50 transition-colors">
@@ -692,7 +692,7 @@ export default function QuotationDetailPage({ params }: { params: Promise<{ id: 
               value={statusComment}
               onChange={(e) => setStatusComment(e.target.value)}
               rows={3}
-              className="w-full border border-gray-200 rounded px-3 py-2.5 text-sm mb-4"
+              className="field-textarea mb-4"
               placeholder={showStatusDialog === "revised" ? "" : ""}
               autoFocus
             />

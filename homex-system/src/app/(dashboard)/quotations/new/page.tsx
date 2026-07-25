@@ -94,11 +94,10 @@ export default function NewQuotationPage() {
 
   const fmtCur = (n: number) => `${n.toFixed(3)} ${t("omr")}`;
 
-  // Shared form-control styles so every input/select/date/number field lines up
-  // at the same height and shape (iPad renders date/number inputs shorter
-  // otherwise). Editable vs read-only vs numeric-centered variants.
-  const fieldBase = "w-full h-11 border border-gray-200 dark:border-gray-700 rounded-lg px-3 text-sm bg-white dark:bg-gray-800 focus:outline-none focus:ring-2 focus:ring-gray-900/10 dark:focus:ring-white/10 focus:border-gray-400 transition-colors";
-  const fieldRO = "w-full h-11 border border-gray-200 dark:border-gray-700 rounded-lg px-3 text-sm bg-gray-50 dark:bg-gray-900/40 text-gray-500";
+  // Shared form-control classes (defined once in globals.css) so every field
+  // across the app lines up at the same height and shape.
+  const fieldBase = "field";
+  const fieldRO = "field-ro";
 
   const resetBuilder = useCallback(() => {
     setBuilderDesc("");
@@ -530,7 +529,7 @@ export default function NewQuotationPage() {
                     <div>
                       <label className="block text-sm font-semibold text-gray-600 mb-1.5">{t("quantity")}</label>
                       <input type="number" min={1} value={builderQty} onChange={(e) => setBuilderQty(Math.max(1, parseInt(e.target.value) || 1))}
-                        className="w-full border border-gray-200 rounded px-3 py-2.5 text-sm text-center font-mono-en" />
+                        className="field text-center font-mono-en" />
                     </div>
                     <div className="flex items-end">
                       <div className="bg-gray-100 rounded px-4 py-2.5 text-center w-full">
@@ -678,7 +677,7 @@ export default function NewQuotationPage() {
               <div>
                 <label className="block text-sm font-semibold text-gray-600 mb-1.5">{t("notes")}</label>
                 <textarea value={notes} onChange={(e) => setNotes(e.target.value)}
-                  className="w-full border border-gray-200 rounded px-3 py-2.5 text-sm resize-none" rows={2}
+                  className="field-textarea resize-none" rows={2}
                   placeholder={t("notesPlaceholder")} />
               </div>
               <div className="space-y-2 text-sm">

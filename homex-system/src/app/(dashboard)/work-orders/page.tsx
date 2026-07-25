@@ -341,7 +341,7 @@ export default function WorkOrdersPage() {
               placeholder={t("searchPlaceholder")}
               value={search}
               onChange={(e) => setSearch(e.target.value)}
-              className="w-full border border-gray-200 dark:border-gray-600 dark:bg-gray-700 rounded px-4 py-2 pr-10 text-sm"
+              className="field pr-10 pl-4"
             />
           </div>
           <div className="flex items-center gap-2">
@@ -350,7 +350,7 @@ export default function WorkOrdersPage() {
               type="date"
               value={deliveryFrom}
               onChange={(e) => setDeliveryFrom(e.target.value)}
-              className="flex-1 border border-gray-200 dark:border-gray-600 dark:bg-gray-700 rounded px-3 py-2 text-sm font-mono-en"
+              className="field flex-1 min-w-0 font-mono-en"
             />
           </div>
           <div className="flex items-center gap-2">
@@ -359,7 +359,7 @@ export default function WorkOrdersPage() {
               type="date"
               value={deliveryTo}
               onChange={(e) => setDeliveryTo(e.target.value)}
-              className="flex-1 border border-gray-200 dark:border-gray-600 dark:bg-gray-700 rounded px-3 py-2 text-sm font-mono-en"
+              className="field flex-1 min-w-0 font-mono-en"
             />
           </div>
         </div>
@@ -594,7 +594,7 @@ export default function WorkOrdersPage() {
                           <textarea
                             value={notesText}
                             onChange={(e) => setNotesText(e.target.value)}
-                            className="w-full border border-gray-200 dark:border-gray-600 dark:bg-gray-700 rounded px-3 py-2 text-sm min-h-[80px]"
+                            className="field-textarea min-h-[80px]"
                             placeholder={t("addWorkNotes")}
                             autoFocus
                           />

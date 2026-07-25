@@ -24,6 +24,41 @@ input:focus, select:focus, textarea:focus {
   border-color: #a3a3a3;
 }
 
+/* ---- Shared form-control theme -------------------------------------------
+   One source of truth for every standard-sized input/select/date/number and
+   textarea across the app, so all fields share the same height, radius,
+   border and dark-mode colours and line up evenly. Small/inline inputs (e.g.
+   the sliders' number boxes in the price builders) intentionally keep their
+   own sizing and don't use these classes. */
+@layer components {
+  .field,
+  .field-ro,
+  .field-textarea {
+    width: 100%;
+    border: 1px solid #e5e7eb;            /* gray-200 */
+    border-radius: 0.5rem;                /* rounded-lg */
+    font-size: 0.875rem;                  /* text-sm */
+    padding-inline: 0.75rem;              /* px-3 */
+    transition: border-color .15s ease, background-color .15s ease, box-shadow .15s ease;
+  }
+  .field,
+  .field-ro { height: 2.75rem; }          /* h-11 — uniform single-line height */
+  .field { background: #ffffff; }
+  .field-ro { background: #f9fafb; color: #6b7280; } /* gray-50 / gray-500 */
+  .field-textarea {
+    padding-block: 0.625rem;              /* py-2.5 */
+    background: #ffffff;
+    resize: vertical;
+  }
+
+  .dark .field,
+  .dark .field-ro,
+  .dark .field-textarea { border-color: #374151; }  /* gray-700 */
+  .dark .field,
+  .dark .field-textarea { background: #1f2937; }     /* gray-800 */
+  .dark .field-ro { background: rgba(17, 24, 39, 0.4); color: #9ca3af; }
+}
+
 ::-webkit-scrollbar {
   width: 8px;
   height: 8px;
