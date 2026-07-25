@@ -441,6 +441,7 @@ const translations = {
   saveEditsFailed: { ar: "فشل حفظ التعديلات. حاول مرة أخرى.", en: "Failed to save changes. Try again." },
   serverConnectionError: { ar: "خطأ في الاتصال بالسيرفر. تأكد من اتصال الإنترنت.", en: "Server connection error. Check your internet." },
   savedSuccess: { ar: "تم الحفظ بنجاح", en: "Saved successfully" },
+  receiptLabel: { ar: "سند القبض", en: "Receipt" },
   deletedSuccess: { ar: "تم الحذف بنجاح", en: "Deleted successfully" },
   deleteFailed: { ar: "تعذّر الحذف", en: "Delete failed" },
   statusUpdatedSuccess: { ar: "تم تحديث الحالة", en: "Status updated" },

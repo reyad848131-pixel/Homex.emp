@@ -567,6 +567,7 @@ export default function QuotationDetailPage({ params }: { params: Promise<{ id: 
                           <th className="text-right py-2 text-xs text-gray-400">{t("reference")}</th>
                           <th className="text-right py-2 text-xs text-gray-400">{t("by")}</th>
                           <th className="text-right py-2 text-xs text-gray-400">{t("date")}</th>
+                          <th className="text-right py-2 text-xs text-gray-400"></th>
                         </tr>
                       </thead>
                       <tbody>
@@ -577,6 +578,13 @@ export default function QuotationDetailPage({ params }: { params: Promise<{ id: 
                             <td className="py-2 font-mono-en text-gray-400 text-xs">{p.reference || "—"}</td>
                             <td className="py-2 text-gray-500 text-xs">{p.recorder.name}</td>
                             <td className="py-2 font-mono-en text-gray-400 text-xs">{new Date(p.paidAt).toLocaleDateString(dateLocale)}</td>
+                            <td className="py-2">
+                              <a href={`/api/payments/${p.id}/pdf`} target="_blank" rel="noopener noreferrer"
+                                className="inline-flex items-center gap-1 text-xs font-bold text-gray-500 hover:text-gray-900" title={t("receiptLabel")}>
+                                <Receipt className="w-3.5 h-3.5" />
+                                {t("receiptLabel")}
+                              </a>
+                            </td>
                           </tr>
                         ))}
                       </tbody>
