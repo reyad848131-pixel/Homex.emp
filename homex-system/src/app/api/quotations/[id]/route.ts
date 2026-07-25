@@ -133,6 +133,7 @@ export async function PATCH(
             customerId: body.customerId,
             ...(body.deliveryDate !== undefined ? {
               deliveryDate: body.deliveryDate ? new Date(body.deliveryDate) : null,
+              deliveryTime: body.deliveryDate ? (body.deliveryTime || null) : null,
               ...(body.deliveryDate && !quotation.workStatus ? { workStatus: "needs_preparation" } : {}),
             } : {}),
             items: {

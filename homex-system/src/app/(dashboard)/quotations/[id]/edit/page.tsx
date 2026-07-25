@@ -50,6 +50,7 @@ export default function EditQuotationPage({ params }: { params: Promise<{ id: st
   const [employeeName, setEmployeeName] = useState("");
   const [createdAt, setCreatedAt] = useState("");
   const [deliveryDate, setDeliveryDate] = useState("");
+  const [deliveryTime, setDeliveryTime] = useState("");
 
   const [customer, setCustomer] = useState<CustomerData>({
     name: "", phone: "", phoneCode: "+968", governorate: "", wilayat: "", address: "",
@@ -85,6 +86,7 @@ export default function EditQuotationPage({ params }: { params: Promise<{ id: st
       setVatRate(q.vatRate ?? 0.05);
       setNotes(q.notes || "");
       setDeliveryDate(q.deliveryDate ? new Date(q.deliveryDate).toISOString().split("T")[0] : "");
+      setDeliveryTime(q.deliveryTime || "");
       setItems(
         (q.items || []).map((item: any) => ({
           id: item.id,
@@ -196,6 +198,7 @@ export default function EditQuotationPage({ params }: { params: Promise<{ id: st
           advancePct,
           vatRate,
           deliveryDate: deliveryDate || null,
+          deliveryTime: deliveryTime || null,
         }),
       });
       if (res.ok) {
@@ -284,8 +287,13 @@ export default function EditQuotationPage({ params }: { params: Promise<{ id: st
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
             <div>
               <label className="block text-sm font-semibold text-gray-600 mb-1.5">{t("deliveryDateLabel")}</label>
-              <input type="date" value={deliveryDate} onChange={(e) => setDeliveryDate(e.target.value)}
-                className={cn(fieldBase, "font-mono-en")} />
+              <div className="flex gap-2">
+                <input type="date" value={deliveryDate} onChange={(e) => setDeliveryDate(e.target.value)}
+                  className={cn(fieldBase, "flex-1 min-w-0 font-mono-en")} />
+                <input type="time" value={deliveryTime} onChange={(e) => setDeliveryTime(e.target.value)}
+                  aria-label={t("deliveryTimeLabel")} title={t("deliveryTimeLabel")}
+                  className={cn(fieldBase, "w-28 shrink-0 font-mono-en")} />
+              </div>
             </div>
             <div>
               <label className="block text-sm font-semibold text-gray-600 mb-1.5">{t("advancePctLabel")}</label>

@@ -73,7 +73,7 @@ export async function GET(req: NextRequest) {
           employee: { select: { name: true } },
           items: { include: { category: { select: { nameAr: true, nameEn: true } } }, orderBy: { sortOrder: "asc" } },
         },
-        orderBy: { deliveryDate: "asc" },
+        orderBy: [{ deliveryDate: "asc" }, { deliveryTime: "asc" }],
       }),
       prisma.quotation.groupBy({
         by: ["workStatus"],

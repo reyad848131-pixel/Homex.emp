@@ -55,6 +55,7 @@ export default function NewQuotationPage() {
   const [employeeName, setEmployeeName] = useState("");
   const [quoteDate, setQuoteDate] = useState(() => new Date().toISOString().split("T")[0]);
   const [deliveryDate, setDeliveryDate] = useState("");
+  const [deliveryTime, setDeliveryTime] = useState("");
 
   const [customer, setCustomer] = useState<CustomerData>({
     name: "", phone: "", phoneCode: "+968",
@@ -135,6 +136,7 @@ export default function NewQuotationPage() {
           if (typeof d.vatRate === "number") setVatRate(d.vatRate);
           if (d.quoteDate) setQuoteDate(d.quoteDate);
           if (d.deliveryDate) setDeliveryDate(d.deliveryDate);
+          if (d.deliveryTime) setDeliveryTime(d.deliveryTime);
           draftAppliedRef.current = true;
           setDraftRestored(true);
         }
@@ -146,9 +148,9 @@ export default function NewQuotationPage() {
   useEffect(() => {
     if (!hydrated) return;
     try {
-      localStorage.setItem(DRAFT_KEY, JSON.stringify({ customer, items, notes, advancePct, vatRate, quoteDate, deliveryDate }));
+      localStorage.setItem(DRAFT_KEY, JSON.stringify({ customer, items, notes, advancePct, vatRate, quoteDate, deliveryDate, deliveryTime }));
     } catch {}
-  }, [hydrated, customer, items, notes, advancePct, vatRate, quoteDate, deliveryDate]);
+  }, [hydrated, customer, items, notes, advancePct, vatRate, quoteDate, deliveryDate, deliveryTime]);
 
   // Warn before closing/refreshing the tab with unsaved items.
   useEffect(() => {
@@ -252,6 +254,7 @@ export default function NewQuotationPage() {
           vatRate,
           quoteDate,
           deliveryDate,
+          deliveryTime,
         }),
       });
       if (res.ok) {
@@ -356,8 +359,13 @@ export default function NewQuotationPage() {
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
             <div>
               <label className="block text-sm font-semibold text-gray-600 mb-1.5">{t("deliveryDateLabel")}</label>
-              <input type="date" value={deliveryDate} onChange={(e) => setDeliveryDate(e.target.value)}
-                className={cn(fieldBase, "font-mono-en")} />
+              <div className="flex gap-2">
+                <input type="date" value={deliveryDate} onChange={(e) => setDeliveryDate(e.target.value)}
+                  className={cn(fieldBase, "flex-1 min-w-0 font-mono-en")} />
+                <input type="time" value={deliveryTime} onChange={(e) => setDeliveryTime(e.target.value)}
+                  aria-label={t("deliveryTimeLabel")} title={t("deliveryTimeLabel")}
+                  className={cn(fieldBase, "w-28 shrink-0 font-mono-en")} />
+              </div>
             </div>
             <div>
               <label className="block text-sm font-semibold text-gray-600 mb-1.5">{t("advancePctLabel")}</label>

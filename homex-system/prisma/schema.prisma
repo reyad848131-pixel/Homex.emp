@@ -87,6 +87,9 @@ model Quotation {
   advanceAmount Float     @default(0) @map("advance_amount")
   notes         String?
   deliveryDate  DateTime? @map("delivery_date")
+  // Optional time-of-day for the delivery (stored as "HH:MM"); pairs with
+  // deliveryDate to schedule the delivery precisely.
+  deliveryTime  String?   @map("delivery_time")
   validUntil    DateTime? @map("valid_until")
   expiryNotified Boolean  @default(false) @map("expiry_notified")
   workStatus    String?   @map("work_status")

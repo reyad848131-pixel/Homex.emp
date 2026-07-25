@@ -70,7 +70,7 @@ export async function POST(req: NextRequest) {
     const parsed = parseBody(createQuotationSchema, await req.json());
     if (!parsed.ok) return NextResponse.json({ error: parsed.error, code: "invalid" }, { status: 400 });
 
-    const { customer: customerData, items, notes, advancePct, deliveryDate } = parsed.data;
+    const { customer: customerData, items, notes, advancePct, deliveryDate, deliveryTime } = parsed.data;
 
     // Enforce the curtain minimum for the customer's wilayat (5 for Bahla/
     // Nizwa/Al Hamra, 8 otherwise). Curtain items carry their count in the
@@ -133,6 +133,7 @@ export async function POST(req: NextRequest) {
         advanceAmount: totals.advanceAmount,
         notes,
         deliveryDate: deliveryDate ? new Date(deliveryDate) : null,
+        deliveryTime: deliveryDate ? (deliveryTime || null) : null,
         workStatus: deliveryDate ? "needs_preparation" : null,
         validUntil: new Date(Date.now() + validityDays * 24 * 60 * 60 * 1000),
         items: {

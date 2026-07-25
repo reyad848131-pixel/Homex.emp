@@ -48,6 +48,7 @@ export const WORK_STATUS_MAP: Record<string, { label: string; cardColor: string;
   ready_to_execute: { label: "جاهز للتنفيذ", cardColor: "border-pink-300 text-pink-600 bg-pink-50", badgeColor: "bg-pink-100 text-pink-700 dark:bg-pink-900/30 dark:text-pink-300" },
   in_progress: { label: "جاري العمل", cardColor: "border-gray-300 text-gray-600 bg-gray-50", badgeColor: "bg-gray-100 text-gray-700 dark:bg-gray-700 dark:text-gray-300" },
   completed: { label: "جاهز", cardColor: "border-green-300 text-green-600 bg-green-50", badgeColor: "bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-300" },
+  ready_for_delivery: { label: "جاهز للتوصيل", cardColor: "border-teal-300 text-teal-600 bg-teal-50", badgeColor: "bg-teal-100 text-teal-700 dark:bg-teal-900/30 dark:text-teal-300" },
   delivered: { label: "تم التوصيل", cardColor: "border-yellow-300 text-yellow-600 bg-yellow-50", badgeColor: "bg-yellow-100 text-yellow-700 dark:bg-yellow-900/30 dark:text-yellow-300" },
 };
 

@@ -47,6 +47,7 @@ export const createQuotationSchema = z.object({
   notes: z.string().nullish(),
   advancePct: z.coerce.number().min(0).max(100).optional(),
   deliveryDate: z.string().nullish(),
+  deliveryTime: z.string().nullish(),
 });
 
 export const updateQuotationItemsSchema = z.object({
@@ -57,6 +58,7 @@ export const updateQuotationItemsSchema = z.object({
   advancePct: z.coerce.number().min(0).max(100).optional(),
   notes: z.string().nullish(),
   deliveryDate: z.string().nullish(),
+  deliveryTime: z.string().nullish(),
 });
 
 export const ROLES = ["admin", "manager", "sales"] as const;
