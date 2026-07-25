@@ -3,9 +3,10 @@
 import { useState, useEffect, useCallback, useMemo } from "react";
 import Link from "next/link";
 import { cn } from "@/lib/utils";
-import { useI18n, type TranslationKey } from "@/lib/i18n";
+import { useI18n } from "@/lib/i18n";
 import { useDebouncedValue } from "@/lib/hooks";
 import { CardsSkeleton } from "@/components/skeleton";
+import { daysUntil, URGENCY_GROUPS, daysRemainingLabel } from "@/lib/schedule-utils";
 import {
   Wrench, Phone, MessageCircle, Check, FileText, Search,
   MapPin, Clock, Package, CalendarDays, User, Printer, RotateCcw,
@@ -23,20 +24,7 @@ interface InstallQuotation {
   items: Array<{ description: string; quantity: number }>;
 }
 
-function daysFrom(dateStr: string | null): number | null {
-  if (!dateStr) return null;
-  const now = new Date(); now.setHours(0, 0, 0, 0);
-  const d = new Date(dateStr); d.setHours(0, 0, 0, 0);
-  return Math.ceil((d.getTime() - now.getTime()) / (1000 * 60 * 60 * 24));
-}
-
-const GROUPS: Array<{ key: string; labelKey: TranslationKey; test: (d: number) => boolean; tone: string }> = [
-  { key: "overdue", labelKey: "grpOverdue", test: (d) => d < 0, tone: "bg-red-100 text-red-700 border-red-200 dark:bg-red-900/30 dark:text-red-300 dark:border-red-800" },
-  { key: "thisWeek", labelKey: "grpThisWeek", test: (d) => d >= 0 && d <= 7, tone: "bg-orange-100 text-orange-700 border-orange-200 dark:bg-orange-900/30 dark:text-orange-300 dark:border-orange-800" },
-  { key: "nextWeek", labelKey: "grpNextWeek", test: (d) => d >= 8 && d <= 14, tone: "bg-amber-100 text-amber-700 border-amber-200 dark:bg-amber-900/30 dark:text-amber-300 dark:border-amber-800" },
-  { key: "thisMonth", labelKey: "grpThisMonth", test: (d) => d >= 15 && d <= 31, tone: "bg-blue-100 text-blue-700 border-blue-200 dark:bg-blue-900/30 dark:text-blue-300 dark:border-blue-800" },
-  { key: "later", labelKey: "grpLater", test: (d) => d > 31, tone: "bg-gray-100 text-gray-600 border-gray-200 dark:bg-gray-700 dark:text-gray-300 dark:border-gray-600" },
-];
+const daysFrom = daysUntil;
 
 export default function InstallationSchedulePage() {
   const { t, dateLocale } = useI18n();
@@ -98,7 +86,7 @@ export default function InstallationSchedulePage() {
   };
 
   const fmtDate = (d: string) => new Date(d).toLocaleDateString(dateLocale, { weekday: "short", year: "numeric", month: "short", day: "numeric" });
-  const daysLabel = (d: number) => (d < 0 ? `${t("lateBy")} ${Math.abs(d)} ${t("day")}` : d === 0 ? t("today") : `${d} ${t("day")}`);
+  const daysLabel = (d: number) => daysRemainingLabel(d, t);
 
   const waLink = (q: InstallQuotation) => {
     const num = `${q.customer.phoneCode}${q.customer.phone}`.replace(/[^0-9]/g, "");
@@ -128,7 +116,7 @@ export default function InstallationSchedulePage() {
   const sections = useMemo(() => {
     const unscheduled = sorted.filter((q) => !q.installDate);
     const scheduled = sorted.filter((q) => q.installDate);
-    const secs = GROUPS.map((g) => ({
+    const secs = URGENCY_GROUPS.map((g) => ({
       key: g.key, label: t(g.labelKey), tone: g.tone,
       items: scheduled.filter((q) => g.test(daysFrom(q.installDate) as number)),
     })).filter((s) => s.items.length > 0);

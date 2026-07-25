@@ -3,9 +3,10 @@
 import { useState, useEffect, useCallback, useMemo } from "react";
 import Link from "next/link";
 import { cn, roundMoney } from "@/lib/utils";
-import { useI18n, type TranslationKey } from "@/lib/i18n";
+import { useI18n } from "@/lib/i18n";
 import { useDebouncedValue } from "@/lib/hooks";
 import { CardsSkeleton } from "@/components/skeleton";
+import { daysUntil, URGENCY_GROUPS, NEUTRAL_TONE, daysRemainingLabel } from "@/lib/schedule-utils";
 import {
   CalendarClock, Phone, MessageCircle, Check, FileText, Search,
   MapPin, Clock, Package, Truck, Printer, Wallet, User, CalendarDays,
@@ -28,21 +29,7 @@ interface DeliveryQuotation {
   payments: Array<{ amount: number }>;
 }
 
-function getDaysRemaining(deliveryDate: string): number {
-  const now = new Date();
-  now.setHours(0, 0, 0, 0);
-  const delivery = new Date(deliveryDate);
-  delivery.setHours(0, 0, 0, 0);
-  return Math.ceil((delivery.getTime() - now.getTime()) / (1000 * 60 * 60 * 24));
-}
-
-const GROUPS: Array<{ key: string; labelKey: TranslationKey; test: (d: number) => boolean; tone: string }> = [
-  { key: "overdue", labelKey: "grpOverdue", test: (d) => d < 0, tone: "bg-red-100 text-red-700 border-red-200 dark:bg-red-900/30 dark:text-red-300 dark:border-red-800" },
-  { key: "thisWeek", labelKey: "grpThisWeek", test: (d) => d >= 0 && d <= 7, tone: "bg-orange-100 text-orange-700 border-orange-200 dark:bg-orange-900/30 dark:text-orange-300 dark:border-orange-800" },
-  { key: "nextWeek", labelKey: "grpNextWeek", test: (d) => d >= 8 && d <= 14, tone: "bg-amber-100 text-amber-700 border-amber-200 dark:bg-amber-900/30 dark:text-amber-300 dark:border-amber-800" },
-  { key: "thisMonth", labelKey: "grpThisMonth", test: (d) => d >= 15 && d <= 31, tone: "bg-blue-100 text-blue-700 border-blue-200 dark:bg-blue-900/30 dark:text-blue-300 dark:border-blue-800" },
-  { key: "later", labelKey: "grpLater", test: (d) => d > 31, tone: "bg-gray-100 text-gray-600 border-gray-200 dark:bg-gray-700 dark:text-gray-300 dark:border-gray-600" },
-];
+const getDaysRemaining = (d: string) => daysUntil(d) as number;
 
 export default function DeliverySchedulePage() {
   const { t, dateLocale } = useI18n();
@@ -150,11 +137,7 @@ export default function DeliverySchedulePage() {
   const fmtDate = (d: string) => new Date(d).toLocaleDateString(dateLocale, { weekday: "short", year: "numeric", month: "short", day: "numeric" });
   const fmtCur = (n: number) => `${roundMoney(n).toFixed(3)} ${t("omr")}`;
 
-  const daysLabel = (d: number) => {
-    if (d < 0) return `${t("lateBy")} ${Math.abs(d)} ${t("day")}`;
-    if (d === 0) return t("today");
-    return `${d} ${t("day")}`;
-  };
+  const daysLabel = (d: number) => daysRemainingLabel(d, t);
 
   const waLink = (q: DeliveryQuotation) => {
     const num = `${q.customer.phoneCode}${q.customer.phone}`.replace(/[^0-9]/g, "");
@@ -199,9 +182,9 @@ export default function DeliverySchedulePage() {
       }
       return Object.entries(byArea)
         .sort((a, b) => a[0].localeCompare(b[0], "ar"))
-        .map(([label, items]) => ({ key: label, label, tone: "bg-gray-100 text-gray-600 border-gray-200 dark:bg-gray-700 dark:text-gray-300 dark:border-gray-600", items }));
+        .map(([label, items]) => ({ key: label, label, tone: NEUTRAL_TONE, items }));
     }
-    return GROUPS.map((g) => ({
+    return URGENCY_GROUPS.map((g) => ({
       key: g.key,
       label: t(g.labelKey),
       tone: g.tone,
