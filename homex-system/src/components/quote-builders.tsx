@@ -19,6 +19,12 @@ export interface Category {
   config: any;
 }
 
+// The 4th argument (details) carries the builder's own control state so an
+// already-added line item can be re-opened in its builder with every field
+// pre-filled (edit-in-builder). Passing it is optional for backward-compat.
+type BuilderUpdate = (d: string, p: number, e: number, details?: Record<string, any>) => void;
+type BuilderInitial = Record<string, any> | undefined;
+
 const KITCHEN_BASE_PRICES: Record<string, number | Record<string, number> | null> = {
   "مسقط": 130,
   "ظفار": null,
@@ -40,12 +46,12 @@ export function getKitchenBasePrice(governorate: string, wilayat: string): numbe
   return entry[wilayat] ?? entry._default ?? null;
 }
 
-function KitchenBuilder({ config, governorate, wilayat, onUpdate }: { config: any; governorate: string; wilayat: string; onUpdate: (d: string, p: number, e: number) => void }) {
+function KitchenBuilder({ config, governorate, wilayat, onUpdate, initial }: { config: any; governorate: string; wilayat: string; onUpdate: BuilderUpdate; initial?: BuilderInitial }) {
   const { t } = useI18n();
-  const [length, setLength] = useState(4);
-  const [unitType, setUnitType] = useState<"2unit" | "3unit">("2unit");
-  const [island, setIsland] = useState<"none" | "small" | "large">("none");
-  const [manualBase, setManualBase] = useState(130);
+  const [length, setLength] = useState(initial?.length ?? 4);
+  const [unitType, setUnitType] = useState<"2unit" | "3unit">(initial?.unitType ?? "2unit");
+  const [island, setIsland] = useState<"none" | "small" | "large">(initial?.island ?? "none");
+  const [manualBase, setManualBase] = useState(initial?.manualBase ?? 130);
 
   const PORCELAIN_PRICE = config?.porcelainSurcharge || 55;
   const unitMultiplier = unitType === "3unit" ? 3 : 2;
@@ -62,7 +68,7 @@ function KitchenBuilder({ config, governorate, wilayat, onUpdate }: { config: an
     const extras = island !== "none" ? ISLAND_PRICES[island] : 0;
     const unitLabel = unitType === "3unit" ? t("unit3Label") : t("unit2Label");
     const desc = `مطبخ MDF - ${unitLabel} - ${length}م`;
-    onUpdate(desc, price, extras);
+    onUpdate(desc, price, extras, { length, unitType, island, manualBase });
   }, [length, unitType, island, basePrice, config, onUpdate]);
 
   return (
@@ -143,20 +149,20 @@ function KitchenBuilder({ config, governorate, wilayat, onUpdate }: { config: an
   );
 }
 
-function CabinetBuilder({ config, onUpdate }: { config: any; onUpdate: (d: string, p: number, e: number) => void }) {
+function CabinetBuilder({ config, onUpdate, initial }: { config: any; onUpdate: BuilderUpdate; initial?: BuilderInitial }) {
   const { t } = useI18n();
-  const [width, setWidth] = useState(1.5);
-  const [height, setHeight] = useState(2.4);
-  const [shape, setShape] = useState("single");
-  const [glassDoors, setGlassDoors] = useState(0);
-  const [leds, setLeds] = useState(0);
+  const [width, setWidth] = useState(initial?.width ?? 1.5);
+  const [height, setHeight] = useState(initial?.height ?? 2.4);
+  const [shape, setShape] = useState(initial?.shape ?? "single");
+  const [glassDoors, setGlassDoors] = useState(initial?.glassDoors ?? 0);
+  const [leds, setLeds] = useState(initial?.leds ?? 0);
 
   useEffect(() => {
     const area = width * height;
     const price = area * (config.basePrice || 54);
     const extras = glassDoors * (config.glassDoor || 60) + leds * (config.led || 25);
     const desc = `خزانة ${shape === "L" ? "L" : shape === "U" ? "U" : "عادية"} - ${width}×${height}م`;
-    onUpdate(desc, price, extras);
+    onUpdate(desc, price, extras, { width, height, shape, glassDoors, leds });
   }, [width, height, shape, glassDoors, leds, config, onUpdate]);
 
   return (
@@ -201,14 +207,14 @@ function CabinetBuilder({ config, onUpdate }: { config: any; onUpdate: (d: strin
   );
 }
 
-function CurtainBuilder({ config, wilayat, onUpdate }: { config: any; wilayat: string; onUpdate: (d: string, p: number, e: number) => void }) {
+function CurtainBuilder({ config, wilayat, onUpdate, initial }: { config: any; wilayat: string; onUpdate: BuilderUpdate; initial?: BuilderInitial }) {
   const { t } = useI18n();
   const minCount = curtainMinCount(wilayat);
-  const [type, setType] = useState("chiffon");
-  const [motor, setMotor] = useState<"manual" | "electric">("manual");
-  const [count, setCount] = useState(minCount);
-  const [width, setWidth] = useState(2);
-  const [height, setHeight] = useState(2);
+  const [type, setType] = useState(initial?.type ?? "chiffon");
+  const [motor, setMotor] = useState<"manual" | "electric">(initial?.motor ?? "manual");
+  const [count, setCount] = useState<number>(initial?.count ?? minCount);
+  const [width, setWidth] = useState(initial?.width ?? 2);
+  const [height, setHeight] = useState(initial?.height ?? 2);
 
   // Keep the count at or above the wilayat minimum (e.g. if the wilayat changes).
   useEffect(() => {
@@ -233,7 +239,7 @@ function CurtainBuilder({ config, wilayat, onUpdate }: { config: any; wilayat: s
     const pricePerSqm = TYPES[type]?.price || 9;
     const price = area * pricePerSqm;
     const desc = `ستائر ${TYPES[type]?.label} (${count} ستارة) - ${width}×${height}م = ${area} م²`;
-    onUpdate(desc, price, motorSurcharge);
+    onUpdate(desc, price, motorSurcharge, { type, motor, count, width, height });
   }, [type, motor, count, width, height, config, onUpdate]);
 
   return (
@@ -327,12 +333,12 @@ const BED_PRICES: Record<string, Record<string, number>> = {
 };
 const BED_SIZES = ["90x190", "100x200", "120x200", "180x200", "200x200", "220x220"];
 
-function BedBuilder({ config, onUpdate }: { config: any; onUpdate: (d: string, p: number, e: number) => void }) {
+function BedBuilder({ config, onUpdate, initial }: { config: any; onUpdate: BuilderUpdate; initial?: BuilderInitial }) {
   const { t } = useI18n();
-  const [type, setType] = useState("wood");
-  const [size, setSize] = useState("180x200");
-  const [lighting, setLighting] = useState(false);
-  const [wantsLegs, setWantsLegs] = useState(false);
+  const [type, setType] = useState(initial?.type ?? "wood");
+  const [size, setSize] = useState(initial?.size ?? "180x200");
+  const [lighting, setLighting] = useState(initial?.lighting ?? false);
+  const [wantsLegs, setWantsLegs] = useState(initial?.wantsLegs ?? false);
 
   useEffect(() => {
     const price = BED_PRICES[type]?.[size] || 160;
@@ -340,7 +346,7 @@ function BedBuilder({ config, onUpdate }: { config: any; onUpdate: (d: string, p
     const typeLabel = type === "wood" ? "خشب" : "قماش";
     // "مع أرجل" is informational only — it never changes price or extras.
     const desc = `سرير ${typeLabel} - ${size} سم${wantsLegs ? " - مع أرجل" : ""}`;
-    onUpdate(desc, price, extras);
+    onUpdate(desc, price, extras, { type, size, lighting, wantsLegs });
   }, [type, size, lighting, wantsLegs, config, onUpdate]);
 
   return (
@@ -382,13 +388,13 @@ function BedBuilder({ config, onUpdate }: { config: any; onUpdate: (d: string, p
   );
 }
 
-function CladdingBuilder({ config, onUpdate }: { config: any; onUpdate: (d: string, p: number, e: number) => void }) {
+function CladdingBuilder({ config, onUpdate, initial }: { config: any; onUpdate: BuilderUpdate; initial?: BuilderInitial }) {
   const { t } = useI18n();
-  const [type, setType] = useState("type1");
-  const [width, setWidth] = useState(3);
-  const [height, setHeight] = useState(2.4);
-  const [lighting, setLighting] = useState(false);
-  const [lightCount, setLightCount] = useState(1);
+  const [type, setType] = useState(initial?.type ?? "type1");
+  const [width, setWidth] = useState(initial?.width ?? 3);
+  const [height, setHeight] = useState(initial?.height ?? 2.4);
+  const [lighting, setLighting] = useState(initial?.lighting ?? false);
+  const [lightCount, setLightCount] = useState(initial?.lightCount ?? 1);
 
   const TYPES: Record<string, { label: string; price: number }> = {
     type1: { label: "Milamin", price: config?.types?.type1 || 45 },
@@ -403,7 +409,7 @@ function CladdingBuilder({ config, onUpdate }: { config: any; onUpdate: (d: stri
     const pricePerSqm = TYPES[type]?.price || 45;
     const price = area * pricePerSqm;
     const desc = `كلادينج ${TYPES[type]?.label} - ${width}×${height}م = ${area} م²`;
-    onUpdate(desc, price, lightSurcharge);
+    onUpdate(desc, price, lightSurcharge, { type, width, height, lighting, lightCount });
   }, [type, width, height, lighting, lightCount, config, onUpdate]);
 
   return (
@@ -488,15 +494,15 @@ function CladdingBuilder({ config, onUpdate }: { config: any; onUpdate: (d: stri
   );
 }
 
-function SofaBuilder({ config, onUpdate }: { config: any; onUpdate: (d: string, p: number, e: number) => void }) {
+function SofaBuilder({ config, onUpdate, initial }: { config: any; onUpdate: BuilderUpdate; initial?: BuilderInitial }) {
   const { t } = useI18n();
-  const [type, setType] = useState("standard");
-  const [price, setPrice] = useState(config.standard?.min || 80);
+  const [type, setType] = useState(initial?.type ?? "standard");
+  const [price, setPrice] = useState(initial?.price ?? (config.standard?.min || 80));
 
   useEffect(() => {
     const typeLabel = type === "wooden" ? t("woodenType") : t("standardType");
     const desc = `طقم جلوس ${typeLabel}`;
-    onUpdate(desc, price, 0);
+    onUpdate(desc, price, 0, { type, price });
   }, [type, price, onUpdate]);
 
   const range = config[type] || { min: 80, max: 95 };
@@ -526,24 +532,25 @@ function SofaBuilder({ config, onUpdate }: { config: any; onUpdate: (d: string, 
   );
 }
 
-function NightstandBuilder({ config, onUpdate }: { config: any; onUpdate: (d: string, p: number, e: number) => void }) {
+function NightstandBuilder({ config, onUpdate, initial }: { config: any; onUpdate: BuilderUpdate; initial?: BuilderInitial }) {
   const { t } = useI18n();
-  const [type, setType] = useState("standard");
-  const [mode, setMode] = useState<"fixed" | "custom">("fixed");
-  const [customLength, setCustomLength] = useState(50);
-  const [customWidth, setCustomWidth] = useState(50);
-  const [customPrice, setCustomPrice] = useState(30);
-  const [wantsLegs, setWantsLegs] = useState(false);
+  const [type, setType] = useState(initial?.type ?? "standard");
+  const [mode, setMode] = useState<"fixed" | "custom">(initial?.mode ?? "fixed");
+  const [customLength, setCustomLength] = useState(initial?.customLength ?? 50);
+  const [customWidth, setCustomWidth] = useState(initial?.customWidth ?? 50);
+  const [customPrice, setCustomPrice] = useState(initial?.customPrice ?? 30);
+  const [wantsLegs, setWantsLegs] = useState(initial?.wantsLegs ?? false);
 
   useEffect(() => {
     const typeLabel = type === "round" ? t("roundType") : t("standardType");
     // "مع أرجل" is informational only — it never changes the price.
     const legs = wantsLegs ? " - مع أرجل" : "";
+    const details = { type, mode, customLength, customWidth, customPrice, wantsLegs };
     if (mode === "fixed") {
       const price = config[type] || (type === "round" ? 50 : 30);
-      onUpdate(`كومودينو ${typeLabel}${legs}`, price, 0);
+      onUpdate(`كومودينو ${typeLabel}${legs}`, price, 0, details);
     } else {
-      onUpdate(`كومودينو ${typeLabel} - ${customLength}×${customWidth} سم${legs}`, customPrice, 0);
+      onUpdate(`كومودينو ${typeLabel} - ${customLength}×${customWidth} سم${legs}`, customPrice, 0, details);
     }
   }, [type, mode, customLength, customWidth, customPrice, wantsLegs, config, onUpdate]);
 
@@ -603,17 +610,17 @@ function NightstandBuilder({ config, onUpdate }: { config: any; onUpdate: (d: st
   );
 }
 
-function DressingBuilder({ config, onUpdate }: { config: any; onUpdate: (d: string, p: number, e: number) => void }) {
+function DressingBuilder({ config, onUpdate, initial }: { config: any; onUpdate: BuilderUpdate; initial?: BuilderInitial }) {
   const { t } = useI18n();
-  const [length, setLength] = useState(2);
-  const [lighting, setLighting] = useState(false);
-  const [lightCount, setLightCount] = useState(1);
+  const [length, setLength] = useState(initial?.length ?? 2);
+  const [lighting, setLighting] = useState(initial?.lighting ?? false);
+  const [lightCount, setLightCount] = useState(initial?.lightCount ?? 1);
 
   useEffect(() => {
     const pricePerMeter = config.pricePerMeter || 120;
     const price = length * pricePerMeter;
     const extras = lighting ? lightCount * (config.lighting || 20) : 0;
-    onUpdate(`تسريحة - ${length} م.ط`, price, extras);
+    onUpdate(`تسريحة - ${length} م.ط`, price, extras, { length, lighting, lightCount });
   }, [length, lighting, lightCount, config, onUpdate]);
 
   return (
@@ -652,17 +659,17 @@ function DressingBuilder({ config, onUpdate }: { config: any; onUpdate: (d: stri
   );
 }
 
-function LaundryBuilder({ config, onUpdate }: { config: any; onUpdate: (d: string, p: number, e: number) => void }) {
+function LaundryBuilder({ config, onUpdate, initial }: { config: any; onUpdate: BuilderUpdate; initial?: BuilderInitial }) {
   const { t } = useI18n();
-  const [area, setArea] = useState(4);
-  const [lighting, setLighting] = useState(false);
-  const [lightCount, setLightCount] = useState(1);
+  const [area, setArea] = useState(initial?.area ?? 4);
+  const [lighting, setLighting] = useState(initial?.lighting ?? false);
+  const [lightCount, setLightCount] = useState(initial?.lightCount ?? 1);
 
   useEffect(() => {
     const pricePerSqm = config.pricePerSqm || 60;
     const price = area * pricePerSqm;
     const extras = lighting ? lightCount * (config.lighting || 20) : 0;
-    onUpdate(`غرفة غسيل - ${area} م²`, price, extras);
+    onUpdate(`غرفة غسيل - ${area} م²`, price, extras, { area, lighting, lightCount });
   }, [area, lighting, lightCount, config, onUpdate]);
 
   return (
@@ -701,13 +708,13 @@ function LaundryBuilder({ config, onUpdate }: { config: any; onUpdate: (d: strin
   );
 }
 
-function GenericBuilder({ cat, onUpdate }: { cat: Category; onUpdate: (d: string, p: number, e: number) => void }) {
+function GenericBuilder({ cat, onUpdate, initial }: { cat: Category; onUpdate: BuilderUpdate; initial?: BuilderInitial }) {
   const { t } = useI18n();
-  const [desc, setDesc] = useState("");
-  const [price, setPrice] = useState(cat.basePrice || 0);
-  const [width, setWidth] = useState(1);
-  const [height, setHeight] = useState(1);
-  const [lighting, setLighting] = useState(false);
+  const [desc, setDesc] = useState(initial?.desc ?? "");
+  const [price, setPrice] = useState(initial?.price ?? (cat.basePrice || 0));
+  const [width, setWidth] = useState(initial?.width ?? 1);
+  const [height, setHeight] = useState(initial?.height ?? 1);
+  const [lighting, setLighting] = useState(initial?.lighting ?? false);
 
   useEffect(() => {
     const config = cat.config || {};
@@ -724,7 +731,7 @@ function GenericBuilder({ cat, onUpdate }: { cat: Category; onUpdate: (d: string
     if (lighting && config.lighting) extras = config.lighting;
 
     const finalDesc = desc || `${cat.nameAr} - ${cat.pricingType === "manual" ? t("customItemLabel") : `${width}${cat.pricingType === "per_sqm" ? `×${height}م` : "م"}`}`;
-    onUpdate(finalDesc, calculatedPrice, extras);
+    onUpdate(finalDesc, calculatedPrice, extras, { desc, price, width, height, lighting });
   }, [desc, price, width, height, lighting, cat, onUpdate]);
 
   return (
@@ -778,11 +785,13 @@ export function CategoryBuilder({
   governorate,
   wilayat,
   onUpdate,
+  initial,
 }: {
   cat: Category;
   governorate: string;
   wilayat: string;
-  onUpdate: (d: string, p: number, e: number) => void;
+  onUpdate: BuilderUpdate;
+  initial?: BuilderInitial;
 }) {
   const config = cat.config
     ? typeof cat.config === "string"
@@ -792,24 +801,24 @@ export function CategoryBuilder({
 
   switch (cat.id) {
     case "kitchens":
-      return <KitchenBuilder config={config} governorate={governorate} wilayat={wilayat} onUpdate={onUpdate} />;
+      return <KitchenBuilder config={config} governorate={governorate} wilayat={wilayat} onUpdate={onUpdate} initial={initial} />;
     case "cabinets":
-      return <CabinetBuilder config={config} onUpdate={onUpdate} />;
+      return <CabinetBuilder config={config} onUpdate={onUpdate} initial={initial} />;
     case "nightstand":
-      return <NightstandBuilder config={config} onUpdate={onUpdate} />;
+      return <NightstandBuilder config={config} onUpdate={onUpdate} initial={initial} />;
     case "curtains":
-      return <CurtainBuilder config={config} wilayat={wilayat} onUpdate={onUpdate} />;
+      return <CurtainBuilder config={config} wilayat={wilayat} onUpdate={onUpdate} initial={initial} />;
     case "dressing-table":
-      return <DressingBuilder config={config} onUpdate={onUpdate} />;
+      return <DressingBuilder config={config} onUpdate={onUpdate} initial={initial} />;
     case "bed":
-      return <BedBuilder config={config} onUpdate={onUpdate} />;
+      return <BedBuilder config={config} onUpdate={onUpdate} initial={initial} />;
     case "cladding":
-      return <CladdingBuilder config={config} onUpdate={onUpdate} />;
+      return <CladdingBuilder config={config} onUpdate={onUpdate} initial={initial} />;
     case "sofa-set":
-      return <SofaBuilder config={config} onUpdate={onUpdate} />;
+      return <SofaBuilder config={config} onUpdate={onUpdate} initial={initial} />;
     case "laundry":
-      return <LaundryBuilder config={config} onUpdate={onUpdate} />;
+      return <LaundryBuilder config={config} onUpdate={onUpdate} initial={initial} />;
     default:
-      return <GenericBuilder cat={cat} onUpdate={onUpdate} />;
+      return <GenericBuilder cat={cat} onUpdate={onUpdate} initial={initial} />;
   }
 }

@@ -66,6 +66,10 @@ export default function NewQuotationPage() {
   const [builderPrice, setBuilderPrice] = useState(0);
   const [builderExtras, setBuilderExtras] = useState(0);
   const [builderDetails, setBuilderDetails] = useState<Record<string, any>>({});
+  // When set, the builder is re-opened to edit an already-added item, seeded
+  // with that item's saved control state (builderInitial).
+  const [editingItemId, setEditingItemId] = useState<string | null>(null);
+  const [builderInitial, setBuilderInitial] = useState<Record<string, any> | undefined>(undefined);
 
   useEffect(() => {
     fetch("/api/categories").then((r) => r.ok ? r.json() : []).then(setCategories).catch(() => {});
@@ -96,12 +100,15 @@ export default function NewQuotationPage() {
     setBuilderPrice(0);
     setBuilderExtras(0);
     setBuilderDetails({});
+    setEditingItemId(null);
+    setBuilderInitial(undefined);
   }, []);
 
-  const handleBuilderUpdate = useCallback((d: string, p: number, e: number) => {
+  const handleBuilderUpdate = useCallback((d: string, p: number, e: number, details?: Record<string, any>) => {
     setBuilderDesc(d);
     setBuilderPrice(p);
     setBuilderExtras(e);
+    if (details) setBuilderDetails(details);
   }, []);
 
   // ---- Draft auto-save: survives navigating away or refreshing the page ----
@@ -156,24 +163,31 @@ export default function NewQuotationPage() {
     resetBuilder();
   };
 
-  // Inline edit of an already-added item; recomputes its line total.
-  const [editingId, setEditingId] = useState<string | null>(null);
-  const updateItem = (id: string, patch: Partial<LineItem>) => {
-    setItems((prev) => prev.map((it) => {
-      if (it.id !== id) return it;
-      const next = { ...it, ...patch };
-      next.lineTotal = Math.max(1, next.quantity) * Math.max(0, next.unitPrice) + Math.max(0, next.extras);
-      return next;
-    }));
+  // Re-open an already-added item back in its category builder (on the right),
+  // pre-filled with its saved control state, so it can be edited with the full
+  // builder and saved back onto the same line.
+  const startEditItem = (item: LineItem) => {
+    const cat = categories.find((c) => c.id === item.categoryId);
+    if (!cat) return;
+    setSelectedCat(cat);
+    setBuilderInitial(item.details && Object.keys(item.details).length ? item.details : undefined);
+    setBuilderDesc(item.description);
+    setBuilderPrice(item.unitPrice);
+    setBuilderExtras(item.extras);
+    setBuilderDetails(item.details || {});
+    setBuilderQty(item.quantity);
+    setEditingItemId(item.id);
+    setStep(3);
+    if (typeof window !== "undefined") window.scrollTo({ top: 0, behavior: "smooth" });
   };
 
   const addItem = () => {
     if (!selectedCat || !builderDesc || builderPrice <= 0) return;
     const lineTotal = builderQty * builderPrice + builderExtras;
-    setItems((prev) => [
-      ...prev,
-      {
-        id: Date.now().toString(36) + Math.random().toString(36).slice(2),
+    if (editingItemId) {
+      // Save edits back onto the existing line item.
+      setItems((prev) => prev.map((it) => it.id === editingItemId ? {
+        ...it,
         categoryId: selectedCat.id,
         categoryNameAr: selectedCat.nameAr,
         categoryNameEn: selectedCat.nameEn,
@@ -183,12 +197,31 @@ export default function NewQuotationPage() {
         unitPrice: builderPrice,
         extras: builderExtras,
         lineTotal,
-      },
-    ]);
+      } : it));
+    } else {
+      setItems((prev) => [
+        ...prev,
+        {
+          id: Date.now().toString(36) + Math.random().toString(36).slice(2),
+          categoryId: selectedCat.id,
+          categoryNameAr: selectedCat.nameAr,
+          categoryNameEn: selectedCat.nameEn,
+          description: builderDesc,
+          details: builderDetails,
+          quantity: builderQty,
+          unitPrice: builderPrice,
+          extras: builderExtras,
+          lineTotal,
+        },
+      ]);
+    }
     resetBuilder();
   };
 
-  const removeItem = (id: string) => setItems((prev) => prev.filter((i) => i.id !== id));
+  const removeItem = (id: string) => {
+    if (editingItemId === id) resetBuilder();
+    setItems((prev) => prev.filter((i) => i.id !== id));
+  };
 
   const canProceed = (s: number) => {
     if (s === 1) return customer.name && customer.phone && /^\d{8}$/.test(customer.phone) && customer.governorate && customer.wilayat;
@@ -238,10 +271,14 @@ export default function NewQuotationPage() {
     if (!selectedCat) return null;
     return (
       <CategoryBuilder
+        // Remount (fresh useState) whenever we switch category or start editing
+        // a different item, so `initial` is applied correctly.
+        key={`${selectedCat.id}:${editingItemId ?? "new"}`}
         cat={selectedCat}
         governorate={customer.governorate}
         wilayat={customer.wilayat}
         onUpdate={handleBuilderUpdate}
+        initial={builderInitial}
       />
     );
   };
@@ -474,6 +511,15 @@ export default function NewQuotationPage() {
 
               {selectedCat && (
                 <>
+                  {editingItemId && (
+                    <div className="flex items-center justify-between gap-3 mb-4 px-4 py-2.5 rounded-lg bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 text-blue-800 dark:text-blue-200 text-sm">
+                      <span className="flex items-center gap-2 font-semibold"><Pencil className="w-4 h-4" /> {t("editingItemNotice")}</span>
+                      <button onClick={resetBuilder} className="flex items-center gap-1 px-3 py-1 rounded border border-blue-300 dark:border-blue-700 font-bold hover:bg-blue-100 dark:hover:bg-blue-900/40 transition-colors">
+                        <X className="w-3.5 h-3.5" /> {t("cancelEdit")}
+                      </button>
+                    </div>
+                  )}
+
                   {renderCategoryBuilder()}
 
                   <div className="grid grid-cols-2 gap-4 mt-4">
@@ -493,9 +539,12 @@ export default function NewQuotationPage() {
                   </div>
 
                   <button onClick={addItem} disabled={!builderDesc || builderPrice <= 0}
-                    className="mt-4 w-full bg-gray-900 text-white font-bold py-3 rounded text-sm hover:bg-gray-800 transition-colors disabled:opacity-30 flex items-center justify-center gap-2">
-                    <Plus className="w-4 h-4" />
-                    {t("addToQuote")}
+                    className={cn(
+                      "mt-4 w-full text-white font-bold py-3 rounded text-sm transition-colors disabled:opacity-30 flex items-center justify-center gap-2",
+                      editingItemId ? "bg-blue-600 hover:bg-blue-700" : "bg-gray-900 hover:bg-gray-800"
+                    )}>
+                    {editingItemId ? <Check className="w-4 h-4" /> : <Plus className="w-4 h-4" />}
+                    {editingItemId ? t("saveEditBtn") : t("addToQuote")}
                   </button>
                 </>
               )}
@@ -520,65 +569,36 @@ export default function NewQuotationPage() {
               ) : (
                 <div className="space-y-2 max-h-96 overflow-y-auto">
                   {items.map((item) => (
-                    <div key={item.id} className="border border-gray-100 rounded p-3 hover:border-gray-300 transition-colors">
-                      {editingId === item.id ? (
-                        <div className="space-y-2">
-                          <input value={item.description}
-                            onChange={(e) => updateItem(item.id, { description: e.target.value })}
-                            className="w-full border border-gray-200 rounded px-2 py-1.5 text-sm font-bold" />
-                          <div className="grid grid-cols-3 gap-2">
-                            <div>
-                              <label className="block text-[10px] text-gray-400 mb-0.5">{t("quantity")}</label>
-                              <input type="number" min={1} value={item.quantity}
-                                onChange={(e) => updateItem(item.id, { quantity: Math.max(1, parseInt(e.target.value) || 1) })}
-                                className="w-full border border-gray-200 rounded px-2 py-1.5 text-sm font-mono-en text-center" />
-                            </div>
-                            <div>
-                              <label className="block text-[10px] text-gray-400 mb-0.5">{t("unitPriceShort")}</label>
-                              <input type="number" min={0} step="0.001" value={item.unitPrice}
-                                onChange={(e) => updateItem(item.id, { unitPrice: Math.max(0, parseFloat(e.target.value) || 0) })}
-                                className="w-full border border-gray-200 rounded px-2 py-1.5 text-sm font-mono-en text-center" />
-                            </div>
-                            <div>
-                              <label className="block text-[10px] text-gray-400 mb-0.5">{t("extrasShort")}</label>
-                              <input type="number" min={0} step="0.001" value={item.extras}
-                                onChange={(e) => updateItem(item.id, { extras: Math.max(0, parseFloat(e.target.value) || 0) })}
-                                className="w-full border border-gray-200 rounded px-2 py-1.5 text-sm font-mono-en text-center" />
-                            </div>
-                          </div>
-                          <div className="flex items-center justify-between pt-1">
-                            <span className="text-sm font-black font-mono-en">{fmtCur(item.lineTotal)}</span>
-                            <button onClick={() => setEditingId(null)}
-                              className="flex items-center gap-1 px-3 py-1.5 bg-gray-900 text-white rounded text-xs font-bold hover:bg-gray-800">
-                              <Check className="w-3.5 h-3.5" /> {t("done")}
+                    <div key={item.id}
+                      className={cn(
+                        "border rounded p-3 transition-colors",
+                        editingItemId === item.id
+                          ? "border-blue-400 ring-1 ring-blue-300 bg-blue-50/50 dark:bg-blue-900/10"
+                          : "border-gray-100 hover:border-gray-300"
+                      )}>
+                      <div className="flex items-start justify-between gap-2">
+                        <div className="flex-1 min-w-0">
+                          <p className="text-xs text-gray-400 font-semibold">{itemCatName(item)}</p>
+                          <p className="text-sm font-bold text-gray-900">{item.description}</p>
+                          <p className="text-xs text-gray-500 mt-1 font-mono-en">
+                            {item.quantity} x {fmtCur(item.unitPrice)}
+                            {item.extras > 0 && ` + ${fmtCur(item.extras)}`}
+                          </p>
+                        </div>
+                        <div className="flex flex-col items-end flex-shrink-0 gap-1.5">
+                          <p className="text-sm font-black font-mono-en">{fmtCur(item.lineTotal)}</p>
+                          <div className="flex items-center gap-1">
+                            <button onClick={() => startEditItem(item)}
+                              className="p-1.5 rounded border border-gray-200 text-gray-500 hover:text-blue-700 hover:border-blue-400" aria-label={t("edit")}>
+                              <Pencil className="w-3.5 h-3.5" />
+                            </button>
+                            <button onClick={() => removeItem(item.id)}
+                              className="p-1.5 rounded border border-red-200 text-red-500 hover:text-red-700 hover:border-red-400" aria-label={t("deleteAction")}>
+                              <Trash2 className="w-3.5 h-3.5" />
                             </button>
                           </div>
                         </div>
-                      ) : (
-                        <div className="flex items-start justify-between gap-2">
-                          <div className="flex-1 min-w-0">
-                            <p className="text-xs text-gray-400 font-semibold">{itemCatName(item)}</p>
-                            <p className="text-sm font-bold text-gray-900">{item.description}</p>
-                            <p className="text-xs text-gray-500 mt-1 font-mono-en">
-                              {item.quantity} x {fmtCur(item.unitPrice)}
-                              {item.extras > 0 && ` + ${fmtCur(item.extras)}`}
-                            </p>
-                          </div>
-                          <div className="flex flex-col items-end flex-shrink-0 gap-1.5">
-                            <p className="text-sm font-black font-mono-en">{fmtCur(item.lineTotal)}</p>
-                            <div className="flex items-center gap-1">
-                              <button onClick={() => setEditingId(item.id)}
-                                className="p-1.5 rounded border border-gray-200 text-gray-500 hover:text-gray-900 hover:border-gray-400" aria-label={t("edit")}>
-                                <Pencil className="w-3.5 h-3.5" />
-                              </button>
-                              <button onClick={() => removeItem(item.id)}
-                                className="p-1.5 rounded border border-red-200 text-red-500 hover:text-red-700 hover:border-red-400" aria-label={t("deleteAction")}>
-                                <Trash2 className="w-3.5 h-3.5" />
-                              </button>
-                            </div>
-                          </div>
-                        </div>
-                      )}
+                      </div>
                     </div>
                   ))}
                 </div>
