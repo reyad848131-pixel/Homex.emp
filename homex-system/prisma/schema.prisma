@@ -132,6 +132,15 @@ model Quotation {
   @@index([createdAt])
   @@index([deliveryDate])
   @@index([workStatus])
+  // Composite indexes matching the app's real filter+sort patterns, so these
+  // hot queries use an index instead of scanning: the work board / delivery
+  // schedule (workStatus + deliveryDate), the installation schedule
+  // (workStatus + installDate), the quotations list (status + createdAt), and
+  // a salesperson's own quotations newest-first (employeeId + createdAt).
+  @@index([workStatus, deliveryDate])
+  @@index([workStatus, installDate])
+  @@index([status, createdAt])
+  @@index([employeeId, createdAt])
   @@map("quotations")
 }
 

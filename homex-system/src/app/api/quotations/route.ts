@@ -7,6 +7,7 @@ import { getSettings } from "@/lib/settings";
 import { computeQuoteTotals } from "@/lib/quote-calc";
 import { parseBody, createQuotationSchema } from "@/lib/schemas";
 import { curtainMinCount } from "@/lib/order-rules";
+import { getQuotationsList } from "@/lib/quotations-list";
 
 export async function GET(req: NextRequest) {
   try {
@@ -16,46 +17,19 @@ export async function GET(req: NextRequest) {
     const user = session.user as any;
     const isAdmin = user.role === "admin" || user.role === "manager";
 
-  const { searchParams } = new URL(req.url);
-  const status = searchParams.get("status");
-  const search = searchParams.get("search");
-  const page = parseIntParam(searchParams.get("page"), 1);
-  const limit = parseIntParam(searchParams.get("limit"), 20, 1, 100);
+    const { searchParams } = new URL(req.url);
+    const result = await getQuotationsList({
+      userId: user.id,
+      isAdmin,
+      status: searchParams.get("status"),
+      search: searchParams.get("search"),
+      dateFrom: searchParams.get("dateFrom"),
+      dateTo: searchParams.get("dateTo"),
+      page: parseIntParam(searchParams.get("page"), 1),
+      limit: parseIntParam(searchParams.get("limit"), 20, 1, 100),
+    });
 
-  const dateFrom = searchParams.get("dateFrom");
-  const dateTo = searchParams.get("dateTo");
-
-  const where: any = isAdmin ? {} : { employeeId: user.id };
-  if (status && status !== "all") where.status = status;
-  if (dateFrom || dateTo) {
-    where.createdAt = {};
-    if (dateFrom) where.createdAt.gte = new Date(dateFrom);
-    if (dateTo) where.createdAt.lte = new Date(dateTo + "T23:59:59.999Z");
-  }
-  if (search) {
-    where.OR = [
-      { quoteNumber: { contains: search, mode: "insensitive" as const } },
-      { customer: { name: { contains: search, mode: "insensitive" as const } } },
-      { customer: { phone: { contains: search } } },
-    ];
-  }
-
-  const [quotations, total] = await Promise.all([
-    prisma.quotation.findMany({
-      where,
-      include: {
-        customer: { select: { name: true, phone: true, governorate: true } },
-        employee: { select: { name: true } },
-        _count: { select: { items: true } },
-      },
-      orderBy: { createdAt: "desc" },
-      skip: (page - 1) * limit,
-      take: limit,
-    }),
-    prisma.quotation.count({ where }),
-  ]);
-
-    return NextResponse.json({ quotations, total, page, totalPages: Math.ceil(total / limit) });
+    return NextResponse.json(result);
   } catch {
     return NextResponse.json({ error: "Server error" }, { status: 500 });
   }
