@@ -90,6 +90,8 @@ model Quotation {
   // paid / accepted) — records the justification and moment for the audit trail.
   managerEditNote String? @map("manager_edit_note")
   managerEditedAt DateTime? @map("manager_edited_at")
+  // Unguessable token for the public customer view (accept / reject online).
+  publicToken   String?   @unique @map("public_token")
   deliveryDate  DateTime? @map("delivery_date")
   // Optional time-of-day for the delivery (stored as "HH:MM"); pairs with
   // deliveryDate to schedule the delivery precisely.

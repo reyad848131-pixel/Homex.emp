@@ -8,6 +8,7 @@ export function proxy(request: NextRequest) {
   const isApi = pathname.startsWith("/api");
   const isPublic =
     pathname.startsWith("/_next") ||
+    pathname.startsWith("/q/") ||
     pathname.startsWith("/icons") ||
     pathname.startsWith("/sw.js") ||
     pathname.startsWith("/manifest.json") ||

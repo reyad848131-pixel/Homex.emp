@@ -9,7 +9,7 @@ import { useToast } from "@/components/toast";
 import {
   ArrowRight, Printer, Trash2, CheckCircle, XCircle, Send,
   Clock, FileText, User, MapPin, Phone, Pencil, Download, Copy, MessageCircle, CalendarDays,
-  CreditCard, Plus, Banknote, RotateCcw, Receipt, MessageSquare, AlertCircle,
+  CreditCard, Plus, Banknote, RotateCcw, Receipt, MessageSquare, AlertCircle, Share2,
 } from "lucide-react";
 import Link from "next/link";
 
@@ -95,6 +95,8 @@ export default function QuotationDetailPage({ params }: { params: Promise<{ id: 
   const [creatingInvoice, setCreatingInvoice] = useState(false);
   const [me, setMe] = useState<{ id: string; role: string } | null>(null);
   const [selfApprove, setSelfApprove] = useState(false);
+  const [shareUrl, setShareUrl] = useState("");
+  const [sharing, setSharing] = useState(false);
 
   const fmtCur = (n: number) => `${n.toFixed(3)} ${t("omr")}`;
 
@@ -191,16 +193,33 @@ export default function QuotationDetailPage({ params }: { params: Promise<{ id: 
     }
   };
 
-  const handleWhatsApp = () => {
+  // Generate (once) and return the public customer link.
+  const ensureShareUrl = async () => {
+    if (shareUrl) return shareUrl;
+    const res = await fetch(`/api/quotations/${id}/share`, { method: "POST" });
+    const data = await res.json();
+    const url = `${window.location.origin}/q/${data.token}`;
+    setShareUrl(url);
+    return url;
+  };
+
+  const handleShare = async () => {
+    setSharing(true);
+    try { await ensureShareUrl(); } catch { toast.error(t("operationFailed")); }
+    finally { setSharing(false); }
+  };
+
+  const handleWhatsApp = async () => {
     if (!q) return;
+    let link = "";
+    try { link = await ensureShareUrl(); } catch { /* fall back to summary only */ }
     const text = encodeURIComponent(
       `*${t("quotePrint")} - ${q.quoteNumber}*\n` +
       `${t("customer")}: ${q.customer.name}\n` +
       `${t("grandTotal")}: ${fmtCur(q.total)}\n` +
-      `${t("advancePayment")} (${q.advancePct}%): ${fmtCur(q.advanceAmount)}\n\n` +
-      `${t("items")}:\n` +
-      q.items.map((item, i) => `${i + 1}. ${item.description} - ${fmtCur(item.lineTotal)}`).join("\n") +
-      `\n\n--- Homex ---`
+      `${t("advancePayment")} (${q.advancePct}%): ${fmtCur(q.advanceAmount)}\n` +
+      (link ? `\n${t("viewAndApprove")}:\n${link}\n` : "") +
+      `\n--- ${q.quoteNumber} ---`
     );
     const phone = q.customer.phone.replace(/\D/g, "");
     const code = (q.customer.phoneCode || "+968").replace(/\D/g, "");
@@ -286,6 +305,11 @@ export default function QuotationDetailPage({ params }: { params: Promise<{ id: 
               <MessageCircle className="w-4 h-4" />
               {t("whatsapp")}
             </button>
+            <button onClick={handleShare} disabled={sharing}
+              className="flex items-center gap-2 px-4 py-2 border border-blue-200 text-blue-600 rounded text-sm font-bold hover:bg-blue-50 disabled:opacity-50">
+              <Share2 className="w-4 h-4" />
+              {t("shareWithCustomer")}
+            </button>
             <button onClick={handleDuplicate}
               className="flex items-center gap-2 px-4 py-2 border border-gray-200 rounded text-sm font-bold hover:bg-gray-50">
               <Copy className="w-4 h-4" />
@@ -358,6 +382,22 @@ export default function QuotationDetailPage({ params }: { params: Promise<{ id: 
             )}
           </div>
         </div>
+
+        {shareUrl && (
+          <div className="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded p-4 mt-4 no-print">
+            <p className="text-sm font-bold text-blue-800 dark:text-blue-200 mb-2 flex items-center gap-2">
+              <Share2 className="w-4 h-4" /> {t("shareLinkTitle")}
+            </p>
+            <div className="flex gap-2">
+              <input readOnly value={shareUrl} dir="ltr" className="field flex-1 min-w-0 text-xs" onFocus={(e) => e.target.select()} />
+              <button onClick={() => { navigator.clipboard?.writeText(shareUrl); toast.success(t("copied")); }}
+                className="flex items-center gap-1.5 px-4 rounded-lg bg-blue-600 text-white text-sm font-bold hover:bg-blue-700 shrink-0">
+                <Copy className="w-4 h-4" /> {t("copy")}
+              </button>
+            </div>
+            <p className="text-xs text-blue-700 dark:text-blue-300 mt-2">{t("shareLinkHint")}</p>
+          </div>
+        )}
 
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
           <div className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded p-5">
