@@ -170,6 +170,11 @@ export default function SettingsPage() {
                 className="field font-mono-en" />
             </div>
             <div>
+              <label className="block text-sm font-semibold text-gray-600 mb-1.5">{t("vatNumber")}</label>
+              <input type="text" value={settings.company_vat || ""} onChange={(e) => update("company_vat", e.target.value)}
+                className="field font-mono-en" dir="ltr" placeholder="OM..." />
+            </div>
+            <div>
               <label className="block text-sm font-semibold text-gray-600 mb-1.5">{t("companyWebsite")}</label>
               <input type="url" value={settings.company_website || ""} onChange={(e) => update("company_website", e.target.value)}
                 className="field font-mono-en" dir="ltr" />

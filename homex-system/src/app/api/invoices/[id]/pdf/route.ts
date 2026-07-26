@@ -3,6 +3,13 @@ import { getAuth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { getSettings } from "@/lib/settings";
 import { pdfToolbar } from "@/lib/pdf-shell";
+import QRCode from "qrcode";
+
+// GCC/ZATCA-style TLV field: tag + length + UTF-8 value.
+function tlv(tag: number, value: string): Buffer {
+  const val = Buffer.from(value, "utf8");
+  return Buffer.concat([Buffer.from([tag]), Buffer.from([val.length]), val]);
+}
 
 function esc(str: string | null | undefined): string {
   if (!str) return "";
@@ -50,6 +57,18 @@ export async function GET(
     const companyLogo = s.company_logo || "";
     const companySubtitle = s.company_subtitle || "";
     const companyFactory = s.company_factory || "";
+    const companyVat = s.company_vat || companyCR || "";
+
+    // Tax-invoice QR (seller, VAT no., timestamp, total, VAT) — TLV/base64.
+    const tlvData = Buffer.concat([
+      tlv(1, companyName),
+      tlv(2, companyVat),
+      tlv(3, new Date(invoice.issuedAt).toISOString()),
+      tlv(4, q.total.toFixed(3)),
+      tlv(5, q.vatAmount.toFixed(3)),
+    ]).toString("base64");
+    let qrDataUrl = "";
+    try { qrDataUrl = await QRCode.toDataURL(tlvData, { margin: 1, width: 220 }); } catch {}
 
     const fmtCur = (n: number) => n.toFixed(3);
     const fmtDate = (d: Date | string) => new Date(d).toLocaleDateString("ar-OM", { year: "numeric", month: "long", day: "numeric" });
@@ -120,7 +139,7 @@ export async function GET(
         <tr><td class="info-label">رقم العرض</td><td style="font-family:'Cairo',monospace">${esc(q.quoteNumber)}</td></tr>
         <tr><td class="info-label">تاريخ الإصدار</td><td>${fmtDate(invoice.issuedAt)}</td></tr>
         <tr><td class="info-label">العميل</td><td><strong>${esc(q.customer.name)}</strong><br><span style="color:#666">${esc(q.customer.phoneCode)} ${esc(q.customer.phone)} · ${esc(q.customer.governorate)} – ${esc(q.customer.wilayat)}</span></td></tr>
-        <tr><td class="info-label">الشركة</td><td><strong>${esc(companyName)}</strong>${companyAddress ? `<br><span style="color:#666">${esc(companyAddress)}</span>` : ""}${companyCR ? `<br><span style="color:#666">س.ت: ${esc(companyCR)}</span>` : ""}${companyPhone ? `<br><span style="color:#666">${esc(companyPhone)}</span>` : ""}</td></tr>
+        <tr><td class="info-label">الشركة</td><td><strong>${esc(companyName)}</strong>${companyAddress ? `<br><span style="color:#666">${esc(companyAddress)}</span>` : ""}${companyCR ? `<br><span style="color:#666">س.ت: ${esc(companyCR)}</span>` : ""}${companyVat ? `<br><span style="color:#666">الرقم الضريبي: ${esc(companyVat)}</span>` : ""}${companyPhone ? `<br><span style="color:#666">${esc(companyPhone)}</span>` : ""}</td></tr>
       </table>
     </div>
 
@@ -138,10 +157,16 @@ export async function GET(
     </div>
 
     <div class="payment-summary">
-      <div class="payment-box">
-        <div><div class="val">${fmtCur(q.total)}</div><div class="lbl">إجمالي الفاتورة</div></div>
-        <div><div class="val" style="color:#16a34a">${fmtCur(totalPaid)}</div><div class="lbl">المدفوع</div></div>
-        <div><div class="val" style="color:${remaining > 0 ? '#dc2626' : '#16a34a'}">${fmtCur(remaining)}</div><div class="lbl">المتبقي</div></div>
+      <div style="display:flex;gap:16px;align-items:stretch">
+        <div class="payment-box" style="flex:1">
+          <div><div class="val">${fmtCur(q.total)}</div><div class="lbl">إجمالي الفاتورة</div></div>
+          <div><div class="val" style="color:#16a34a">${fmtCur(totalPaid)}</div><div class="lbl">المدفوع</div></div>
+          <div><div class="val" style="color:${remaining > 0 ? '#dc2626' : '#16a34a'}">${fmtCur(remaining)}</div><div class="lbl">المتبقي</div></div>
+        </div>
+        ${qrDataUrl ? `<div style="flex-shrink:0;text-align:center;border:1px solid #e5e7eb;border-radius:6px;padding:8px">
+          <img src="${qrDataUrl}" alt="QR" style="width:96px;height:96px;display:block">
+          <div style="font-size:9px;color:#999;margin-top:4px">فاتورة ضريبية</div>
+        </div>` : ""}
       </div>
     </div>
 

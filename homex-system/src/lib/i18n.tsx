@@ -266,6 +266,7 @@ const translations = {
   createdBy: { ar: "أنشئ بواسطة", en: "Created by" },
   print: { ar: "طباعة", en: "Print" },
   whatsapp: { ar: "واتساب", en: "WhatsApp" },
+  vatNumber: { ar: "الرقم الضريبي", en: "VAT number" },
   globalSearchPlaceholder: { ar: "بحث عن عرض أو عميل...", en: "Search a quote or customer..." },
   searching: { ar: "جاري البحث...", en: "Searching..." },
   shareWithCustomer: { ar: "مشاركة مع العميل", en: "Share with customer" },
