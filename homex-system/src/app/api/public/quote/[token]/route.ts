@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { notify, notifyAdmins } from "@/lib/notifications";
+import { rateLimit, clientIp } from "@/lib/rate-limit";
 
 // Public (token-gated, no login) customer decision on a shared quotation.
 // Only quotes that are still open can be accepted/declined by the customer.
@@ -9,6 +10,12 @@ const ACTIONABLE = ["pending", "approved", "sent", "revised", "draft"];
 export async function POST(req: NextRequest, { params }: { params: Promise<{ token: string }> }) {
   try {
     const { token } = await params;
+
+    // Throttle repeated hits on the same token from the same client.
+    if (!rateLimit(`quote-decision:${clientIp(req)}:${token}`, 10, 60_000)) {
+      return NextResponse.json({ error: "محاولات كثيرة، حاول لاحقاً" }, { status: 429 });
+    }
+
     const body = await req.json().catch(() => ({}));
     const action = body.action === "accept" ? "accept" : body.action === "reject" ? "reject" : null;
     if (!action) return NextResponse.json({ error: "Invalid action" }, { status: 400 });
@@ -41,7 +48,8 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ tok
     }
 
     return NextResponse.json({ ok: true, status: newStatus });
-  } catch {
+  } catch (e) {
+    console.error("API error [/api/public/quote/[token]]:", e);
     return NextResponse.json({ error: "Server error" }, { status: 500 });
   }
 }

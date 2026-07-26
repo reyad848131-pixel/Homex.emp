@@ -26,7 +26,8 @@ export async function PUT(req: NextRequest, { params }: { params: Promise<{ id: 
     });
 
     return NextResponse.json(category);
-  } catch {
+  } catch (e) {
+    console.error("API error [/api/categories/[id]]:", e);
     return NextResponse.json({ error: "Server error" }, { status: 500 });
   }
 }
@@ -49,7 +50,8 @@ export async function DELETE(_req: NextRequest, { params }: { params: Promise<{ 
 
     await prisma.category.delete({ where: { id } });
     return NextResponse.json({ deleted: true });
-  } catch {
+  } catch (e) {
+    console.error("API error [/api/categories/[id]]:", e);
     return NextResponse.json({ error: "Server error" }, { status: 500 });
   }
 }

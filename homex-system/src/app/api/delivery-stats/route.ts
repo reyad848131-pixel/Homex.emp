@@ -50,7 +50,8 @@ export async function GET() {
       queueTotal, queueThisWeek, queueOverdue, installQueue, openServices,
       deliveredThisMonth, toCollect, onTimePct,
     });
-  } catch {
+  } catch (e) {
+    console.error("API error [/api/delivery-stats]:", e);
     return NextResponse.json({ error: "Server error" }, { status: 500 });
   }
 }

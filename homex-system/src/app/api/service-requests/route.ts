@@ -36,7 +36,8 @@ export async function GET(req: NextRequest) {
       },
     });
     return NextResponse.json(requests);
-  } catch {
+  } catch (e) {
+    console.error("API error [/api/service-requests]:", e);
     return NextResponse.json({ error: "Server error" }, { status: 500 });
   }
 }
@@ -75,7 +76,8 @@ export async function POST(req: NextRequest) {
     ).catch(() => {});
 
     return NextResponse.json(created, { status: 201 });
-  } catch {
+  } catch (e) {
+    console.error("API error [/api/service-requests]:", e);
     return NextResponse.json({ error: "Server error" }, { status: 500 });
   }
 }

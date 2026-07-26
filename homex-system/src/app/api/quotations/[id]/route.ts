@@ -39,7 +39,8 @@ export async function GET(
     }
 
     return NextResponse.json(quotation);
-  } catch {
+  } catch (e) {
+    console.error("API error [/api/quotations/[id]]:", e);
     return NextResponse.json({ error: "Server error" }, { status: 500 });
   }
 }
@@ -238,7 +239,8 @@ export async function PATCH(
     }
 
     return NextResponse.json(updated);
-  } catch {
+  } catch (e) {
+    console.error("API error [/api/quotations/[id]]:", e);
     return NextResponse.json({ error: "Server error" }, { status: 500 });
   }
 }
@@ -274,7 +276,8 @@ export async function DELETE(
     await prisma.quotation.delete({ where: { id } });
     await logAction(user.id, "delete", "quotation", id);
     return NextResponse.json({ success: true });
-  } catch {
+  } catch (e) {
+    console.error("API error [/api/quotations/[id]]:", e);
     return NextResponse.json({ error: "Server error" }, { status: 500 });
   }
 }

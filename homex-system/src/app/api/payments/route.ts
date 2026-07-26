@@ -17,7 +17,7 @@ export async function POST(req: NextRequest) {
 
     const quotation = await prisma.quotation.findUnique({
       where: { id: quotationId },
-      include: { payments: true },
+      select: { id: true, total: true, employeeId: true, quoteNumber: true },
     });
 
     if (!quotation) return NextResponse.json({ error: "Not found" }, { status: 404 });
@@ -26,27 +26,36 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: "Forbidden" }, { status: 403 });
     }
 
-    const totalPaid = quotation.payments.reduce((s, p) => roundMoney(s + p.amount), 0);
-    if (roundMoney(totalPaid + amount) > roundMoney(quotation.total)) {
-      return NextResponse.json({ error: "المبلغ يتجاوز المتبقي" }, { status: 400 });
-    }
-
-    const payment = await prisma.payment.create({
-      data: {
-        quotationId,
-        amount: roundMoney(amount),
-        method: method || "cash",
-        reference: reference || null,
-        notes: notes || null,
-        recordedBy: user.id,
-      },
-      include: { recorder: { select: { name: true } } },
+    // Re-sum the existing payments and create the new one inside one transaction,
+    // so two payments recorded at the same instant can't both pass the
+    // remaining-balance check and overshoot the total (concurrency race).
+    const payment = await prisma.$transaction(async (tx) => {
+      const agg = await tx.payment.aggregate({ where: { quotationId }, _sum: { amount: true } });
+      const paidSoFar = roundMoney(agg._sum.amount || 0);
+      if (roundMoney(paidSoFar + amount) > roundMoney(quotation.total)) {
+        throw Object.assign(new Error("overpay"), { code: "OVERPAY" });
+      }
+      return tx.payment.create({
+        data: {
+          quotationId,
+          amount: roundMoney(amount),
+          method: method || "cash",
+          reference: reference || null,
+          notes: notes || null,
+          recordedBy: user.id,
+        },
+        include: { recorder: { select: { name: true } } },
+      });
     });
 
     await logAction(user.id, "create", "payment", payment.id, `${amount} for ${quotation.quoteNumber}`);
 
     return NextResponse.json(payment, { status: 201 });
-  } catch {
+  } catch (e: any) {
+    if (e?.code === "OVERPAY") {
+      return NextResponse.json({ error: "المبلغ يتجاوز المتبقي" }, { status: 400 });
+    }
+    console.error("POST /api/payments error:", e);
     return NextResponse.json({ error: "Server error" }, { status: 500 });
   }
 }

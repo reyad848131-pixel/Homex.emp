@@ -16,7 +16,8 @@ export async function GET() {
     });
 
     return NextResponse.json(employee);
-  } catch {
+  } catch (e) {
+    console.error("API error [/api/profile]:", e);
     return NextResponse.json({ error: "Server error" }, { status: 500 });
   }
 }
@@ -59,7 +60,8 @@ export async function PUT(req: NextRequest) {
     }
 
     return NextResponse.json({ error: "Invalid action" }, { status: 400 });
-  } catch {
+  } catch (e) {
+    console.error("API error [/api/profile]:", e);
     return NextResponse.json({ error: "Server error" }, { status: 500 });
   }
 }

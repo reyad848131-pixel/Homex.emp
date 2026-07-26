@@ -40,7 +40,8 @@ export async function GET(req: NextRequest) {
     ]);
 
     return NextResponse.json({ quotations, customers });
-  } catch {
+  } catch (e) {
+    console.error("API error [/api/search]:", e);
     return NextResponse.json({ error: "Server error" }, { status: 500 });
   }
 }

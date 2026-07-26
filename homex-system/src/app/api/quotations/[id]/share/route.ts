@@ -27,7 +27,8 @@ export async function POST(_req: NextRequest, { params }: { params: Promise<{ id
     }
 
     return NextResponse.json({ token });
-  } catch {
+  } catch (e) {
+    console.error("API error [/api/quotations/[id]/share]:", e);
     return NextResponse.json({ error: "Server error" }, { status: 500 });
   }
 }

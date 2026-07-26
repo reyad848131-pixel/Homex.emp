@@ -35,7 +35,8 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
 
     await logAction(user.id, "update", "service_request", id, JSON.stringify(data));
     return NextResponse.json(updated);
-  } catch {
+  } catch (e) {
+    console.error("API error [/api/service-requests/[id]]:", e);
     return NextResponse.json({ error: "Server error" }, { status: 500 });
   }
 }
@@ -52,7 +53,8 @@ export async function DELETE(req: NextRequest, { params }: { params: Promise<{ i
     await prisma.serviceRequest.delete({ where: { id } });
     await logAction(user.id, "delete", "service_request", id, "");
     return NextResponse.json({ ok: true });
-  } catch {
+  } catch (e) {
+    console.error("API error [/api/service-requests/[id]]:", e);
     return NextResponse.json({ error: "Server error" }, { status: 500 });
   }
 }

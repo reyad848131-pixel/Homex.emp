@@ -12,7 +12,8 @@ export async function GET() {
 
     const logo = await getSetting("company_logo", "");
     return NextResponse.json({ logo });
-  } catch {
+  } catch (e) {
+    console.error("API error [/api/logo]:", e);
     return NextResponse.json({ error: "Server error" }, { status: 500 });
   }
 }
@@ -43,7 +44,8 @@ export async function POST(req: NextRequest) {
 
     await setSetting("company_logo", base64);
     return NextResponse.json({ logo: base64 });
-  } catch {
+  } catch (e) {
+    console.error("API error [/api/logo]:", e);
     return NextResponse.json({ error: "Server error" }, { status: 500 });
   }
 }
@@ -60,7 +62,8 @@ export async function DELETE() {
 
     await setSetting("company_logo", "");
     return NextResponse.json({ ok: true });
-  } catch {
+  } catch (e) {
+    console.error("API error [/api/logo]:", e);
     return NextResponse.json({ error: "Server error" }, { status: 500 });
   }
 }

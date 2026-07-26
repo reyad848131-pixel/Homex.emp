@@ -65,7 +65,8 @@ export async function PATCH(
 
     await logAction(user.id, "update", "employee", id, JSON.stringify(body.password ? { ...body, password: "[changed]" } : body));
     return NextResponse.json(employee);
-  } catch {
+  } catch (e) {
+    console.error("API error [/api/employees/[id]]:", e);
     return NextResponse.json({ error: "Server error" }, { status: 500 });
   }
 }

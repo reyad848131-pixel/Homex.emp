@@ -57,7 +57,8 @@ export async function POST(
 
   await logAction(user.id, "duplicate", "quotation", quotation.id, `from:${id}`);
   return NextResponse.json(quotation, { status: 201 });
-  } catch {
+  } catch (e) {
+    console.error("API error [/api/quotations/[id]/duplicate]:", e);
     return NextResponse.json({ error: "Server error" }, { status: 500 });
   }
 }

@@ -97,7 +97,6 @@ export default function QuoteDetailClient({
   // with no loading spinner and no client round-trips. Mutations below patch
   // this state locally, so no re-fetch on mount is needed.
   const [q, setQ] = useState<QuotationDetail | null>(initialQuote);
-  const [loading] = useState(false);
   const [terms, setTerms] = useState(initialTerms);
   const [showPayForm, setShowPayForm] = useState(false);
   const [payAmount, setPayAmount] = useState("");
@@ -261,7 +260,6 @@ export default function QuoteDetailClient({
     } finally { setPaying(false); }
   };
 
-  if (loading) return <div className="text-center py-20 text-gray-400">{t("loading")}</div>;
   if (!q) return <div className="text-center py-20 text-red-500">{t("quoteNotFound")}</div>;
 
   const status = STATUS_MAP[q.status] || STATUS_MAP.draft;

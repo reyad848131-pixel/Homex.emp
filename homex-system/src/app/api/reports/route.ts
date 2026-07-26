@@ -92,7 +92,8 @@ export async function GET(req: NextRequest) {
       .map(([date, data]) => ({ date, ...data }))
       .sort((a, b) => a.date.localeCompare(b.date)),
     });
-  } catch {
+  } catch (e) {
+    console.error("API error [/api/reports]:", e);
     return NextResponse.json({ error: "Server error" }, { status: 500 });
   }
 }

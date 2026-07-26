@@ -25,7 +25,8 @@ export async function GET() {
     });
 
     return NextResponse.json(employees);
-  } catch {
+  } catch (e) {
+    console.error("API error [/api/employees]:", e);
     return NextResponse.json({ error: "Server error" }, { status: 500 });
   }
 }
@@ -57,7 +58,8 @@ export async function POST(req: NextRequest) {
 
     await logAction(user.id, "create", "employee", employee.id, JSON.stringify({ name, civilId, role }));
     return NextResponse.json(employee, { status: 201 });
-  } catch {
+  } catch (e) {
+    console.error("API error [/api/employees]:", e);
     return NextResponse.json({ error: "Server error" }, { status: 500 });
   }
 }

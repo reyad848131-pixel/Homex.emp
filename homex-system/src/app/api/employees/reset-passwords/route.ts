@@ -37,7 +37,8 @@ export async function POST() {
 
     await logAction(user.id, "reset_passwords", "employee", "bulk", `count=${results.length}`);
     return NextResponse.json({ count: results.length, employees: results });
-  } catch {
+  } catch (e) {
+    console.error("API error [/api/employees/reset-passwords]:", e);
     return NextResponse.json({ error: "Server error" }, { status: 500 });
   }
 }

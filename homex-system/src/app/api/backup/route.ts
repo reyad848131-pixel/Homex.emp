@@ -47,7 +47,8 @@ export async function GET(req: NextRequest) {
         "Content-Disposition": `attachment; filename="homex-backup-${date}.json"`,
       },
     });
-  } catch {
+  } catch (e) {
+    console.error("API error [/api/backup]:", e);
     return NextResponse.json({ error: "Backup failed" }, { status: 500 });
   }
 }

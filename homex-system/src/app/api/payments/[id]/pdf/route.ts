@@ -159,7 +159,8 @@ export async function GET(
     return new NextResponse(html, {
       headers: { "Content-Type": "text/html; charset=utf-8" },
     });
-  } catch {
+  } catch (e) {
+    console.error("API error [/api/payments/[id]/pdf]:", e);
     return NextResponse.json({ error: "Server error" }, { status: 500 });
   }
 }

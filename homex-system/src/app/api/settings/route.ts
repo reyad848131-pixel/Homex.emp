@@ -19,7 +19,8 @@ export async function GET() {
     const res = NextResponse.json(light);
     res.headers.set("Cache-Control", "private, max-age=30, stale-while-revalidate=120");
     return res;
-  } catch {
+  } catch (e) {
+    console.error("API error [/api/settings]:", e);
     return NextResponse.json({ error: "Server error" }, { status: 500 });
   }
 }
@@ -42,7 +43,8 @@ export async function PUT(req: NextRequest) {
     await logAction(user.id, "update", "settings", undefined, JSON.stringify(body));
     const settings = await getSettings();
     return NextResponse.json(settings);
-  } catch {
+  } catch (e) {
+    console.error("API error [/api/settings]:", e);
     return NextResponse.json({ error: "Server error" }, { status: 500 });
   }
 }

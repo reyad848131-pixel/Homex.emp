@@ -29,7 +29,8 @@ export async function GET(req: NextRequest) {
       res.headers.set("Cache-Control", "private, max-age=60, stale-while-revalidate=300");
     }
     return res;
-  } catch {
+  } catch (e) {
+    console.error("API error [/api/categories]:", e);
     return NextResponse.json({ error: "Server error" }, { status: 500 });
   }
 }
@@ -60,7 +61,8 @@ export async function POST(req: NextRequest) {
     });
 
     return NextResponse.json(category, { status: 201 });
-  } catch {
+  } catch (e) {
+    console.error("API error [/api/categories]:", e);
     return NextResponse.json({ error: "Server error" }, { status: 500 });
   }
 }

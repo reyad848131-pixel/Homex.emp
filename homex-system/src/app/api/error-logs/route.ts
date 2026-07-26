@@ -24,7 +24,8 @@ export async function GET(req: NextRequest) {
     ]);
 
     return NextResponse.json({ logs, total, page, totalPages: Math.ceil(total / limit) });
-  } catch {
+  } catch (e) {
+    console.error("API error [/api/error-logs]:", e);
     return NextResponse.json({ error: "Server error" }, { status: 500 });
   }
 }

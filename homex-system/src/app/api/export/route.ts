@@ -84,7 +84,8 @@ export async function GET(req: NextRequest) {
   }
 
     return NextResponse.json({ error: "Invalid type" }, { status: 400 });
-  } catch {
+  } catch (e) {
+    console.error("API error [/api/export]:", e);
     return NextResponse.json({ error: "Server error" }, { status: 500 });
   }
 }

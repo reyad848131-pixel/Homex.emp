@@ -30,7 +30,8 @@ export async function GET(req: NextRequest) {
     });
 
     return NextResponse.json(result);
-  } catch {
+  } catch (e) {
+    console.error("API error [/api/quotations]:", e);
     return NextResponse.json({ error: "Server error" }, { status: 500 });
   }
 }

@@ -55,7 +55,8 @@ export async function POST(req: NextRequest) {
     if (!invoice) return NextResponse.json({ error: "تعذّر إصدار رقم فاتورة فريد" }, { status: 409 });
 
     return NextResponse.json(invoice);
-  } catch {
+  } catch (e) {
+    console.error("API error [/api/invoices]:", e);
     return NextResponse.json({ error: "Server error" }, { status: 500 });
   }
 }

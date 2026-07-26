@@ -27,7 +27,8 @@ export async function GET(req: NextRequest) {
     });
 
     return NextResponse.json(result);
-  } catch {
+  } catch (e) {
+    console.error("API error [/api/work-orders]:", e);
     return NextResponse.json({ error: "Server error" }, { status: 500 });
   }
 }
@@ -100,7 +101,8 @@ export async function PATCH(req: NextRequest) {
     await logAction(user.id, "work_status_change", "quotation", id, JSON.stringify(data));
 
     return NextResponse.json(updated);
-  } catch {
+  } catch (e) {
+    console.error("API error [/api/work-orders]:", e);
     return NextResponse.json({ error: "Server error" }, { status: 500 });
   }
 }

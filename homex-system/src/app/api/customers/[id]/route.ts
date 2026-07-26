@@ -42,7 +42,8 @@ export async function PATCH(
     await logAction(user.id, "update", "customer", id);
 
     return NextResponse.json(updated);
-  } catch {
+  } catch (e) {
+    console.error("API error [/api/customers/[id]]:", e);
     return NextResponse.json({ error: "Server error" }, { status: 500 });
   }
 }

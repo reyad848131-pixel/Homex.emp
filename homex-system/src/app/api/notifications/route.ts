@@ -24,7 +24,8 @@ export async function GET(req: NextRequest) {
     ]);
 
     return NextResponse.json({ notifications, unreadCount });
-  } catch {
+  } catch (e) {
+    console.error("API error [/api/notifications]:", e);
     return NextResponse.json({ error: "Server error" }, { status: 500 });
   }
 }
@@ -54,7 +55,8 @@ export async function PATCH(req: NextRequest) {
     }
 
     return NextResponse.json({ error: "Invalid request" }, { status: 400 });
-  } catch {
+  } catch (e) {
+    console.error("API error [/api/notifications]:", e);
     return NextResponse.json({ error: "Server error" }, { status: 500 });
   }
 }
