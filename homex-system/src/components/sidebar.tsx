@@ -36,32 +36,32 @@ const ROLE_KEYS: Record<string, TranslationKey> = {
 
 interface SidebarProps {
   user: { name: string; role: string; civilId: string };
+  // Permission keys the current user's role grants. Menu items with a `perm`
+  // are shown only when that permission is present (dashboard has none — always
+  // visible). Falls back to showing everything if not provided.
+  permissions?: string[];
 }
 
-const navItems: Array<{ href: string; labelKey: TranslationKey; icon: any }> = [
+// `perm: undefined` → always visible. Otherwise the item shows only when the
+// user's role grants that permission.
+const allItems: Array<{ href: string; labelKey: TranslationKey; icon: any; perm?: string }> = [
   { href: "/", labelKey: "dashboard", icon: LayoutDashboard },
-  { href: "/quotations", labelKey: "quotations", icon: FileText },
-  { href: "/quotations/new", labelKey: "newQuotation", icon: FilePlus },
-  { href: "/customers", labelKey: "customers", icon: Users },
+  { href: "/quotations", labelKey: "quotations", icon: FileText, perm: "quotes" },
+  { href: "/quotations/new", labelKey: "newQuotation", icon: FilePlus, perm: "quotes" },
+  { href: "/customers", labelKey: "customers", icon: Users, perm: "customers" },
+  { href: "/work-orders", labelKey: "workOrders", icon: Truck, perm: "work_orders" },
+  { href: "/delivery-schedule", labelKey: "deliverySchedule", icon: CalendarClock, perm: "work_orders" },
+  { href: "/installation-schedule", labelKey: "installSchedule", icon: Wrench, perm: "work_orders" },
+  { href: "/service-requests", labelKey: "serviceRequests", icon: LifeBuoy, perm: "work_orders" },
+  { href: "/reports", labelKey: "reports", icon: BarChart3, perm: "reports" },
+  { href: "/employees", labelKey: "employees", icon: UsersRound, perm: "employees" },
+  { href: "/categories", labelKey: "categories", icon: Layers, perm: "categories" },
+  { href: "/audit-logs", labelKey: "auditLogs", icon: ScrollText, perm: "audit" },
+  { href: "/error-logs", labelKey: "errorLogs", icon: AlertTriangle, perm: "audit" },
+  { href: "/settings", labelKey: "settings", icon: Settings, perm: "settings" },
 ];
 
-const managerItems: Array<{ href: string; labelKey: TranslationKey; icon: any }> = [
-  { href: "/work-orders", labelKey: "workOrders", icon: Truck },
-  { href: "/delivery-schedule", labelKey: "deliverySchedule", icon: CalendarClock },
-  { href: "/installation-schedule", labelKey: "installSchedule", icon: Wrench },
-  { href: "/service-requests", labelKey: "serviceRequests", icon: LifeBuoy },
-  { href: "/reports", labelKey: "reports", icon: BarChart3 },
-];
-
-const adminItems: Array<{ href: string; labelKey: TranslationKey; icon: any }> = [
-  { href: "/employees", labelKey: "employees", icon: UsersRound },
-  { href: "/categories", labelKey: "categories", icon: Layers },
-  { href: "/audit-logs", labelKey: "auditLogs", icon: ScrollText },
-  { href: "/error-logs", labelKey: "errorLogs", icon: AlertTriangle },
-  { href: "/settings", labelKey: "settings", icon: Settings },
-];
-
-export function Sidebar({ user }: SidebarProps) {
+export function Sidebar({ user, permissions }: SidebarProps) {
   const pathname = usePathname();
   const router = useRouter();
   const [mobileOpen, setMobileOpen] = useState(false);
@@ -80,11 +80,16 @@ export function Sidebar({ user }: SidebarProps) {
     router.refresh();
   };
 
-  const items = user.role === "admin"
-    ? [...navItems, ...managerItems, ...adminItems]
-    : user.role === "manager"
-      ? [...navItems, ...managerItems]
-      : navItems;
+  // Show an item when it needs no permission, or the user's role grants it.
+  // Legacy fallback: if permissions weren't supplied, use the old role tiers.
+  const items = permissions
+    ? allItems.filter((it) => !it.perm || permissions.includes(it.perm))
+    : allItems.filter((it) => {
+        if (!it.perm) return true;
+        if (user.role === "admin") return true;
+        if (user.role === "manager") return !["employees", "categories", "audit", "settings"].includes(it.perm);
+        return ["quotes", "customers"].includes(it.perm);
+      });
 
   const content = (
     <>
