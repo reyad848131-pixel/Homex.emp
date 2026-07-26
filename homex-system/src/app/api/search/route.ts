@@ -9,7 +9,7 @@ export async function GET(req: NextRequest) {
     const session = await getAuth();
     if (!session) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     const user = session.user as any;
-    const isAdmin = user.role === "admin" || user.role === "manager";
+    const isAdmin = (user.role === "admin" || user.role === "ceo") || user.role === "manager";
 
     const q = (new URL(req.url).searchParams.get("q") || "").trim();
     if (q.length < 2) return NextResponse.json({ quotations: [], customers: [] });

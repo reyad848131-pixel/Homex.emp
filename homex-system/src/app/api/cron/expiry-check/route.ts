@@ -18,7 +18,7 @@ export async function GET(req: NextRequest) {
     if (!isCron) {
       const session = await getAuth();
       const user = session?.user as any;
-      if (!session || user?.role !== "admin") {
+      if (!session || user?.role !== "admin" && user?.role !== "ceo") {
         return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
       }
     }

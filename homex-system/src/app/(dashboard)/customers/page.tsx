@@ -5,7 +5,7 @@ import { CustomersClient } from "./customers-client";
 export default async function CustomersPage() {
   const session = await getAuth();
   const user = session?.user as any;
-  const isAdmin = user?.role === "admin" || user?.role === "manager";
+  const isAdmin = (user?.role === "admin" || user?.role === "ceo") || user?.role === "manager";
 
   const customers = await prisma.customer.findMany({
     where: isAdmin ? {} : { createdBy: user?.id },

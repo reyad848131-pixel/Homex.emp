@@ -38,6 +38,7 @@ const translations = {
   roleSales: { ar: "مبيعات", en: "Sales" },
   roleAccountant: { ar: "محاسب", en: "Accountant" },
   roleDriver: { ar: "سائق", en: "Driver" },
+  roleCeo: { ar: "مدير تنفيذي (CEO)", en: "CEO" },
   rolesAndPermissions: { ar: "الرتب والصلاحيات", en: "Roles & Permissions" },
   newRole: { ar: "رتبة جديدة", en: "New role" },
   roleNameLabel: { ar: "اسم الرتبة", en: "Role name" },

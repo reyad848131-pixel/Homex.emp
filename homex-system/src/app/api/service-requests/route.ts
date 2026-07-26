@@ -13,7 +13,7 @@ async function requireManager() {
   const session = await getAuth();
   if (!session) return { error: NextResponse.json({ error: "Unauthorized" }, { status: 401 }) };
   const user = session.user as any;
-  const allowed = user.role === "admin" || user.role === "manager" || await userCan(user.role, "work_orders");
+  const allowed = (user.role === "admin" || user.role === "ceo") || user.role === "manager" || await userCan(user.role, "work_orders");
   if (!allowed) {
     return { error: NextResponse.json({ error: "Forbidden" }, { status: 403 }) };
   }

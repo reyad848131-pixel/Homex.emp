@@ -56,11 +56,15 @@ export interface RoleDef {
   label: string;
   permissions: Permission[];
   system?: boolean;
+  // A singleton role may be held by at most one employee at a time (e.g. CEO).
+  singleton?: boolean;
 }
 
 // Built-in roles — their permissions reproduce the original hard-coded access
 // (sales: own quotes + customers; manager: + work orders & reports; admin: all).
 export const SYSTEM_ROLES: RoleDef[] = [
+  // CEO: full access like the system admin, but limited to a single person.
+  { key: "ceo", label: "مدير تنفيذي (CEO)", system: true, singleton: true, permissions: [...PERMISSIONS] },
   { key: "admin", label: "مدير النظام", system: true, permissions: [...PERMISSIONS] },
   {
     key: "manager",

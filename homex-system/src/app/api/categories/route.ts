@@ -8,7 +8,7 @@ export async function GET(req: NextRequest) {
     if (!session) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
     const user = session.user as any;
-    const showAll = req.nextUrl.searchParams.get("all") === "true" && user.role === "admin";
+    const showAll = req.nextUrl.searchParams.get("all") === "true" && (user.role === "admin" || user.role === "ceo");
 
     const categories = await prisma.category.findMany({
       where: showAll ? {} : { isActive: true },
@@ -41,7 +41,7 @@ export async function POST(req: NextRequest) {
     if (!session) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
     const user = session.user as any;
-    if (user.role !== "admin") return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+    if (user.role !== "admin" && user.role !== "ceo") return NextResponse.json({ error: "Forbidden" }, { status: 403 });
 
     const body = await req.json();
 

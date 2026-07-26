@@ -9,7 +9,7 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
     const session = await getAuth();
     if (!session) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     const user = session.user as any;
-    if (!(user.role === "admin" || user.role === "manager" || await userCan(user.role, "work_orders"))) {
+    if (!((user.role === "admin" || user.role === "ceo") || user.role === "manager" || await userCan(user.role, "work_orders"))) {
       return NextResponse.json({ error: "Forbidden" }, { status: 403 });
     }
 
@@ -47,7 +47,7 @@ export async function DELETE(req: NextRequest, { params }: { params: Promise<{ i
     const session = await getAuth();
     if (!session) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     const user = session.user as any;
-    if (user.role !== "admin" && user.role !== "manager") {
+    if (user.role !== "admin" && user.role !== "ceo" && user.role !== "manager") {
       return NextResponse.json({ error: "Forbidden" }, { status: 403 });
     }
     const { id } = await params;

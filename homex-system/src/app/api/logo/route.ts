@@ -24,7 +24,7 @@ export async function POST(req: NextRequest) {
     if (!session) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
     const user = session.user as any;
-    if (user.role !== "admin") {
+    if (user.role !== "admin" && user.role !== "ceo") {
       return NextResponse.json({ error: "Admin only" }, { status: 403 });
     }
 
@@ -56,7 +56,7 @@ export async function DELETE() {
     if (!session) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
     const user = session.user as any;
-    if (user.role !== "admin") {
+    if (user.role !== "admin" && user.role !== "ceo") {
       return NextResponse.json({ error: "Admin only" }, { status: 403 });
     }
 

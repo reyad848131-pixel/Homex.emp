@@ -15,7 +15,7 @@ export async function PATCH(
     if (!session) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
     const user = session.user as any;
-    if (user.role !== "admin") {
+    if (user.role !== "admin" && user.role !== "ceo") {
       return NextResponse.json({ error: "Admin only" }, { status: 403 });
     }
 
@@ -29,8 +29,17 @@ export async function PATCH(
 
     if (body.role !== undefined) {
       const roles = await getAllRoles();
-      if (!roles.some((r) => r.key === body.role)) {
+      const roleDef = roles.find((r) => r.key === body.role);
+      if (!roleDef) {
         return NextResponse.json({ error: "رتبة غير معروفة", code: "invalid" }, { status: 400 });
+      }
+      // A singleton role (e.g. CEO) may be held by only one employee — allow it
+      // only if no *other* employee already has it.
+      if (roleDef.singleton) {
+        const others = await prisma.employee.count({ where: { role: body.role, id: { not: id } } });
+        if (others > 0) {
+          return NextResponse.json({ error: `رتبة "${roleDef.label}" مخصّصة لشخص واحد فقط`, code: "singleton" }, { status: 409 });
+        }
       }
     }
 

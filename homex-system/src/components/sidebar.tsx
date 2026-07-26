@@ -29,9 +29,12 @@ import { DarkModeToggle } from "@/components/dark-mode-toggle";
 import { LanguageToggle } from "@/components/language-toggle";
 
 const ROLE_KEYS: Record<string, TranslationKey> = {
+  ceo: "roleCeo",
   admin: "roleAdmin",
   manager: "roleManager",
   sales: "roleSales",
+  accountant: "roleAccountant",
+  driver: "roleDriver",
 };
 
 interface SidebarProps {

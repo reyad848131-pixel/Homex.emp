@@ -67,7 +67,7 @@ export async function PATCH(
       return NextResponse.json({ error: "Forbidden" }, { status: 403 });
     }
 
-    const isManager = user.role === "admin" || user.role === "manager";
+    const isManager = (user.role === "admin" || user.role === "ceo") || user.role === "manager";
     const locked = isFinanciallyLocked(quotation);
 
     // A quotation is financially frozen once it is invoiced, has payments, or

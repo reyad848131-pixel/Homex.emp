@@ -16,6 +16,7 @@ interface Employee {
 }
 
 const ROLE_KEYS: Record<string, TranslationKey> = {
+  ceo: "roleCeo",
   admin: "roleAdmin",
   manager: "roleManager",
   sales: "roleSales",
@@ -24,6 +25,7 @@ const ROLE_KEYS: Record<string, TranslationKey> = {
 };
 
 const ROLE_COLORS: Record<string, string> = {
+  ceo: "bg-gray-900 text-white",
   admin: "bg-red-100 text-red-700",
   manager: "bg-blue-100 text-blue-700",
   sales: "bg-green-100 text-green-700",
@@ -123,7 +125,11 @@ export default function EmployeesPage() {
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify(body),
         });
-        if (!res.ok) { setError(t("updateFailed")); return; }
+        if (!res.ok) {
+          const d = await res.json().catch(() => ({}));
+          setError(d.code === "singleton" ? d.error : t("updateFailed"));
+          return;
+        }
       } else {
         if (!form.name || !form.civilId || !form.password) { setError(t("allFieldsRequired")); return; }
         if (form.password.length < 6) { setError(t("passwordMinHint")); return; }
@@ -132,8 +138,13 @@ export default function EmployeesPage() {
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify(form),
         });
-        if (res.status === 409) { setError(t("civilIdExists")); return; }
-        if (!res.ok) { setError(t("addFailed")); return; }
+        if (!res.ok) {
+          const d = await res.json().catch(() => ({}));
+          if (d.code === "singleton") setError(d.error);
+          else if (res.status === 409) setError(t("civilIdExists"));
+          else setError(t("addFailed"));
+          return;
+        }
       }
       resetForm();
       load();

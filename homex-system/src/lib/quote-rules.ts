@@ -29,7 +29,7 @@ export function canSetStatus(params: {
   status: string;
   selfApprove: boolean;
 }): StatusDecision {
-  const isManager = params.role === "admin" || params.role === "manager";
+  const isManager = params.role === "admin" || params.role === "ceo" || params.role === "manager";
   if (isManager) return { ok: true };
   if (params.status === "declined") return { ok: false, reason: "sales_decline" };
   if (params.status === "approved" && !params.selfApprove) {

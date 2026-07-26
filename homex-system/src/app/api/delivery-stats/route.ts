@@ -11,7 +11,7 @@ export async function GET() {
     const session = await getAuth();
     if (!session) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     const user = session.user as any;
-    const allowed = user.role === "admin" || user.role === "manager" || await userCan(user.role, "work_orders");
+    const allowed = (user.role === "admin" || user.role === "ceo") || user.role === "manager" || await userCan(user.role, "work_orders");
     if (!allowed) {
       return NextResponse.json({ error: "Forbidden" }, { status: 403 });
     }

@@ -16,7 +16,7 @@ export async function GET(req: NextRequest) {
     if (!session) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
     const user = session.user as any;
-    const isAdmin = user.role === "admin" || user.role === "manager" || await userCan(user.role, "view_all_quotes");
+    const isAdmin = (user.role === "admin" || user.role === "ceo") || user.role === "manager" || await userCan(user.role, "view_all_quotes");
 
     const { searchParams } = new URL(req.url);
     const result = await getQuotationsList({

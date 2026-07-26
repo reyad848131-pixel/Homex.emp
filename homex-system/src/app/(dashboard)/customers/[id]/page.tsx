@@ -24,7 +24,7 @@ export default async function CustomerDetailPage({ params }: { params: Promise<{
 
   if (!customer) return notFound();
 
-  const isAdmin = user?.role === "admin" || user?.role === "manager";
+  const isAdmin = (user?.role === "admin" || user?.role === "ceo") || user?.role === "manager";
   if (!isAdmin && customer.createdBy !== user?.id) return notFound();
 
   const approvedQuotes = customer.quotations.filter((q) => q.status === "approved");

@@ -14,11 +14,11 @@ export default async function DashboardPage() {
   const userId = (session?.user as any)?.id;
   const role = (session?.user as any)?.role;
 
-  const isAdmin = role === "admin" || role === "manager";
+  const isAdmin = role === "admin" || role === "ceo" || role === "manager";
   const whereClause = isAdmin ? {} : { employeeId: userId };
 
-  // Only admins configure settings, so only they see the readiness nudge.
-  const missingSettings = role === "admin"
+  // Only admins/CEO configure settings, so only they see the readiness nudge.
+  const missingSettings = (role === "admin" || role === "ceo")
     ? await getSettings().then((s) => READINESS_KEYS.filter((k) => !s[k] || !String(s[k]).trim()))
     : [];
 
