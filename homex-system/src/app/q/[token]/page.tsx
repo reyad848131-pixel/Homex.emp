@@ -131,17 +131,17 @@ export default async function PublicQuotePage({ params }: { params: Promise<{ to
           </div>
         </div>
 
-        {/* Decision */}
-        <div className="bg-white rounded-2xl shadow-sm p-6">
-          <QuoteDecision token={token} initialStatus={q.status} />
-        </div>
-
         {terms && (
           <div className="bg-white rounded-2xl shadow-sm p-6">
             <p className="text-xs font-bold text-gray-400 mb-2">الشروط والأحكام</p>
             <p className="text-xs text-gray-500 whitespace-pre-wrap leading-relaxed">{terms}</p>
           </div>
         )}
+
+        {/* Contract signature + decision — placed at the bottom, under the terms. */}
+        <div className="bg-white rounded-2xl shadow-sm p-6">
+          <QuoteDecision token={token} initialStatus={q.status} customerName={q.customer.name} />
+        </div>
 
         <p className="text-center text-xs text-gray-400 pb-4">{companyName} · نظام عروض الأسعار</p>
       </div>

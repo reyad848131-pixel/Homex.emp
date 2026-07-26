@@ -86,6 +86,20 @@ export async function GET(
     `).join("");
   })() : "";
 
+  // Signed-contract block (rendered on the terms page when the customer signed).
+  const signedDate = quotation.signedAt
+    ? new Date(quotation.signedAt).toLocaleDateString("ar-OM", { year: "numeric", month: "long", day: "numeric" })
+    : "";
+  const signatureHtml = quotation.signedAt ? `
+    <div class="signature-block">
+      <div class="sig-title">توقيع العميل على العقد</div>
+      <div class="sig-row">
+        <div><span class="sig-label">الاسم:</span> ${esc(quotation.signerName || "")}</div>
+        <div><span class="sig-label">التاريخ:</span> ${esc(signedDate)}</div>
+      </div>
+      ${quotation.signatureData ? `<img class="sig-img" src="${quotation.signatureData}" alt="signature" />` : ""}
+    </div>` : "";
+
   const html = `<!DOCTYPE html>
 <html dir="rtl" lang="ar">
 <head>
@@ -391,6 +405,17 @@ export async function GET(
     }
 
     /* ===== TERMS FOOTER ===== */
+    .signature-block {
+      margin-top: 24px;
+      padding: 16px 18px;
+      border: 1.5px solid #d1d5db;
+      border-radius: 8px;
+      background: #fafafa;
+    }
+    .sig-title { font-weight: 700; font-size: 13px; margin-bottom: 10px; color: #111827; }
+    .sig-row { display: flex; gap: 32px; font-size: 12px; color: #374151; margin-bottom: 8px; }
+    .sig-label { color: #9ca3af; font-weight: 600; }
+    .sig-img { height: 70px; background: #fff; border: 1px solid #e5e7eb; border-radius: 4px; padding: 4px; }
     .terms-footer {
       border-top: 1px solid #ddd;
       padding: 14px 48px;
@@ -571,7 +596,7 @@ export async function GET(
     </div>
 
     <!-- ========== PAGE 2: TERMS ========== -->
-    ${termsConditions ? `
+    ${(termsConditions || quotation.signedAt) ? `
     <div class="terms-page">
       <div class="section-bar">
         <span class="section-bar-text">الشروط والمواصفات</span>
@@ -581,6 +606,7 @@ export async function GET(
       </div>
       <div class="terms-content">
         ${termsHtml}
+        ${signatureHtml}
       </div>
 
       <div class="terms-footer">

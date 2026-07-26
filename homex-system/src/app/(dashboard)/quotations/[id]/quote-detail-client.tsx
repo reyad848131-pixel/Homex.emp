@@ -7,6 +7,7 @@ import { cn } from "@/lib/utils";
 import { useI18n, type TranslationKey } from "@/lib/i18n";
 import { useToast } from "@/components/toast";
 import { normalizeNumeric } from "@/components/quote-builders";
+import { SignaturePad } from "@/components/signature-pad";
 import {
   ArrowRight, Printer, Trash2, CheckCircle, XCircle, Send,
   Clock, FileText, User, MapPin, Phone, Pencil, Download, Copy, MessageCircle, CalendarDays,
@@ -28,6 +29,9 @@ interface QuotationDetail {
   notes: string | null;
   managerEditNote: string | null;
   managerEditedAt: string | null;
+  signatureData: string | null;
+  signerName: string | null;
+  signedAt: string | null;
   validUntil: string | null;
   deliveryDate: string | null;
   createdAt: string;
@@ -546,6 +550,31 @@ export default function QuoteDetailClient({
           </div>
         )}
 
+        {/* Contract signature: show the signed record, or let the rep capture
+            it in person on this device. */}
+        <div className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded p-5 mt-6 no-print">
+          <h2 className="text-sm font-bold text-gray-400 mb-3 flex items-center gap-2">
+            <Pencil className="w-4 h-4" /> {t("contractSignature")}
+          </h2>
+          {q.signedAt ? (
+            <div className="flex flex-wrap items-end gap-6">
+              <div>
+                <p className="text-xs text-gray-400 mb-1">{t("signerName")}</p>
+                <p className="font-bold text-gray-800 dark:text-gray-100">{q.signerName}</p>
+                <p className="text-xs text-gray-400 mt-2 font-mono-en">
+                  {new Date(q.signedAt).toLocaleString(locale === "ar" ? "ar-OM" : "en-GB", { dateStyle: "medium", timeStyle: "short" })}
+                </p>
+              </div>
+              {q.signatureData && (
+                // eslint-disable-next-line @next/next/no-img-element
+                <img src={q.signatureData} alt="signature" className="h-20 bg-white border border-gray-200 rounded px-2" />
+              )}
+            </div>
+          ) : (
+            <SignCapture id={id} onSigned={(u) => setQ((prev) => prev ? { ...prev, ...u } : prev)} />
+          )}
+        </div>
+
         {q.status === "approved" && (() => {
           const totalPaid = q.payments.reduce((s, p) => s + p.amount, 0);
           const remaining = q.total - totalPaid;
@@ -783,5 +812,76 @@ export default function QuoteDetailClient({
         </div>
       )}
     </>
+  );
+}
+
+// In-person signing widget on the detail page: the customer signs on the rep's
+// device. Posts to the internal sign endpoint and reports the stored fields
+// back so the parent updates without a reload.
+function SignCapture({
+  id,
+  onSigned,
+}: {
+  id: string;
+  onSigned: (u: { signatureData: string; signerName: string; signedAt: string; status: string }) => void;
+}) {
+  const { t } = useI18n();
+  const toast = useToast();
+  const [open, setOpen] = useState(false);
+  const [name, setName] = useState("");
+  const [sig, setSig] = useState<string | null>(null);
+  const [busy, setBusy] = useState(false);
+
+  const submit = async () => {
+    if (!name.trim()) return toast.error(t("nameRequired"));
+    if (!sig) return toast.error(t("signatureRequired"));
+    setBusy(true);
+    try {
+      const res = await fetch(`/api/quotations/${id}/sign`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ signerName: name.trim(), signatureData: sig }),
+      });
+      if (res.ok) {
+        toast.success(t("signedSuccess"));
+        onSigned({ signatureData: sig, signerName: name.trim(), signedAt: new Date().toISOString(), status: "accepted" });
+      } else {
+        const d = await res.json().catch(() => ({}));
+        toast.error(d.error || t("errorOccurred"));
+      }
+    } catch {
+      toast.error(t("errorOccurred"));
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  if (!open) {
+    return (
+      <button onClick={() => setOpen(true)}
+        className="flex items-center gap-2 bg-gray-900 dark:bg-white text-white dark:text-gray-900 font-bold px-4 py-2.5 rounded-lg text-sm">
+        <Pencil className="w-4 h-4" /> {t("signInPerson")}
+      </button>
+    );
+  }
+
+  return (
+    <div className="max-w-md">
+      <label className="block text-sm font-semibold text-gray-600 dark:text-gray-300 mb-1">{t("signerName")}</label>
+      <input value={name} onChange={(e) => setName(e.target.value)} placeholder={t("signerName")}
+        className="field mb-3" />
+      <label className="block text-sm font-semibold text-gray-600 dark:text-gray-300 mb-1">{t("signature")}</label>
+      <SignaturePad onChange={setSig} clearLabel={t("clear")} />
+      <div className="flex gap-2 mt-3">
+        <button onClick={submit} disabled={busy}
+          className="flex items-center gap-2 bg-emerald-600 hover:bg-emerald-700 text-white font-bold px-4 py-2.5 rounded-lg text-sm disabled:opacity-50">
+          {busy ? <Clock className="w-4 h-4 animate-spin" /> : <CheckCircle className="w-4 h-4" />} {t("confirmSignature")}
+        </button>
+        <button onClick={() => setOpen(false)} disabled={busy}
+          className="px-4 py-2.5 rounded-lg text-sm font-bold border border-gray-300 text-gray-600">
+          {t("cancel")}
+        </button>
+      </div>
+    </div>
   );
 }

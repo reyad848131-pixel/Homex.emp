@@ -7,8 +7,9 @@ export function isFinanciallyLocked(q: {
   status: string;
   invoice?: { id: string } | null;
   _count?: { payments: number };
+  signedAt?: Date | string | null;
 }): boolean {
-  return !!q.invoice || (q._count?.payments ?? 0) > 0 || q.status === "accepted";
+  return !!q.invoice || (q._count?.payments ?? 0) > 0 || q.status === "accepted" || !!q.signedAt;
 }
 
 // A manager override must never drop the total below what the customer already

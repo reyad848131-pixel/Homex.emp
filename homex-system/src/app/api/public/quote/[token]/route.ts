@@ -20,6 +20,21 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ tok
     const action = body.action === "accept" ? "accept" : body.action === "reject" ? "reject" : null;
     if (!action) return NextResponse.json({ error: "Invalid action" }, { status: 400 });
 
+    // Accepting requires a signed contract: the signer's name + a drawn
+    // signature (base64 PNG, size-capped to reject junk/oversized payloads).
+    let signerName: string | null = null;
+    let signatureData: string | null = null;
+    if (action === "accept") {
+      const nm = typeof body.signerName === "string" ? body.signerName.trim() : "";
+      const sig = typeof body.signatureData === "string" ? body.signatureData : "";
+      if (!nm) return NextResponse.json({ error: "الاسم مطلوب" }, { status: 400 });
+      if (!sig.startsWith("data:image/png;base64,") || sig.length > 600_000) {
+        return NextResponse.json({ error: "التوقيع غير صالح" }, { status: 400 });
+      }
+      signerName = nm;
+      signatureData = sig;
+    }
+
     const quotation = await prisma.quotation.findUnique({
       where: { publicToken: token },
       select: { id: true, quoteNumber: true, status: true, employeeId: true },
@@ -32,11 +47,17 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ tok
     }
 
     const newStatus = action === "accept" ? "accepted" : "declined";
-    const comment = action === "accept" ? "قبول من العميل عبر الرابط" : "رفض من العميل عبر الرابط";
+    const comment = action === "accept" ? "قبول وتوقيع من العميل عبر الرابط" : "رفض من العميل عبر الرابط";
 
     await prisma.quotation.update({
       where: { id: quotation.id },
-      data: { status: newStatus, statusComment: comment },
+      data: {
+        status: newStatus,
+        statusComment: comment,
+        ...(action === "accept"
+          ? { signerName, signatureData, signedAt: new Date(), signerIp: clientIp(req) }
+          : {}),
+      },
     });
 
     const link = `/quotations/${quotation.id}`;
