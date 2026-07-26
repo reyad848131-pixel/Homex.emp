@@ -6,6 +6,7 @@ import { STATUS_MAP } from "@/lib/types";
 import { cn } from "@/lib/utils";
 import { useI18n, type TranslationKey } from "@/lib/i18n";
 import { useToast } from "@/components/toast";
+import { normalizeNumeric } from "@/components/quote-builders";
 import {
   ArrowRight, Printer, Trash2, CheckCircle, XCircle, Send,
   Clock, FileText, User, MapPin, Phone, Pencil, Download, Copy, MessageCircle, CalendarDays,
@@ -593,12 +594,7 @@ export default function QuotationDetailPage({ params }: { params: Promise<{ id: 
                         <label className="block text-xs font-semibold text-gray-500 mb-1">{t("amount")} *</label>
                         <input type="text" inputMode="decimal" dir="ltr"
                           value={payAmount}
-                          onChange={(e) => {
-                            let v = e.target.value.replace(/[،,]/g, ".").replace(/[^0-9.]/g, "");
-                            const dot = v.indexOf(".");
-                            if (dot !== -1) v = v.slice(0, dot + 1) + v.slice(dot + 1).replace(/\./g, "");
-                            setPayAmount(v);
-                          }}
+                          onChange={(e) => setPayAmount(normalizeNumeric(e.target.value))}
                           className="field font-mono-en"
                           placeholder={`${t("maxAmount")} ${remaining.toFixed(3)}`} />
                       </div>

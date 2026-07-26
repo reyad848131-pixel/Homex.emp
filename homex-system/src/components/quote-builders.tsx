@@ -25,11 +25,32 @@ export interface Category {
 type BuilderUpdate = (d: string, p: number, e: number, details?: Record<string, any>) => void;
 type BuilderInitial = Record<string, any> | undefined;
 
+// Normalise anything a keyboard might produce for a number into plain
+// Latin digits + a single "." separator. On an Arabic-locale iPad the
+// decimal keypad emits the Arabic decimal separator "٫" (U+066B) and often
+// Arabic-Indic / Persian digits — if those aren't converted they get
+// stripped, so the decimal key looks like it "does nothing". We map:
+//   • Arabic-Indic (٠-٩) & Persian (۰-۹) digits -> 0-9
+//   • every separator variant (. , ، ٫ ٬) -> "."
+// then keep only digits and collapse to one dot.
+export function normalizeNumeric(raw: string): string {
+  let s = raw
+    .replace(/[٠-٩]/g, (d) => String(d.charCodeAt(0) - 0x0660))
+    .replace(/[۰-۹]/g, (d) => String(d.charCodeAt(0) - 0x06F0))
+    .replace(/[.,،٫٬⸲⁄]/g, ".")
+    .replace(/[^0-9.]/g, "");
+  const firstDot = s.indexOf(".");
+  if (firstDot !== -1) {
+    s = s.slice(0, firstDot + 1) + s.slice(firstDot + 1).replace(/\./g, "");
+  }
+  return s;
+}
+
 // A decimal-friendly number field. Native type="number" (controlled) drops the
 // decimal point while typing ("2." -> "2"), so measurements like 2.4 / 3.7 are
-// impossible to enter. This keeps the raw text while editing, accepts "." or
-// "," as the decimal separator, shows the decimal keypad on iPad, and clamps
-// on blur — so decimals type smoothly everywhere.
+// impossible to enter. This keeps the raw text while editing, accepts every
+// decimal-separator variant (see normalizeNumeric), shows the decimal keypad on
+// iPad, and clamps on blur — so decimals type smoothly everywhere.
 export function NumField({
   value, onChange, min, max, int, className, placeholder,
 }: {
@@ -46,12 +67,7 @@ export function NumField({
   }, [value]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const handleChange = (raw: string) => {
-    // Normalise Arabic/Latin comma to a dot; keep only digits and one dot.
-    let cleaned = raw.replace(/[،,]/g, ".").replace(/[^0-9.]/g, "");
-    const firstDot = cleaned.indexOf(".");
-    if (firstDot !== -1) {
-      cleaned = cleaned.slice(0, firstDot + 1) + cleaned.slice(firstDot + 1).replace(/\./g, "");
-    }
+    let cleaned = normalizeNumeric(raw);
     if (int) cleaned = cleaned.replace(/\./g, "");
     setText(cleaned);
     const n = parseFloat(cleaned);
