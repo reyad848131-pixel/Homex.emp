@@ -3,14 +3,18 @@ import { getAuth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { logAction } from "@/lib/audit";
 import { notifyAdmins } from "@/lib/notifications";
+import { userCan } from "@/lib/permissions";
 
 const TYPES = ["return", "maintenance"];
 
+// Service & returns: available to admin/manager and to the work-orders
+// permission (e.g. the driver role).
 async function requireManager() {
   const session = await getAuth();
   if (!session) return { error: NextResponse.json({ error: "Unauthorized" }, { status: 401 }) };
   const user = session.user as any;
-  if (user.role !== "admin" && user.role !== "manager") {
+  const allowed = user.role === "admin" || user.role === "manager" || await userCan(user.role, "work_orders");
+  if (!allowed) {
     return { error: NextResponse.json({ error: "Forbidden" }, { status: 403 }) };
   }
   return { user };

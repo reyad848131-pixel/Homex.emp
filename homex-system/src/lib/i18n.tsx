@@ -36,6 +36,8 @@ const translations = {
   roleAdmin: { ar: "مدير النظام", en: "System Admin" },
   roleManager: { ar: "مدير", en: "Manager" },
   roleSales: { ar: "مبيعات", en: "Sales" },
+  roleAccountant: { ar: "محاسب", en: "Accountant" },
+  roleDriver: { ar: "سائق", en: "Driver" },
 
   // Login
   employeeLogin: { ar: "دخول الموظفين", en: "Employee Login" },

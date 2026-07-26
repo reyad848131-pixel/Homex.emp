@@ -19,13 +19,20 @@ const ROLE_KEYS: Record<string, TranslationKey> = {
   admin: "roleAdmin",
   manager: "roleManager",
   sales: "roleSales",
+  accountant: "roleAccountant",
+  driver: "roleDriver",
 };
 
 const ROLE_COLORS: Record<string, string> = {
   admin: "bg-red-100 text-red-700",
   manager: "bg-blue-100 text-blue-700",
   sales: "bg-green-100 text-green-700",
+  accountant: "bg-amber-100 text-amber-700",
+  driver: "bg-purple-100 text-purple-700",
 };
+
+// Assignable roles, in the order shown in the picker.
+const ROLE_OPTIONS = ["sales", "accountant", "driver", "manager", "admin"] as const;
 
 export default function EmployeesPage() {
   const [employees, setEmployees] = useState<Employee[]>([]);
@@ -199,9 +206,9 @@ export default function EmployeesPage() {
               <label className="block text-sm font-semibold text-gray-600 mb-1.5">{t("role")}</label>
               <select value={form.role} onChange={(e) => setForm({ ...form, role: e.target.value })}
                 className="field">
-                <option value="sales">{t("roleSales")}</option>
-                <option value="manager">{t("roleManager")}</option>
-                <option value="admin">{t("roleAdmin")}</option>
+                {ROLE_OPTIONS.map((r) => (
+                  <option key={r} value={r}>{t(ROLE_KEYS[r])}</option>
+                ))}
               </select>
             </div>
             <div>

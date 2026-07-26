@@ -2,14 +2,17 @@ import { NextResponse } from "next/server";
 import { getAuth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { roundMoney } from "@/lib/utils";
+import { userCan } from "@/lib/permissions";
 
-// Delivery / operations KPIs for the schedule dashboard. Manager/admin only.
+// Delivery / operations KPIs for the schedule dashboard. Requires the
+// work-orders permission (admin/manager/driver).
 export async function GET() {
   try {
     const session = await getAuth();
     if (!session) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     const user = session.user as any;
-    if (user.role !== "admin" && user.role !== "manager") {
+    const allowed = user.role === "admin" || user.role === "manager" || await userCan(user.role, "work_orders");
+    if (!allowed) {
       return NextResponse.json({ error: "Forbidden" }, { status: 403 });
     }
 

@@ -8,6 +8,7 @@ import { computeQuoteTotals } from "@/lib/quote-calc";
 import { parseBody, createQuotationSchema } from "@/lib/schemas";
 import { curtainMinCount } from "@/lib/order-rules";
 import { getQuotationsList } from "@/lib/quotations-list";
+import { userCan } from "@/lib/permissions";
 
 export async function GET(req: NextRequest) {
   try {
@@ -15,7 +16,7 @@ export async function GET(req: NextRequest) {
     if (!session) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
     const user = session.user as any;
-    const isAdmin = user.role === "admin" || user.role === "manager";
+    const isAdmin = user.role === "admin" || user.role === "manager" || await userCan(user.role, "view_all_quotes");
 
     const { searchParams } = new URL(req.url);
     const result = await getQuotationsList({

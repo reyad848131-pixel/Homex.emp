@@ -40,6 +40,11 @@ export const SYSTEM_ROLES: RoleDef[] = [
     permissions: ["quotes", "view_all_quotes", "approve", "payments", "invoices", "edit_locked", "work_orders", "reports", "customers"],
   },
   { key: "sales", label: "مبيعات", system: true, permissions: ["quotes", "customers", "payments"] },
+  // Accountant: sees every quotation + reports, records payments and issues
+  // invoices; no settings / employees / pricing / approvals.
+  { key: "accountant", label: "محاسب", system: true, permissions: ["quotes", "view_all_quotes", "payments", "invoices", "reports"] },
+  // Driver: only the delivery / installation / work board.
+  { key: "driver", label: "سائق", system: true, permissions: ["work_orders"] },
 ];
 
 // Custom roles are stored as JSON in the settings table (no schema change).
@@ -76,6 +81,12 @@ export async function getRolePermissions(roleKey: string): Promise<Permission[]>
 
 export function roleHasPermissionIn(perms: Permission[], perm: Permission): boolean {
   return perms.includes(perm);
+}
+
+// Convenience: does the given role grant the permission? (async settings read,
+// cached). Use in API routes to gate access by capability instead of role name.
+export async function userCan(roleKey: string, perm: Permission): Promise<boolean> {
+  return (await getRolePermissions(roleKey)).includes(perm);
 }
 
 export { CUSTOM_ROLES_KEY };

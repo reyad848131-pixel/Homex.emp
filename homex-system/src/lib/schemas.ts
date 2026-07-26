@@ -61,7 +61,7 @@ export const updateQuotationItemsSchema = z.object({
   deliveryTime: z.string().nullish(),
 });
 
-export const ROLES = ["admin", "manager", "sales"] as const;
+export const ROLES = ["admin", "manager", "sales", "accountant", "driver"] as const;
 
 export const employeeCreateSchema = z.object({
   name: z.string().trim().min(1),
