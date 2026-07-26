@@ -24,6 +24,29 @@ export function TableSkeleton({ rows = 8 }: { rows?: number }) {
   );
 }
 
+/**
+ * A full list-page skeleton (title + toolbar + table card). Shown instantly on
+ * navigation to a server-rendered list page so the click feels immediate
+ * instead of "hanging" while the server fetches the first page of data.
+ */
+export function ListSkeleton({ rows = 8 }: { rows?: number }) {
+  return (
+    <div>
+      <div className="flex items-center justify-between mb-6">
+        <Skeleton className="h-8 w-40" />
+        <Skeleton className="h-10 w-32 rounded" />
+      </div>
+      <div className="flex gap-2 mb-4">
+        <Skeleton className="h-10 flex-1 rounded" />
+        <Skeleton className="h-10 w-28 rounded max-sm:hidden" />
+      </div>
+      <div className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded">
+        <TableSkeleton rows={rows} />
+      </div>
+    </div>
+  );
+}
+
 /** A skeleton grid of stat/summary cards. */
 export function CardsSkeleton({ count = 4 }: { count?: number }) {
   return (
