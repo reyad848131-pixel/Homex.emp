@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { UsersRound, Plus, X, Shield, UserCheck, UserX } from "lucide-react";
+import { UsersRound, Plus, X, Shield, UserCheck, UserX, KeyRound, Copy } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useI18n, type TranslationKey } from "@/lib/i18n";
 
@@ -34,7 +34,24 @@ export default function EmployeesPage() {
   const [form, setForm] = useState({ name: "", civilId: "", phone: "", role: "sales", password: "" });
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
+  const [resetting, setResetting] = useState(false);
+  const [resetResult, setResetResult] = useState<Array<{ name: string; civilId: string; password: string }> | null>(null);
   const { t } = useI18n();
+
+  const handleResetPasswords = async () => {
+    if (!confirm(t("resetPasswordsConfirm"))) return;
+    setResetting(true);
+    try {
+      const res = await fetch("/api/employees/reset-passwords", { method: "POST" });
+      if (res.ok) {
+        const data = await res.json();
+        setResetResult(data.employees || []);
+      } else {
+        setError(t("addFailed"));
+      }
+    } catch { setError(t("serverConnectionError")); }
+    finally { setResetting(false); }
+  };
 
   const load = () => fetch("/api/employees").then((r) => r.json()).then(setEmployees);
   useEffect(() => { load(); }, []);
@@ -101,12 +118,60 @@ export default function EmployeesPage() {
           </h1>
           <p className="text-sm text-gray-500 mt-1">{employees.length} {t("employeeCount")}</p>
         </div>
-        <button onClick={() => { resetForm(); setShowForm(true); }}
-          className="flex items-center gap-2 bg-gray-900 text-white px-5 py-2.5 rounded text-sm font-bold hover:bg-gray-800">
-          <Plus className="w-4 h-4" />
-          {t("addEmployee")}
-        </button>
+        <div className="flex items-center gap-2">
+          <button onClick={handleResetPasswords} disabled={resetting}
+            className="flex items-center gap-2 border border-gray-200 dark:border-gray-700 text-gray-700 dark:text-gray-200 px-4 py-2.5 rounded text-sm font-bold hover:bg-gray-50 dark:hover:bg-gray-700 disabled:opacity-50">
+            <KeyRound className="w-4 h-4" />
+            {resetting ? t("savingText") : t("resetPasswordsBtn")}
+          </button>
+          <button onClick={() => { resetForm(); setShowForm(true); }}
+            className="flex items-center gap-2 bg-gray-900 text-white px-5 py-2.5 rounded text-sm font-bold hover:bg-gray-800">
+            <Plus className="w-4 h-4" />
+            {t("addEmployee")}
+          </button>
+        </div>
       </div>
+
+      {resetResult && (
+        <div className="mb-6 rounded-xl border border-emerald-200 dark:border-emerald-800 bg-emerald-50 dark:bg-emerald-900/20 p-4">
+          <div className="flex items-start justify-between gap-3 mb-3">
+            <div>
+              <p className="text-sm font-bold text-emerald-800 dark:text-emerald-200 flex items-center gap-2">
+                <KeyRound className="w-4 h-4" /> {t("resetPasswordsDone").replace("{n}", String(resetResult.length))}
+              </p>
+              <p className="text-xs text-emerald-700 dark:text-emerald-300 mt-0.5">{t("resetPasswordsNote")}</p>
+            </div>
+            <button onClick={() => setResetResult(null)} className="text-emerald-700 dark:text-emerald-300"><X className="w-4 h-4" /></button>
+          </div>
+          {resetResult.length > 0 && (
+            <div className="overflow-x-auto">
+              <table className="w-full text-sm">
+                <thead>
+                  <tr className="text-xs text-gray-500 border-b border-emerald-200 dark:border-emerald-800">
+                    <th className="text-right py-1.5 px-2">{t("nameLabel")}</th>
+                    <th className="text-right py-1.5 px-2">{t("civilId")}</th>
+                    <th className="text-right py-1.5 px-2">{t("password")}</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {resetResult.map((r) => (
+                    <tr key={r.civilId} className="border-b border-emerald-100 dark:border-emerald-900/40">
+                      <td className="py-1.5 px-2 font-semibold">{r.name}</td>
+                      <td className="py-1.5 px-2 font-mono-en">{r.civilId}</td>
+                      <td className="py-1.5 px-2 font-mono-en font-bold" dir="ltr">{r.password}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+              <button
+                onClick={() => navigator.clipboard?.writeText(resetResult.map((r) => `${r.name} — ${r.civilId} — ${r.password}`).join("\n"))}
+                className="mt-3 inline-flex items-center gap-1.5 text-xs font-bold text-emerald-700 dark:text-emerald-300 hover:underline">
+                <Copy className="w-3.5 h-3.5" /> {t("copyAll")}
+              </button>
+            </div>
+          )}
+        </div>
+      )}
 
       {showForm && (
         <div className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded p-6 mb-6">

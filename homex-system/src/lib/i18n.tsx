@@ -393,6 +393,11 @@ const translations = {
   addBtn: { ar: "إضافة", en: "Add" },
   newPasswordOptional: { ar: "كلمة مرور جديدة (اختياري)", en: "New password (optional)" },
   passwordMinHint: { ar: "كلمة المرور يجب أن تكون 6 أحرف على الأقل", en: "Password must be at least 6 characters" },
+  resetPasswordsBtn: { ar: "كلمات مرور افتراضية", en: "Default passwords" },
+  resetPasswordsConfirm: { ar: "سيتم تعيين كلمة مرور كل الموظفين إلى: Homex + الرقم المدني (مثال Homex1383). المتابعة؟", en: "This sets every employee's password to: Homex + their civil ID (e.g. Homex1383). Continue?" },
+  resetPasswordsDone: { ar: "تم تعيين كلمات المرور لـ {n} موظف", en: "Passwords set for {n} employees" },
+  resetPasswordsNote: { ar: "كلمة مرور كل موظف = Homex + رقمه المدني. سلّمها للموظفين وانصحهم بتغييرها من الملف الشخصي.", en: "Each password = Homex + the civil ID. Hand them out and advise changing from Profile." },
+  copyAll: { ar: "نسخ الكل", en: "Copy all" },
 
   // Categories
   categoriesManagement: { ar: "إدارة الفئات", en: "Category Management" },
