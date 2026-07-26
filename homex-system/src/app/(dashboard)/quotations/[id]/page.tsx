@@ -591,8 +591,14 @@ export default function QuotationDetailPage({ params }: { params: Promise<{ id: 
                     <div className="grid grid-cols-2 gap-3">
                       <div>
                         <label className="block text-xs font-semibold text-gray-500 mb-1">{t("amount")} *</label>
-                        <input type="number" step="0.001" min="0.001" max={remaining}
-                          value={payAmount} onChange={(e) => setPayAmount(e.target.value)}
+                        <input type="text" inputMode="decimal" dir="ltr"
+                          value={payAmount}
+                          onChange={(e) => {
+                            let v = e.target.value.replace(/[،,]/g, ".").replace(/[^0-9.]/g, "");
+                            const dot = v.indexOf(".");
+                            if (dot !== -1) v = v.slice(0, dot + 1) + v.slice(dot + 1).replace(/\./g, "");
+                            setPayAmount(v);
+                          }}
                           className="field font-mono-en"
                           placeholder={`${t("maxAmount")} ${remaining.toFixed(3)}`} />
                       </div>

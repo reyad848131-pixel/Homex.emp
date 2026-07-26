@@ -6,7 +6,7 @@ import { GOVERNORATES } from "@/lib/types";
 import { cn } from "@/lib/utils";
 import { useI18n } from "@/lib/i18n";
 import { useToast } from "@/components/toast";
-import { CategoryBuilder, type Category } from "@/components/quote-builders";
+import { CategoryBuilder, NumField, type Category } from "@/components/quote-builders";
 import {
   ChefHat, DoorOpen, Lamp, Blinds, Sparkles, BedDouble,
   Layers, Tv, Monitor, Sofa, WashingMachine, Plus,
@@ -319,8 +319,7 @@ export default function EditQuotationPage({ params }: { params: Promise<{ id: st
             </div>
             <div>
               <label className="block text-sm font-semibold text-gray-600 mb-1.5">{t("advancePctLabel")}</label>
-              <input type="number" min={0} max={100} value={advancePct}
-                onChange={(e) => setAdvancePct(Math.min(100, Math.max(0, parseInt(e.target.value) || 0)))}
+              <NumField value={advancePct} onChange={setAdvancePct} min={0} max={100} int
                 className={cn(fieldBase, "font-mono-en text-center")} />
             </div>
             <div>
@@ -483,7 +482,7 @@ export default function EditQuotationPage({ params }: { params: Promise<{ id: st
                   <div className="grid grid-cols-2 gap-4 mt-4">
                     <div>
                       <label className="block text-sm font-semibold text-gray-600 mb-1.5">{t("quantity")}</label>
-                      <input type="number" min={1} value={builderQty} onChange={(e) => setBuilderQty(Math.max(1, parseInt(e.target.value) || 1))}
+                      <NumField value={builderQty} onChange={setBuilderQty} min={1} int
                         className="field text-center font-mono-en" />
                     </div>
                     <div className="flex items-end">

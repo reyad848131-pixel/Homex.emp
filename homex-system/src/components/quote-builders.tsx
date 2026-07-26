@@ -25,6 +25,63 @@ export interface Category {
 type BuilderUpdate = (d: string, p: number, e: number, details?: Record<string, any>) => void;
 type BuilderInitial = Record<string, any> | undefined;
 
+// A decimal-friendly number field. Native type="number" (controlled) drops the
+// decimal point while typing ("2." -> "2"), so measurements like 2.4 / 3.7 are
+// impossible to enter. This keeps the raw text while editing, accepts "." or
+// "," as the decimal separator, shows the decimal keypad on iPad, and clamps
+// on blur — so decimals type smoothly everywhere.
+export function NumField({
+  value, onChange, min, max, int, className, placeholder,
+}: {
+  value: number;
+  onChange: (n: number) => void;
+  min?: number; max?: number; int?: boolean;
+  className?: string; placeholder?: string;
+}) {
+  const [text, setText] = useState<string>(value != null ? String(value) : "");
+
+  // Re-sync when the value is changed from outside (e.g. a slider).
+  useEffect(() => {
+    if (parseFloat(text) !== value) setText(value != null ? String(value) : "");
+  }, [value]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  const handleChange = (raw: string) => {
+    // Normalise Arabic/Latin comma to a dot; keep only digits and one dot.
+    let cleaned = raw.replace(/[،,]/g, ".").replace(/[^0-9.]/g, "");
+    const firstDot = cleaned.indexOf(".");
+    if (firstDot !== -1) {
+      cleaned = cleaned.slice(0, firstDot + 1) + cleaned.slice(firstDot + 1).replace(/\./g, "");
+    }
+    if (int) cleaned = cleaned.replace(/\./g, "");
+    setText(cleaned);
+    const n = parseFloat(cleaned);
+    if (!isNaN(n)) onChange(max != null && n > max ? max : n);
+  };
+
+  const handleBlur = () => {
+    let n = parseFloat(text);
+    if (isNaN(n)) n = min ?? 0;
+    if (int) n = Math.round(n);
+    if (min != null) n = Math.max(min, n);
+    if (max != null) n = Math.min(max, n);
+    onChange(n);
+    setText(String(n));
+  };
+
+  return (
+    <input
+      type="text"
+      inputMode={int ? "numeric" : "decimal"}
+      dir="ltr"
+      value={text}
+      onChange={(e) => handleChange(e.target.value)}
+      onBlur={handleBlur}
+      className={className}
+      placeholder={placeholder}
+    />
+  );
+}
+
 const KITCHEN_BASE_PRICES: Record<string, number | Record<string, number> | null> = {
   "مسقط": 130,
   "ظفار": null,
@@ -83,8 +140,7 @@ function KitchenBuilder({ config, governorate, wilayat, onUpdate, initial }: { c
           <input type="range" min={2} max={15} step={1} value={length}
             onChange={(e) => setLength(parseInt(e.target.value))}
             className="flex-1 h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer accent-gray-900" />
-          <input type="number" min={2} max={15} step={1} value={length}
-            onChange={(e) => setLength(Math.min(15, Math.max(2, parseInt(e.target.value) || 2)))}
+          <NumField value={length} onChange={setLength} min={2} max={15}
             className="w-16 border border-gray-200 rounded px-2 py-1.5 text-sm font-mono-en text-center" />
         </div>
         <div className="mt-2 text-center py-2 bg-gray-50 rounded border border-gray-100">
@@ -110,8 +166,7 @@ function KitchenBuilder({ config, governorate, wilayat, onUpdate, initial }: { c
       {isManual && (
         <div>
           <label className="block text-sm font-semibold text-gray-600 mb-1.5">{t("pricePerMeterLabel")} (OMR)</label>
-          <input type="number" step={1} min={1} value={manualBase}
-            onChange={(e) => setManualBase(Math.max(1, parseInt(e.target.value) || 1))}
+          <NumField value={manualBase} onChange={setManualBase} min={1} int
             className="field font-mono-en text-center" />
           <p className="text-xs text-amber-600 mt-1">{governorate}: {t("manualPriceHint")}</p>
         </div>
@@ -182,24 +237,24 @@ function CabinetBuilder({ config, onUpdate, initial }: { config: any; onUpdate: 
       <div className="grid grid-cols-2 gap-4">
         <div>
           <label className="block text-sm font-semibold text-gray-600 mb-1.5">{t("widthM")}</label>
-          <input type="number" step={0.1} min={0.5} value={width} onChange={(e) => setWidth(parseFloat(e.target.value) || 0.5)}
+          <NumField value={width} onChange={setWidth} min={0.5}
             className="field font-mono-en text-center" />
         </div>
         <div>
           <label className="block text-sm font-semibold text-gray-600 mb-1.5">{t("heightM")}</label>
-          <input type="number" step={0.1} min={0.5} value={height} onChange={(e) => setHeight(parseFloat(e.target.value) || 0.5)}
+          <NumField value={height} onChange={setHeight} min={0.5}
             className="field font-mono-en text-center" />
         </div>
       </div>
       <div className="grid grid-cols-2 gap-4">
         <div>
           <label className="block text-sm font-semibold text-gray-600 mb-1.5">{t("glassDoors")} ({config.glassDoor || 60} {t("perDoor")})</label>
-          <input type="number" min={0} value={glassDoors} onChange={(e) => setGlassDoors(parseInt(e.target.value) || 0)}
+          <NumField value={glassDoors} onChange={setGlassDoors} min={0} int
             className="field font-mono-en text-center" />
         </div>
         <div>
           <label className="block text-sm font-semibold text-gray-600 mb-1.5">{t("ledLighting")} ({config.led || 25} {t("omr")})</label>
-          <input type="number" min={0} value={leds} onChange={(e) => setLeds(parseInt(e.target.value) || 0)}
+          <NumField value={leds} onChange={setLeds} min={0} int
             className="field font-mono-en text-center" />
         </div>
       </div>
@@ -279,8 +334,7 @@ function CurtainBuilder({ config, wilayat, onUpdate, initial }: { config: any; w
 
       <div>
         <label className="block text-sm font-semibold text-gray-600 mb-1.5">{t("curtainCount")}</label>
-        <input type="number" min={minCount} step={1} value={count}
-          onChange={(e) => setCount(Math.max(minCount, parseInt(e.target.value) || minCount))}
+        <NumField value={count} onChange={setCount} min={minCount} int
           className="field font-mono-en text-center" />
         <p className="text-xs text-amber-600 mt-1 font-semibold">{t("curtainMinPrefix")}: {minCount} {t("curtainsUnit")}</p>
       </div>
@@ -297,8 +351,7 @@ function CurtainBuilder({ config, wilayat, onUpdate, initial }: { config: any; w
               <input type="range" min={1} max={20} step={1} value={width}
                 onChange={(e) => setWidth(parseInt(e.target.value))}
                 className="flex-1 h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer accent-gray-900" />
-              <input type="number" min={1} max={20} step={1} value={width}
-                onChange={(e) => setWidth(Math.min(20, Math.max(1, parseInt(e.target.value) || 1)))}
+              <NumField value={width} onChange={setWidth} min={1} max={20} int
                 className="w-16 border border-gray-200 rounded px-2 py-1.5 text-sm font-mono-en text-center" />
             </div>
           </div>
@@ -311,8 +364,7 @@ function CurtainBuilder({ config, wilayat, onUpdate, initial }: { config: any; w
               <input type="range" min={1} max={20} step={1} value={height}
                 onChange={(e) => setHeight(parseInt(e.target.value))}
                 className="flex-1 h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer accent-gray-900" />
-              <input type="number" min={1} max={20} step={1} value={height}
-                onChange={(e) => setHeight(Math.min(20, Math.max(1, parseInt(e.target.value) || 1)))}
+              <NumField value={height} onChange={setHeight} min={1} max={20} int
                 className="w-16 border border-gray-200 rounded px-2 py-1.5 text-sm font-mono-en text-center" />
             </div>
           </div>
@@ -440,8 +492,7 @@ function CladdingBuilder({ config, onUpdate, initial }: { config: any; onUpdate:
               <input type="range" min={1} max={10} step={0.1} value={width}
                 onChange={(e) => setWidth(parseFloat(e.target.value))}
                 className="flex-1 h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer accent-gray-900" />
-              <input type="number" min={1} max={10} step={0.1} value={width}
-                onChange={(e) => setWidth(Math.min(10, Math.max(1, parseFloat(e.target.value) || 1)))}
+              <NumField value={width} onChange={setWidth} min={1} max={10}
                 className="w-16 border border-gray-200 rounded px-2 py-1.5 text-sm font-mono-en text-center" />
             </div>
           </div>
@@ -454,8 +505,7 @@ function CladdingBuilder({ config, onUpdate, initial }: { config: any; onUpdate:
               <input type="range" min={1} max={10} step={0.1} value={height}
                 onChange={(e) => setHeight(parseFloat(e.target.value))}
                 className="flex-1 h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer accent-gray-900" />
-              <input type="number" min={1} max={10} step={0.1} value={height}
-                onChange={(e) => setHeight(Math.min(10, Math.max(1, parseFloat(e.target.value) || 1)))}
+              <NumField value={height} onChange={setHeight} min={1} max={10}
                 className="w-16 border border-gray-200 rounded px-2 py-1.5 text-sm font-mono-en text-center" />
             </div>
           </div>
@@ -481,8 +531,7 @@ function CladdingBuilder({ config, onUpdate, initial }: { config: any; onUpdate:
         {lighting && (
           <div className="mt-2">
             <label className="block text-xs text-gray-500 mb-1">{t("lightPointsCount")}</label>
-            <input type="number" min={1} step={1} value={lightCount}
-              onChange={(e) => setLightCount(Math.max(1, parseInt(e.target.value) || 1))}
+            <NumField value={lightCount} onChange={setLightCount} min={1} int
               className="w-full border border-gray-200 rounded px-3 py-2 text-sm font-mono-en text-center" />
             <p className="text-xs text-emerald-600 mt-1">
               {lightCount} × {LIGHT_PRICE.toFixed(3)} {t("omr")} = {lightSurcharge.toFixed(3)} {t("omr")}
@@ -587,17 +636,17 @@ function NightstandBuilder({ config, onUpdate, initial }: { config: any; onUpdat
         <div className="grid grid-cols-3 gap-3">
           <div>
             <label className="block text-sm font-semibold text-gray-600 mb-1.5">{t("lengthCm")}</label>
-            <input type="number" min={1} value={customLength} onChange={(e) => setCustomLength(parseInt(e.target.value) || 1)}
+            <NumField value={customLength} onChange={setCustomLength} min={1} int
               className="field font-mono-en text-center" />
           </div>
           <div>
             <label className="block text-sm font-semibold text-gray-600 mb-1.5">{t("widthCm")}</label>
-            <input type="number" min={1} value={customWidth} onChange={(e) => setCustomWidth(parseInt(e.target.value) || 1)}
+            <NumField value={customWidth} onChange={setCustomWidth} min={1} int
               className="field font-mono-en text-center" />
           </div>
           <div>
             <label className="block text-sm font-semibold text-gray-600 mb-1.5">{t("priceOMR")}</label>
-            <input type="number" min={0} step={0.5} value={customPrice} onChange={(e) => setCustomPrice(parseFloat(e.target.value) || 0)}
+            <NumField value={customPrice} onChange={setCustomPrice} min={0}
               className="field font-mono-en text-center" />
           </div>
         </div>
@@ -631,8 +680,7 @@ function DressingBuilder({ config, onUpdate, initial }: { config: any; onUpdate:
           <input type="range" min={1} max={20} step={0.5} value={length}
             onChange={(e) => setLength(parseFloat(e.target.value))}
             className="flex-1 accent-gray-900" />
-          <input type="number" min={1} max={20} step={0.5} value={length}
-            onChange={(e) => setLength(parseFloat(e.target.value) || 1)}
+          <NumField value={length} onChange={setLength} min={1} max={20}
             className="w-20 border border-gray-200 rounded px-2 py-2 text-sm font-mono-en text-center" />
         </div>
       </div>
@@ -650,7 +698,7 @@ function DressingBuilder({ config, onUpdate, initial }: { config: any; onUpdate:
         {lighting && (
           <div className="mt-3">
             <label className="block text-sm font-semibold text-gray-600 mb-1.5">{t("lightingsCount")} ({config.lighting || 20} {t("omr")})</label>
-            <input type="number" min={1} value={lightCount} onChange={(e) => setLightCount(Math.max(1, parseInt(e.target.value) || 1))}
+            <NumField value={lightCount} onChange={setLightCount} min={1} int
               className="field font-mono-en text-center" />
           </div>
         )}
@@ -680,8 +728,7 @@ function LaundryBuilder({ config, onUpdate, initial }: { config: any; onUpdate: 
           <input type="range" min={1} max={20} step={1} value={area}
             onChange={(e) => setArea(parseInt(e.target.value))}
             className="flex-1 accent-gray-900" />
-          <input type="number" min={1} max={20} step={1} value={area}
-            onChange={(e) => setArea(parseInt(e.target.value) || 1)}
+          <NumField value={area} onChange={setArea} min={1} max={20} int
             className="w-20 border border-gray-200 rounded px-2 py-2 text-sm font-mono-en text-center" />
         </div>
       </div>
@@ -699,7 +746,7 @@ function LaundryBuilder({ config, onUpdate, initial }: { config: any; onUpdate: 
         {lighting && (
           <div className="mt-3">
             <label className="block text-sm font-semibold text-gray-600 mb-1.5">{t("lightingsCount")} ({config.lighting || 20} {t("omr")})</label>
-            <input type="number" min={1} value={lightCount} onChange={(e) => setLightCount(Math.max(1, parseInt(e.target.value) || 1))}
+            <NumField value={lightCount} onChange={setLightCount} min={1} int
               className="field font-mono-en text-center" />
           </div>
         )}
@@ -746,7 +793,7 @@ function GenericBuilder({ cat, onUpdate, initial }: { cat: Category; onUpdate: B
       {cat.pricingType === "manual" ? (
         <div>
           <label className="block text-sm font-semibold text-gray-600 mb-1.5">{t("priceOMR")}</label>
-          <input type="number" step={0.5} min={0} value={price} onChange={(e) => setPrice(parseFloat(e.target.value) || 0)}
+          <NumField value={price} onChange={setPrice} min={0}
             className="field font-mono-en text-center" />
         </div>
       ) : (
@@ -755,13 +802,13 @@ function GenericBuilder({ cat, onUpdate, initial }: { cat: Category; onUpdate: B
             <label className="block text-sm font-semibold text-gray-600 mb-1.5">
               {cat.pricingType === "per_meter" ? t("lengthM") : t("widthM")}
             </label>
-            <input type="number" step={0.1} min={0.5} value={width} onChange={(e) => setWidth(parseFloat(e.target.value) || 0.5)}
+            <NumField value={width} onChange={setWidth} min={0.5}
               className="field font-mono-en text-center" />
           </div>
           {cat.pricingType === "per_sqm" && (
             <div>
               <label className="block text-sm font-semibold text-gray-600 mb-1.5">{t("heightM")}</label>
-              <input type="number" step={0.1} min={0.5} value={height} onChange={(e) => setHeight(parseFloat(e.target.value) || 0.5)}
+              <NumField value={height} onChange={setHeight} min={0.5}
                 className="field font-mono-en text-center" />
             </div>
           )}
