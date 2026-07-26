@@ -8,7 +8,15 @@ export async function GET() {
     const session = await getAuth();
     if (!session) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     const settings = await getSettings();
-    const res = NextResponse.json(settings);
+    // Strip the heavy base64 logo blob from the general settings payload: it can
+    // be hundreds of KB and is downloaded on every quotation view / new-quote
+    // page, none of which display it. The Settings editor loads it separately
+    // via /api/logo, and server-side rendering (public quote, PDF) reads it
+    // straight from getSettings(). Keeping it out of this response makes those
+    // hot pages noticeably faster.
+    const light = { ...settings };
+    delete light.company_logo;
+    const res = NextResponse.json(light);
     res.headers.set("Cache-Control", "private, max-age=30, stale-while-revalidate=120");
     return res;
   } catch {
