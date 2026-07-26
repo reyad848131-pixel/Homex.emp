@@ -31,8 +31,7 @@ const ROLE_COLORS: Record<string, string> = {
   driver: "bg-purple-100 text-purple-700",
 };
 
-// Assignable roles, in the order shown in the picker.
-const ROLE_OPTIONS = ["sales", "accountant", "driver", "manager", "admin"] as const;
+interface RoleDef { key: string; label: string; permissions: string[]; system?: boolean }
 
 export default function EmployeesPage() {
   const [employees, setEmployees] = useState<Employee[]>([]);
@@ -43,7 +42,48 @@ export default function EmployeesPage() {
   const [error, setError] = useState("");
   const [resetting, setResetting] = useState(false);
   const [resetResult, setResetResult] = useState<Array<{ name: string; civilId: string; password: string }> | null>(null);
+  // Roles & permissions management.
+  const [roles, setRoles] = useState<RoleDef[]>([]);
+  const [permCatalog, setPermCatalog] = useState<Array<{ key: string; label: string }>>([]);
+  const [showRoles, setShowRoles] = useState(false);
+  const [roleForm, setRoleForm] = useState<{ key?: string; label: string; permissions: string[] } | null>(null);
+  const [roleError, setRoleError] = useState("");
   const { t } = useI18n();
+
+  const loadRoles = () =>
+    fetch("/api/roles")
+      .then((r) => (r.ok ? r.json() : { roles: [], permissions: [] }))
+      .then((d) => { setRoles(d.roles || []); setPermCatalog(d.permissions || []); })
+      .catch(() => {});
+
+  const roleLabel = (key: string) =>
+    roles.find((r) => r.key === key)?.label || (ROLE_KEYS[key] ? t(ROLE_KEYS[key]) : key);
+
+  const saveRole = async () => {
+    if (!roleForm) return;
+    if (!roleForm.label.trim()) { setRoleError(t("roleNameRequired")); return; }
+    setRoleError("");
+    const res = await fetch("/api/roles", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(roleForm),
+    });
+    if (res.ok) { setRoleForm(null); loadRoles(); }
+    else { const d = await res.json().catch(() => ({})); setRoleError(d.error || t("errorOccurred")); }
+  };
+
+  const deleteRole = async (key: string) => {
+    if (!confirm(t("deleteRoleConfirm"))) return;
+    const res = await fetch(`/api/roles?key=${encodeURIComponent(key)}`, { method: "DELETE" });
+    if (res.ok) loadRoles();
+    else { const d = await res.json().catch(() => ({})); alert(d.error || t("errorOccurred")); }
+  };
+
+  const togglePerm = (p: string) => {
+    if (!roleForm) return;
+    const has = roleForm.permissions.includes(p);
+    setRoleForm({ ...roleForm, permissions: has ? roleForm.permissions.filter((x) => x !== p) : [...roleForm.permissions, p] });
+  };
 
   const handleResetPasswords = async () => {
     if (!confirm(t("resetPasswordsConfirm"))) return;
@@ -61,7 +101,7 @@ export default function EmployeesPage() {
   };
 
   const load = () => fetch("/api/employees").then((r) => r.json()).then(setEmployees);
-  useEffect(() => { load(); }, []);
+  useEffect(() => { load(); loadRoles(); }, []);
 
   const resetForm = () => {
     setForm({ name: "", civilId: "", phone: "", role: "sales", password: "" });
@@ -126,6 +166,11 @@ export default function EmployeesPage() {
           <p className="text-sm text-gray-500 mt-1">{employees.length} {t("employeeCount")}</p>
         </div>
         <div className="flex items-center gap-2">
+          <button onClick={() => setShowRoles((v) => !v)}
+            className="flex items-center gap-2 border border-gray-200 dark:border-gray-700 text-gray-700 dark:text-gray-200 px-4 py-2.5 rounded text-sm font-bold hover:bg-gray-50 dark:hover:bg-gray-700">
+            <Shield className="w-4 h-4" />
+            {t("rolesAndPermissions")}
+          </button>
           <button onClick={handleResetPasswords} disabled={resetting}
             className="flex items-center gap-2 border border-gray-200 dark:border-gray-700 text-gray-700 dark:text-gray-200 px-4 py-2.5 rounded text-sm font-bold hover:bg-gray-50 dark:hover:bg-gray-700 disabled:opacity-50">
             <KeyRound className="w-4 h-4" />
@@ -180,6 +225,71 @@ export default function EmployeesPage() {
         </div>
       )}
 
+      {showRoles && (
+        <div className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded p-6 mb-6">
+          <div className="flex items-center justify-between mb-4">
+            <h2 className="text-base font-bold flex items-center gap-2"><Shield className="w-4 h-4" /> {t("rolesAndPermissions")}</h2>
+            <div className="flex items-center gap-2">
+              {!roleForm && (
+                <button onClick={() => { setRoleError(""); setRoleForm({ label: "", permissions: [] }); }}
+                  className="flex items-center gap-1.5 bg-gray-900 text-white px-3 py-1.5 rounded text-xs font-bold hover:bg-gray-800">
+                  <Plus className="w-3.5 h-3.5" /> {t("newRole")}
+                </button>
+              )}
+              <button onClick={() => { setShowRoles(false); setRoleForm(null); }}><X className="w-5 h-5 text-gray-400" /></button>
+            </div>
+          </div>
+
+          {roleForm && (
+            <div className="border border-gray-200 dark:border-gray-700 rounded-lg p-4 mb-4 bg-gray-50 dark:bg-gray-900/30">
+              <label className="block text-sm font-semibold text-gray-600 dark:text-gray-300 mb-1.5">{t("roleNameLabel")}</label>
+              <input value={roleForm.label} onChange={(e) => setRoleForm({ ...roleForm, label: e.target.value })}
+                className="field mb-3 max-w-xs" placeholder={t("roleNameLabel")} />
+              <p className="text-sm font-semibold text-gray-600 dark:text-gray-300 mb-2">{t("permissionsLabel")}</p>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                {permCatalog.map((p) => (
+                  <label key={p.key} className="flex items-center gap-2 text-sm cursor-pointer p-1.5 rounded hover:bg-white dark:hover:bg-gray-800">
+                    <input type="checkbox" checked={roleForm.permissions.includes(p.key)} onChange={() => togglePerm(p.key)} className="rounded" />
+                    {p.label}
+                  </label>
+                ))}
+              </div>
+              {roleError && <p className="text-red-600 text-sm mt-2 font-semibold">{roleError}</p>}
+              <div className="flex gap-2 mt-4">
+                <button onClick={saveRole} className="bg-gray-900 text-white px-4 py-2 rounded text-sm font-bold hover:bg-gray-800">{t("saveBtn")}</button>
+                <button onClick={() => { setRoleForm(null); setRoleError(""); }} className="px-4 py-2 border border-gray-200 rounded text-sm font-bold text-gray-600 hover:bg-gray-50">{t("cancel")}</button>
+              </div>
+            </div>
+          )}
+
+          <div className="space-y-2">
+            {roles.map((r) => (
+              <div key={r.key} className="flex items-center justify-between gap-3 border border-gray-100 dark:border-gray-700 rounded-lg px-3 py-2.5">
+                <div className="min-w-0">
+                  <div className="flex items-center gap-2">
+                    <span className={cn("text-xs font-bold px-2 py-0.5 rounded-full", ROLE_COLORS[r.key] || "bg-gray-100 text-gray-600")}>{r.label}</span>
+                    {r.system
+                      ? <span className="text-[10px] text-gray-400 font-semibold">{t("systemRole")}</span>
+                      : <span className="text-[10px] text-emerald-600 font-semibold">{t("customRole")}</span>}
+                  </div>
+                  <p className="text-xs text-gray-500 mt-1 truncate">
+                    {r.permissions.length === 0 ? "—" : r.permissions.map((p) => permCatalog.find((c) => c.key === p)?.label || p).join(" · ")}
+                  </p>
+                </div>
+                {!r.system && (
+                  <div className="flex gap-2 shrink-0">
+                    <button onClick={() => { setRoleError(""); setRoleForm({ key: r.key, label: r.label, permissions: [...r.permissions] }); }}
+                      className="text-xs font-bold text-gray-500 hover:text-gray-900 px-2 py-1 border border-gray-200 rounded hover:bg-gray-50">{t("edit")}</button>
+                    <button onClick={() => deleteRole(r.key)}
+                      className="text-xs font-bold text-red-500 border border-red-200 rounded px-2 py-1 hover:bg-red-50">{t("delete")}</button>
+                  </div>
+                )}
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
       {showForm && (
         <div className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded p-6 mb-6">
           <div className="flex items-center justify-between mb-4">
@@ -206,8 +316,8 @@ export default function EmployeesPage() {
               <label className="block text-sm font-semibold text-gray-600 mb-1.5">{t("role")}</label>
               <select value={form.role} onChange={(e) => setForm({ ...form, role: e.target.value })}
                 className="field">
-                {ROLE_OPTIONS.map((r) => (
-                  <option key={r} value={r}>{t(ROLE_KEYS[r])}</option>
+                {roles.map((r) => (
+                  <option key={r.key} value={r.key}>{r.label}</option>
                 ))}
               </select>
             </div>
@@ -254,7 +364,7 @@ export default function EmployeesPage() {
                 <td className="p-3 font-mono-en">{emp.civilId}</td>
                 <td className="p-3">
                   <span className={cn("text-xs font-bold px-2 py-1 rounded-full", ROLE_COLORS[emp.role] || "bg-gray-100 text-gray-600")}>
-                    {ROLE_KEYS[emp.role] ? t(ROLE_KEYS[emp.role]) : emp.role}
+                    {roleLabel(emp.role)}
                   </span>
                 </td>
                 <td className="p-3 font-mono-en">{emp._count.quotations}</td>

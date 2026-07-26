@@ -38,6 +38,16 @@ const translations = {
   roleSales: { ar: "مبيعات", en: "Sales" },
   roleAccountant: { ar: "محاسب", en: "Accountant" },
   roleDriver: { ar: "سائق", en: "Driver" },
+  rolesAndPermissions: { ar: "الرتب والصلاحيات", en: "Roles & Permissions" },
+  newRole: { ar: "رتبة جديدة", en: "New role" },
+  roleNameLabel: { ar: "اسم الرتبة", en: "Role name" },
+  roleNameRequired: { ar: "اسم الرتبة مطلوب", en: "Role name is required" },
+  permissionsLabel: { ar: "الصلاحيات", en: "Permissions" },
+  systemRole: { ar: "رتبة نظام", en: "System role" },
+  customRole: { ar: "رتبة مخصّصة", en: "Custom role" },
+  deleteRoleConfirm: { ar: "هل تريد حذف هذه الرتبة؟", en: "Delete this role?" },
+  saveBtn: { ar: "حفظ", en: "Save" },
+  delete: { ar: "حذف", en: "Delete" },
 
   // Login
   employeeLogin: { ar: "دخول الموظفين", en: "Employee Login" },

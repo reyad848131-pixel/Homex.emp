@@ -47,7 +47,7 @@ interface SidebarProps {
 const allItems: Array<{ href: string; labelKey: TranslationKey; icon: any; perm?: string }> = [
   { href: "/", labelKey: "dashboard", icon: LayoutDashboard },
   { href: "/quotations", labelKey: "quotations", icon: FileText, perm: "quotes" },
-  { href: "/quotations/new", labelKey: "newQuotation", icon: FilePlus, perm: "quotes" },
+  { href: "/quotations/new", labelKey: "newQuotation", icon: FilePlus, perm: "quotes_create" },
   { href: "/customers", labelKey: "customers", icon: Users, perm: "customers" },
   { href: "/work-orders", labelKey: "workOrders", icon: Truck, perm: "work_orders" },
   { href: "/delivery-schedule", labelKey: "deliverySchedule", icon: CalendarClock, perm: "work_orders" },

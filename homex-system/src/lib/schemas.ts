@@ -67,7 +67,8 @@ export const employeeCreateSchema = z.object({
   name: z.string().trim().min(1),
   civilId: z.string().trim().min(1),
   phone: z.string().trim().nullish(),
-  role: z.enum(ROLES).default("sales"),
+  // Any role key; the route verifies it exists among system + custom roles.
+  role: z.string().trim().min(1).default("sales"),
   password: z.string().min(6, "كلمة المرور يجب أن تكون 6 أحرف على الأقل"),
 });
 
@@ -75,7 +76,7 @@ export const employeeUpdateSchema = z
   .object({
     name: z.string().trim().min(1),
     phone: z.string().trim().nullish(),
-    role: z.enum(ROLES),
+    role: z.string().trim().min(1),
     isActive: z.boolean(),
     password: z.string().min(6, "كلمة المرور يجب أن تكون 6 أحرف على الأقل"),
   })

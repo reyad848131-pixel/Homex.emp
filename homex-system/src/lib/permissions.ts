@@ -5,7 +5,8 @@ import { getSettings } from "./settings";
 // fixed set (matching the app's original admin/manager/sales behaviour), and
 // managers can define custom roles that grant any subset of these.
 export const PERMISSIONS = [
-  "quotes",          // create / view own quotations, customers
+  "quotes",          // view the quotations list & open quotes
+  "quotes_create",   // create / edit quotations
   "view_all_quotes", // see every quotation, not only own
   "approve",         // approve / decline quotations
   "payments",        // record payments
@@ -22,6 +23,34 @@ export const PERMISSIONS = [
 
 export type Permission = (typeof PERMISSIONS)[number];
 
+// Permissions a manager may grant to a CUSTOM role — limited to the ones the
+// app actually enforces through this permission layer, so every checkbox works.
+// Admin-only areas (employees/categories/settings/audit) and role-name-bound
+// actions (approve/edit_locked) stay reserved for the built-in roles.
+export const ASSIGNABLE_PERMISSIONS: Permission[] = [
+  "quotes", "quotes_create", "view_all_quotes", "customers",
+  "payments", "invoices", "work_orders", "reports",
+];
+
+// Arabic labels for the role-management UI (kept here so the catalogue and its
+// labels live together; served to the client via the /api/roles response).
+export const PERMISSION_LABELS: Record<Permission, string> = {
+  quotes: "عرض قائمة عروض الأسعار",
+  quotes_create: "إنشاء وتعديل عروض الأسعار",
+  view_all_quotes: "رؤية كل العروض (لا عروضه فقط)",
+  approve: "اعتماد ورفض العروض",
+  payments: "تسجيل الدفعات",
+  invoices: "إصدار الفواتير",
+  edit_locked: "تعديل العروض المقفلة",
+  work_orders: "أوامر العمل والتسليم والتركيب والصيانة",
+  reports: "التقارير والإحصائيات",
+  customers: "إدارة العملاء",
+  employees: "إدارة الموظفين والرتب",
+  categories: "إدارة الفئات والأسعار",
+  settings: "إعدادات الشركة",
+  audit: "سجل التدقيق والأخطاء",
+};
+
 export interface RoleDef {
   key: string;
   label: string;
@@ -37,13 +66,13 @@ export const SYSTEM_ROLES: RoleDef[] = [
     key: "manager",
     label: "مشرف",
     system: true,
-    permissions: ["quotes", "view_all_quotes", "approve", "payments", "invoices", "edit_locked", "work_orders", "reports", "customers"],
+    permissions: ["quotes", "quotes_create", "view_all_quotes", "approve", "payments", "invoices", "edit_locked", "work_orders", "reports", "customers"],
   },
-  { key: "sales", label: "مبيعات", system: true, permissions: ["quotes", "customers", "payments"] },
-  // Accountant: sees every quotation + reports, records payments and issues
-  // invoices; no settings / employees / pricing / approvals.
-  { key: "accountant", label: "محاسب", system: true, permissions: ["quotes", "view_all_quotes", "payments", "invoices", "reports"] },
-  // Driver: only the delivery / installation / work board.
+  { key: "sales", label: "مبيعات", system: true, permissions: ["quotes", "quotes_create", "customers", "payments"] },
+  // Accountant: sees every quotation + customers + reports, records payments and
+  // issues invoices; cannot create quotes, and no settings / employees / pricing.
+  { key: "accountant", label: "محاسب", system: true, permissions: ["quotes", "view_all_quotes", "customers", "payments", "invoices", "reports"] },
+  // Driver: only the delivery / installation / work board / service.
   { key: "driver", label: "سائق", system: true, permissions: ["work_orders"] },
 ];
 

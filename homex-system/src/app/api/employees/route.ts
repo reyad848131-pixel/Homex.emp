@@ -3,6 +3,7 @@ import { getAuth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { logAction } from "@/lib/audit";
 import { parseBody, employeeCreateSchema } from "@/lib/schemas";
+import { getAllRoles } from "@/lib/permissions";
 import bcrypt from "bcryptjs";
 
 export async function GET() {
@@ -44,6 +45,11 @@ export async function POST(req: NextRequest) {
     const parsed = parseBody(employeeCreateSchema, await req.json());
     if (!parsed.ok) return NextResponse.json({ error: parsed.error, code: "invalid" }, { status: 400 });
     const { name, civilId, phone, role, password } = parsed.data;
+
+    const roles = await getAllRoles();
+    if (!roles.some((r) => r.key === role)) {
+      return NextResponse.json({ error: "رتبة غير معروفة", code: "invalid" }, { status: 400 });
+    }
 
     const existing = await prisma.employee.findUnique({ where: { civilId } });
     if (existing) {

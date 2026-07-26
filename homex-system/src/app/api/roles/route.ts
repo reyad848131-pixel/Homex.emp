@@ -3,7 +3,7 @@ import { getAuth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { logAction } from "@/lib/audit";
 import { getSettings, setSetting } from "@/lib/settings";
-import { getAllRoles, getRolePermissions, PERMISSIONS, SYSTEM_ROLES, CUSTOM_ROLES_KEY, type RoleDef, type Permission } from "@/lib/permissions";
+import { getAllRoles, getRolePermissions, ASSIGNABLE_PERMISSIONS, PERMISSION_LABELS, SYSTEM_ROLES, CUSTOM_ROLES_KEY, type RoleDef, type Permission } from "@/lib/permissions";
 
 // Only users whose role grants the "employees" permission may manage roles.
 async function canManage(role: string): Promise<boolean> {
@@ -17,7 +17,8 @@ export async function GET() {
     const user = session.user as any;
     if (!(await canManage(user.role))) return NextResponse.json({ error: "Forbidden" }, { status: 403 });
 
-    return NextResponse.json({ roles: await getAllRoles(), permissions: PERMISSIONS });
+    const permissions = ASSIGNABLE_PERMISSIONS.map((key) => ({ key, label: PERMISSION_LABELS[key] }));
+    return NextResponse.json({ roles: await getAllRoles(), permissions });
   } catch (e) {
     console.error("API error [/api/roles]:", e);
     return NextResponse.json({ error: "Server error" }, { status: 500 });
@@ -35,7 +36,7 @@ export async function POST(req: NextRequest) {
     const label = typeof body.label === "string" ? body.label.trim() : "";
     let key = typeof body.key === "string" ? body.key.trim() : "";
     const permissions: Permission[] = (Array.isArray(body.permissions) ? body.permissions : []).filter(
-      (p: string): p is Permission => (PERMISSIONS as readonly string[]).includes(p)
+      (p: string): p is Permission => (ASSIGNABLE_PERMISSIONS as readonly string[]).includes(p)
     );
     if (!label) return NextResponse.json({ error: "اسم الرتبة مطلوب" }, { status: 400 });
 

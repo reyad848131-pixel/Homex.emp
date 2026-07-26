@@ -43,6 +43,11 @@ export async function POST(req: NextRequest) {
 
   try {
     const user = session.user as any;
+    // Only roles that may create quotations (sales/manager/admin, or any custom
+    // role granted the permission). Blocks e.g. the accountant from creating.
+    if (!(await userCan(user.role, "quotes_create"))) {
+      return NextResponse.json({ error: "غير مصرّح بإنشاء عروض" }, { status: 403 });
+    }
     const parsed = parseBody(createQuotationSchema, await req.json());
     if (!parsed.ok) return NextResponse.json({ error: parsed.error, code: "invalid" }, { status: 400 });
 

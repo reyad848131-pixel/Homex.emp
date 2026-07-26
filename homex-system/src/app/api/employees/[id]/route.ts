@@ -3,6 +3,7 @@ import { getAuth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { logAction } from "@/lib/audit";
 import { parseBody, employeeUpdateSchema } from "@/lib/schemas";
+import { getAllRoles } from "@/lib/permissions";
 import bcrypt from "bcryptjs";
 
 export async function PATCH(
@@ -25,6 +26,13 @@ export async function PATCH(
 
     const target = await prisma.employee.findUnique({ where: { id } });
     if (!target) return NextResponse.json({ error: "Not found" }, { status: 404 });
+
+    if (body.role !== undefined) {
+      const roles = await getAllRoles();
+      if (!roles.some((r) => r.key === body.role)) {
+        return NextResponse.json({ error: "رتبة غير معروفة", code: "invalid" }, { status: 400 });
+      }
+    }
 
     const demoting = body.role !== undefined && body.role !== "admin";
     const deactivating = body.isActive === false;

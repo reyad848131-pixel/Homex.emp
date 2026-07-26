@@ -52,11 +52,19 @@ describe("paymentSchema", () => {
 });
 
 describe("employeeCreateSchema", () => {
-  it("rejects an invalid role", () => {
+  it("rejects an empty role", () => {
+    // The schema now accepts any non-empty role key (system or custom); the
+    // route verifies it exists. An empty role must still be rejected.
     const r = parseBody(employeeCreateSchema, {
-      name: "A", civilId: "1", password: "secret6", role: "superadmin",
+      name: "A", civilId: "1", password: "secret6", role: "",
     });
     expect(r.ok).toBe(false);
+  });
+  it("accepts a custom role key", () => {
+    const r = parseBody(employeeCreateSchema, {
+      name: "A", civilId: "1", password: "secret6", role: "accountant",
+    });
+    expect(r.ok).toBe(true);
   });
   it("rejects a password shorter than 6 chars", () => {
     const r = parseBody(employeeCreateSchema, {
