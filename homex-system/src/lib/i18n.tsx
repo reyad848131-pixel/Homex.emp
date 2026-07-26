@@ -392,6 +392,7 @@ const translations = {
   updateBtn: { ar: "تحديث", en: "Update" },
   addBtn: { ar: "إضافة", en: "Add" },
   newPasswordOptional: { ar: "كلمة مرور جديدة (اختياري)", en: "New password (optional)" },
+  passwordMinHint: { ar: "كلمة المرور يجب أن تكون 6 أحرف على الأقل", en: "Password must be at least 6 characters" },
 
   // Categories
   categoriesManagement: { ar: "إدارة الفئات", en: "Category Management" },

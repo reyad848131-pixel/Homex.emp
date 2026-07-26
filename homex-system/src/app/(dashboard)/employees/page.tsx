@@ -51,6 +51,7 @@ export default function EmployeesPage() {
     setError("");
     try {
       if (editId) {
+        if (form.password && form.password.length < 6) { setError(t("passwordMinHint")); return; }
         const body: any = { name: form.name, phone: form.phone, role: form.role };
         if (form.password) body.password = form.password;
         const res = await fetch(`/api/employees/${editId}`, {
@@ -61,6 +62,7 @@ export default function EmployeesPage() {
         if (!res.ok) { setError(t("updateFailed")); return; }
       } else {
         if (!form.name || !form.civilId || !form.password) { setError(t("allFieldsRequired")); return; }
+        if (form.password.length < 6) { setError(t("passwordMinHint")); return; }
         const res = await fetch("/api/employees", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
@@ -142,7 +144,10 @@ export default function EmployeesPage() {
                 {editId ? t("newPasswordOptional") : `${t("password")} *`}
               </label>
               <input type="password" value={form.password} onChange={(e) => setForm({ ...form, password: e.target.value })}
-                className="field" />
+                className="field" minLength={6} placeholder={editId ? "" : "••••••"} />
+              <p className={cn("text-xs mt-1", form.password && form.password.length > 0 && form.password.length < 6 ? "text-red-500 font-semibold" : "text-gray-400")}>
+                {t("passwordMinHint")}
+              </p>
             </div>
           </div>
           {error && <p className="text-red-600 text-sm mt-3 font-semibold">{error}</p>}
