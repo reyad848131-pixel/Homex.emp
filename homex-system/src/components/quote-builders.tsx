@@ -153,8 +153,8 @@ function KitchenBuilder({ config, governorate, wilayat, onUpdate, initial }: { c
           <span className="text-xs font-mono-en font-bold">{length}</span>
         </div>
         <div className="flex items-center gap-2">
-          <input type="range" min={2} max={15} step={1} value={length}
-            onChange={(e) => setLength(parseInt(e.target.value))}
+          <input type="range" min={2} max={15} step={0.1} value={length}
+            onChange={(e) => setLength(parseFloat(e.target.value))}
             className="flex-1 h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer accent-gray-900" />
           <NumField value={length} onChange={setLength} min={2} max={15}
             className="w-16 border border-gray-200 rounded px-2 py-1.5 text-sm font-mono-en text-center" />
@@ -364,10 +364,10 @@ function CurtainBuilder({ config, wilayat, onUpdate, initial }: { config: any; w
               <span className="text-xs font-mono-en font-bold">{width}</span>
             </div>
             <div className="flex items-center gap-2">
-              <input type="range" min={1} max={20} step={1} value={width}
-                onChange={(e) => setWidth(parseInt(e.target.value))}
+              <input type="range" min={1} max={20} step={0.1} value={width}
+                onChange={(e) => setWidth(parseFloat(e.target.value))}
                 className="flex-1 h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer accent-gray-900" />
-              <NumField value={width} onChange={setWidth} min={1} max={20} int
+              <NumField value={width} onChange={setWidth} min={1} max={20}
                 className="w-16 border border-gray-200 rounded px-2 py-1.5 text-sm font-mono-en text-center" />
             </div>
           </div>
@@ -377,10 +377,10 @@ function CurtainBuilder({ config, wilayat, onUpdate, initial }: { config: any; w
               <span className="text-xs font-mono-en font-bold">{height}</span>
             </div>
             <div className="flex items-center gap-2">
-              <input type="range" min={1} max={20} step={1} value={height}
-                onChange={(e) => setHeight(parseInt(e.target.value))}
+              <input type="range" min={1} max={20} step={0.1} value={height}
+                onChange={(e) => setHeight(parseFloat(e.target.value))}
                 className="flex-1 h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer accent-gray-900" />
-              <NumField value={height} onChange={setHeight} min={1} max={20} int
+              <NumField value={height} onChange={setHeight} min={1} max={20}
                 className="w-16 border border-gray-200 rounded px-2 py-1.5 text-sm font-mono-en text-center" />
             </div>
           </div>
@@ -741,10 +741,10 @@ function LaundryBuilder({ config, onUpdate, initial }: { config: any; onUpdate: 
       <div>
         <label className="block text-sm font-semibold text-gray-600 mb-1.5">{t("areaSqm")}</label>
         <div className="flex gap-3 items-center">
-          <input type="range" min={1} max={20} step={1} value={area}
-            onChange={(e) => setArea(parseInt(e.target.value))}
+          <input type="range" min={1} max={20} step={0.1} value={area}
+            onChange={(e) => setArea(parseFloat(e.target.value))}
             className="flex-1 accent-gray-900" />
-          <NumField value={area} onChange={setArea} min={1} max={20} int
+          <NumField value={area} onChange={setArea} min={1} max={20}
             className="w-20 border border-gray-200 rounded px-2 py-2 text-sm font-mono-en text-center" />
         </div>
       </div>
