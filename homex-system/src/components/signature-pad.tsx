@@ -64,11 +64,29 @@ export function SignaturePad({
     hasDrawn.current = true;
   };
 
+  // Export the signature downscaled to a modest width. A retina canvas backing
+  // store can be 2-3x oversized, producing a heavy PNG that's slow to upload
+  // and store; capping the width keeps it small (and legible) so confirming is
+  // near-instant.
+  const exportPng = (): string => {
+    const canvas = canvasRef.current!;
+    const maxW = 480;
+    if (canvas.width <= maxW) return canvas.toDataURL("image/png");
+    const scale = maxW / canvas.width;
+    const off = document.createElement("canvas");
+    off.width = maxW;
+    off.height = Math.round(canvas.height * scale);
+    const octx = off.getContext("2d");
+    if (!octx) return canvas.toDataURL("image/png");
+    octx.drawImage(canvas, 0, 0, off.width, off.height);
+    return off.toDataURL("image/png");
+  };
+
   const end = () => {
     if (!drawing.current) return;
     drawing.current = false;
     last.current = null;
-    if (hasDrawn.current) onChange(canvasRef.current!.toDataURL("image/png"));
+    if (hasDrawn.current) onChange(exportPng());
   };
 
   const clear = () => {

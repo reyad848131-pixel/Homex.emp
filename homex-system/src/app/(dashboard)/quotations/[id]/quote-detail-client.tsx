@@ -830,30 +830,29 @@ function SignCapture({
   const [open, setOpen] = useState(false);
   const [name, setName] = useState("");
   const [sig, setSig] = useState<string | null>(null);
-  const [busy, setBusy] = useState(false);
 
-  const submit = async () => {
+  const submit = () => {
     if (!name.trim()) return toast.error(t("nameRequired"));
     if (!sig) return toast.error(t("signatureRequired"));
-    setBusy(true);
-    try {
-      const res = await fetch(`/api/quotations/${id}/sign`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ signerName: name.trim(), signatureData: sig }),
-      });
-      if (res.ok) {
-        toast.success(t("signedSuccess"));
-        onSigned({ signatureData: sig, signerName: name.trim(), signedAt: new Date().toISOString(), status: "accepted" });
-      } else {
+    // Optimistic: show the signed record instantly and save in the background.
+    // On failure, reload to fall back to the true (unsigned) server state.
+    onSigned({ signatureData: sig, signerName: name.trim(), signedAt: new Date().toISOString(), status: "accepted" });
+    setOpen(false);
+    fetch(`/api/quotations/${id}/sign`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ signerName: name.trim(), signatureData: sig }),
+    })
+      .then(async (res) => {
+        if (res.ok) { toast.success(t("signedSuccess")); return; }
         const d = await res.json().catch(() => ({}));
         toast.error(d.error || t("errorOccurred"));
-      }
-    } catch {
-      toast.error(t("errorOccurred"));
-    } finally {
-      setBusy(false);
-    }
+        setTimeout(() => window.location.reload(), 1200);
+      })
+      .catch(() => {
+        toast.error(t("errorOccurred"));
+        setTimeout(() => window.location.reload(), 1200);
+      });
   };
 
   if (!open) {
@@ -873,11 +872,11 @@ function SignCapture({
       <label className="block text-sm font-semibold text-gray-600 dark:text-gray-300 mb-1">{t("signature")}</label>
       <SignaturePad onChange={setSig} clearLabel={t("clear")} />
       <div className="flex gap-2 mt-3">
-        <button onClick={submit} disabled={busy}
-          className="flex items-center gap-2 bg-emerald-600 hover:bg-emerald-700 text-white font-bold px-4 py-2.5 rounded-lg text-sm disabled:opacity-50">
-          {busy ? <Clock className="w-4 h-4 animate-spin" /> : <CheckCircle className="w-4 h-4" />} {t("confirmSignature")}
+        <button onClick={submit}
+          className="flex items-center gap-2 bg-emerald-600 hover:bg-emerald-700 text-white font-bold px-4 py-2.5 rounded-lg text-sm">
+          <CheckCircle className="w-4 h-4" /> {t("confirmSignature")}
         </button>
-        <button onClick={() => setOpen(false)} disabled={busy}
+        <button onClick={() => setOpen(false)}
           className="px-4 py-2.5 rounded-lg text-sm font-bold border border-gray-300 text-gray-600">
           {t("cancel")}
         </button>

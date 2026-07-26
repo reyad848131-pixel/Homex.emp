@@ -45,26 +45,30 @@ export function QuoteDecision({
     }
   };
 
-  const confirmSign = async () => {
+  const confirmSign = () => {
     if (!name.trim()) return setError("الرجاء كتابة الاسم.");
     if (!signature) return setError("الرجاء التوقيع في المربّع.");
-    setBusy("accept");
     setError("");
-    try {
-      const res = await fetch(`/api/public/quote/${token}`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ action: "accept", signerName: name.trim(), signatureData: signature }),
+    // Optimistic: show the success state instantly, save in the background.
+    // If the save fails, restore the signing form and show the error.
+    setStatus("accepted");
+    fetch(`/api/public/quote/${token}`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ action: "accept", signerName: name.trim(), signatureData: signature }),
+    })
+      .then(async (res) => {
+        if (res.ok) return;
+        const data = await res.json().catch(() => ({}));
+        setStatus(data.status && data.status !== "accepted" ? data.status : initialStatus);
+        if (!data.status || data.status === initialStatus) setSigning(true);
+        setError(data.error || "تعذّر إتمام العملية، حاول مرة أخرى.");
+      })
+      .catch(() => {
+        setStatus(initialStatus);
+        setSigning(true);
+        setError("تعذّر الاتصال، تحقّق من الإنترنت.");
       });
-      const data = await res.json().catch(() => ({}));
-      if (res.ok) setStatus("accepted");
-      else if (data.status) setStatus(data.status);
-      else setError(data.error || "تعذّر إتمام العملية، حاول مرة أخرى.");
-    } catch {
-      setError("تعذّر الاتصال، تحقّق من الإنترنت.");
-    } finally {
-      setBusy(null);
-    }
   };
 
   if (status === "accepted") {
