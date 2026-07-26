@@ -8,16 +8,44 @@ function money(n: number) {
   return `${(n || 0).toFixed(3)} ر.ع`;
 }
 
+// Neon (free tier) auto-suspends the DB; the first query after idle can fail
+// while it wakes. Retry a couple of times before giving up.
+async function loadQuote(token: string) {
+  let lastErr: unknown;
+  for (let attempt = 0; attempt < 3; attempt++) {
+    try {
+      return await prisma.quotation.findUnique({
+        where: { publicToken: token },
+        include: {
+          customer: { select: { name: true, governorate: true, wilayat: true } },
+          items: { include: { category: { select: { nameAr: true } } }, orderBy: { sortOrder: "asc" } },
+        },
+      });
+    } catch (e) {
+      lastErr = e;
+      await new Promise((r) => setTimeout(r, 800));
+    }
+  }
+  throw lastErr;
+}
+
 export default async function PublicQuotePage({ params }: { params: Promise<{ token: string }> }) {
   const { token } = await params;
 
-  const q = await prisma.quotation.findUnique({
-    where: { publicToken: token },
-    include: {
-      customer: { select: { name: true, governorate: true, wilayat: true } },
-      items: { include: { category: { select: { nameAr: true } } }, orderBy: { sortOrder: "asc" } },
-    },
-  });
+  let q;
+  try {
+    q = await loadQuote(token);
+  } catch (e) {
+    console.error("Public quote load failed:", e);
+    return (
+      <div dir="rtl" className="min-h-screen flex items-center justify-center bg-gray-100 p-6">
+        <div className="bg-white rounded-2xl shadow-sm p-8 text-center max-w-sm">
+          <p className="text-lg font-bold text-gray-800">تعذّر تحميل العرض</p>
+          <p className="text-sm text-gray-500 mt-2">حدّث الصفحة بعد لحظات، أو تواصل مع الشركة.</p>
+        </div>
+      </div>
+    );
+  }
 
   if (!q) {
     return (
@@ -30,7 +58,7 @@ export default async function PublicQuotePage({ params }: { params: Promise<{ to
     );
   }
 
-  const s = await getSettings();
+  const s = await getSettings().catch(() => ({} as Record<string, string>));
   const companyName = s.company_name || "homex";
   const logo = s.company_logo || "";
   const phone = s.company_phone || "";
