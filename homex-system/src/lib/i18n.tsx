@@ -266,6 +266,8 @@ const translations = {
   createdBy: { ar: "أنشئ بواسطة", en: "Created by" },
   print: { ar: "طباعة", en: "Print" },
   whatsapp: { ar: "واتساب", en: "WhatsApp" },
+  globalSearchPlaceholder: { ar: "بحث عن عرض أو عميل...", en: "Search a quote or customer..." },
+  searching: { ar: "جاري البحث...", en: "Searching..." },
   shareWithCustomer: { ar: "مشاركة مع العميل", en: "Share with customer" },
   shareLinkTitle: { ar: "رابط العرض للعميل", en: "Customer quote link" },
   shareLinkHint: { ar: "أرسل هذا الرابط للعميل — يشوف العرض ويقدر يوافق أو يرفض مباشرة، وتوصلك النتيجة.", en: "Send this to the customer — they can view and accept/reject online; you'll be notified." },
