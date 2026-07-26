@@ -195,6 +195,8 @@ export async function PATCH(
 
     const allowedFields: Record<string, any> = {};
     if (body.status) allowedFields.status = body.status;
+    // Re-arm the follow-up nudge whenever a quote is (re)sent for review.
+    if (body.status === "pending") allowedFields.followUpNotified = false;
     if (body.notes !== undefined) allowedFields.notes = body.notes;
     if (body.statusComment !== undefined) allowedFields.statusComment = body.statusComment;
 
