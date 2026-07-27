@@ -1,8 +1,9 @@
 "use client";
 
 import { useState, useEffect, useRef } from "react";
-import { Settings, Save, Building2, Download, Database, FileSpreadsheet, ScrollText, Upload, Trash2, ImageIcon, ShieldCheck } from "lucide-react";
+import { Settings, Save, Building2, Download, Database, FileSpreadsheet, ScrollText, Upload, Trash2, ImageIcon, ShieldCheck, Smartphone } from "lucide-react";
 import { useI18n } from "@/lib/i18n";
+import { AppIconEditor } from "@/components/app-icon-editor";
 
 export default function SettingsPage() {
   const [settings, setSettings] = useState<Record<string, string>>({});
@@ -11,6 +12,12 @@ export default function SettingsPage() {
   const [logo, setLogo] = useState("");
   const [uploadingLogo, setUploadingLogo] = useState(false);
   const fileRef = useRef<HTMLInputElement>(null);
+  // App icon (home-screen / browser-tab). iconVer busts the <img> cache after
+  // an upload; the icon itself is served from /api/app-icon.
+  const [iconVer, setIconVer] = useState(0);
+  const [uploadingIcon, setUploadingIcon] = useState(false);
+  const [iconFile, setIconFile] = useState<File | null>(null);
+  const iconRef = useRef<HTMLInputElement>(null);
   const { t, dateLocale } = useI18n();
 
   type BackupRow = { id: string; size: number; source: string; createdAt: string };
@@ -45,6 +52,21 @@ export default function SettingsPage() {
   const handleLogoDelete = async () => {
     const res = await fetch("/api/logo", { method: "DELETE" });
     if (res.ok) setLogo("");
+  };
+
+  const handleIconUpload = async (file: File) => {
+    setUploadingIcon(true);
+    const form = new FormData();
+    form.append("icon", file);
+    try {
+      const res = await fetch("/api/app-icon", { method: "POST", body: form });
+      if (res.ok) setIconVer((v) => v + 1);
+    } catch {} finally { setUploadingIcon(false); }
+  };
+
+  const handleIconDelete = async () => {
+    const res = await fetch("/api/app-icon", { method: "DELETE" });
+    if (res.ok) setIconVer((v) => v + 1);
   };
 
   const update = (key: string, value: string) => {
@@ -115,6 +137,44 @@ export default function SettingsPage() {
           </div>
         </div>
       </div>
+
+      {/* App icon */}
+      <div className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded p-6 mb-6">
+        <h2 className="text-base font-bold mb-4 flex items-center gap-2">
+          <Smartphone className="w-4 h-4 text-gray-400" />
+          {t("appIcon")}
+        </h2>
+        <div className="flex items-center gap-6">
+          <div className="w-24 h-24 border-2 border-dashed border-gray-200 rounded-2xl flex items-center justify-center overflow-hidden bg-gray-50">
+            {/* iconVer busts the cache so a fresh upload shows immediately. */}
+            <img src={`/api/app-icon?v=${iconVer}`} alt={t("appIcon")} className="w-full h-full object-cover" />
+          </div>
+          <div className="space-y-2">
+            <input type="file" ref={iconRef} className="hidden" accept="image/png,image/jpeg,image/webp"
+              onChange={(e) => { if (e.target.files?.[0]) { setIconFile(e.target.files[0]); e.target.value = ""; } }} />
+            <button onClick={() => iconRef.current?.click()} disabled={uploadingIcon}
+              className="flex items-center gap-2 px-4 py-2 border border-gray-200 rounded text-sm font-bold hover:bg-gray-50 disabled:opacity-50 transition-colors">
+              <Upload className="w-4 h-4" />
+              {uploadingIcon ? t("uploadingLogo") : t("uploadIcon")}
+            </button>
+            <button onClick={handleIconDelete}
+              className="flex items-center gap-2 px-4 py-2 border border-red-200 text-red-600 rounded text-sm font-bold hover:bg-red-50 transition-colors">
+              <Trash2 className="w-4 h-4" />
+              {t("resetIcon")}
+            </button>
+            <p className="text-xs text-gray-400">{t("appIconHint")}</p>
+          </div>
+        </div>
+      </div>
+
+      {iconFile && (
+        <AppIconEditor
+          file={iconFile}
+          saving={uploadingIcon}
+          onCancel={() => setIconFile(null)}
+          onSave={async (f) => { await handleIconUpload(f); setIconFile(null); }}
+        />
+      )}
 
       <div className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded p-6 mb-6">
         <h2 className="text-base font-bold mb-4 flex items-center gap-2">

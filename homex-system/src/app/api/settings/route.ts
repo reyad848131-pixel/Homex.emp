@@ -16,6 +16,7 @@ export async function GET() {
     // hot pages noticeably faster.
     const light = { ...settings };
     delete light.company_logo;
+    delete light.app_icon;
     const res = NextResponse.json(light);
     res.headers.set("Cache-Control", "private, max-age=30, stale-while-revalidate=120");
     return res;
