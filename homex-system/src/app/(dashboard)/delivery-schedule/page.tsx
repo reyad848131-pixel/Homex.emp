@@ -31,6 +31,9 @@ interface DeliveryQuotation {
 
 const getDaysRemaining = (d: string) => daysUntil(d) as number;
 
+// Default driver pre-selected for every delivery (still changeable per order).
+const DEFAULT_DRIVER = "قصي الشكيلي";
+
 export default function DeliverySchedulePage() {
   const { t, dateLocale } = useI18n();
   const [tab, setTab] = useState<"queue" | "delivered">("queue");
@@ -102,7 +105,9 @@ export default function DeliverySchedulePage() {
       }
       await fetch("/api/work-orders", {
         method: "PATCH", headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ id: q.id, workStatus: "delivered" }),
+        // Persist the effective driver (the default when none was picked) so the
+        // delivered record reflects who actually took it.
+        body: JSON.stringify({ id: q.id, workStatus: "delivered", deliveryDriver: q.deliveryDriver || DEFAULT_DRIVER }),
       });
     } catch {
       fetchData();
@@ -403,12 +408,13 @@ export default function DeliverySchedulePage() {
                         <div className="no-print mt-3 pt-3 border-t border-gray-100 dark:border-gray-700 space-y-2">
                           <div className="flex flex-wrap items-center gap-2">
                             <span className="inline-flex items-center gap-1 text-xs font-bold text-gray-500"><User className="w-3.5 h-3.5" /> {t("driverLabel")}:</span>
-                            <select value={q.deliveryDriver || ""}
+                            <select value={q.deliveryDriver || DEFAULT_DRIVER}
                               onChange={(e) => patch(q.id, { deliveryDriver: e.target.value }, { deliveryDriver: e.target.value })}
                               className="field w-auto h-9 text-xs py-0">
                               <option value="">{t("noDriver")}</option>
+                              {!drivers.includes(DEFAULT_DRIVER) && <option value={DEFAULT_DRIVER}>{DEFAULT_DRIVER}</option>}
                               {drivers.map((d) => <option key={d} value={d}>{d}</option>)}
-                              {q.deliveryDriver && !drivers.includes(q.deliveryDriver) && <option value={q.deliveryDriver}>{q.deliveryDriver}</option>}
+                              {q.deliveryDriver && q.deliveryDriver !== DEFAULT_DRIVER && !drivers.includes(q.deliveryDriver) && <option value={q.deliveryDriver}>{q.deliveryDriver}</option>}
                             </select>
                             <button onClick={() => patch(q.id, { apptConfirmed: !q.apptConfirmed }, { apptConfirmed: !q.apptConfirmed })}
                               className={cn("inline-flex items-center gap-1.5 px-3 h-9 rounded-lg border text-xs font-bold transition-colors",
