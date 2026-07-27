@@ -29,7 +29,10 @@ async function main() {
         island: { small: 390, large: 600 }
       })
     },
-    { id: "cabinets", nameAr: "الخزائن", nameEn: "Cabinets", icon: "DoorOpen", pricingType: "per_sqm", basePrice: 54, sortOrder: 2,
+    { id: "pantry", nameAr: "بانتري", nameEn: "Pantry", icon: "Refrigerator", pricingType: "per_sqm", basePrice: 130, sortOrder: 2,
+      config: JSON.stringify({ porcelainSurcharge: 55 })
+    },
+    { id: "cabinets", nameAr: "الخزائن", nameEn: "Cabinets", icon: "DoorOpen", pricingType: "per_sqm", basePrice: 54, sortOrder: 3,
       config: JSON.stringify({ basePrice: 54, glassDoor: 60, led: 25, shapes: ["single", "L", "U"] })
     },
     { id: "nightstand", nameAr: "كومودينو", nameEn: "Nightstand", icon: "Lamp", pricingType: "per_unit", sortOrder: 3,

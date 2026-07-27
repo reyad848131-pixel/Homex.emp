@@ -220,6 +220,65 @@ function KitchenBuilder({ config, governorate, wilayat, onUpdate, initial }: { c
   );
 }
 
+// Pantry: priced exactly like a 1-unit kitchen — length × (wilayat base price
+// + porcelain surcharge). No unit toggle or island.
+function PantryBuilder({ config, governorate, wilayat, onUpdate, initial }: { config: any; governorate: string; wilayat: string; onUpdate: BuilderUpdate; initial?: BuilderInitial }) {
+  const { t } = useI18n();
+  const [length, setLength] = useState(initial?.length ?? 3);
+  const [manualBase, setManualBase] = useState(initial?.manualBase ?? 130);
+
+  const PORCELAIN_PRICE = config?.porcelainSurcharge || 55;
+  const autoBase = getKitchenBasePrice(governorate, wilayat);
+  const isManual = autoBase === null;
+  const basePrice = isManual ? manualBase : autoBase;
+  const pricePerSqm = basePrice + PORCELAIN_PRICE; // 1 unit
+  const area = Math.round(length * 100) / 100;
+
+  useEffect(() => {
+    const price = area * pricePerSqm;
+    onUpdate(`بانتري - ${length}م`, price, 0, { length, manualBase });
+  }, [length, basePrice, config, onUpdate]);
+
+  return (
+    <div className="space-y-4">
+      <div>
+        <label className="block text-sm font-semibold text-gray-600 mb-2">{t("lengthM")}</label>
+        <div className="flex items-center justify-between mb-1">
+          <span className="text-xs text-gray-500">{t("lengthM")}</span>
+          <span className="text-xs font-mono-en font-bold">{length}</span>
+        </div>
+        <div className="flex items-center gap-2">
+          <input type="range" min={1} max={15} step={0.1} value={length}
+            onChange={(e) => setLength(parseFloat(e.target.value))}
+            className="flex-1 h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer accent-gray-900" />
+          <NumField value={length} onChange={setLength} min={1} max={15}
+            className="w-16 border border-gray-200 rounded px-2 py-1.5 text-sm font-mono-en text-center" />
+        </div>
+        <div className="mt-2 text-center py-2 bg-gray-50 rounded border border-gray-100">
+          <span className="text-sm text-gray-600">{t("areaLabel")}: </span>
+          <span className="font-bold font-mono-en text-gray-900">{area.toFixed(2)}</span>
+          <span className="text-sm text-gray-600"> {t("sqmUnit")}</span>
+        </div>
+      </div>
+
+      {isManual && (
+        <div>
+          <label className="block text-sm font-semibold text-gray-600 mb-1.5">{t("pricePerMeterLabel")} (OMR)</label>
+          <NumField value={manualBase} onChange={setManualBase} min={1} int
+            className="field font-mono-en text-center" />
+          <p className="text-xs text-amber-600 mt-1">{governorate}: {t("manualPriceHint")}</p>
+        </div>
+      )}
+
+      <div className="text-center py-2 bg-gray-50 rounded border border-gray-100">
+        <p className="text-xs text-gray-500">
+          {wilayat || governorate}: {basePrice} + {PORCELAIN_PRICE} ({t("porcelain")}) = <span className="font-bold font-mono-en">{pricePerSqm.toFixed(3)}</span> {t("omrPerSqm")}
+        </p>
+      </div>
+    </div>
+  );
+}
+
 function CabinetBuilder({ config, onUpdate, initial }: { config: any; onUpdate: BuilderUpdate; initial?: BuilderInitial }) {
   const { t } = useI18n();
   const [width, setWidth] = useState(initial?.width ?? 1.5);
@@ -968,6 +1027,8 @@ export function CategoryBuilder({
   switch (cat.id) {
     case "kitchens":
       return <KitchenBuilder config={config} governorate={governorate} wilayat={wilayat} onUpdate={onUpdate} initial={initial} />;
+    case "pantry":
+      return <PantryBuilder config={config} governorate={governorate} wilayat={wilayat} onUpdate={onUpdate} initial={initial} />;
     case "cabinets":
       return <CabinetBuilder config={config} onUpdate={onUpdate} initial={initial} />;
     case "nightstand":

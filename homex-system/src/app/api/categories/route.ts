@@ -2,10 +2,34 @@ import { NextRequest, NextResponse } from "next/server";
 import { getAuth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 
+// Builder-backed categories that must exist with a fixed id (so they dispatch
+// to their dedicated builder). Seeded DBs predating a category won't have it,
+// so we upsert it once per server instance on the first categories fetch.
+let ensuredExtras = false;
+async function ensureBuilderCategories() {
+  if (ensuredExtras) return;
+  try {
+    await prisma.category.upsert({
+      where: { id: "pantry" },
+      update: {},
+      create: {
+        id: "pantry", nameAr: "بانتري", nameEn: "Pantry", icon: "Refrigerator",
+        pricingType: "per_sqm", basePrice: 130, sortOrder: 2,
+        config: JSON.stringify({ porcelainSurcharge: 55 }),
+      },
+    });
+    ensuredExtras = true;
+  } catch {
+    // Non-fatal: fall back to whatever categories already exist.
+  }
+}
+
 export async function GET(req: NextRequest) {
   try {
     const session = await getAuth();
     if (!session) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+
+    await ensureBuilderCategories();
 
     const user = session.user as any;
     const showAll = req.nextUrl.searchParams.get("all") === "true" && (user.role === "admin" || user.role === "ceo");
