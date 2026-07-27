@@ -70,6 +70,7 @@ export async function PATCH(
     const data: any = {};
     if (body.name !== undefined) data.name = body.name;
     if (body.phone !== undefined) data.phone = body.phone;
+    if (body.phoneCode !== undefined) data.phoneCode = body.phoneCode;
     if (body.role !== undefined) data.role = body.role;
     if (body.isActive !== undefined) data.isActive = body.isActive;
     if (body.password) data.password = await bcrypt.hash(body.password, 10);
@@ -77,7 +78,7 @@ export async function PATCH(
     const employee = await prisma.employee.update({
       where: { id },
       data,
-      select: { id: true, name: true, civilId: true, phone: true, role: true, isActive: true },
+      select: { id: true, name: true, civilId: true, phone: true, phoneCode: true, role: true, isActive: true },
     });
 
     await logAction(user.id, "update", "employee", id, JSON.stringify(body.password ? { ...body, password: "[changed]" } : body));

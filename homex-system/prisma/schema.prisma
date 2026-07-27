@@ -12,6 +12,7 @@ model Employee {
   name      String
   civilId   String   @unique @map("civil_id")
   phone     String?
+  phoneCode String   @default("+968") @map("phone_code")
   role      String   @default("sales")
   password  String
   isActive  Boolean  @default(true) @map("is_active")

@@ -18,7 +18,7 @@ export async function GET() {
 
     const employees = await prisma.employee.findMany({
       select: {
-        id: true, name: true, civilId: true, phone: true,
+        id: true, name: true, civilId: true, phone: true, phoneCode: true,
         role: true, isActive: true, createdAt: true,
         _count: { select: { quotations: true } },
       },
@@ -44,7 +44,7 @@ export async function POST(req: NextRequest) {
 
     const parsed = parseBody(employeeCreateSchema, await req.json());
     if (!parsed.ok) return NextResponse.json({ error: parsed.error, code: "invalid" }, { status: 400 });
-    const { name, civilId, phone, role, password } = parsed.data;
+    const { name, civilId, phone, phoneCode, role, password } = parsed.data;
 
     const roles = await getAllRoles();
     const roleDef = roles.find((r) => r.key === role);
@@ -63,8 +63,8 @@ export async function POST(req: NextRequest) {
 
     const hashedPassword = await bcrypt.hash(password, 10);
     const employee = await prisma.employee.create({
-      data: { name, civilId, phone: phone || null, role, password: hashedPassword },
-      select: { id: true, name: true, civilId: true, phone: true, role: true, isActive: true },
+      data: { name, civilId, phone: phone || null, phoneCode: phoneCode || "+968", role, password: hashedPassword },
+      select: { id: true, name: true, civilId: true, phone: true, phoneCode: true, role: true, isActive: true },
     });
 
     await logAction(user.id, "create", "employee", employee.id, JSON.stringify({ name, civilId, role }));

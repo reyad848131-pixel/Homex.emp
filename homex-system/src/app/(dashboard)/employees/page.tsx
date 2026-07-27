@@ -10,6 +10,7 @@ interface Employee {
   name: string;
   civilId: string;
   phone: string | null;
+  phoneCode?: string;
   role: string;
   isActive: boolean;
   _count: { quotations: number };
@@ -39,7 +40,7 @@ export default function EmployeesPage() {
   const [employees, setEmployees] = useState<Employee[]>([]);
   const [showForm, setShowForm] = useState(false);
   const [editId, setEditId] = useState<string | null>(null);
-  const [form, setForm] = useState({ name: "", civilId: "", phone: "", role: "sales", password: "" });
+  const [form, setForm] = useState({ name: "", civilId: "", phone: "", phoneCode: "+968", role: "sales", password: "" });
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
   const [resetting, setResetting] = useState(false);
@@ -106,7 +107,7 @@ export default function EmployeesPage() {
   useEffect(() => { load(); loadRoles(); }, []);
 
   const resetForm = () => {
-    setForm({ name: "", civilId: "", phone: "", role: "sales", password: "" });
+    setForm({ name: "", civilId: "", phone: "", phoneCode: "+968", role: "sales", password: "" });
     setShowForm(false);
     setEditId(null);
     setError("");
@@ -118,7 +119,7 @@ export default function EmployeesPage() {
     try {
       if (editId) {
         if (form.password && form.password.length < 6) { setError(t("passwordMinHint")); return; }
-        const body: any = { name: form.name, phone: form.phone, role: form.role };
+        const body: any = { name: form.name, phone: form.phone, phoneCode: form.phoneCode, role: form.role };
         if (form.password) body.password = form.password;
         const res = await fetch(`/api/employees/${editId}`, {
           method: "PATCH",
@@ -167,7 +168,7 @@ export default function EmployeesPage() {
   };
 
   const startEdit = (emp: Employee) => {
-    setForm({ name: emp.name, civilId: emp.civilId, phone: emp.phone || "", role: emp.role, password: "" });
+    setForm({ name: emp.name, civilId: emp.civilId, phone: emp.phone || "", phoneCode: emp.phoneCode || "+968", role: emp.role, password: "" });
     setEditId(emp.id);
     setShowForm(true);
   };
@@ -326,8 +327,18 @@ export default function EmployeesPage() {
             </div>
             <div>
               <label className="block text-sm font-semibold text-gray-600 mb-1.5">{t("phone")}</label>
-              <input type="tel" value={form.phone} onChange={(e) => setForm({ ...form, phone: e.target.value })}
-                className="field font-mono-en" />
+              <div className="flex gap-2">
+                <select value={form.phoneCode} onChange={(e) => setForm({ ...form, phoneCode: e.target.value })}
+                  className="field w-28 shrink-0 font-mono-en">
+                  <option value="+968">+968</option>
+                  <option value="+971">+971</option>
+                  <option value="+966">+966</option>
+                </select>
+                <input type="tel" value={form.phone}
+                  onChange={(e) => setForm({ ...form, phone: e.target.value.replace(/\D/g, "").slice(0, 8) })}
+                  maxLength={8} placeholder="9XXXXXXX"
+                  className="field flex-1 min-w-0 font-mono-en" />
+              </div>
             </div>
             <div>
               <label className="block text-sm font-semibold text-gray-600 mb-1.5">{t("role")}</label>
