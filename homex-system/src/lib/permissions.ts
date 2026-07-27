@@ -12,10 +12,14 @@ export const PERMISSIONS = [
   "payments",        // record payments
   "invoices",        // issue invoices
   "edit_locked",     // edit a locked (signed / invoiced / paid) quotation
-  "work_orders",     // work board, delivery & installation schedules, service
+  "work_orders",     // the work board (إدارة الأعمال) — drive jobs through the pipeline
+  "deliveries",      // delivery / installation schedules & service (field ops)
+  "deliveries_view", // read-only delivery schedule (e.g. the photographer)
   "photography",     // photography queue: shoot delivered/installed jobs
+  "financials",      // may see money: prices, totals, payments, revenue
   "reports",         // reports & analytics
   "customers",       // manage customers
+  "customers_view",  // read-only customers (name / contact / location only)
   "employees",       // manage employees & roles
   "categories",      // manage categories & pricing
   "settings",        // company settings
@@ -30,8 +34,9 @@ export type Permission = (typeof PERMISSIONS)[number];
 // Admin-only areas (employees/categories/settings/audit) and role-name-bound
 // actions (approve/edit_locked) stay reserved for the built-in roles.
 export const ASSIGNABLE_PERMISSIONS: Permission[] = [
-  "quotes", "quotes_create", "view_all_quotes", "customers",
-  "payments", "invoices", "work_orders", "photography", "reports",
+  "quotes", "quotes_create", "view_all_quotes", "customers", "customers_view",
+  "payments", "invoices", "work_orders", "deliveries", "deliveries_view",
+  "photography", "financials", "reports",
 ];
 
 // Arabic labels for the role-management UI (kept here so the catalogue and its
@@ -44,10 +49,14 @@ export const PERMISSION_LABELS: Record<Permission, string> = {
   payments: "تسجيل الدفعات",
   invoices: "إصدار الفواتير",
   edit_locked: "تعديل العروض المقفلة",
-  work_orders: "أوامر العمل والتسليم والتركيب والصيانة",
+  work_orders: "لوحة إدارة الأعمال (تحريك مراحل العمل)",
+  deliveries: "جداول التسليم والتركيب والصيانة",
+  deliveries_view: "عرض جدول التسليم (قراءة فقط)",
   photography: "التصوير (تصوير الأعمال المنجزة)",
+  financials: "رؤية المبالغ (الأسعار والإيرادات والدفعات)",
   reports: "التقارير والإحصائيات",
   customers: "إدارة العملاء",
+  customers_view: "عرض العملاء (قراءة فقط)",
   employees: "إدارة الموظفين والرتب",
   categories: "إدارة الفئات والأسعار",
   settings: "إعدادات الشركة",
@@ -74,16 +83,18 @@ export const SYSTEM_ROLES: RoleDef[] = [
     key: "manager",
     label: "مشرف",
     system: true,
-    permissions: ["quotes", "quotes_create", "view_all_quotes", "approve", "payments", "invoices", "edit_locked", "work_orders", "photography", "reports", "customers", "trash"],
+    permissions: ["quotes", "quotes_create", "view_all_quotes", "approve", "payments", "invoices", "edit_locked", "work_orders", "deliveries", "photography", "financials", "reports", "customers", "trash"],
   },
-  { key: "sales", label: "مبيعات", system: true, permissions: ["quotes", "quotes_create", "customers", "payments"] },
+  { key: "sales", label: "مبيعات", system: true, permissions: ["quotes", "quotes_create", "customers", "payments", "financials"] },
   // Accountant: sees every quotation + customers + reports, records payments and
   // issues invoices; cannot create quotes, and no settings / employees / pricing.
-  { key: "accountant", label: "محاسب", system: true, permissions: ["quotes", "view_all_quotes", "customers", "payments", "invoices", "reports"] },
-  // Driver: only the delivery / installation / work board / service.
-  { key: "driver", label: "سائق", system: true, permissions: ["work_orders"] },
-  // Photographer: only the photography queue (shoot delivered/installed jobs).
-  { key: "photographer", label: "مصوّر", system: true, permissions: ["photography"] },
+  { key: "accountant", label: "محاسب", system: true, permissions: ["quotes", "view_all_quotes", "customers", "payments", "invoices", "financials", "reports"] },
+  // Driver: field ops only — delivery / installation schedules & service. No
+  // access to the work board (can't drive job stages) and no money.
+  { key: "driver", label: "سائق", system: true, permissions: ["deliveries"] },
+  // Photographer: the photography queue, plus read-only delivery schedule and
+  // read-only customers. No money anywhere.
+  { key: "photographer", label: "مصوّر", system: true, permissions: ["photography", "deliveries_view", "customers_view"] },
 ];
 
 // Custom roles are stored as JSON in the settings table (no schema change).
@@ -120,6 +131,27 @@ export async function getRolePermissions(roleKey: string): Promise<Permission[]>
 
 export function roleHasPermissionIn(perms: Permission[], perm: Permission): boolean {
   return perms.includes(perm);
+}
+
+// Field-ops (delivery/installation/service + work board) access helpers.
+// "view" also admits the read-only delivery viewer (photographer); "edit"
+// requires a mutating field-ops permission.
+export async function canViewFieldOps(roleKey: string): Promise<boolean> {
+  if (roleKey === "admin" || roleKey === "ceo" || roleKey === "manager") return true;
+  const perms = await getRolePermissions(roleKey);
+  return perms.includes("work_orders") || perms.includes("deliveries") || perms.includes("deliveries_view");
+}
+export async function canEditFieldOps(roleKey: string): Promise<boolean> {
+  if (roleKey === "admin" || roleKey === "ceo" || roleKey === "manager") return true;
+  const perms = await getRolePermissions(roleKey);
+  return perms.includes("work_orders") || perms.includes("deliveries");
+}
+
+// Managing (editing/deleting) customers requires the full "customers"
+// permission — the read-only "customers_view" (photographer) must not mutate.
+export async function canManageCustomers(roleKey: string): Promise<boolean> {
+  if (roleKey === "admin" || roleKey === "ceo" || roleKey === "manager") return true;
+  return (await getRolePermissions(roleKey)).includes("customers");
 }
 
 // Convenience: does the given role grant the permission? (async settings read,

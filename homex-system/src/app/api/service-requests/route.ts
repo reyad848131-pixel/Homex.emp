@@ -3,7 +3,7 @@ import { getAuth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { logAction } from "@/lib/audit";
 import { notifyAdmins } from "@/lib/notifications";
-import { userCan } from "@/lib/permissions";
+import { canEditFieldOps } from "@/lib/permissions";
 
 const TYPES = ["return", "maintenance"];
 
@@ -13,8 +13,7 @@ async function requireManager() {
   const session = await getAuth();
   if (!session) return { error: NextResponse.json({ error: "Unauthorized" }, { status: 401 }) };
   const user = session.user as any;
-  const allowed = (user.role === "admin" || user.role === "ceo") || user.role === "manager" || await userCan(user.role, "work_orders");
-  if (!allowed) {
+  if (!(await canEditFieldOps(user.role))) {
     return { error: NextResponse.json({ error: "Forbidden" }, { status: 403 }) };
   }
   return { user };

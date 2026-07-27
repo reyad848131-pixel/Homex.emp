@@ -32,6 +32,7 @@ interface DashboardData {
   outstandingAmount: number;
   conversionRate: string;
   photoQueueCount: number;
+  canSeeFinancials: boolean;
   expiringQuotations: Array<{
     id: string;
     quoteNumber: string;
@@ -58,7 +59,8 @@ export function DashboardClient({ data }: { data: DashboardData }) {
   const stats = [
     { labelKey: "totalQuotations" as TranslationKey, value: data.totalQuotes, sub: `${data.monthlyQuotes} ${t("thisMonth")}`, icon: FileText, color: "bg-blue-50 text-blue-600" },
     { labelKey: "customers" as TranslationKey, value: data.totalCustomers, sub: null, icon: Users, color: "bg-green-50 text-green-600" },
-    { labelKey: "approvedRevenue" as TranslationKey, value: formatCurrency(data.totalRevenue, t("omr")), sub: `${data.conversionRate}% ${t("conversionRate")}`, icon: TrendingUp, color: "bg-purple-50 text-purple-600" },
+    // Revenue card only for roles allowed to see money.
+    ...(data.canSeeFinancials ? [{ labelKey: "approvedRevenue" as TranslationKey, value: formatCurrency(data.totalRevenue, t("omr")), sub: `${data.conversionRate}% ${t("conversionRate")}`, icon: TrendingUp, color: "bg-purple-50 text-purple-600" }] : []),
     { labelKey: "underReview" as TranslationKey, value: data.pendingCount, sub: `${data.draftCount} ${t("draft")}`, icon: Clock, color: "bg-yellow-50 text-yellow-600" },
   ];
 
@@ -126,7 +128,7 @@ export function DashboardClient({ data }: { data: DashboardData }) {
         </Link>
       )}
 
-      {data.totalRevenue > 0 && (() => {
+      {data.canSeeFinancials && data.totalRevenue > 0 && (() => {
         const pct = data.totalRevenue > 0 ? Math.min((data.collectedAmount / data.totalRevenue) * 100, 100) : 0;
         return (
           <div className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded p-5 mb-6">

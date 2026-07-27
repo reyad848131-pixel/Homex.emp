@@ -1,3 +1,4 @@
+import { redirect } from "next/navigation";
 import { getAuth } from "@/lib/auth";
 import { getQuotationsList } from "@/lib/quotations-list";
 import { userCan } from "@/lib/permissions";
@@ -8,7 +9,10 @@ import { QuotationsClient } from "./quotations-client";
 export default async function QuotationsPage() {
   const session = await getAuth();
   const user = session?.user as any;
-  const isAdmin = (user?.role === "admin" || user?.role === "ceo") || user?.role === "manager" || await userCan(user?.role, "view_all_quotes");
+  const privileged = user?.role === "admin" || user?.role === "ceo" || user?.role === "manager";
+  // Quotations show prices — block roles without quote access at the URL level.
+  if (!(privileged || (await userCan(user?.role, "quotes")))) redirect("/");
+  const isAdmin = privileged || await userCan(user?.role, "view_all_quotes");
 
   const initial = await getQuotationsList({ userId: user?.id, isAdmin, page: 1, limit: 20 });
 

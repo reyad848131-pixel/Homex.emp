@@ -2,14 +2,14 @@ import { NextRequest, NextResponse } from "next/server";
 import { getAuth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { logAction } from "@/lib/audit";
-import { userCan } from "@/lib/permissions";
+import { canEditFieldOps } from "@/lib/permissions";
 
 export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
     const session = await getAuth();
     if (!session) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     const user = session.user as any;
-    if (!((user.role === "admin" || user.role === "ceo") || user.role === "manager" || await userCan(user.role, "work_orders"))) {
+    if (!(await canEditFieldOps(user.role))) {
       return NextResponse.json({ error: "Forbidden" }, { status: 403 });
     }
 

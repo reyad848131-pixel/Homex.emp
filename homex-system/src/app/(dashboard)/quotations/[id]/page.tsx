@@ -1,6 +1,7 @@
 import { getAuth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { getSettings } from "@/lib/settings";
+import { getRolePermissions } from "@/lib/permissions";
 import QuoteDetailClient from "./quote-detail-client";
 
 export const dynamic = "force-dynamic";
@@ -14,7 +15,14 @@ export default async function QuotationDetailPage({ params }: { params: Promise<
   const session = await getAuth();
   const user = session?.user as { id: string; role: string } | undefined;
 
-  let quotation = user
+  // Only roles that can view quotations may open one (they show prices/money).
+  // Field roles like driver/photographer are blocked at the URL level.
+  const canViewQuotes = user
+    ? user.role === "admin" || user.role === "ceo" || user.role === "manager" ||
+      ((await getRolePermissions(user.role).catch(() => [])) as string[]).includes("quotes")
+    : false;
+
+  let quotation = user && canViewQuotes
     ? await prisma.quotation.findFirst({
         where: { id },
         include: {

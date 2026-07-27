@@ -3,6 +3,7 @@ import { getAuth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { logAction } from "@/lib/audit";
 import { parseBody, customerUpdateSchema } from "@/lib/schemas";
+import { canManageCustomers } from "@/lib/permissions";
 
 export async function PATCH(
   req: NextRequest,
@@ -14,6 +15,10 @@ export async function PATCH(
 
     const user = session.user as any;
     const { id } = await params;
+
+    if (!(await canManageCustomers(user.role))) {
+      return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+    }
 
     const customer = await prisma.customer.findFirst({ where: { id } });
     if (!customer) return NextResponse.json({ error: "Not found" }, { status: 404 });
@@ -59,6 +64,10 @@ export async function DELETE(
     if (!session) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     const user = session.user as any;
     const { id } = await params;
+
+    if (!(await canManageCustomers(user.role))) {
+      return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+    }
 
     const customer = await prisma.customer.findFirst({ where: { id } });
     if (!customer) return NextResponse.json({ error: "Not found" }, { status: 404 });

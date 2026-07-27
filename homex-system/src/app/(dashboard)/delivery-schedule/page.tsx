@@ -50,6 +50,16 @@ export default function DeliverySchedulePage() {
   const [locEditId, setLocEditId] = useState<string | null>(null);
   const [locValue, setLocValue] = useState("");
   const [stats, setStats] = useState<Record<string, number | null> | null>(null);
+  // Access flags: read-only viewers (photographer) can't edit; roles without
+  // financial access never see money. Default to full access until /api/me loads.
+  const [canEdit, setCanEdit] = useState(true);
+  const [canMoney, setCanMoney] = useState(true);
+
+  useEffect(() => {
+    fetch("/api/me").then((r) => (r.ok ? r.json() : null)).then((m) => {
+      if (m) { setCanEdit(m.canEditDeliveries !== false); setCanMoney(m.canSeeFinancials !== false); }
+    }).catch(() => {});
+  }, []);
 
   const loadStats = useCallback(() => {
     fetch("/api/delivery-stats").then((r) => (r.ok ? r.json() : null)).then(setStats).catch(() => {});
@@ -89,7 +99,8 @@ export default function DeliverySchedulePage() {
   const markDelivered = async (q: DeliveryQuotation) => {
     const remaining = remainingOf(q);
     let collect = false;
-    if (remaining > 0) {
+    // Only prompt to collect the balance for roles allowed to see money.
+    if (remaining > 0 && canMoney) {
       collect = confirm(t("collectPrompt").replace("{amount}", `${remaining.toFixed(3)} ${t("omr")}`));
     } else {
       if (!confirm(t("confirmDelivered"))) return;
@@ -215,7 +226,7 @@ export default function DeliverySchedulePage() {
           <p className="text-sm text-gray-500 mt-1">{t("deliveryScheduleSubtitle")}</p>
         </div>
         <div className="flex items-center gap-2">
-          {tab === "queue" && totalToCollect > 0 && (
+          {canMoney && tab === "queue" && totalToCollect > 0 && (
             <span className="hidden sm:inline-flex items-center gap-1.5 self-start bg-emerald-50 dark:bg-emerald-900/20 border border-emerald-200 dark:border-emerald-800 text-emerald-700 dark:text-emerald-300 px-3 h-11 rounded-lg text-sm font-bold">
               <Wallet className="w-4 h-4" /> <span className="font-mono-en">{fmtCur(totalToCollect)}</span>
             </span>
@@ -233,7 +244,8 @@ export default function DeliverySchedulePage() {
           {[
             { label: t("kpiThisWeek"), value: stats.queueThisWeek ?? 0, tone: "text-teal-600 dark:text-teal-400" },
             { label: t("kpiOverdue"), value: stats.queueOverdue ?? 0, tone: "text-red-600 dark:text-red-400" },
-            { label: t("kpiToCollect"), value: fmtCur(Number(stats.toCollect || 0)), tone: "text-amber-600 dark:text-amber-400", small: true },
+            // Money KPI only for roles allowed to see amounts.
+            ...(canMoney ? [{ label: t("kpiToCollect"), value: fmtCur(Number(stats.toCollect || 0)), tone: "text-amber-600 dark:text-amber-400", small: true }] : []),
             { label: t("kpiOnTime"), value: stats.onTimePct === null ? "—" : `${stats.onTimePct}%`, tone: "text-emerald-600 dark:text-emerald-400" },
             { label: t("kpiInstallQueue"), value: stats.installQueue ?? 0, tone: "text-indigo-600 dark:text-indigo-400" },
             { label: t("kpiOpenServices"), value: stats.openServices ?? 0, tone: "text-purple-600 dark:text-purple-400" },
@@ -355,8 +367,9 @@ export default function DeliverySchedulePage() {
                         </div>
                       </div>
 
-                      {/* Remaining balance */}
-                      {remaining > 0 ? (
+                      {/* Remaining balance — money is hidden from roles without
+                          financial access (driver / photographer). */}
+                      {canMoney && (remaining > 0 ? (
                         <div className="mt-3 inline-flex items-center gap-2 px-3 py-1.5 rounded-lg bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 text-amber-800 dark:text-amber-200 text-sm font-bold">
                           <Wallet className="w-4 h-4" /> {t("toCollect")}: <span className="font-mono-en">{fmtCur(remaining)}</span>
                         </div>
@@ -364,7 +377,7 @@ export default function DeliverySchedulePage() {
                         <div className="mt-3 inline-flex items-center gap-2 px-3 py-1.5 rounded-lg bg-emerald-50 dark:bg-emerald-900/20 border border-emerald-200 dark:border-emerald-800 text-emerald-700 dark:text-emerald-300 text-sm font-bold">
                           <Check className="w-4 h-4" /> {t("fullyPaid")}
                         </div>
-                      )}
+                      ))}
 
                       {/* Contact + maps. The exact pin the employee enters here
                           is shared with the photographer once the job moves to
@@ -403,8 +416,8 @@ export default function DeliverySchedulePage() {
                         <p className="mt-2 text-xs text-gray-500 dark:text-gray-400 whitespace-pre-wrap border-r-2 border-gray-200 dark:border-gray-600 pr-2">{q.workNotes}</p>
                       )}
 
-                      {/* Driver + appointment + actions (queue only) */}
-                      {!isDelivered && (
+                      {/* Driver + appointment + actions (queue only, editors only) */}
+                      {!isDelivered && canEdit && (
                         <div className="no-print mt-3 pt-3 border-t border-gray-100 dark:border-gray-700 space-y-2">
                           <div className="flex flex-wrap items-center gap-2">
                             <span className="inline-flex items-center gap-1 text-xs font-bold text-gray-500"><User className="w-3.5 h-3.5" /> {t("driverLabel")}:</span>
@@ -460,12 +473,15 @@ export default function DeliverySchedulePage() {
                         </div>
                       )}
 
-                      {/* Footer actions */}
+                      {/* Footer actions. The original quote (which shows prices)
+                          is only linked for roles allowed to see money. */}
                       <div className="flex items-center justify-between gap-3 mt-3 pt-3 border-t border-gray-100 dark:border-gray-700">
-                        <Link href={`/quotations/${q.id}`} className="inline-flex items-center gap-1.5 text-xs font-bold text-gray-900 dark:text-white hover:underline">
-                          <FileText className="w-3.5 h-3.5" /> {t("openOriginalQuote")}
-                        </Link>
-                        {isDelivered ? (
+                        {canMoney ? (
+                          <Link href={`/quotations/${q.id}`} className="inline-flex items-center gap-1.5 text-xs font-bold text-gray-900 dark:text-white hover:underline">
+                            <FileText className="w-3.5 h-3.5" /> {t("openOriginalQuote")}
+                          </Link>
+                        ) : <span />}
+                        {canEdit && (isDelivered ? (
                           <button onClick={() => revertToQueue(q.id)} className="no-print inline-flex items-center gap-1.5 px-4 h-10 rounded-lg border border-amber-300 dark:border-amber-700 bg-amber-50 dark:bg-amber-900/20 text-amber-700 dark:text-amber-300 text-sm font-bold hover:bg-amber-100 dark:hover:bg-amber-900/40 transition-colors">
                             <RotateCcw className="w-4 h-4" /> {t("returnToQueue")}
                           </button>
@@ -474,7 +490,7 @@ export default function DeliverySchedulePage() {
                             className="no-print inline-flex items-center gap-1.5 px-4 h-10 rounded-lg bg-teal-600 hover:bg-teal-700 text-white text-sm font-bold transition-colors disabled:opacity-50">
                             <Check className="w-4 h-4" /> {t("markDelivered")}
                           </button>
-                        )}
+                        ))}
                       </div>
 
                       {/* Driver line shown on print */}

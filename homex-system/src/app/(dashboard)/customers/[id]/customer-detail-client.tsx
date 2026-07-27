@@ -32,14 +32,16 @@ interface CustomerData {
   createdAt: string;
   totalQuotes: number;
   approvedCount: number;
-  totalRevenue: number;
+  canManage?: boolean;
+  canSeeFinancials?: boolean;
+  totalRevenue: number | null;
   quotations: Array<{
     id: string;
     quoteNumber: string;
     employeeName: string;
     status: string;
     itemCount: number;
-    total: number;
+    total: number | null;
     createdAt: string;
   }>;
 }
@@ -50,6 +52,7 @@ export function CustomerDetailClient({ data }: { data: CustomerData }) {
   const toast = useToast();
   const [deleting, setDeleting] = useState(false);
   const fmtCur = (n: number) => `${n.toFixed(3)} ${t("omr")}`;
+  const showMoney = data.canSeeFinancials !== false;
 
   const handleDelete = async () => {
     if (!confirm(t("confirmDelete"))) return;
@@ -80,20 +83,22 @@ export function CustomerDetailClient({ data }: { data: CustomerData }) {
           <h1 className="text-2xl font-bold">{data.name}</h1>
           <p className="text-sm text-gray-500 mt-0.5">{t("customerDetails")}</p>
         </div>
-        <div className="flex items-center gap-2">
-          <EditCustomerButton customer={{
-            id: data.id, name: data.name, phone: data.phone,
-            phoneCode: data.phoneCode, governorate: data.governorate,
-            wilayat: data.wilayat, address: data.address,
-          }} />
-          {data.totalQuotes === 0 && (
-            <button onClick={handleDelete} disabled={deleting}
-              className="flex items-center gap-2 px-4 py-2 border border-red-200 text-red-600 rounded text-sm font-bold hover:bg-red-50 disabled:opacity-50">
-              {deleting ? <Loader2 className="w-4 h-4 animate-spin" /> : <Trash2 className="w-4 h-4" />}
-              {t("delete")}
-            </button>
-          )}
-        </div>
+        {data.canManage !== false && (
+          <div className="flex items-center gap-2">
+            <EditCustomerButton customer={{
+              id: data.id, name: data.name, phone: data.phone,
+              phoneCode: data.phoneCode, governorate: data.governorate,
+              wilayat: data.wilayat, address: data.address,
+            }} />
+            {data.totalQuotes === 0 && (
+              <button onClick={handleDelete} disabled={deleting}
+                className="flex items-center gap-2 px-4 py-2 border border-red-200 text-red-600 rounded text-sm font-bold hover:bg-red-50 disabled:opacity-50">
+                {deleting ? <Loader2 className="w-4 h-4 animate-spin" /> : <Trash2 className="w-4 h-4" />}
+                {t("delete")}
+              </button>
+            )}
+          </div>
+        )}
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-6">
@@ -141,11 +146,13 @@ export function CustomerDetailClient({ data }: { data: CustomerData }) {
           </div>
         </div>
 
-        <div className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded p-5">
-          <h2 className="text-sm font-bold text-gray-400 mb-4">{t("revenueTitle")}</h2>
-          <p className="text-3xl font-black text-gray-900">{fmtCur(data.totalRevenue)}</p>
-          <p className="text-xs text-gray-400 mt-1">{t("fromApproved")}</p>
-        </div>
+        {showMoney && (
+          <div className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded p-5">
+            <h2 className="text-sm font-bold text-gray-400 mb-4">{t("revenueTitle")}</h2>
+            <p className="text-3xl font-black text-gray-900">{data.totalRevenue != null ? fmtCur(data.totalRevenue) : "—"}</p>
+            <p className="text-xs text-gray-400 mt-1">{t("fromApproved")}</p>
+          </div>
+        )}
       </div>
 
       <div className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded">
@@ -170,7 +177,7 @@ export function CustomerDetailClient({ data }: { data: CustomerData }) {
                   <th className="text-right p-3 text-xs text-gray-400 font-semibold">{t("employee")}</th>
                   <th className="text-right p-3 text-xs text-gray-400 font-semibold">{t("status")}</th>
                   <th className="text-right p-3 text-xs text-gray-400 font-semibold">{t("items")}</th>
-                  <th className="text-right p-3 text-xs text-gray-400 font-semibold">{t("total")}</th>
+                  {showMoney && <th className="text-right p-3 text-xs text-gray-400 font-semibold">{t("total")}</th>}
                   <th className="text-right p-3 text-xs text-gray-400 font-semibold">{t("date")}</th>
                 </tr>
               </thead>
@@ -181,9 +188,13 @@ export function CustomerDetailClient({ data }: { data: CustomerData }) {
                   return (
                     <tr key={q.id} className="border-b border-gray-50 hover:bg-gray-50 transition-colors">
                       <td className="p-3 px-5">
-                        <Link href={`/quotations/${q.id}`} className="font-mono-en font-bold text-gray-900 hover:underline">
-                          {q.quoteNumber}
-                        </Link>
+                        {showMoney ? (
+                          <Link href={`/quotations/${q.id}`} className="font-mono-en font-bold text-gray-900 hover:underline">
+                            {q.quoteNumber}
+                          </Link>
+                        ) : (
+                          <span className="font-mono-en font-bold text-gray-900">{q.quoteNumber}</span>
+                        )}
                       </td>
                       <td className="p-3 text-gray-500 text-xs">{q.employeeName}</td>
                       <td className="p-3">
@@ -192,7 +203,7 @@ export function CustomerDetailClient({ data }: { data: CustomerData }) {
                         </span>
                       </td>
                       <td className="p-3 font-mono-en text-gray-400 text-xs">{q.itemCount}</td>
-                      <td className="p-3 font-mono-en font-bold text-gray-900">{fmtCur(q.total)}</td>
+                      {showMoney && <td className="p-3 font-mono-en font-bold text-gray-900">{q.total != null ? fmtCur(q.total) : "—"}</td>}
                       <td className="p-3 text-gray-400 font-mono-en text-xs">
                         {new Date(q.createdAt).toLocaleDateString(dateLocale)}
                       </td>

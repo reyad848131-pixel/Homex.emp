@@ -8,6 +8,7 @@ import { parseBody, updateQuotationItemsSchema } from "@/lib/schemas";
 import { roundMoney } from "@/lib/utils";
 import { getSetting } from "@/lib/settings";
 import { isFinanciallyLocked, newTotalBelowPaid, canSetStatus } from "@/lib/quote-rules";
+import { userCan } from "@/lib/permissions";
 
 const VALID_STATUSES = ["draft", "pending", "approved", "declined", "revised"];
 
@@ -21,6 +22,13 @@ export async function GET(
 
     const user = session.user as any;
     const { id } = await params;
+
+    // Quotations expose prices — only roles with quote access may read one.
+    const privileged = user.role === "admin" || user.role === "ceo" || user.role === "manager";
+    if (!(privileged || (await userCan(user.role, "quotes")))) {
+      return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+    }
+
     const quotation = await prisma.quotation.findFirst({
       where: { id },
       include: {

@@ -3,6 +3,7 @@ import { prisma } from "@/lib/prisma";
 import { STATUS_MAP } from "@/lib/types";
 import { roundMoney } from "@/lib/utils";
 import { getSettings } from "@/lib/settings";
+import { getRolePermissions } from "@/lib/permissions";
 import { DashboardClient } from "./dashboard-client";
 import { ReadinessBanner } from "@/components/readiness-banner";
 
@@ -16,6 +17,9 @@ export default async function DashboardPage() {
 
   const isAdmin = role === "admin" || role === "ceo" || role === "manager";
   const whereClause = isAdmin ? {} : { employeeId: userId };
+
+  // Roles without financial access (driver / photographer) never see money.
+  const canSeeFinancials = isAdmin || ((await getRolePermissions(role).catch(() => [])) as string[]).includes("financials");
 
   // Only admins/CEO configure settings, so only they see the readiness nudge.
   const missingSettings = (role === "admin" || role === "ceo")
@@ -92,6 +96,7 @@ export default async function DashboardPage() {
     outstandingAmount,
     conversionRate,
     photoQueueCount,
+    canSeeFinancials,
     expiringQuotations: expiringQuotations.map((q) => ({
       id: q.id,
       quoteNumber: q.quoteNumber,

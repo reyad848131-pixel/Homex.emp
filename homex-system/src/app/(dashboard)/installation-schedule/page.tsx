@@ -36,6 +36,13 @@ export default function InstallationSchedulePage() {
   const [schedId, setSchedId] = useState<string | null>(null);
   const [schedDate, setSchedDate] = useState("");
   const [schedTime, setSchedTime] = useState("");
+  const [canMoney, setCanMoney] = useState(true);
+
+  useEffect(() => {
+    fetch("/api/me").then((r) => (r.ok ? r.json() : null)).then((m) => {
+      if (m) setCanMoney(m.canSeeFinancials !== false);
+    }).catch(() => {});
+  }, []);
 
   const fetchData = useCallback(() => {
     setRows(null);
@@ -242,7 +249,9 @@ export default function InstallationSchedulePage() {
                       )}
 
                       <div className="flex items-center justify-between gap-3 mt-3 pt-3 border-t border-gray-100 dark:border-gray-700">
-                        <Link href={`/quotations/${q.id}`} className="inline-flex items-center gap-1.5 text-xs font-bold text-gray-900 dark:text-white hover:underline"><FileText className="w-3.5 h-3.5" /> {t("openOriginalQuote")}</Link>
+                        {canMoney ? (
+                          <Link href={`/quotations/${q.id}`} className="inline-flex items-center gap-1.5 text-xs font-bold text-gray-900 dark:text-white hover:underline"><FileText className="w-3.5 h-3.5" /> {t("openOriginalQuote")}</Link>
+                        ) : <span />}
                         {isDone ? (
                           <button onClick={() => revert(q.id)} className="no-print inline-flex items-center gap-1.5 px-4 h-10 rounded-lg border border-amber-300 dark:border-amber-700 bg-amber-50 dark:bg-amber-900/20 text-amber-700 dark:text-amber-300 text-sm font-bold hover:bg-amber-100 dark:hover:bg-amber-900/40"><RotateCcw className="w-4 h-4" /> {t("returnToQueue")}</button>
                         ) : (

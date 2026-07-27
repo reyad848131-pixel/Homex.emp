@@ -48,25 +48,26 @@ interface SidebarProps {
   permissions?: string[];
 }
 
-// `perm: undefined` → always visible. Otherwise the item shows only when the
-// user's role grants that permission.
-const allItems: Array<{ href: string; labelKey: TranslationKey; icon: any; perm?: string }> = [
+// `perm: undefined` → always visible. Otherwise the item shows when the user's
+// role grants ANY of the listed permissions (so a read-only viewer role sees
+// the same page a full-access role does).
+const allItems: Array<{ href: string; labelKey: TranslationKey; icon: any; perm?: string[] }> = [
   { href: "/", labelKey: "dashboard", icon: LayoutDashboard },
-  { href: "/quotations", labelKey: "quotations", icon: FileText, perm: "quotes" },
-  { href: "/quotations/new", labelKey: "newQuotation", icon: FilePlus, perm: "quotes_create" },
-  { href: "/customers", labelKey: "customers", icon: Users, perm: "customers" },
-  { href: "/work-orders", labelKey: "workOrders", icon: Truck, perm: "work_orders" },
-  { href: "/delivery-schedule", labelKey: "deliverySchedule", icon: CalendarClock, perm: "work_orders" },
-  { href: "/installation-schedule", labelKey: "installSchedule", icon: Wrench, perm: "work_orders" },
-  { href: "/service-requests", labelKey: "serviceRequests", icon: LifeBuoy, perm: "work_orders" },
-  { href: "/photography", labelKey: "photography", icon: Camera, perm: "photography" },
-  { href: "/reports", labelKey: "reports", icon: BarChart3, perm: "reports" },
-  { href: "/employees", labelKey: "employees", icon: UsersRound, perm: "employees" },
-  { href: "/categories", labelKey: "categories", icon: Layers, perm: "categories" },
-  { href: "/audit-logs", labelKey: "auditLogs", icon: ScrollText, perm: "audit" },
-  { href: "/error-logs", labelKey: "errorLogs", icon: AlertTriangle, perm: "audit" },
-  { href: "/settings", labelKey: "settings", icon: Settings, perm: "settings" },
-  { href: "/trash", labelKey: "trash", icon: Trash2, perm: "trash" },
+  { href: "/quotations", labelKey: "quotations", icon: FileText, perm: ["quotes"] },
+  { href: "/quotations/new", labelKey: "newQuotation", icon: FilePlus, perm: ["quotes_create"] },
+  { href: "/customers", labelKey: "customers", icon: Users, perm: ["customers", "customers_view"] },
+  { href: "/work-orders", labelKey: "workOrders", icon: Truck, perm: ["work_orders"] },
+  { href: "/delivery-schedule", labelKey: "deliverySchedule", icon: CalendarClock, perm: ["deliveries", "deliveries_view"] },
+  { href: "/installation-schedule", labelKey: "installSchedule", icon: Wrench, perm: ["deliveries"] },
+  { href: "/service-requests", labelKey: "serviceRequests", icon: LifeBuoy, perm: ["deliveries"] },
+  { href: "/photography", labelKey: "photography", icon: Camera, perm: ["photography"] },
+  { href: "/reports", labelKey: "reports", icon: BarChart3, perm: ["reports"] },
+  { href: "/employees", labelKey: "employees", icon: UsersRound, perm: ["employees"] },
+  { href: "/categories", labelKey: "categories", icon: Layers, perm: ["categories"] },
+  { href: "/audit-logs", labelKey: "auditLogs", icon: ScrollText, perm: ["audit"] },
+  { href: "/error-logs", labelKey: "errorLogs", icon: AlertTriangle, perm: ["audit"] },
+  { href: "/settings", labelKey: "settings", icon: Settings, perm: ["settings"] },
+  { href: "/trash", labelKey: "trash", icon: Trash2, perm: ["trash"] },
 ];
 
 export function Sidebar({ user, permissions }: SidebarProps) {
@@ -91,12 +92,12 @@ export function Sidebar({ user, permissions }: SidebarProps) {
   // Show an item when it needs no permission, or the user's role grants it.
   // Legacy fallback: if permissions weren't supplied, use the old role tiers.
   const items = permissions
-    ? allItems.filter((it) => !it.perm || permissions.includes(it.perm))
+    ? allItems.filter((it) => !it.perm || it.perm.some((p) => permissions.includes(p)))
     : allItems.filter((it) => {
         if (!it.perm) return true;
         if (user.role === "admin") return true;
-        if (user.role === "manager") return !["employees", "categories", "audit", "settings"].includes(it.perm);
-        return ["quotes", "customers"].includes(it.perm);
+        if (user.role === "manager") return !it.perm.some((p) => ["employees", "categories", "audit", "settings"].includes(p));
+        return it.perm.some((p) => ["quotes", "customers"].includes(p));
       });
 
   const content = (

@@ -4,7 +4,7 @@ import { prisma } from "@/lib/prisma";
 import { VALID_WORK_STATUSES } from "@/lib/types";
 import { logAction } from "@/lib/audit";
 import { getWorkOrders } from "@/lib/work-orders-list";
-import { userCan } from "@/lib/permissions";
+import { canViewFieldOps, canEditFieldOps } from "@/lib/permissions";
 
 export async function GET(req: NextRequest) {
   try {
@@ -12,8 +12,7 @@ export async function GET(req: NextRequest) {
     if (!session) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
     const user = session.user as any;
-    const allowed = (user.role === "admin" || user.role === "ceo") || user.role === "manager" || await userCan(user.role, "work_orders");
-    if (!allowed) return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+    if (!(await canViewFieldOps(user.role))) return NextResponse.json({ error: "Forbidden" }, { status: 403 });
 
     const { searchParams } = new URL(req.url);
     const result = await getWorkOrders({
@@ -40,8 +39,7 @@ export async function PATCH(req: NextRequest) {
     if (!session) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
     const user = session.user as any;
-    const allowed = (user.role === "admin" || user.role === "ceo") || user.role === "manager" || await userCan(user.role, "work_orders");
-    if (!allowed) return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+    if (!(await canEditFieldOps(user.role))) return NextResponse.json({ error: "Forbidden" }, { status: 403 });
 
     const body = await req.json();
     const { id, workStatus, hasOrangeAlert, hasRedAlert, workNotes, woodStatus, fabricStatus,

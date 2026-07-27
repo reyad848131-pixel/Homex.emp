@@ -1,6 +1,7 @@
 import { getAuth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { notFound } from "next/navigation";
+import { getRolePermissions } from "@/lib/permissions";
 import { CustomerDetailClient } from "./customer-detail-client";
 
 export default async function CustomerDetailPage({ params }: { params: Promise<{ id: string }> }) {
@@ -24,8 +25,16 @@ export default async function CustomerDetailPage({ params }: { params: Promise<{
 
   if (!customer) return notFound();
 
-  const isAdmin = (user?.role === "admin" || user?.role === "ceo") || user?.role === "manager";
-  if (!isAdmin && customer.createdBy !== user?.id) return notFound();
+  const privileged = (user?.role === "admin" || user?.role === "ceo") || user?.role === "manager";
+  const perms = (await getRolePermissions(user?.role).catch(() => [])) as string[];
+  const viewAll = privileged || perms.includes("customers_view");
+  const canView = viewAll || perms.includes("customers");
+  if (!canView) return notFound();
+  // Sales see only their own customers; viewers/managers see all.
+  if (!viewAll && customer.createdBy !== user?.id) return notFound();
+
+  // Money is redacted for roles without financial access (e.g. photographer).
+  const canSeeFinancials = privileged || perms.includes("financials");
 
   const approvedQuotes = customer.quotations.filter((q) => q.status === "approved");
   const totalRevenue = approvedQuotes.reduce((sum, q) => sum + q.total, 0);
@@ -42,14 +51,16 @@ export default async function CustomerDetailPage({ params }: { params: Promise<{
     createdAt: customer.createdAt.toISOString(),
     totalQuotes: customer.quotations.length,
     approvedCount: approvedQuotes.length,
-    totalRevenue,
+    canManage: privileged || perms.includes("customers"),
+    canSeeFinancials,
+    totalRevenue: canSeeFinancials ? totalRevenue : null,
     quotations: customer.quotations.map((q) => ({
       id: q.id,
       quoteNumber: q.quoteNumber,
       employeeName: q.employee.name,
       status: q.status,
       itemCount: q._count.items,
-      total: q.total,
+      total: canSeeFinancials ? q.total : null,
       createdAt: q.createdAt.toISOString(),
     })),
   };

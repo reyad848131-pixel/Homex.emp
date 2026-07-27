@@ -44,6 +44,13 @@ export default function ServiceRequestsPage() {
   const [schedId, setSchedId] = useState<string | null>(null);
   const [schedDate, setSchedDate] = useState("");
   const [schedTech, setSchedTech] = useState("");
+  const [canMoney, setCanMoney] = useState(true);
+
+  useEffect(() => {
+    fetch("/api/me").then((r) => (r.ok ? r.json() : null)).then((m) => {
+      if (m) setCanMoney(m.canSeeFinancials !== false);
+    }).catch(() => {});
+  }, []);
 
   const fetchData = useCallback(() => {
     setRows(null);
@@ -197,7 +204,9 @@ export default function ServiceRequestsPage() {
                 )}
 
                 <div className="flex flex-wrap items-center justify-between gap-2 mt-3 pt-3 border-t border-gray-100 dark:border-gray-700">
-                  <Link href={`/quotations/${r.quotation.id}`} className="inline-flex items-center gap-1.5 text-xs font-bold text-gray-900 dark:text-white hover:underline"><FileText className="w-3.5 h-3.5" /> {t("openOriginalQuote")}</Link>
+                  {canMoney && (
+                    <Link href={`/quotations/${r.quotation.id}`} className="inline-flex items-center gap-1.5 text-xs font-bold text-gray-900 dark:text-white hover:underline"><FileText className="w-3.5 h-3.5" /> {t("openOriginalQuote")}</Link>
+                  )}
                   <div className="flex items-center gap-2">
                     <a href={`tel:${tel}`} className="inline-flex items-center gap-1.5 px-3 h-9 rounded-lg bg-gray-900 dark:bg-gray-100 dark:text-gray-900 text-white text-xs font-bold"><Phone className="w-3.5 h-3.5" /> {t("callAction")}</a>
                     {r.status !== "resolved" ? (
