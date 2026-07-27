@@ -655,6 +655,8 @@ const translations = {
   legsLabel: { ar: "الأرجل", en: "Legs" },
   perSqmMethod: { ar: "بالمتر المربّع", en: "Per m²" },
   perMeterMethod: { ar: "بالمتر الطولي", en: "Per linear m" },
+  tvTypeCladding: { ar: "مع كلادينج", en: "With cladding" },
+  tvTypeFloor: { ar: "أرضية", en: "Floor" },
   legsNone: { ar: "بدون", en: "None" },
   legsWood: { ar: "خشبية", en: "Wooden" },
   legsAluminum: { ar: "ألمنيوم", en: "Aluminium" },

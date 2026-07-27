@@ -807,7 +807,11 @@ function TVTableBuilder({ config, onUpdate, initial }: { config: any; onUpdate: 
   const { t } = useI18n();
   const perSqm = config?.pricePerSqm ?? config?.basePrice ?? 50;
   const perMeter = config?.pricePerMeter ?? 65;
-  const [method, setMethod] = useState<"sqm" | "meter">(initial?.method ?? "sqm");
+  // Two TV-table types: "cladding" is priced by area (width × height), "floor"
+  // is priced only by linear metre. Back-compat with the earlier method field.
+  const [type, setType] = useState<"cladding" | "floor">(
+    initial?.type ?? (initial?.method === "meter" ? "floor" : "cladding")
+  );
   const [width, setWidth] = useState(initial?.width ?? 1.5);
   const [height, setHeight] = useState(initial?.height ?? 0.5);
   const [length, setLength] = useState(initial?.length ?? 2);
@@ -815,33 +819,33 @@ function TVTableBuilder({ config, onUpdate, initial }: { config: any; onUpdate: 
   useEffect(() => {
     let price: number;
     let desc: string;
-    if (method === "meter") {
+    if (type === "floor") {
       price = length * perMeter;
-      desc = `طاولة تلفزيون - ${length} م.ط`;
+      desc = `طاولة تلفزيون أرضية - ${length} م.ط`;
     } else {
       const area = Math.round(width * height * 100) / 100;
       price = area * perSqm;
-      desc = `طاولة تلفزيون - ${width}×${height}م = ${area} م²`;
+      desc = `طاولة تلفزيون مع كلادينج - ${width}×${height}م = ${area} م²`;
     }
-    onUpdate(desc, price, 0, { method, width, height, length });
-  }, [method, width, height, length, config, onUpdate]);
+    onUpdate(desc, price, 0, { type, width, height, length });
+  }, [type, width, height, length, config, onUpdate]);
 
   return (
     <div className="space-y-4">
       <div>
-        <label className="block text-sm font-semibold text-gray-600 mb-2">{t("pricingMethod")}</label>
+        <label className="block text-sm font-semibold text-gray-600 mb-2">{t("typeLabel")}</label>
         <div className="flex gap-2">
-          {([["sqm", `${t("perSqmMethod")} (${perSqm})`], ["meter", `${t("perMeterMethod")} (${perMeter})`]] as const).map(([k, l]) => (
-            <button key={k} type="button" onClick={() => setMethod(k as "sqm" | "meter")}
+          {([["cladding", t("tvTypeCladding")], ["floor", t("tvTypeFloor")]] as const).map(([k, l]) => (
+            <button key={k} type="button" onClick={() => setType(k as "cladding" | "floor")}
               className={cn("flex-1 py-2.5 rounded text-sm font-bold border transition-colors",
-                method === k ? "bg-gray-900 text-white border-gray-900" : "bg-white border-gray-200 text-gray-600")}>
+                type === k ? "bg-gray-900 text-white border-gray-900" : "bg-white border-gray-200 text-gray-600")}>
               {l}
             </button>
           ))}
         </div>
       </div>
 
-      {method === "meter" ? (
+      {type === "floor" ? (
         <div>
           <label className="block text-sm font-semibold text-gray-600 mb-1.5">{t("lengthM")} (م.ط)</label>
           <NumField value={length} onChange={setLength} min={0.5} className="field font-mono-en text-center" />
@@ -861,8 +865,8 @@ function TVTableBuilder({ config, onUpdate, initial }: { config: any; onUpdate: 
 
       <div className="text-center py-2 bg-gray-50 rounded border border-gray-100">
         <p className="text-sm font-bold font-mono-en text-gray-900">
-          {method === "meter"
-            ? `${length} × ${perMeter} = ${(length * perMeter).toFixed(3)}`
+          {type === "floor"
+            ? `${length} م.ط × ${perMeter} = ${(length * perMeter).toFixed(3)}`
             : `${(Math.round(width * height * 100) / 100).toFixed(2)} م² × ${perSqm} = ${((Math.round(width * height * 100) / 100) * perSqm).toFixed(3)}`} {t("omr")}
         </p>
       </div>
