@@ -37,6 +37,9 @@ export default function PhotographyPage() {
   const [search, setSearch] = useState("");
   const debouncedSearch = useDebouncedValue(search);
   const [photographers, setPhotographers] = useState<string[]>([]);
+  // The employee holding the photographer role — pre-selected by default on
+  // every job (still changeable per job). Empty until employees load.
+  const [defaultPhotographer, setDefaultPhotographer] = useState("");
   const [noteId, setNoteId] = useState<string | null>(null);
   const [noteValue, setNoteValue] = useState("");
 
@@ -61,6 +64,8 @@ export default function PhotographyPage() {
         const active = (list || []).filter((e) => e.isActive !== false);
         const shooters = active.filter((e) => e.role === "photographer").map((e) => e.name);
         setPhotographers(shooters.length ? shooters : active.map((e) => e.name));
+        // Default only to a real photographer-role employee (not the fallback).
+        setDefaultPhotographer(shooters[0] || "");
       })
       .catch(() => {});
   }, []);
@@ -78,7 +83,8 @@ export default function PhotographyPage() {
     setRows((prev) => (prev ? prev.filter((r) => r.id !== q.id) : prev));
     fetch("/api/photography", {
       method: "PATCH", headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ id: q.id, photoStatus: "done" }),
+      // Record the effective photographer (the default when none was picked).
+      body: JSON.stringify({ id: q.id, photoStatus: "done", photographer: q.photographer || defaultPhotographer || undefined }),
     }).then(() => toast.success(t("photographedOn"))).catch(() => fetchData());
   };
 
@@ -204,7 +210,7 @@ export default function PhotographyPage() {
               <div className="flex items-center gap-2">
                 <User className="w-3.5 h-3.5 text-gray-400 shrink-0" />
                 <select
-                  value={q.photographer || ""}
+                  value={q.photographer || defaultPhotographer}
                   onChange={(e) => patch(q.id, { photographer: e.target.value }, { photographer: e.target.value || null })}
                   className="field h-9 text-xs flex-1"
                 >
