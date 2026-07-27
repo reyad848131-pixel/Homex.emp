@@ -18,12 +18,18 @@ export async function POST(req: NextRequest) {
 
     if (!quotation) return NextResponse.json({ error: "Not found" }, { status: 404 });
 
-    // A sales rep may only invoice their own quotations.
-    if (user.role === "sales" && quotation.employeeId !== user.id) {
+    const isManager = user.role === "admin" || user.role === "manager" || user.role === "ceo";
+    // Once signed/accepted the contract is locked — only managers may invoice.
+    // Before that a sales rep may invoice their own approved quotation.
+    if (quotation.status === "accepted" || quotation.signedAt) {
+      if (!isManager) return NextResponse.json({ error: "بعد قفل العقد، فقط المدراء يصدرون الفواتير", code: "locked" }, { status: 403 });
+    } else if (user.role === "sales" && quotation.employeeId !== user.id) {
       return NextResponse.json({ error: "Forbidden" }, { status: 403 });
     }
 
-    if (quotation.status !== "approved") return NextResponse.json({ error: "يجب اعتماد العرض أولاً" }, { status: 400 });
+    if (quotation.status !== "approved" && quotation.status !== "accepted") {
+      return NextResponse.json({ error: "يجب اعتماد العرض أولاً" }, { status: 400 });
+    }
     if (quotation.invoice) return NextResponse.json({ error: "تم إصدار فاتورة لهذا العرض مسبقاً" }, { status: 400 });
 
     // Generate a unique invoice number, retrying on a concurrent-collision

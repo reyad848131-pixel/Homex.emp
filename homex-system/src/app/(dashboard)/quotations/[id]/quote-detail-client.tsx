@@ -288,6 +288,14 @@ export default function QuoteDetailClient({
   const status = STATUS_MAP[q.status] || STATUS_MAP.draft;
   const statusLabel = STATUS_KEYS[q.status] ? t(STATUS_KEYS[q.status]) : status.label;
 
+  // Financial permissions: after the contract locks (signed / invoiced / paid /
+  // accepted) only managers may record payments or issue invoices; before lock
+  // the quote owner may too.
+  const isManager = me?.role === "admin" || me?.role === "manager" || me?.role === "ceo";
+  const isOwner = me?.id === q.employee.id;
+  const quoteLocked = !!q.invoice || q.payments.length > 0 || q.status === "accepted" || !!q.signedAt;
+  const canManageMoney = isManager || (!quoteLocked && isOwner);
+
   const groupedItems: Record<string, typeof q.items> = {};
   q.items.forEach((item) => {
     const cat = locale === "en" && item.category.nameEn ? item.category.nameEn : item.category.nameAr;
@@ -357,7 +365,7 @@ export default function QuoteDetailClient({
                 {t("approveQuoteBtn")}
               </button>
             )}
-            {q.status === "approved" && !q.invoice && (
+            {(q.status === "approved" || q.status === "accepted") && !q.invoice && canManageMoney && (
               <button onClick={handleCreateInvoice} disabled={creatingInvoice}
                 className="flex items-center gap-2 px-4 py-2 bg-emerald-600 text-white rounded text-sm font-bold hover:bg-emerald-700 disabled:opacity-50">
                 <Receipt className="w-4 h-4" />
@@ -568,20 +576,23 @@ export default function QuoteDetailClient({
           )}
         </div>
 
-        {q.status === "approved" && (() => {
+        {(q.status === "approved" || q.status === "accepted") && (() => {
           const totalPaid = q.payments.reduce((s, p) => s + p.amount, 0);
           const remaining = q.total - totalPaid;
           const paidPct = q.total > 0 ? (totalPaid / q.total) * 100 : 0;
+          const canRecordPayment = canManageMoney;
           return (
             <div className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded mt-6">
               <div className="p-5 border-b border-gray-100 dark:border-gray-700 flex items-center justify-between">
                 <h2 className="text-sm font-bold text-gray-400 uppercase tracking-wider flex items-center gap-2">
                   <Banknote className="w-4 h-4" /> {t("payments")}
                 </h2>
-                <button onClick={() => setShowPayForm(!showPayForm)}
-                  className="flex items-center gap-1 text-sm font-bold text-gray-900 hover:text-gray-600 transition-colors">
-                  <Plus className="w-4 h-4" /> {t("recordPayment")}
-                </button>
+                {canRecordPayment && (
+                  <button onClick={() => setShowPayForm(!showPayForm)}
+                    className="flex items-center gap-1 text-sm font-bold text-gray-900 hover:text-gray-600 transition-colors">
+                    <Plus className="w-4 h-4" /> {t("recordPayment")}
+                  </button>
+                )}
               </div>
 
               <div className="p-5">

@@ -4,6 +4,7 @@ import { prisma } from "@/lib/prisma";
 import { logAction } from "@/lib/audit";
 import { parseBody, paymentSchema } from "@/lib/schemas";
 import { roundMoney } from "@/lib/utils";
+import { isFinanciallyLocked } from "@/lib/quote-rules";
 
 export async function POST(req: NextRequest) {
   try {
@@ -17,12 +18,21 @@ export async function POST(req: NextRequest) {
 
     const quotation = await prisma.quotation.findFirst({
       where: { id: quotationId },
-      select: { id: true, total: true, employeeId: true, quoteNumber: true },
+      select: {
+        id: true, total: true, employeeId: true, quoteNumber: true, status: true, signedAt: true,
+        invoice: { select: { id: true } }, _count: { select: { payments: true } },
+      },
     });
 
     if (!quotation) return NextResponse.json({ error: "Not found" }, { status: 404 });
 
-    if (user.role === "sales" && quotation.employeeId !== user.id) {
+    const isManager = user.role === "admin" || user.role === "manager" || user.role === "ceo";
+    // Once the contract is locked (signed / invoiced / accepted / already has a
+    // payment), only managers may record further payments. Before lock, the
+    // quote owner may too.
+    if (isFinanciallyLocked(quotation)) {
+      if (!isManager) return NextResponse.json({ error: "بعد قفل العقد، فقط المدراء يسجّلون الدفعات", code: "locked" }, { status: 403 });
+    } else if (user.role === "sales" && quotation.employeeId !== user.id) {
       return NextResponse.json({ error: "Forbidden" }, { status: 403 });
     }
 
