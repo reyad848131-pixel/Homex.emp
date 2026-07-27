@@ -153,17 +153,6 @@ export default function QuoteDetailClient({
     }
   };
 
-  const handleStatusAction = (action: "approved" | "declined" | "revised") => {
-    setStatusComment("");
-    setShowStatusDialog(action);
-  };
-
-  const confirmStatusAction = () => {
-    if (!showStatusDialog) return;
-    if (showStatusDialog === "revised" && !statusComment.trim()) return;
-    updateStatus(showStatusDialog, statusComment.trim());
-  };
-
   const handleCreateInvoice = async () => {
     if (!q) return;
     setCreatingInvoice(true);
@@ -361,38 +350,12 @@ export default function QuoteDetailClient({
                 {(q.invoice || q.payments.length > 0 || q.status === "accepted") && me?.role !== "sales" ? t("managerEditLocked") : t("edit")}
               </Link>
             )}
-            {(q.status === "draft" || q.status === "revised") && (
-              <button onClick={() => updateStatus("pending")} disabled={statusBusy}
-                className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded text-sm font-bold hover:bg-blue-700 disabled:opacity-50">
-                {statusBusy ? <Clock className="w-4 h-4 animate-spin" /> : <Send className="w-4 h-4" />}
-                {t("sendForReview")}
-              </button>
-            )}
-            {selfApprove && me?.role === "sales" && (q.status === "draft" || q.status === "pending" || q.status === "revised") && (
+            {(q.status === "draft" || q.status === "pending" || q.status === "revised") && (
               <button onClick={() => updateStatus("approved")} disabled={statusBusy}
                 className="flex items-center gap-2 px-4 py-2 bg-green-600 text-white rounded text-sm font-bold hover:bg-green-700 disabled:opacity-50">
                 {statusBusy ? <Clock className="w-4 h-4 animate-spin" /> : <CheckCircle className="w-4 h-4" />}
-                {t("selfApproveBtn")}
+                {t("approveQuoteBtn")}
               </button>
-            )}
-            {q.status === "pending" && me?.role !== "sales" && (
-              <>
-                <button onClick={() => handleStatusAction("approved")}
-                  className="flex items-center gap-2 px-4 py-2 bg-green-600 text-white rounded text-sm font-bold hover:bg-green-700">
-                  <CheckCircle className="w-4 h-4" />
-                  {t("approve")}
-                </button>
-                <button onClick={() => handleStatusAction("revised")}
-                  className="flex items-center gap-2 px-4 py-2 bg-orange-500 text-white rounded text-sm font-bold hover:bg-orange-600">
-                  <RotateCcw className="w-4 h-4" />
-                  {t("returnForEdit")}
-                </button>
-                <button onClick={() => handleStatusAction("declined")}
-                  className="flex items-center gap-2 px-4 py-2 bg-red-600 text-white rounded text-sm font-bold hover:bg-red-700">
-                  <XCircle className="w-4 h-4" />
-                  {t("decline")}
-                </button>
-              </>
             )}
             {q.status === "approved" && !q.invoice && (
               <button onClick={handleCreateInvoice} disabled={creatingInvoice}
@@ -802,46 +765,6 @@ export default function QuoteDetailClient({
         </div>
       </div>
 
-      {showStatusDialog && (
-        <div className="fixed inset-0 bg-black/40 z-50 flex items-center justify-center no-print" onClick={() => setShowStatusDialog(null)}>
-          <div className="bg-white rounded-lg shadow-xl w-full max-w-md p-6 mx-4" onClick={(e) => e.stopPropagation()}>
-            <h3 className="text-lg font-bold mb-1 flex items-center gap-2">
-              {showStatusDialog === "approved" && <><CheckCircle className="w-5 h-5 text-green-600" /> {t("approveQuote")}</>}
-              {showStatusDialog === "declined" && <><XCircle className="w-5 h-5 text-red-600" /> {t("declineQuote")}</>}
-              {showStatusDialog === "revised" && <><RotateCcw className="w-5 h-5 text-orange-500" /> {t("returnForEditTitle")}</>}
-            </h3>
-            <p className="text-sm text-gray-500 mb-4">
-              {showStatusDialog === "revised" ? t("revisionRequired") : t("addCommentOptional")}
-            </p>
-            <textarea
-              value={statusComment}
-              onChange={(e) => setStatusComment(e.target.value)}
-              rows={3}
-              className="field-textarea mb-4"
-              placeholder={showStatusDialog === "revised" ? "" : ""}
-              autoFocus
-            />
-            <div className="flex gap-2 justify-end">
-              <button onClick={() => setShowStatusDialog(null)}
-                className="px-4 py-2 border border-gray-200 rounded text-sm font-bold hover:bg-gray-50">
-                {t("cancel")}
-              </button>
-              <button onClick={confirmStatusAction}
-                disabled={statusBusy || (showStatusDialog === "revised" && !statusComment.trim())}
-                className={cn(
-                  "flex items-center gap-2 px-5 py-2 rounded text-sm font-bold text-white disabled:opacity-50",
-                  showStatusDialog === "approved" ? "bg-green-600 hover:bg-green-700" :
-                  showStatusDialog === "revised" ? "bg-orange-500 hover:bg-orange-600" :
-                  "bg-red-600 hover:bg-red-700"
-                )}>
-                {statusBusy && <Clock className="w-4 h-4 animate-spin" />}
-                {showStatusDialog === "approved" ? t("confirmApprove") :
-                 showStatusDialog === "revised" ? t("returnForEdit") : t("confirmDecline")}
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
     </>
   );
 }

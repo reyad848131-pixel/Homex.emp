@@ -224,11 +224,9 @@ export async function PATCH(
       const label = statusLabels[body.status] || body.status;
       const link = `/quotations/${id}`;
 
-      if (body.status === "pending") {
-        await notifyAdmins("عرض سعر جديد للمراجعة", `${user.name} أرسل عرض سعر ${updated.quoteNumber} للمراجعة`, "info", link);
-      } else if (body.status === "approved") {
-        const comment = body.statusComment ? ` — "${body.statusComment}"` : "";
-        await notify(updated.employeeId, "عرض السعر معتمد", `تم اعتماد عرض السعر ${updated.quoteNumber}${comment}`, "success", link);
+      if (body.status === "approved") {
+        // Employees approve their own quotes now — let managers/admins know.
+        await notifyAdmins("عرض سعر معتمد", `اعتمد ${user.name} عرض السعر ${updated.quoteNumber}`, "success", link);
       } else if (body.status === "declined") {
         const comment = body.statusComment ? ` — "${body.statusComment}"` : "";
         await notify(updated.employeeId, "عرض السعر مرفوض", `تم رفض عرض السعر ${updated.quoteNumber}${comment}`, "error", link);

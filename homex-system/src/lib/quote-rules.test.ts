@@ -45,15 +45,9 @@ describe("canSetStatus", () => {
     expect(d.ok).toBe(false);
     expect(d.ok === false && d.reason).toBe("sales_decline");
   });
-  it("blocks sales approval when self-approve is off", () => {
-    const d = canSetStatus({ role: "sales", status: "approved", selfApprove: false });
-    expect(d.ok).toBe(false);
-    expect(d.ok === false && d.reason).toBe("needs_approval_role");
-  });
-  it("allows sales approval when self-approve is on", () => {
+  it("lets any employee approve their own quote directly", () => {
+    // Simplified workflow: approval no longer needs a manager or a setting.
+    expect(canSetStatus({ role: "sales", status: "approved", selfApprove: false }).ok).toBe(true);
     expect(canSetStatus({ role: "sales", status: "approved", selfApprove: true }).ok).toBe(true);
-  });
-  it("allows sales to send for review (pending) regardless", () => {
-    expect(canSetStatus({ role: "sales", status: "pending", selfApprove: false }).ok).toBe(true);
   });
 });

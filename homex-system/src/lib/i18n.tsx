@@ -39,6 +39,7 @@ const translations = {
   roleAccountant: { ar: "محاسب", en: "Accountant" },
   roleDriver: { ar: "سائق", en: "Driver" },
   roleCeo: { ar: "مدير تنفيذي (CEO)", en: "CEO" },
+  approveQuoteBtn: { ar: "اعتماد العرض", en: "Approve quote" },
   trash: { ar: "المحذوفات", en: "Trash" },
   restore: { ar: "استرجاع", en: "Restore" },
   permanentDelete: { ar: "حذف نهائي", en: "Delete permanently" },
