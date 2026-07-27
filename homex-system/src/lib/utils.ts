@@ -62,15 +62,20 @@ export async function generateQuoteNumber(prisma: any): Promise<string> {
   const m = (now.getMonth() + 1).toString().padStart(2, "0");
   const prefix = `HX-${y}${m}-`;
 
-  const last = await prisma.quotation.findFirst({
-    where: { quoteNumber: { startsWith: prefix } },
-    orderBy: { quoteNumber: "desc" },
-    select: { quoteNumber: true },
-  });
+  // Raw query so it sees EVERY quote number, including soft-deleted (trashed)
+  // ones — those numbers are still reserved by the unique constraint, so the
+  // model-level soft-delete filter must not hide them here (it would cause a
+  // duplicate quote_number collision on create).
+  const rows = (await prisma.$queryRaw`
+    SELECT quote_number FROM quotations
+    WHERE quote_number LIKE ${prefix + "%"}
+    ORDER BY quote_number DESC
+    LIMIT 1
+  `) as Array<{ quote_number: string }>;
 
   let seq = 1;
-  if (last) {
-    const lastNum = parseInt(last.quoteNumber.split("-").pop() || "0", 10);
+  if (rows.length > 0) {
+    const lastNum = parseInt(rows[0].quote_number.split("-").pop() || "0", 10);
     seq = lastNum + 1;
   }
 
