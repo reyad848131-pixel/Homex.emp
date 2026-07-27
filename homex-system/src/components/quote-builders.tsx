@@ -395,6 +395,45 @@ function CurtainBuilder({ config, wilayat, onUpdate, initial }: { config: any; w
   );
 }
 
+// Legs option shared by the bed and nightstand builders: wooden (15 OMR) or
+// aluminium (10 OMR), added to the line's extras. Prices are overridable via
+// the category config (config.legs.wood / config.legs.aluminum).
+function legWoodPrice(config: any) { return config?.legs?.wood ?? 15; }
+function legAluPrice(config: any) { return config?.legs?.aluminum ?? 10; }
+function legsExtra(config: any, legs: string): number {
+  if (legs === "wood") return legWoodPrice(config);
+  if (legs === "aluminum") return legAluPrice(config);
+  return 0;
+}
+function legsDescSuffix(legs: string): string {
+  if (legs === "wood") return " - أرجل خشبية";
+  if (legs === "aluminum") return " - أرجل ألمنيوم";
+  return "";
+}
+
+function LegsSelector({ value, onChange, config }: { value: string; onChange: (v: string) => void; config: any }) {
+  const { t } = useI18n();
+  const opts: Array<[string, string]> = [
+    ["none", t("legsNone")],
+    ["wood", `${t("legsWood")} (${legWoodPrice(config)})`],
+    ["aluminum", `${t("legsAluminum")} (${legAluPrice(config)})`],
+  ];
+  return (
+    <div>
+      <label className="block text-sm font-semibold text-gray-600 mb-2">{t("legsLabel")}</label>
+      <div className="flex gap-2">
+        {opts.map(([k, l]) => (
+          <button key={k} type="button" onClick={() => onChange(k)}
+            className={cn("flex-1 py-2.5 rounded text-sm font-bold border transition-colors",
+              value === k ? "bg-gray-900 text-white border-gray-900" : "bg-white border-gray-200 text-gray-600")}>
+            {l}
+          </button>
+        ))}
+      </div>
+    </div>
+  );
+}
+
 const BED_PRICES: Record<string, Record<string, number>> = {
   wood:   { "90x190": 120, "100x200": 130, "120x200": 135, "180x200": 390, "200x200": 400, "220x220": 410 },
   fabric: { "90x190": 125, "100x200": 135, "120x200": 140, "180x200": 420, "200x200": 430, "220x220": 450 },
@@ -406,16 +445,15 @@ function BedBuilder({ config, onUpdate, initial }: { config: any; onUpdate: Buil
   const [type, setType] = useState(initial?.type ?? "wood");
   const [size, setSize] = useState(initial?.size ?? "180x200");
   const [lighting, setLighting] = useState(initial?.lighting ?? false);
-  const [wantsLegs, setWantsLegs] = useState(initial?.wantsLegs ?? false);
+  const [legs, setLegs] = useState<string>(initial?.legs ?? "none");
 
   useEffect(() => {
     const price = BED_PRICES[type]?.[size] || 160;
-    const extras = lighting ? (config.lighting || 20) : 0;
+    const extras = (lighting ? (config.lighting || 20) : 0) + legsExtra(config, legs);
     const typeLabel = type === "wood" ? "خشب" : "قماش";
-    // "مع أرجل" is informational only — it never changes price or extras.
-    const desc = `سرير ${typeLabel} - ${size} سم${wantsLegs ? " - مع أرجل" : ""}`;
-    onUpdate(desc, price, extras, { type, size, lighting, wantsLegs });
-  }, [type, size, lighting, wantsLegs, config, onUpdate]);
+    const desc = `سرير ${typeLabel} - ${size} سم${legsDescSuffix(legs)}`;
+    onUpdate(desc, price, extras, { type, size, lighting, legs });
+  }, [type, size, lighting, legs, config, onUpdate]);
 
   return (
     <div className="space-y-4">
@@ -448,10 +486,7 @@ function BedBuilder({ config, onUpdate, initial }: { config: any; onUpdate: Buil
         <input type="checkbox" checked={lighting} onChange={(e) => setLighting(e.target.checked)} className="rounded" />
         {t("lightingLabel")} (+{config.lighting || 20} {t("omr")})
       </label>
-      <label className="flex items-center gap-2 text-sm font-semibold cursor-pointer">
-        <input type="checkbox" checked={wantsLegs} onChange={(e) => setWantsLegs(e.target.checked)} className="rounded" />
-        {t("bedLegsLabel")}
-      </label>
+      <LegsSelector value={legs} onChange={setLegs} config={config} />
     </div>
   );
 }
@@ -604,20 +639,20 @@ function NightstandBuilder({ config, onUpdate, initial }: { config: any; onUpdat
   const [customLength, setCustomLength] = useState(initial?.customLength ?? 50);
   const [customWidth, setCustomWidth] = useState(initial?.customWidth ?? 50);
   const [customPrice, setCustomPrice] = useState(initial?.customPrice ?? 30);
-  const [wantsLegs, setWantsLegs] = useState(initial?.wantsLegs ?? false);
+  const [legs, setLegs] = useState<string>(initial?.legs ?? "none");
 
   useEffect(() => {
     const typeLabel = type === "round" ? t("roundType") : t("standardType");
-    // "مع أرجل" is informational only — it never changes the price.
-    const legs = wantsLegs ? " - مع أرجل" : "";
-    const details = { type, mode, customLength, customWidth, customPrice, wantsLegs };
+    const legsSuffix = legsDescSuffix(legs);
+    const extras = legsExtra(config, legs);
+    const details = { type, mode, customLength, customWidth, customPrice, legs };
     if (mode === "fixed") {
       const price = config[type] || (type === "round" ? 50 : 30);
-      onUpdate(`كومودينو ${typeLabel}${legs}`, price, 0, details);
+      onUpdate(`كومودينو ${typeLabel}${legsSuffix}`, price, extras, details);
     } else {
-      onUpdate(`كومودينو ${typeLabel} - ${customLength}×${customWidth} سم${legs}`, customPrice, 0, details);
+      onUpdate(`كومودينو ${typeLabel} - ${customLength}×${customWidth} سم${legsSuffix}`, customPrice, extras, details);
     }
-  }, [type, mode, customLength, customWidth, customPrice, wantsLegs, config, onUpdate]);
+  }, [type, mode, customLength, customWidth, customPrice, legs, config, onUpdate]);
 
   return (
     <div className="space-y-4">
@@ -667,10 +702,7 @@ function NightstandBuilder({ config, onUpdate, initial }: { config: any; onUpdat
           </div>
         </div>
       )}
-      <label className="flex items-center gap-2 text-sm font-semibold cursor-pointer">
-        <input type="checkbox" checked={wantsLegs} onChange={(e) => setWantsLegs(e.target.checked)} className="rounded" />
-        {t("nightstandLegsLabel")}
-      </label>
+      <LegsSelector value={legs} onChange={setLegs} config={config} />
     </div>
   );
 }
