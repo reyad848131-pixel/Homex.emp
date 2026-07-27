@@ -246,9 +246,9 @@ export default function PhotographyPage() {
                 <a href={q.deliveryLocation ? preciseHref(q.deliveryLocation) : areaHref(q)} target="_blank" rel="noreferrer"
                   className={cn("flex-1 flex items-center justify-center gap-1.5 h-9 rounded-lg border text-xs font-bold",
                     q.deliveryLocation
-                      ? "border-teal-300 dark:border-teal-700 text-teal-700 dark:text-teal-300 hover:bg-teal-50 dark:hover:bg-teal-900/20"
+                      ? "bg-rose-600 text-white border-rose-600 hover:bg-rose-700"
                       : "border-gray-200 dark:border-gray-700 text-gray-600 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700")}>
-                  <MapPin className="w-3.5 h-3.5" /> {t("openMaps")}
+                  <MapPin className="w-3.5 h-3.5" /> {q.deliveryLocation ? t("preciseLocation") : t("openMaps")}
                 </a>
               </div>
 

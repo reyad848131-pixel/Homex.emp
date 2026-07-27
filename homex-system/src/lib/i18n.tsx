@@ -203,6 +203,7 @@ const translations = {
   addLocation: { ar: "إضافة موقع دقيق", en: "Add exact location" },
   pasteLocation: { ar: "الصق رابط الموقع من الزبون (خرائط جوجل)", en: "Paste customer's location link (Google Maps)" },
   clearLocation: { ar: "مسح الموقع", en: "Clear location" },
+  noPreciseLocationHint: { ar: "أضف الموقع الدقيق من الزبون ليصل للمصوّر تلقائياً", en: "Add the customer's exact location so it reaches the photographer automatically" },
   savedLocation: { ar: "تم حفظ الموقع", en: "Location saved" },
   collectPrompt: { ar: "المتبقّي {amount}. هل حصّلته الآن نقداً؟ (موافق = تسجيل دفعة كاملة)", en: "Remaining {amount}. Collected now in cash? (OK = record full payment)" },
   noDeliveredYet: { ar: "لا يوجد طلبات تم توصيلها بعد", en: "No delivered orders yet" },

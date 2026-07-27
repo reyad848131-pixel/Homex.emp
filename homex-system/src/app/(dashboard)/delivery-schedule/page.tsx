@@ -8,7 +8,7 @@ import { useDebouncedValue } from "@/lib/hooks";
 import { CardsSkeleton } from "@/components/skeleton";
 import { daysUntil, URGENCY_GROUPS, NEUTRAL_TONE, daysRemainingLabel } from "@/lib/schedule-utils";
 import {
-  CalendarClock, Phone, MessageCircle, Check, FileText, Search,
+  CalendarClock, Check, FileText, Search,
   MapPin, Clock, Package, Truck, Printer, Wallet, User, CalendarDays,
   BadgeCheck, RotateCcw,
 } from "lucide-react";
@@ -138,13 +138,6 @@ export default function DeliverySchedulePage() {
   const fmtCur = (n: number) => `${roundMoney(n).toFixed(3)} ${t("omr")}`;
 
   const daysLabel = (d: number) => daysRemainingLabel(d, t);
-
-  const waLink = (q: DeliveryQuotation) => {
-    const num = `${q.customer.phoneCode}${q.customer.phone}`.replace(/[^0-9]/g, "");
-    const when = `${fmtDate(q.deliveryDate)}${q.deliveryTime ? ` - ${q.deliveryTime}` : ""}`;
-    const msg = `${t("waGreeting")} ${q.customer.name} 👋\n${t("waReadyMsg")}.\n${t("waAppointment")}: ${when}\n${t("waConfirmAsk")} 🙏`;
-    return `https://wa.me/${num}?text=${encodeURIComponent(msg)}`;
-  };
 
   const mapsLink = (q: DeliveryQuotation) => {
     const query = [q.customer.address, q.customer.wilayat, q.customer.governorate, "Oman"].filter(Boolean).join(", ");
@@ -312,7 +305,6 @@ export default function DeliverySchedulePage() {
                 {s.items.map((q) => {
                   const days = getDaysRemaining(q.deliveryDate);
                   const remaining = remainingOf(q);
-                  const telNumber = `${q.customer.phoneCode}${q.customer.phone}`;
                   const isDelivered = tab === "delivered";
                   return (
                     <div key={q.id} className={cn("bg-white dark:bg-gray-800 border rounded-xl p-4",
@@ -361,15 +353,9 @@ export default function DeliverySchedulePage() {
                         </div>
                       )}
 
-                      {/* Contact + maps */}
+                      {/* Location — the exact pin the employee enters (shared
+                          with the photographer once the job moves to photos). */}
                       <div className="flex flex-wrap items-center gap-2 mt-3">
-                        <span className="text-sm font-mono-en font-semibold text-gray-700 dark:text-gray-200" dir="ltr">{telNumber}</span>
-                        <a href={`tel:${telNumber}`} className="no-print inline-flex items-center gap-1.5 px-3 h-9 rounded-lg bg-gray-900 dark:bg-gray-100 dark:text-gray-900 text-white text-xs font-bold hover:opacity-90 transition-opacity">
-                          <Phone className="w-3.5 h-3.5" /> {t("callAction")}
-                        </a>
-                        <a href={waLink(q)} target="_blank" rel="noopener noreferrer" className="no-print inline-flex items-center gap-1.5 px-3 h-9 rounded-lg bg-green-600 text-white text-xs font-bold hover:bg-green-700 transition-colors">
-                          <MessageCircle className="w-3.5 h-3.5" /> {t("whatsappAction")}
-                        </a>
                         {q.deliveryLocation ? (
                           <a href={preciseHref(q.deliveryLocation)} target="_blank" rel="noopener noreferrer" className="no-print inline-flex items-center gap-1.5 px-3 h-9 rounded-lg bg-rose-600 text-white text-xs font-bold hover:bg-rose-700 transition-colors">
                             <MapPin className="w-3.5 h-3.5" /> {t("preciseLocation")}
@@ -378,6 +364,9 @@ export default function DeliverySchedulePage() {
                           <a href={mapsLink(q)} target="_blank" rel="noopener noreferrer" className="no-print inline-flex items-center gap-1.5 px-3 h-9 rounded-lg border border-gray-200 dark:border-gray-700 text-gray-600 dark:text-gray-300 text-xs font-bold hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors">
                             <MapPin className="w-3.5 h-3.5" /> {t("openMaps")}
                           </a>
+                        )}
+                        {!q.deliveryLocation && (
+                          <span className="text-[11px] text-gray-400">{t("noPreciseLocationHint")}</span>
                         )}
                       </div>
 
