@@ -15,7 +15,7 @@ export default async function QuotationDetailPage({ params }: { params: Promise<
   const user = session?.user as { id: string; role: string } | undefined;
 
   let quotation = user
-    ? await prisma.quotation.findUnique({
+    ? await prisma.quotation.findFirst({
         where: { id },
         include: {
           customer: true,

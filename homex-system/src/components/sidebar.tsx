@@ -23,6 +23,7 @@ import {
   Wrench,
   LifeBuoy,
   AlertTriangle,
+  Trash2,
 } from "lucide-react";
 import { useState, useEffect } from "react";
 import { DarkModeToggle } from "@/components/dark-mode-toggle";
@@ -62,6 +63,7 @@ const allItems: Array<{ href: string; labelKey: TranslationKey; icon: any; perm?
   { href: "/audit-logs", labelKey: "auditLogs", icon: ScrollText, perm: "audit" },
   { href: "/error-logs", labelKey: "errorLogs", icon: AlertTriangle, perm: "audit" },
   { href: "/settings", labelKey: "settings", icon: Settings, perm: "settings" },
+  { href: "/trash", labelKey: "trash", icon: Trash2, perm: "trash" },
 ];
 
 export function Sidebar({ user, permissions }: SidebarProps) {

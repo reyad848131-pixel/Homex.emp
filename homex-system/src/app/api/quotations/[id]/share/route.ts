@@ -13,7 +13,7 @@ export async function POST(_req: NextRequest, { params }: { params: Promise<{ id
     const user = session.user as any;
     const { id } = await params;
 
-    const quotation = await prisma.quotation.findUnique({ where: { id }, select: { id: true, employeeId: true, publicToken: true } });
+    const quotation = await prisma.quotation.findFirst({ where: { id }, select: { id: true, employeeId: true, publicToken: true } });
     if (!quotation) return NextResponse.json({ error: "Not found" }, { status: 404 });
     if (user.role === "sales" && quotation.employeeId !== user.id) {
       return NextResponse.json({ error: "Forbidden" }, { status: 403 });

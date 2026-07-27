@@ -1,8 +1,11 @@
 "use client";
 
 import Link from "next/link";
-import { ArrowRight, Phone, MapPin, Calendar, FileText, User } from "lucide-react";
+import { useState } from "react";
+import { useRouter } from "next/navigation";
+import { ArrowRight, Phone, MapPin, Calendar, FileText, User, Trash2, Loader2 } from "lucide-react";
 import { EditCustomerButton } from "@/components/edit-customer-button";
+import { useToast } from "@/components/toast";
 import { useI18n, type TranslationKey } from "@/lib/i18n";
 import { STATUS_MAP } from "@/lib/types";
 
@@ -43,7 +46,29 @@ interface CustomerData {
 
 export function CustomerDetailClient({ data }: { data: CustomerData }) {
   const { t, dateLocale } = useI18n();
+  const router = useRouter();
+  const toast = useToast();
+  const [deleting, setDeleting] = useState(false);
   const fmtCur = (n: number) => `${n.toFixed(3)} ${t("omr")}`;
+
+  const handleDelete = async () => {
+    if (!confirm(t("confirmDelete"))) return;
+    setDeleting(true);
+    try {
+      const res = await fetch(`/api/customers/${data.id}`, { method: "DELETE" });
+      if (res.ok) {
+        toast.success(t("deletedSuccess"));
+        router.push("/customers");
+      } else {
+        const d = await res.json().catch(() => ({}));
+        toast.error(d.error || t("deleteFailed"));
+        setDeleting(false);
+      }
+    } catch {
+      toast.error(t("serverConnectionError"));
+      setDeleting(false);
+    }
+  };
 
   return (
     <div>
@@ -55,11 +80,20 @@ export function CustomerDetailClient({ data }: { data: CustomerData }) {
           <h1 className="text-2xl font-bold">{data.name}</h1>
           <p className="text-sm text-gray-500 mt-0.5">{t("customerDetails")}</p>
         </div>
-        <EditCustomerButton customer={{
-          id: data.id, name: data.name, phone: data.phone,
-          phoneCode: data.phoneCode, governorate: data.governorate,
-          wilayat: data.wilayat, address: data.address,
-        }} />
+        <div className="flex items-center gap-2">
+          <EditCustomerButton customer={{
+            id: data.id, name: data.name, phone: data.phone,
+            phoneCode: data.phoneCode, governorate: data.governorate,
+            wilayat: data.wilayat, address: data.address,
+          }} />
+          {data.totalQuotes === 0 && (
+            <button onClick={handleDelete} disabled={deleting}
+              className="flex items-center gap-2 px-4 py-2 border border-red-200 text-red-600 rounded text-sm font-bold hover:bg-red-50 disabled:opacity-50">
+              {deleting ? <Loader2 className="w-4 h-4 animate-spin" /> : <Trash2 className="w-4 h-4" />}
+              {t("delete")}
+            </button>
+          )}
+        </div>
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-6">

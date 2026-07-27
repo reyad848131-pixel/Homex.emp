@@ -56,7 +56,7 @@ export async function POST(req: NextRequest) {
 
     let quotationId = body.quotationId as string | undefined;
     if (!quotationId && body.quoteNumber) {
-      const q = await prisma.quotation.findUnique({ where: { quoteNumber: String(body.quoteNumber).trim() }, select: { id: true } });
+      const q = await prisma.quotation.findFirst({ where: { quoteNumber: String(body.quoteNumber).trim() }, select: { id: true } });
       if (!q) return NextResponse.json({ error: "رقم العرض غير موجود" }, { status: 404 });
       quotationId = q.id;
     }

@@ -15,7 +15,7 @@ export async function POST(
   const user = session.user as any;
   const { id } = await params;
 
-  const original = await prisma.quotation.findUnique({
+  const original = await prisma.quotation.findFirst({
     where: { id },
     include: { items: true },
   });

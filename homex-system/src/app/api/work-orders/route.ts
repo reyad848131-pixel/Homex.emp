@@ -50,7 +50,7 @@ export async function PATCH(req: NextRequest) {
 
     if (!id) return NextResponse.json({ error: "Missing id" }, { status: 400 });
 
-    const quotation = await prisma.quotation.findUnique({ where: { id } });
+    const quotation = await prisma.quotation.findFirst({ where: { id } });
     if (!quotation) return NextResponse.json({ error: "Not found" }, { status: 404 });
 
     const data: any = {};

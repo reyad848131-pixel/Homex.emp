@@ -19,6 +19,7 @@ export const PERMISSIONS = [
   "categories",      // manage categories & pricing
   "settings",        // company settings
   "audit",           // audit & error logs
+  "trash",           // view Trash, restore & permanently delete
 ] as const;
 
 export type Permission = (typeof PERMISSIONS)[number];
@@ -49,6 +50,7 @@ export const PERMISSION_LABELS: Record<Permission, string> = {
   categories: "إدارة الفئات والأسعار",
   settings: "إعدادات الشركة",
   audit: "سجل التدقيق والأخطاء",
+  trash: "المحذوفات (استرجاع وحذف نهائي)",
 };
 
 export interface RoleDef {
@@ -70,7 +72,7 @@ export const SYSTEM_ROLES: RoleDef[] = [
     key: "manager",
     label: "مشرف",
     system: true,
-    permissions: ["quotes", "quotes_create", "view_all_quotes", "approve", "payments", "invoices", "edit_locked", "work_orders", "reports", "customers"],
+    permissions: ["quotes", "quotes_create", "view_all_quotes", "approve", "payments", "invoices", "edit_locked", "work_orders", "reports", "customers", "trash"],
   },
   { key: "sales", label: "مبيعات", system: true, permissions: ["quotes", "quotes_create", "customers", "payments"] },
   // Accountant: sees every quotation + customers + reports, records payments and

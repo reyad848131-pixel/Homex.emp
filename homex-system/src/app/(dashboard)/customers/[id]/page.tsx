@@ -8,7 +8,7 @@ export default async function CustomerDetailPage({ params }: { params: Promise<{
   const user = session?.user as any;
   const { id } = await params;
 
-  const customer = await prisma.customer.findUnique({
+  const customer = await prisma.customer.findFirst({
     where: { id },
     include: {
       creator: { select: { name: true } },

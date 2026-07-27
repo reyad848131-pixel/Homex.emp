@@ -35,7 +35,7 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ tok
       signatureData = sig;
     }
 
-    const quotation = await prisma.quotation.findUnique({
+    const quotation = await prisma.quotation.findFirst({
       where: { publicToken: token },
       select: { id: true, quoteNumber: true, status: true, employeeId: true },
     });

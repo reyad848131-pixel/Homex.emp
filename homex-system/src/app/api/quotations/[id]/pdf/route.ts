@@ -19,7 +19,7 @@ export async function GET(
 
   const user = session.user as any;
   const { id } = await params;
-  const quotation = await prisma.quotation.findUnique({
+  const quotation = await prisma.quotation.findFirst({
     where: { id },
     include: {
       customer: true,

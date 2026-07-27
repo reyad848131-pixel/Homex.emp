@@ -21,7 +21,7 @@ export async function GET(
 
     const user = session.user as any;
     const { id } = await params;
-    const quotation = await prisma.quotation.findUnique({
+    const quotation = await prisma.quotation.findFirst({
       where: { id },
       include: {
         customer: true,
@@ -57,7 +57,7 @@ export async function PATCH(
     const { id } = await params;
     const body = await req.json();
 
-    const quotation = await prisma.quotation.findUnique({
+    const quotation = await prisma.quotation.findFirst({
       where: { id },
       include: { invoice: { select: { id: true } }, _count: { select: { payments: true } } },
     });
@@ -256,7 +256,7 @@ export async function DELETE(
     const user = session.user as any;
     const { id } = await params;
 
-    const quotation = await prisma.quotation.findUnique({
+    const quotation = await prisma.quotation.findFirst({
       where: { id },
       include: { invoice: { select: { id: true } }, _count: { select: { payments: true } } },
     });
@@ -273,7 +273,8 @@ export async function DELETE(
       );
     }
 
-    await prisma.quotation.delete({ where: { id } });
+    // Soft delete: move to Trash instead of removing.
+    await prisma.quotation.update({ where: { id }, data: { deletedAt: new Date(), deletedBy: user.id } });
     await logAction(user.id, "delete", "quotation", id);
     return NextResponse.json({ success: true });
   } catch (e) {

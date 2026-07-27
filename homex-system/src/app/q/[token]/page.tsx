@@ -14,7 +14,7 @@ async function loadQuote(token: string) {
   let lastErr: unknown;
   for (let attempt = 0; attempt < 3; attempt++) {
     try {
-      return await prisma.quotation.findUnique({
+      return await prisma.quotation.findFirst({
         where: { publicToken: token },
         include: {
           customer: { select: { name: true, governorate: true, wilayat: true } },

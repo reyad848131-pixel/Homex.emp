@@ -11,7 +11,7 @@ export async function POST(req: NextRequest) {
     const user = session.user as any;
     const { quotationId } = await req.json();
 
-    const quotation = await prisma.quotation.findUnique({
+    const quotation = await prisma.quotation.findFirst({
       where: { id: quotationId },
       include: { invoice: true },
     });

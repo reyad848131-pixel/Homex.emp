@@ -22,7 +22,7 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
       return NextResponse.json({ error: "التوقيع غير صالح" }, { status: 400 });
     }
 
-    const quotation = await prisma.quotation.findUnique({
+    const quotation = await prisma.quotation.findFirst({
       where: { id },
       select: { id: true, quoteNumber: true, employeeId: true, signedAt: true },
     });

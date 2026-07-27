@@ -15,7 +15,7 @@ export async function POST(req: NextRequest) {
     if (!parsed.ok) return NextResponse.json({ error: parsed.error, code: "invalid" }, { status: 400 });
     const { quotationId, amount, method, reference, notes } = parsed.data;
 
-    const quotation = await prisma.quotation.findUnique({
+    const quotation = await prisma.quotation.findFirst({
       where: { id: quotationId },
       select: { id: true, total: true, employeeId: true, quoteNumber: true },
     });
