@@ -60,6 +60,9 @@ async function main() {
     { id: "office-desk", nameAr: "مكتب", nameEn: "Office Desk", icon: "Monitor", pricingType: "per_sqm", basePrice: 50, sortOrder: 9,
       config: JSON.stringify({ pricePerSqm: 50, addon: 20 })
     },
+    { id: "coffee-corner", nameAr: "كوفي كورنر", nameEn: "Coffee Corner", icon: "Coffee", pricingType: "per_sqm", basePrice: 60, sortOrder: 10,
+      config: JSON.stringify({ pricePerSqm: 60 })
+    },
     { id: "sofa-set", nameAr: "أطقم الجلوس", nameEn: "Sofa Set", icon: "Sofa", pricingType: "per_unit", sortOrder: 10,
       config: JSON.stringify({ standard: { min: 80, max: 95 }, wooden: { min: 110, max: 140 } })
     },

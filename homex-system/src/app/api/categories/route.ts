@@ -5,19 +5,26 @@ import { prisma } from "@/lib/prisma";
 // Builder-backed categories that must exist with a fixed id (so they dispatch
 // to their dedicated builder). Seeded DBs predating a category won't have it,
 // so we upsert it once per server instance on the first categories fetch.
+const EXTRA_CATEGORIES = [
+  {
+    id: "pantry", nameAr: "بانتري", nameEn: "Pantry", icon: "Refrigerator",
+    pricingType: "per_sqm", basePrice: 130, sortOrder: 2,
+    config: JSON.stringify({ porcelainSurcharge: 55 }),
+  },
+  {
+    id: "coffee-corner", nameAr: "كوفي كورنر", nameEn: "Coffee Corner", icon: "Coffee",
+    pricingType: "per_sqm", basePrice: 60, sortOrder: 10,
+    config: JSON.stringify({ pricePerSqm: 60 }),
+  },
+];
+
 let ensuredExtras = false;
 async function ensureBuilderCategories() {
   if (ensuredExtras) return;
   try {
-    await prisma.category.upsert({
-      where: { id: "pantry" },
-      update: {},
-      create: {
-        id: "pantry", nameAr: "بانتري", nameEn: "Pantry", icon: "Refrigerator",
-        pricingType: "per_sqm", basePrice: 130, sortOrder: 2,
-        config: JSON.stringify({ porcelainSurcharge: 55 }),
-      },
-    });
+    for (const c of EXTRA_CATEGORIES) {
+      await prisma.category.upsert({ where: { id: c.id }, update: {}, create: c });
+    }
     ensuredExtras = true;
   } catch {
     // Non-fatal: fall back to whatever categories already exist.
