@@ -9,13 +9,13 @@ import { useToast } from "@/components/toast";
 import { CategoryBuilder, NumField, type Category } from "@/components/quote-builders";
 import {
   ChefHat, DoorOpen, Lamp, Blinds, Sparkles, BedDouble,
-  Layers, Tv, Monitor, Sofa, WashingMachine, Plus,
+  Layers, Tv, Monitor, Sofa, WashingMachine, Plus, Refrigerator, Coffee,
   Trash2, ShoppingCart, ArrowLeft, ArrowRight, Save, Check, Eye, Pencil, RotateCcw, X,
 } from "lucide-react";
 
 const ICONS: Record<string, any> = {
   ChefHat, DoorOpen, Lamp, Blinds, Sparkles, BedDouble,
-  Layers, Tv, Monitor, Sofa, WashingMachine, Plus,
+  Layers, Tv, Monitor, Sofa, WashingMachine, Plus, Refrigerator, Coffee,
 };
 
 interface LineItem {
