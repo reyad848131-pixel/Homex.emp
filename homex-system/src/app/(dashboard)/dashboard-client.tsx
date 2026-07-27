@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { useI18n, type TranslationKey } from "@/lib/i18n";
 import { formatCurrency } from "@/lib/utils";
-import { FileText, FilePlus, Users, TrendingUp, Clock, ArrowUpRight, AlertTriangle } from "lucide-react";
+import { FileText, FilePlus, Users, TrendingUp, Clock, ArrowUpRight, AlertTriangle, Camera } from "lucide-react";
 
 const STATUS_KEYS: Record<string, TranslationKey> = {
   draft: "statusDraft",
@@ -31,6 +31,7 @@ interface DashboardData {
   collectedAmount: number;
   outstandingAmount: number;
   conversionRate: string;
+  photoQueueCount: number;
   expiringQuotations: Array<{
     id: string;
     quoteNumber: string;
@@ -108,6 +109,22 @@ export function DashboardClient({ data }: { data: DashboardData }) {
           </div>
         ))}
       </div>
+
+      {data.photoQueueCount > 0 && (
+        <Link href="/photography"
+          className="flex items-center gap-3 bg-teal-50 dark:bg-teal-900/20 border border-teal-200 dark:border-teal-800 rounded p-4 mb-6 hover:bg-teal-100 dark:hover:bg-teal-900/30 transition-colors">
+          <div className="w-10 h-10 rounded-lg bg-teal-100 dark:bg-teal-900/40 text-teal-600 dark:text-teal-300 flex items-center justify-center shrink-0">
+            <Camera className="w-5 h-5" />
+          </div>
+          <div className="flex-1 min-w-0">
+            <p className="text-sm font-bold text-teal-800 dark:text-teal-200">
+              <span className="font-mono-en">{data.photoQueueCount}</span> {t("photoCount")}
+            </p>
+            <p className="text-xs text-teal-600 dark:text-teal-400">{t("photographySubtitle")}</p>
+          </div>
+          <ArrowUpRight className="w-5 h-5 text-teal-500 shrink-0" />
+        </Link>
+      )}
 
       {data.totalRevenue > 0 && (() => {
         const pct = data.totalRevenue > 0 ? Math.min((data.collectedAmount / data.totalRevenue) * 100, 100) : 0;

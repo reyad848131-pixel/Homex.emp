@@ -27,7 +27,7 @@ export default async function DashboardPage() {
 
   const sevenDaysFromNow = new Date(now.getTime() + 7 * 24 * 60 * 60 * 1000);
 
-  const [totalQuotes, totalCustomers, quotations, monthlyQuotes, statusGroupBy, expiringQuotations, revenueAgg, collectedAgg] = await Promise.all([
+  const [totalQuotes, totalCustomers, quotations, monthlyQuotes, statusGroupBy, expiringQuotations, revenueAgg, collectedAgg, photoQueueCount] = await Promise.all([
     prisma.quotation.count({ where: whereClause }),
     prisma.customer.count({ where: isAdmin ? {} : { createdBy: userId } }),
     prisma.quotation.findMany({
@@ -60,6 +60,8 @@ export default async function DashboardPage() {
       where: { quotation: { ...whereClause, status: "approved" } },
       _sum: { amount: true },
     }),
+    // Jobs waiting to be photographed (global — the queue isn't per-employee).
+    prisma.quotation.count({ where: { photoStatus: "ready" } }),
   ]);
 
   const statusMap = Object.fromEntries(statusGroupBy.map((s) => [s.status, s._count]));
@@ -89,6 +91,7 @@ export default async function DashboardPage() {
     collectedAmount,
     outstandingAmount,
     conversionRate,
+    photoQueueCount,
     expiringQuotations: expiringQuotations.map((q) => ({
       id: q.id,
       quoteNumber: q.quoteNumber,
