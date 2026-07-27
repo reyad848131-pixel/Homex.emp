@@ -653,6 +653,8 @@ const translations = {
   curtainsUnit: { ar: "ستارة", en: "curtains" },
   bedLegsLabel: { ar: "يريد أرجل للسرير؟", en: "Wants bed legs?" },
   legsLabel: { ar: "الأرجل", en: "Legs" },
+  perSqmMethod: { ar: "بالمتر المربّع", en: "Per m²" },
+  perMeterMethod: { ar: "بالمتر الطولي", en: "Per linear m" },
   legsNone: { ar: "بدون", en: "None" },
   legsWood: { ar: "خشبية", en: "Wooden" },
   legsAluminum: { ar: "ألمنيوم", en: "Aluminium" },

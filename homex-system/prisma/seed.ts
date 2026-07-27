@@ -52,7 +52,7 @@ async function main() {
       config: JSON.stringify({ types: { wood: 35, pvc: 28, fabric: 42, stone: 55 }, lighting: 15 })
     },
     { id: "tv-table", nameAr: "طاولة تلفزيون", nameEn: "TV Table", icon: "Tv", pricingType: "per_sqm", basePrice: 50, sortOrder: 8,
-      config: JSON.stringify({ pricePerSqm: 50, addon: 20 })
+      config: JSON.stringify({ pricePerSqm: 50, pricePerMeter: 65, addon: 20 })
     },
     { id: "office-desk", nameAr: "مكتب", nameEn: "Office Desk", icon: "Monitor", pricingType: "per_sqm", basePrice: 50, sortOrder: 9,
       config: JSON.stringify({ pricePerSqm: 50, addon: 20 })
