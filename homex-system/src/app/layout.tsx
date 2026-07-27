@@ -22,6 +22,15 @@ export const metadata: Metadata = {
   title: "Homex | نظام عروض الأسعار",
   description: "نظام إدارة عروض الأسعار الداخلي - Homex",
   manifest: "/manifest.json",
+  // All icons resolve through the dynamic /api/app-icon route so a custom icon
+  // uploaded in Settings shows up in the browser tab, bookmarks and on newly
+  // added home-screen shortcuts. (There is no app/favicon.ico anymore — a
+  // static favicon file would override this and always show the default.)
+  icons: {
+    icon: [{ url: "/api/app-icon", type: "image/png" }],
+    shortcut: ["/api/app-icon"],
+    apple: [{ url: "/api/app-icon" }],
+  },
   appleWebApp: {
     capable: true,
     statusBarStyle: "black-translucent",
@@ -41,7 +50,6 @@ export default function RootLayout({
     <html lang="ar" dir="rtl" className={`${cairo.variable} ${montserrat.variable}`}>
       <head>
         <meta name="theme-color" content="#171717" />
-        <link rel="apple-touch-icon" href="/api/app-icon" />
         <script dangerouslySetInnerHTML={{ __html: `try{var t=localStorage.getItem("theme");if(t==="dark"||((t===null||t==="auto")&&window.matchMedia("(prefers-color-scheme: dark)").matches))document.documentElement.classList.add("dark")}catch(e){}` }} />
       </head>
       <body className="font-cairo antialiased bg-gray-100 dark:bg-gray-950 text-gray-900 dark:text-gray-100 min-h-screen">
