@@ -351,6 +351,7 @@ const translations = {
   bankTransfer: { ar: "تحويل بنكي", en: "Bank Transfer" },
   cheque: { ar: "شيك", en: "Cheque" },
   card: { ar: "بطاقة", en: "Card" },
+  financing: { ar: "تمويل", en: "Financing" },
   reference: { ar: "رقم المرجع", en: "Reference #" },
   optional: { ar: "اختياري", en: "Optional" },
   maxAmount: { ar: "الحد الأقصى", en: "Max" },

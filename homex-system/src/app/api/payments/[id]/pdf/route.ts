@@ -15,6 +15,7 @@ const METHOD_AR: Record<string, string> = {
   bank_transfer: "تحويل بنكي",
   cheque: "شيك",
   card: "بطاقة",
+  financing: "تمويل",
 };
 
 export async function GET(

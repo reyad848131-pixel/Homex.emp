@@ -79,6 +79,7 @@ const PAYMENT_METHOD_KEYS: Record<string, TranslationKey> = {
   bank_transfer: "bankTransfer",
   cheque: "cheque",
   card: "card",
+  financing: "financing",
 };
 
 export default function QuoteDetailClient({
