@@ -754,12 +754,12 @@ export default function NewQuotationPage() {
       </div>
 
       {items.length > 0 && step === 3 && (
-        <div className="fixed bottom-6 left-1/2 -translate-x-1/2 bg-gray-900 text-white rounded-2xl px-5 py-3 shadow-2xl flex items-center gap-3 z-50">
+        <div className="fixed bottom-4 sm:bottom-6 left-1/2 -translate-x-1/2 bg-gray-900 text-white rounded-2xl px-3 sm:px-5 py-3 shadow-2xl flex items-center gap-2 sm:gap-3 z-50 max-w-[calc(100vw-1rem)]">
           <div className="flex items-center gap-2">
-            <ShoppingCart className="w-4 h-4 text-gray-400" />
-            <span className="font-bold text-sm">{items.length} {t("itemsWord")}</span>
+            <ShoppingCart className="w-4 h-4 text-gray-400 shrink-0" />
+            <span className="font-bold text-sm whitespace-nowrap">{items.length} {t("itemsWord")}</span>
           </div>
-          <span className="w-px h-5 bg-gray-600" />
+          <span className="w-px h-5 bg-gray-600 shrink-0" />
           <span className="font-black font-mono-en text-emerald-400">{fmtCur(total)}</span>
           <span className="w-px h-5 bg-gray-600" />
           <button onClick={() => setStep(4)} className="flex items-center gap-1 px-3 py-1.5 bg-white/10 hover:bg-white/20 rounded-lg text-xs font-bold transition-colors">

@@ -29,6 +29,10 @@
 
 body {
   font-family: var(--font-cairo), 'Cairo', sans-serif;
+  /* Safety net for phones: never let a stray wide element scroll the whole
+     page sideways. Wide content (tables, the quote builder) lives inside its
+     own `overflow-x-auto` container, which still scrolls normally. */
+  overflow-x: hidden;
 }
 
 .font-mono-en {

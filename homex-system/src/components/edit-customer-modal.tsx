@@ -64,7 +64,7 @@ export function EditCustomerModal({ customer, onClose }: Props) {
 
   return (
     <div className="fixed inset-0 bg-black/40 z-50 flex items-center justify-center p-4" onClick={onClose}>
-      <div className="bg-white dark:bg-gray-800 rounded-lg w-full max-w-lg" onClick={(e) => e.stopPropagation()}>
+      <div className="bg-white dark:bg-gray-800 rounded-lg w-full max-w-lg max-h-[90vh] overflow-y-auto" onClick={(e) => e.stopPropagation()}>
         <div className="flex items-center justify-between p-5 border-b border-gray-100 dark:border-gray-700">
           <h2 className="text-lg font-bold">{t("editCustomerInfo")}</h2>
           <button onClick={onClose} className="text-gray-400 hover:text-gray-600">

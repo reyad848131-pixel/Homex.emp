@@ -74,7 +74,8 @@ export default function AuditLogsPage() {
             <p className="font-semibold">{t("noLogs")}</p>
           </div>
         ) : (
-          <table className="w-full text-sm">
+          <div className="overflow-x-auto">
+          <table className="w-full text-sm min-w-[560px]">
             <thead>
               <tr className="border-b border-gray-200 bg-gray-50">
                 <th className="text-right p-3 px-5 text-xs text-gray-400 font-semibold">{t("date")}</th>
@@ -102,6 +103,7 @@ export default function AuditLogsPage() {
               ))}
             </tbody>
           </table>
+          </div>
         )}
       </div>
 

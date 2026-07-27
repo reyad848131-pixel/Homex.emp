@@ -44,7 +44,8 @@ export default function ErrorLogsPage() {
             <p className="font-semibold">{t("noErrors")}</p>
           </div>
         ) : (
-          <table className="w-full text-sm">
+          <div className="overflow-x-auto">
+          <table className="w-full text-sm min-w-[560px]">
             <thead>
               <tr className="border-b border-gray-200 bg-gray-50 dark:bg-gray-900/40">
                 <th className="text-right p-3 px-5 text-xs text-gray-400 font-semibold">{t("date")}</th>
@@ -81,6 +82,7 @@ export default function ErrorLogsPage() {
               ))}
             </tbody>
           </table>
+          </div>
         )}
       </div>
 

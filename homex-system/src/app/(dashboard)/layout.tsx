@@ -20,7 +20,9 @@ export default async function DashboardLayout({
     <div className="flex min-h-screen">
       <Sidebar user={session.user as any} permissions={permissions} />
       <DashboardContent>
-        <div className="flex items-center gap-3 mb-4 no-print">
+        {/* ps-12 on mobile reserves room for the fixed hamburger button (which
+            sits at the inline-start top corner) so it doesn't cover the search. */}
+        <div className="flex items-center gap-3 mb-4 no-print max-lg:ps-12">
           <GlobalSearch />
           <div className="flex-1" />
           <NotificationBell />
