@@ -8,7 +8,7 @@ import { useDebouncedValue } from "@/lib/hooks";
 import { useToast } from "@/components/toast";
 import { CardsSkeleton } from "@/components/skeleton";
 import {
-  Camera, Phone, MessageCircle, Check, FileText, Search,
+  Camera, Check, FileText, Search,
   MapPin, User, RotateCcw, Package, CalendarDays,
 } from "lucide-react";
 
@@ -102,11 +102,6 @@ export default function PhotographyPage() {
 
   const fmtDate = (d: string) => new Date(d).toLocaleDateString(dateLocale, { year: "numeric", month: "short", day: "numeric" });
 
-  const waLink = (q: PhotoQuotation) => {
-    const num = `${q.customer.phoneCode}${q.customer.phone}`.replace(/[^0-9]/g, "");
-    return `https://wa.me/${num}`;
-  };
-  const telLink = (q: PhotoQuotation) => `tel:${q.customer.phoneCode}${q.customer.phone}`;
   const preciseHref = (loc: string) =>
     loc.trim().startsWith("http") ? loc.trim() : `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(loc.trim())}`;
   const areaHref = (q: PhotoQuotation) => {
@@ -235,22 +230,15 @@ export default function PhotographyPage() {
                   className="text-xs text-gray-400 hover:text-gray-600 text-start">+ {t("photoNotesLabel")}</button>
               )}
 
-              {/* Contact + location row */}
-              <div className="flex items-center gap-2">
-                <a href={telLink(q)} className="flex-1 flex items-center justify-center gap-1.5 h-9 rounded-lg border border-gray-200 dark:border-gray-700 text-xs font-bold text-gray-600 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700">
-                  <Phone className="w-3.5 h-3.5" /> {t("callAction")}
-                </a>
-                <a href={waLink(q)} target="_blank" rel="noreferrer" className="flex-1 flex items-center justify-center gap-1.5 h-9 rounded-lg border border-green-200 dark:border-green-800 text-xs font-bold text-green-700 dark:text-green-400 hover:bg-green-50 dark:hover:bg-green-900/20">
-                  <MessageCircle className="w-3.5 h-3.5" /> {t("whatsappAction")}
-                </a>
-                <a href={q.deliveryLocation ? preciseHref(q.deliveryLocation) : areaHref(q)} target="_blank" rel="noreferrer"
-                  className={cn("flex-1 flex items-center justify-center gap-1.5 h-9 rounded-lg border text-xs font-bold",
-                    q.deliveryLocation
-                      ? "bg-rose-600 text-white border-rose-600 hover:bg-rose-700"
-                      : "border-gray-200 dark:border-gray-700 text-gray-600 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700")}>
-                  <MapPin className="w-3.5 h-3.5" /> {q.deliveryLocation ? t("preciseLocation") : t("openMaps")}
-                </a>
-              </div>
+              {/* Location — the exact pin the delivery employee entered, so the
+                  photographer reaches the site without calling anyone. */}
+              <a href={q.deliveryLocation ? preciseHref(q.deliveryLocation) : areaHref(q)} target="_blank" rel="noreferrer"
+                className={cn("flex items-center justify-center gap-1.5 h-9 rounded-lg border text-xs font-bold",
+                  q.deliveryLocation
+                    ? "bg-rose-600 text-white border-rose-600 hover:bg-rose-700"
+                    : "border-gray-200 dark:border-gray-700 text-gray-600 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700")}>
+                <MapPin className="w-3.5 h-3.5" /> {q.deliveryLocation ? t("preciseLocation") : t("openMaps")}
+              </a>
 
               {/* Primary action */}
               {tab === "queue" ? (
