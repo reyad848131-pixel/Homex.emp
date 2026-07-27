@@ -152,12 +152,18 @@ export default function EmployeesPage() {
   };
 
   const toggleActive = async (emp: Employee) => {
-    await fetch(`/api/employees/${emp.id}`, {
-      method: "PATCH",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ isActive: !emp.isActive }),
-    });
-    load();
+    // Optimistic: flip locally right away, reconcile with the server after.
+    setEmployees((prev) => prev.map((e) => (e.id === emp.id ? { ...e, isActive: !e.isActive } : e)));
+    try {
+      const res = await fetch(`/api/employees/${emp.id}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ isActive: !emp.isActive }),
+      });
+      if (!res.ok) load(); // revert to the true state on failure
+    } catch {
+      load();
+    }
   };
 
   const startEdit = (emp: Employee) => {

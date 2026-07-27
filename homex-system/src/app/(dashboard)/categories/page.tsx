@@ -104,12 +104,18 @@ export default function CategoriesPage() {
   };
 
   const handleReactivate = async (c: Category) => {
-    await fetch(`/api/categories/${c.id}`, {
-      method: "PUT",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ ...c, isActive: true }),
-    });
-    load();
+    // Optimistic: mark active immediately, reconcile on failure.
+    setCategories((prev) => prev.map((x) => (x.id === c.id ? { ...x, isActive: true } : x)));
+    try {
+      const res = await fetch(`/api/categories/${c.id}`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ ...c, isActive: true }),
+      });
+      if (!res.ok) load();
+    } catch {
+      load();
+    }
   };
 
   return (

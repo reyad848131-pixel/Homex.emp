@@ -115,6 +115,12 @@ export default function QuoteDetailClient({
   const [selfApprove] = useState(initialSelfApprove);
   const [shareUrl, setShareUrl] = useState("");
   const [sharing, setSharing] = useState(false);
+  // Pending flags so action buttons respond instantly (spinner + disabled) on
+  // click instead of appearing frozen while the server request is in flight.
+  const [statusBusy, setStatusBusy] = useState(false);
+  const [deleting, setDeleting] = useState(false);
+  const [duplicating, setDuplicating] = useState(false);
+  const [whatsapping, setWhatsapping] = useState(false);
 
   const fmtCur = (n: number) => `${n.toFixed(3)} ${t("omr")}`;
 
@@ -122,20 +128,28 @@ export default function QuoteDetailClient({
   useEffect(() => { setTerms(initialTerms); }, [initialTerms]);
 
   const updateStatus = async (status: string, comment?: string) => {
-    const res = await fetch(`/api/quotations/${id}`, {
-      method: "PATCH",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ status, statusComment: comment || null }),
-    });
-    if (res.ok) {
-      const data = await res.json();
-      setQ((prev) => prev ? { ...prev, status: data.status, statusComment: data.statusComment } : prev);
-      setShowStatusDialog(null);
-      setStatusComment("");
-      toast.success(t("statusUpdatedSuccess"));
-    } else {
-      const err = await res.json().catch(() => ({}));
-      toast.error(err.error || t("operationFailed"));
+    if (statusBusy) return;
+    setStatusBusy(true);
+    try {
+      const res = await fetch(`/api/quotations/${id}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ status, statusComment: comment || null }),
+      });
+      if (res.ok) {
+        const data = await res.json();
+        setQ((prev) => prev ? { ...prev, status: data.status, statusComment: data.statusComment } : prev);
+        setShowStatusDialog(null);
+        setStatusComment("");
+        toast.success(t("statusUpdatedSuccess"));
+      } else {
+        const err = await res.json().catch(() => ({}));
+        toast.error(err.error || t("operationFailed"));
+      }
+    } catch {
+      toast.error(t("serverConnectionError"));
+    } finally {
+      setStatusBusy(false);
     }
   };
 
@@ -174,27 +188,41 @@ export default function QuoteDetailClient({
 
   const handleDelete = async () => {
     if (!confirm(t("deleteQuote"))) return;
-    const res = await fetch(`/api/quotations/${id}`, { method: "DELETE" });
-    if (res.ok) {
-      toast.success(t("deletedSuccess"));
-      router.push("/quotations");
-    } else {
-      const err = await res.json().catch(() => ({}));
-      toast.error(err.error || t("deleteFailed"));
+    setDeleting(true);
+    try {
+      const res = await fetch(`/api/quotations/${id}`, { method: "DELETE" });
+      if (res.ok) {
+        toast.success(t("deletedSuccess"));
+        router.push("/quotations");
+      } else {
+        const err = await res.json().catch(() => ({}));
+        toast.error(err.error || t("deleteFailed"));
+        setDeleting(false);
+      }
+    } catch {
+      toast.error(t("serverConnectionError"));
+      setDeleting(false);
     }
   };
 
   const handlePrint = () => window.print();
 
   const handleDuplicate = async () => {
-    if (!q) return;
-    const res = await fetch(`/api/quotations/${id}/duplicate`, { method: "POST" });
-    if (res.ok) {
-      const data = await res.json();
-      router.push(`/quotations/${data.id}/edit`);
-    } else {
-      const err = await res.json().catch(() => ({}));
-      toast.error(err.error || t("operationFailed"));
+    if (!q || duplicating) return;
+    setDuplicating(true);
+    try {
+      const res = await fetch(`/api/quotations/${id}/duplicate`, { method: "POST" });
+      if (res.ok) {
+        const data = await res.json();
+        router.push(`/quotations/${data.id}/edit`);
+      } else {
+        const err = await res.json().catch(() => ({}));
+        toast.error(err.error || t("operationFailed"));
+        setDuplicating(false);
+      }
+    } catch {
+      toast.error(t("serverConnectionError"));
+      setDuplicating(false);
     }
   };
 
@@ -215,9 +243,11 @@ export default function QuoteDetailClient({
   };
 
   const handleWhatsApp = async () => {
-    if (!q) return;
+    if (!q || whatsapping) return;
+    setWhatsapping(true);
     let link = "";
     try { link = await ensureShareUrl(); } catch { /* fall back to summary only */ }
+    setWhatsapping(false);
     const text = encodeURIComponent(
       `*${t("quotePrint")} - ${q.quoteNumber}*\n` +
       `${t("customer")}: ${q.customer.name}\n` +
@@ -304,9 +334,9 @@ export default function QuoteDetailClient({
               <Download className="w-4 h-4" />
               PDF
             </a>
-            <button onClick={handleWhatsApp}
-              className="flex items-center gap-2 px-4 py-2 border border-green-200 text-green-600 rounded text-sm font-bold hover:bg-green-50">
-              <MessageCircle className="w-4 h-4" />
+            <button onClick={handleWhatsApp} disabled={whatsapping}
+              className="flex items-center gap-2 px-4 py-2 border border-green-200 text-green-600 rounded text-sm font-bold hover:bg-green-50 disabled:opacity-50">
+              {whatsapping ? <Clock className="w-4 h-4 animate-spin" /> : <MessageCircle className="w-4 h-4" />}
               {t("whatsapp")}
             </button>
             <button onClick={handleShare} disabled={sharing}
@@ -314,9 +344,9 @@ export default function QuoteDetailClient({
               <Share2 className="w-4 h-4" />
               {t("shareWithCustomer")}
             </button>
-            <button onClick={handleDuplicate}
-              className="flex items-center gap-2 px-4 py-2 border border-gray-200 rounded text-sm font-bold hover:bg-gray-50">
-              <Copy className="w-4 h-4" />
+            <button onClick={handleDuplicate} disabled={duplicating}
+              className="flex items-center gap-2 px-4 py-2 border border-gray-200 rounded text-sm font-bold hover:bg-gray-50 disabled:opacity-50">
+              {duplicating ? <Clock className="w-4 h-4 animate-spin" /> : <Copy className="w-4 h-4" />}
               {t("duplicate")}
             </button>
             {(q.status === "draft" || q.status === "pending" || q.status === "revised" || me?.role !== "sales") && (
@@ -332,16 +362,16 @@ export default function QuoteDetailClient({
               </Link>
             )}
             {(q.status === "draft" || q.status === "revised") && (
-              <button onClick={() => updateStatus("pending")}
-                className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded text-sm font-bold hover:bg-blue-700">
-                <Send className="w-4 h-4" />
+              <button onClick={() => updateStatus("pending")} disabled={statusBusy}
+                className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded text-sm font-bold hover:bg-blue-700 disabled:opacity-50">
+                {statusBusy ? <Clock className="w-4 h-4 animate-spin" /> : <Send className="w-4 h-4" />}
                 {t("sendForReview")}
               </button>
             )}
             {selfApprove && me?.role === "sales" && (q.status === "draft" || q.status === "pending" || q.status === "revised") && (
-              <button onClick={() => updateStatus("approved")}
-                className="flex items-center gap-2 px-4 py-2 bg-green-600 text-white rounded text-sm font-bold hover:bg-green-700">
-                <CheckCircle className="w-4 h-4" />
+              <button onClick={() => updateStatus("approved")} disabled={statusBusy}
+                className="flex items-center gap-2 px-4 py-2 bg-green-600 text-white rounded text-sm font-bold hover:bg-green-700 disabled:opacity-50">
+                {statusBusy ? <Clock className="w-4 h-4 animate-spin" /> : <CheckCircle className="w-4 h-4" />}
                 {t("selfApproveBtn")}
               </button>
             )}
@@ -379,9 +409,9 @@ export default function QuoteDetailClient({
               </a>
             )}
             {!(q.invoice || q.payments.length > 0 || q.status === "accepted") && (
-              <button onClick={handleDelete}
-                className="flex items-center gap-2 px-4 py-2 border border-red-200 text-red-600 rounded text-sm font-bold hover:bg-red-50">
-                <Trash2 className="w-4 h-4" />
+              <button onClick={handleDelete} disabled={deleting}
+                className="flex items-center gap-2 px-4 py-2 border border-red-200 text-red-600 rounded text-sm font-bold hover:bg-red-50 disabled:opacity-50">
+                {deleting ? <Clock className="w-4 h-4 animate-spin" /> : <Trash2 className="w-4 h-4" />}
               </button>
             )}
           </div>
@@ -797,13 +827,14 @@ export default function QuoteDetailClient({
                 {t("cancel")}
               </button>
               <button onClick={confirmStatusAction}
-                disabled={showStatusDialog === "revised" && !statusComment.trim()}
+                disabled={statusBusy || (showStatusDialog === "revised" && !statusComment.trim())}
                 className={cn(
-                  "px-5 py-2 rounded text-sm font-bold text-white disabled:opacity-50",
+                  "flex items-center gap-2 px-5 py-2 rounded text-sm font-bold text-white disabled:opacity-50",
                   showStatusDialog === "approved" ? "bg-green-600 hover:bg-green-700" :
                   showStatusDialog === "revised" ? "bg-orange-500 hover:bg-orange-600" :
                   "bg-red-600 hover:bg-red-700"
                 )}>
+                {statusBusy && <Clock className="w-4 h-4 animate-spin" />}
                 {showStatusDialog === "approved" ? t("confirmApprove") :
                  showStatusDialog === "revised" ? t("returnForEdit") : t("confirmDecline")}
               </button>
