@@ -23,6 +23,7 @@ const ROLE_KEYS: Record<string, TranslationKey> = {
   sales: "roleSales",
   accountant: "roleAccountant",
   driver: "roleDriver",
+  photographer: "rolePhotographer",
 };
 
 const ROLE_COLORS: Record<string, string> = {
@@ -32,6 +33,7 @@ const ROLE_COLORS: Record<string, string> = {
   sales: "bg-green-100 text-green-700",
   accountant: "bg-amber-100 text-amber-700",
   driver: "bg-purple-100 text-purple-700",
+  photographer: "bg-teal-100 text-teal-700",
 };
 
 interface RoleDef { key: string; label: string; permissions: string[]; system?: boolean }

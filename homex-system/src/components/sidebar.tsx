@@ -22,6 +22,7 @@ import {
   CalendarClock,
   Wrench,
   LifeBuoy,
+  Camera,
   AlertTriangle,
   Trash2,
 } from "lucide-react";
@@ -36,6 +37,7 @@ const ROLE_KEYS: Record<string, TranslationKey> = {
   sales: "roleSales",
   accountant: "roleAccountant",
   driver: "roleDriver",
+  photographer: "rolePhotographer",
 };
 
 interface SidebarProps {
@@ -57,6 +59,7 @@ const allItems: Array<{ href: string; labelKey: TranslationKey; icon: any; perm?
   { href: "/delivery-schedule", labelKey: "deliverySchedule", icon: CalendarClock, perm: "work_orders" },
   { href: "/installation-schedule", labelKey: "installSchedule", icon: Wrench, perm: "work_orders" },
   { href: "/service-requests", labelKey: "serviceRequests", icon: LifeBuoy, perm: "work_orders" },
+  { href: "/photography", labelKey: "photography", icon: Camera, perm: "photography" },
   { href: "/reports", labelKey: "reports", icon: BarChart3, perm: "reports" },
   { href: "/employees", labelKey: "employees", icon: UsersRound, perm: "employees" },
   { href: "/categories", labelKey: "categories", icon: Layers, perm: "categories" },

@@ -23,6 +23,7 @@ import {
   Check,
   Filter,
   Package,
+  Camera,
 } from "lucide-react";
 
 interface WorkQuotation {
@@ -39,6 +40,7 @@ interface WorkQuotation {
   workNotes: string | null;
   woodStatus: string;
   fabricStatus: string;
+  photoStatus: string | null;
   customer: { name: string; phone: string; phoneCode: string; governorate: string; wilayat: string };
   employee: { name: string };
   items: Array<{ description: string; quantity: number; category: { nameAr: string; nameEn: string } }>;
@@ -206,6 +208,16 @@ export function WorkOrdersClient({ initialData }: { initialData: { quotations: W
     if (workStatus === "delivered") patch.hasRedAlert = false;
     updateLocal(id, patch);
     patchApi({ id, workStatus });
+  };
+
+  // Flag a finished (delivered/installed) job into the photographer's queue.
+  const handleMarkPhotographable = (id: string) => {
+    updateLocal(id, { photoStatus: "ready" });
+    fetch("/api/photography", {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ id, photoStatus: "ready" }),
+    }).catch(() => fetchData());
   };
 
   const handleAlertToggle = (id: string, field: "hasOrangeAlert" | "hasRedAlert", current: boolean) => {
@@ -571,6 +583,25 @@ export function WorkOrdersClient({ initialData }: { initialData: { quotations: W
                           <Check className="w-3.5 h-3.5" /> {t("markInstalled")}
                         </button>
                       </div>
+                    )}
+
+                    {/* Photography: once the job is delivered/installed a manager
+                        can flag it into the photographer's queue. */}
+                    {(q.workStatus === "delivered" || q.workStatus === "installed") && (
+                      !q.photoStatus ? (
+                        <button
+                          onClick={() => handleMarkPhotographable(q.id)}
+                          className="w-full flex items-center justify-center gap-2 px-4 py-2.5 rounded-lg bg-white dark:bg-gray-800 border border-teal-300 dark:border-teal-700 text-teal-700 dark:text-teal-300 hover:bg-teal-50 dark:hover:bg-teal-900/20 text-sm font-bold transition-colors"
+                        >
+                          <Camera className="w-4 h-4" />
+                          {t("markPhotographable")}
+                        </button>
+                      ) : (
+                        <div className="flex items-center gap-2 px-4 py-2.5 rounded-lg bg-teal-50 dark:bg-teal-900/20 border border-teal-200 dark:border-teal-800 text-sm font-bold text-teal-700 dark:text-teal-300">
+                          <Camera className="w-4 h-4" />
+                          {q.photoStatus === "done" ? t("photographedOn") : t("photographyTitle")}
+                        </div>
+                      )
                     )}
 
                     <div>

@@ -127,6 +127,15 @@ model Quotation {
   hasOrangeAlert Boolean  @default(false) @map("has_orange_alert")
   hasRedAlert    Boolean  @default(false) @map("has_red_alert")
   workNotes     String?   @map("work_notes")
+  // Photography track — parallel to delivery/installation. A manager flags a
+  // finished (delivered/installed) job "ready for photo", it appears in the
+  // photographer's queue with the same location/customer info, and the
+  // photographer confirms "photographed" (or sends it back for a re-shoot).
+  // null = not flagged · "ready" = in queue · "done" = photographed.
+  photoStatus   String?   @map("photo_status")
+  photographer  String?   @map("photographer")
+  photographedAt DateTime? @map("photographed_at")
+  photoNotes    String?   @map("photo_notes")
   woodStatus    String    @default("not_ordered") @map("wood_status")
   fabricStatus  String    @default("not_ordered") @map("fabric_status")
   // Soft delete: when set, the quotation is in the Trash (hidden everywhere)
@@ -156,6 +165,7 @@ model Quotation {
   // a salesperson's own quotations newest-first (employeeId + createdAt).
   @@index([workStatus, deliveryDate])
   @@index([workStatus, installDate])
+  @@index([photoStatus])
   @@index([status, createdAt])
   @@index([employeeId, createdAt])
   @@map("quotations")

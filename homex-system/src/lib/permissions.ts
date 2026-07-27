@@ -13,6 +13,7 @@ export const PERMISSIONS = [
   "invoices",        // issue invoices
   "edit_locked",     // edit a locked (signed / invoiced / paid) quotation
   "work_orders",     // work board, delivery & installation schedules, service
+  "photography",     // photography queue: shoot delivered/installed jobs
   "reports",         // reports & analytics
   "customers",       // manage customers
   "employees",       // manage employees & roles
@@ -30,7 +31,7 @@ export type Permission = (typeof PERMISSIONS)[number];
 // actions (approve/edit_locked) stay reserved for the built-in roles.
 export const ASSIGNABLE_PERMISSIONS: Permission[] = [
   "quotes", "quotes_create", "view_all_quotes", "customers",
-  "payments", "invoices", "work_orders", "reports",
+  "payments", "invoices", "work_orders", "photography", "reports",
 ];
 
 // Arabic labels for the role-management UI (kept here so the catalogue and its
@@ -44,6 +45,7 @@ export const PERMISSION_LABELS: Record<Permission, string> = {
   invoices: "إصدار الفواتير",
   edit_locked: "تعديل العروض المقفلة",
   work_orders: "أوامر العمل والتسليم والتركيب والصيانة",
+  photography: "التصوير (تصوير الأعمال المنجزة)",
   reports: "التقارير والإحصائيات",
   customers: "إدارة العملاء",
   employees: "إدارة الموظفين والرتب",
@@ -72,7 +74,7 @@ export const SYSTEM_ROLES: RoleDef[] = [
     key: "manager",
     label: "مشرف",
     system: true,
-    permissions: ["quotes", "quotes_create", "view_all_quotes", "approve", "payments", "invoices", "edit_locked", "work_orders", "reports", "customers", "trash"],
+    permissions: ["quotes", "quotes_create", "view_all_quotes", "approve", "payments", "invoices", "edit_locked", "work_orders", "photography", "reports", "customers", "trash"],
   },
   { key: "sales", label: "مبيعات", system: true, permissions: ["quotes", "quotes_create", "customers", "payments"] },
   // Accountant: sees every quotation + customers + reports, records payments and
@@ -80,6 +82,8 @@ export const SYSTEM_ROLES: RoleDef[] = [
   { key: "accountant", label: "محاسب", system: true, permissions: ["quotes", "view_all_quotes", "customers", "payments", "invoices", "reports"] },
   // Driver: only the delivery / installation / work board / service.
   { key: "driver", label: "سائق", system: true, permissions: ["work_orders"] },
+  // Photographer: only the photography queue (shoot delivered/installed jobs).
+  { key: "photographer", label: "مصوّر", system: true, permissions: ["photography"] },
 ];
 
 // Custom roles are stored as JSON in the settings table (no schema change).
