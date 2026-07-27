@@ -22,6 +22,7 @@ interface Profile {
 export default function ProfilePage() {
   const [profile, setProfile] = useState<Profile | null>(null);
   const [phone, setPhone] = useState("");
+  const [phoneCode, setPhoneCode] = useState("+968");
   const [savingPhone, setSavingPhone] = useState(false);
   const [phoneSaved, setPhoneSaved] = useState(false);
 
@@ -40,6 +41,7 @@ export default function ProfilePage() {
       .then((data) => {
         setProfile(data);
         setPhone(data.phone || "");
+        setPhoneCode(data.phoneCode || "+968");
       });
   }, []);
 
@@ -48,7 +50,7 @@ export default function ProfilePage() {
     await fetch("/api/profile", {
       method: "PUT",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ phone }),
+      body: JSON.stringify({ phone, phoneCode }),
     });
     setSavingPhone(false);
     setPhoneSaved(true);
@@ -139,12 +141,22 @@ export default function ProfilePage() {
                 {t("phoneNumber")}
               </label>
               <div className="flex gap-2">
+                <select
+                  value={phoneCode}
+                  onChange={(e) => { setPhoneCode(e.target.value); setPhoneSaved(false); }}
+                  className="field w-24 shrink-0 font-mono-en"
+                >
+                  <option value="+968">+968</option>
+                  <option value="+971">+971</option>
+                  <option value="+966">+966</option>
+                </select>
                 <input
                   type="tel"
                   value={phone}
-                  onChange={(e) => { setPhone(e.target.value); setPhoneSaved(false); }}
+                  onChange={(e) => { setPhone(e.target.value.replace(/\D/g, "").slice(0, 8)); setPhoneSaved(false); }}
+                  maxLength={8}
                   className="field flex-1 min-w-0 font-mono-en"
-                  placeholder="+968 XXXXXXXX"
+                  placeholder="9XXXXXXX"
                 />
                 <button
                   onClick={handleSavePhone}

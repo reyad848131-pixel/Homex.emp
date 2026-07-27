@@ -12,7 +12,7 @@ export async function GET() {
     const user = session.user as any;
     const employee = await prisma.employee.findUnique({
       where: { id: user.id },
-      select: { id: true, name: true, civilId: true, phone: true, role: true, createdAt: true },
+      select: { id: true, name: true, civilId: true, phone: true, phoneCode: true, role: true, createdAt: true },
     });
 
     return NextResponse.json(employee);
@@ -54,7 +54,10 @@ export async function PUT(req: NextRequest) {
     if (body.phone !== undefined) {
       await prisma.employee.update({
         where: { id: user.id },
-        data: { phone: body.phone },
+        data: {
+          phone: body.phone,
+          ...(typeof body.phoneCode === "string" && body.phoneCode ? { phoneCode: body.phoneCode } : {}),
+        },
       });
       return NextResponse.json({ success: true });
     }
