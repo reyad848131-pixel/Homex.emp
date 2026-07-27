@@ -702,6 +702,7 @@ const translations = {
   // Kitchen unit types
   unit3Label: { ar: "3 Unit — ارتفاع 3م", en: "3 Unit — Height 3m" },
   unit2Label: { ar: "2 Unit — ارتفاع 2.6م", en: "2 Unit — Height 2.6m" },
+  unit1Label: { ar: "1 Unit — وحدة واحدة", en: "1 Unit" },
 
   // Cladding types
   chipboardAlt: { ar: "بديل التشيبورد", en: "Chipboard Alternative" },

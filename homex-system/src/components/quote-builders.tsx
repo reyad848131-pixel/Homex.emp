@@ -122,12 +122,12 @@ export function getKitchenBasePrice(governorate: string, wilayat: string): numbe
 function KitchenBuilder({ config, governorate, wilayat, onUpdate, initial }: { config: any; governorate: string; wilayat: string; onUpdate: BuilderUpdate; initial?: BuilderInitial }) {
   const { t } = useI18n();
   const [length, setLength] = useState(initial?.length ?? 4);
-  const [unitType, setUnitType] = useState<"2unit" | "3unit">(initial?.unitType ?? "2unit");
+  const [unitType, setUnitType] = useState<"1unit" | "2unit" | "3unit">(initial?.unitType ?? "2unit");
   const [island, setIsland] = useState<"none" | "small" | "large">(initial?.island ?? "none");
   const [manualBase, setManualBase] = useState(initial?.manualBase ?? 130);
 
   const PORCELAIN_PRICE = config?.porcelainSurcharge || 55;
-  const unitMultiplier = unitType === "3unit" ? 3 : 2;
+  const unitMultiplier = unitType === "3unit" ? 3 : unitType === "1unit" ? 1 : 2;
   const autoBase = getKitchenBasePrice(governorate, wilayat);
   const isManual = autoBase === null;
   const basePrice = isManual ? manualBase : autoBase;
@@ -139,7 +139,7 @@ function KitchenBuilder({ config, governorate, wilayat, onUpdate, initial }: { c
   useEffect(() => {
     const price = area * pricePerSqm;
     const extras = island !== "none" ? ISLAND_PRICES[island] : 0;
-    const unitLabel = unitType === "3unit" ? t("unit3Label") : t("unit2Label");
+    const unitLabel = unitType === "3unit" ? t("unit3Label") : unitType === "1unit" ? t("unit1Label") : t("unit2Label");
     const desc = `مطبخ MDF - ${unitLabel} - ${length}م`;
     onUpdate(desc, price, extras, { length, unitType, island, manualBase });
   }, [length, unitType, island, basePrice, config, onUpdate]);
@@ -169,7 +169,7 @@ function KitchenBuilder({ config, governorate, wilayat, onUpdate, initial }: { c
       <div>
         <label className="block text-sm font-semibold text-gray-600 mb-2">{t("unitTypeKitchen")}</label>
         <div className="flex gap-2">
-          {([["2unit", t("unit2Label")], ["3unit", t("unit3Label")]] as const).map(([k, l]) => (
+          {([["1unit", t("unit1Label")], ["2unit", t("unit2Label")], ["3unit", t("unit3Label")]] as const).map(([k, l]) => (
             <button key={k} onClick={() => setUnitType(k)}
               className={cn("flex-1 py-2.5 rounded text-sm font-bold border transition-colors",
                 unitType === k ? "bg-gray-900 text-white border-gray-900" : "bg-white border-gray-200 text-gray-600")}>
