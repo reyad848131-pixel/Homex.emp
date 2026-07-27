@@ -59,8 +59,12 @@ export default function EmployeesPage() {
       .then((d) => { setRoles(d.roles || []); setPermCatalog(d.permissions || []); })
       .catch(() => {});
 
+  // System roles are translated via ROLE_KEYS (so they follow the app language);
+  // custom roles fall back to their stored label.
   const roleLabel = (key: string) =>
-    roles.find((r) => r.key === key)?.label || (ROLE_KEYS[key] ? t(ROLE_KEYS[key]) : key);
+    ROLE_KEYS[key] ? t(ROLE_KEYS[key]) : (roles.find((r) => r.key === key)?.label || key);
+  const roleName = (r: { key: string; label: string }) =>
+    ROLE_KEYS[r.key] ? t(ROLE_KEYS[r.key]) : r.label;
 
   const saveRole = async () => {
     if (!roleForm) return;
@@ -285,7 +289,7 @@ export default function EmployeesPage() {
               <div key={r.key} className="flex items-center justify-between gap-3 border border-gray-100 dark:border-gray-700 rounded-lg px-3 py-2.5">
                 <div className="min-w-0">
                   <div className="flex items-center gap-2">
-                    <span className={cn("text-xs font-bold px-2 py-0.5 rounded-full", ROLE_COLORS[r.key] || "bg-gray-100 text-gray-600")}>{r.label}</span>
+                    <span className={cn("text-xs font-bold px-2 py-0.5 rounded-full", ROLE_COLORS[r.key] || "bg-gray-100 text-gray-600")}>{roleName(r)}</span>
                     {r.system
                       ? <span className="text-[10px] text-gray-400 font-semibold">{t("systemRole")}</span>
                       : <span className="text-[10px] text-emerald-600 font-semibold">{t("customRole")}</span>}
@@ -345,7 +349,7 @@ export default function EmployeesPage() {
               <select value={form.role} onChange={(e) => setForm({ ...form, role: e.target.value })}
                 className="field">
                 {roles.map((r) => (
-                  <option key={r.key} value={r.key}>{r.label}</option>
+                  <option key={r.key} value={r.key}>{roleName(r)}</option>
                 ))}
               </select>
             </div>
