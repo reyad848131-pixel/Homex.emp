@@ -3,7 +3,7 @@ import { getAuth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { logAction } from "@/lib/audit";
 import {
-  parseWorkbook, mapRow, DEFAULT_MAPPING, IMPORT_FIELDS,
+  parseWorkbook, mapRow, autoMapHeaders, IMPORT_FIELDS,
   type ImportField, type MappedRow,
 } from "@/lib/import";
 import { VALID_WORK_STATUSES } from "@/lib/types";
@@ -18,6 +18,7 @@ interface Payload {
   statusMap?: Record<string, string>; // raw work-status text → system work status
   years?: number[] | null;            // only import rows whose delivery year is in this set (null/empty = all)
   defaultWorkStatus?: string;          // fallback when a raw status isn't mapped
+  headerRow?: number;                  // 1-based header row (auto-detected when omitted)
 }
 
 const DELIVERED = "delivered";
@@ -53,9 +54,11 @@ export async function POST(req: NextRequest) {
     const payload: Payload = JSON.parse((form.get("payload") as string) || "{}");
     if (!file) return NextResponse.json({ error: "No file" }, { status: 400 });
 
-    const mapping = { ...DEFAULT_MAPPING, ...(payload.mapping || {}) } as Record<ImportField, string>;
     const buffer = Buffer.from(await file.arrayBuffer());
-    const { headers, rows } = await parseWorkbook(buffer);
+    const { headers, rows, headerRow } = await parseWorkbook(buffer, payload.headerRow);
+    // Auto-map by header name, then let any explicit user overrides win. An
+    // override to "" (—) clears an auto-mapped field.
+    const mapping = { ...autoMapHeaders(headers), ...(payload.mapping || {}) } as Record<ImportField, string>;
 
     const mapped = rows.map((r, i) => mapRow(r, i + 2, mapping)); // +2: header is row 1
     const years = (payload.years || []).filter((y) => Number.isFinite(y));
@@ -111,6 +114,8 @@ export async function POST(req: NextRequest) {
       const noDateRows = mapped.filter((m) => !m.deliveryDate).length;
       return NextResponse.json({
         headers,
+        headerRow,
+        mapping,
         totalRows: mapped.length,
         yearRows: inYear.length,
         validCount: valid.length,

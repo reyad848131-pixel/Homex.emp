@@ -39,35 +39,105 @@ export const DEFAULT_MAPPING: Record<ImportField, string> = {
 export interface ParsedSheet {
   headers: string[];
   rows: Record<string, string>[];
+  headerRow: number; // 1-based row where headers were found
 }
 
-// Read the first worksheet of an .xlsx buffer into headers + string rows.
-export async function parseWorkbook(buffer: Buffer): Promise<ParsedSheet> {
+// Normalize a header for fuzzy matching: lowercase, keep only a-z0-9.
+function norm(s: string): string {
+  return (s || "").toLowerCase().replace(/[^a-z0-9]/g, "");
+}
+
+// Keywords (normalized) that identify each target field in a header cell.
+const FIELD_SYNONYMS: Record<ImportField, string[]> = {
+  orderNumber: ["advancebillno", "billno", "orderno", "ordernumber", "advbill", "quoteno", "invoiceno"],
+  name: ["name", "customername", "customer", "clientname", "client"],
+  phone: ["phone", "mobile", "contactno", "contact", "whatsapp", "tel", "phoneno"],
+  place: ["place", "area", "wilayat", "wilaya", "governorate", "location", "region", "city", "address"],
+  total: ["totalprice", "total", "grandtotal", "amount", "price", "netamount"],
+  advance: ["advance", "advancepaid", "paid", "deposit", "downpayment"],
+  deliveryDate: ["deliverydate", "promiseddate", "duedate", "targetdate", "deliverydt"],
+  deliveredOn: ["deldate", "delivereddate", "actualdelivery", "deliveredon", "deliverdate"],
+  workStatus: ["workstatus", "orderstatus", "jobstatus", "status"],
+  description: ["melboard", "description", "details", "item", "items", "product", "desc", "particulars"],
+  remarks: ["remarks", "notes", "note", "comment", "comments"],
+};
+
+// Build a best-effort field→header mapping from the detected headers.
+export function autoMapHeaders(headers: string[]): Record<ImportField, string> {
+  const normed = headers.map((h) => ({ raw: h, n: norm(h) }));
+  const used = new Set<string>();
+  const out = {} as Record<ImportField, string>;
+  for (const field of IMPORT_FIELDS) {
+    const syns = FIELD_SYNONYMS[field];
+    let best = "";
+    let bestScore = 0;
+    for (const h of normed) {
+      if (!h.n || used.has(h.raw)) continue;
+      for (const s of syns) {
+        // Exact match is strongest, then "contains".
+        const score = h.n === s ? 100 + s.length : h.n.includes(s) ? 10 + s.length : 0;
+        if (score > bestScore) { bestScore = score; best = h.raw; }
+      }
+    }
+    if (best) { out[field] = best; used.add(best); } else { out[field] = ""; }
+  }
+  return out;
+}
+
+// Score a row's cells by how many look like known headers — used to locate the
+// real header row when the sheet has a title/blank rows above it.
+function headerScore(cells: string[]): number {
+  const allSyns = Object.values(FIELD_SYNONYMS).flat();
+  let score = 0;
+  for (const c of cells) {
+    const n = norm(c);
+    if (!n) continue;
+    if (allSyns.some((s) => n === s || n.includes(s))) score++;
+  }
+  return score;
+}
+
+// Read the first worksheet into headers + string rows. The header row is
+// auto-detected (scanning the first rows) unless headerRowOverride is given.
+export async function parseWorkbook(buffer: Buffer, headerRowOverride?: number): Promise<ParsedSheet> {
   const wb = new ExcelJS.Workbook();
   await wb.xlsx.load(buffer as any);
   const ws = wb.worksheets[0];
-  if (!ws) return { headers: [], rows: [] };
+  if (!ws) return { headers: [], rows: [], headerRow: 1 };
 
-  const headers: string[] = [];
-  const headerRow = ws.getRow(1);
-  headerRow.eachCell({ includeEmpty: true }, (cell, col) => {
-    headers[col - 1] = cellText(cell.value).trim();
-  });
+  const readCells = (r: number): string[] => {
+    const row = ws.getRow(r);
+    const cells: string[] = [];
+    row.eachCell({ includeEmpty: true }, (cell, col) => { cells[col - 1] = cellText(cell.value).trim(); });
+    return cells;
+  };
+
+  let headerRow = headerRowOverride && headerRowOverride > 0 ? headerRowOverride : 1;
+  if (!headerRowOverride) {
+    let bestScore = -1;
+    const limit = Math.min(ws.rowCount, 20);
+    for (let r = 1; r <= limit; r++) {
+      const score = headerScore(readCells(r));
+      if (score > bestScore) { bestScore = score; headerRow = r; }
+    }
+  }
+
+  const headers = readCells(headerRow);
 
   const rows: Record<string, string>[] = [];
-  for (let r = 2; r <= ws.rowCount; r++) {
-    const row = ws.getRow(r);
+  for (let r = headerRow + 1; r <= ws.rowCount; r++) {
+    const cells = readCells(r);
     const obj: Record<string, string> = {};
     let any = false;
     for (let c = 0; c < headers.length; c++) {
       const key = headers[c] || `col${c + 1}`;
-      const v = cellText(row.getCell(c + 1).value).trim();
+      const v = cells[c] || "";
       obj[key] = v;
       if (v) any = true;
     }
     if (any) rows.push(obj);
   }
-  return { headers: headers.filter(Boolean), rows };
+  return { headers: headers.filter(Boolean), rows, headerRow };
 }
 
 function cellText(value: ExcelJS.CellValue): string {

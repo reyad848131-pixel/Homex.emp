@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { parseSheetDate, parseMoney, mapRow, DEFAULT_MAPPING } from "./import";
+import { parseSheetDate, parseMoney, mapRow, DEFAULT_MAPPING, autoMapHeaders } from "./import";
 
 const iso = (d: Date | null) => (d ? d.toISOString() : null);
 
@@ -52,6 +52,35 @@ describe("parseMoney", () => {
     expect(parseMoney("1,125.500")).toBe(1125.5);
     expect(parseMoney("")).toBe(0);
     expect(parseMoney("Nill")).toBe(0);
+  });
+});
+
+describe("autoMapHeaders — the real sheet headers", () => {
+  const HEADERS = [
+    "S.No.", "Name", "Delivery date", "Phone", "Place", "Booking Date",
+    "Melboard", "Melboard Count", "PVC Colours", "Fabrics", "Total Price",
+    "Advance", "Balance", "Advance Bill No.", "Delivery Bill No.",
+    "Work Status", "del.date", "Payment Status", "Remarks",
+  ];
+  it("matches each field to the right column", () => {
+    const m = autoMapHeaders(HEADERS);
+    expect(m.name).toBe("Name");
+    expect(m.phone).toBe("Phone");
+    expect(m.place).toBe("Place");
+    expect(m.total).toBe("Total Price");
+    expect(m.advance).toBe("Advance");
+    expect(m.deliveryDate).toBe("Delivery date");
+    expect(m.deliveredOn).toBe("del.date");
+    expect(m.workStatus).toBe("Work Status"); // not "Payment Status"
+    expect(m.orderNumber).toBe("Advance Bill No.");
+  });
+  it("is tolerant of case and spacing differences", () => {
+    const m = autoMapHeaders(["CUSTOMER NAME", "Mobile No", "Total", "Delivery Date", "Status"]);
+    expect(m.name).toBe("CUSTOMER NAME");
+    expect(m.phone).toBe("Mobile No");
+    expect(m.total).toBe("Total");
+    expect(m.deliveryDate).toBe("Delivery Date");
+    expect(m.workStatus).toBe("Status");
   });
 });
 

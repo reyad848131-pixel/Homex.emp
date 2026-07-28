@@ -20,12 +20,6 @@ const FIELDS: Array<{ key: string; label: string; hint?: string }> = [
   { key: "remarks", label: "ملاحظات" },
 ];
 
-const DEFAULT_MAPPING: Record<string, string> = {
-  orderNumber: "Advance Bill No.", name: "Name", phone: "Phone", place: "Place",
-  total: "Total Price", advance: "Advance", deliveryDate: "Delivery date",
-  deliveredOn: "del.date", workStatus: "Work Status", description: "Melboard", remarks: "Remarks",
-};
-
 const WORK_STATUS_OPTIONS = Object.entries(WORK_STATUS_MAP).map(([key, v]) => ({ key, label: v.label }));
 
 interface PreviewResult {
@@ -35,6 +29,8 @@ interface PreviewResult {
   validCount: number;
   errorCount: number;
   noDateRows: number;
+  headerRow: number;
+  mapping: Record<string, string>;
   distinctStatuses: Array<{ raw: string; count: number }>;
   fileDuplicates: string[];
   sample: Array<{
@@ -54,7 +50,8 @@ export default function ImportPage() {
   const fileRef = useRef<HTMLInputElement>(null);
   const [file, setFile] = useState<File | null>(null);
   const [headers, setHeaders] = useState<string[]>([]);
-  const [mapping, setMapping] = useState<Record<string, string>>(DEFAULT_MAPPING);
+  const [mapping, setMapping] = useState<Record<string, string>>({});
+  const [headerRow, setHeaderRow] = useState<number>(1);
   // Comma/space separated years to include (empty = all years).
   const [yearsInput, setYearsInput] = useState("2025, 2026");
   const [statusMap, setStatusMap] = useState<Record<string, string>>({});
@@ -70,18 +67,22 @@ export default function ImportPage() {
   }, []);
   useEffect(() => { loadBatches(); }, [loadBatches]);
 
-  const runPreview = useCallback(async (f: File, map: Record<string, string>, years: number[], sMap: Record<string, string>, dws: string) => {
+  const runPreview = useCallback(async (f: File, map: Record<string, string>, years: number[], sMap: Record<string, string>, dws: string, hRow?: number) => {
     setLoading(true);
     setResult(null);
     const fd = new FormData();
     fd.append("file", f);
-    fd.append("payload", JSON.stringify({ action: "preview", mapping: map, years, statusMap: sMap, defaultWorkStatus: dws }));
+    fd.append("payload", JSON.stringify({ action: "preview", mapping: map, years, statusMap: sMap, defaultWorkStatus: dws, headerRow: hRow }));
     try {
       const res = await fetch("/api/import", { method: "POST", body: fd });
       const data = await res.json();
       if (!res.ok) { toast.error(data.error || "فشل التحليل"); return; }
       setPreview(data);
       setHeaders(data.headers || []);
+      // Adopt the server's detected header row and effective (auto) mapping so
+      // the dropdowns reflect what was matched.
+      if (typeof data.headerRow === "number") setHeaderRow(data.headerRow);
+      if (data.mapping) setMapping(data.mapping);
       // Seed status mapping for any new raw statuses (smart defaults).
       setStatusMap((prev) => {
         const next = { ...prev };
@@ -109,10 +110,12 @@ export default function ImportPage() {
     setFile(f);
     setPreview(null);
     setResult(null);
-    if (f) runPreview(f, mapping, parseYears(yearsInput), {}, defaultWorkStatus);
+    setMapping({});
+    // First pass: let the server auto-detect the header row + mapping.
+    if (f) runPreview(f, {}, parseYears(yearsInput), {}, defaultWorkStatus, undefined);
   };
 
-  const reprocess = () => { if (file) runPreview(file, mapping, parseYears(yearsInput), statusMap, defaultWorkStatus); };
+  const reprocess = () => { if (file) runPreview(file, mapping, parseYears(yearsInput), statusMap, defaultWorkStatus, headerRow); };
 
   const commit = async () => {
     if (!file || !preview) return;
@@ -120,7 +123,7 @@ export default function ImportPage() {
     setCommitting(true);
     const fd = new FormData();
     fd.append("file", file);
-    fd.append("payload", JSON.stringify({ action: "commit", mapping, years: parseYears(yearsInput), statusMap, defaultWorkStatus }));
+    fd.append("payload", JSON.stringify({ action: "commit", mapping, years: parseYears(yearsInput), statusMap, defaultWorkStatus, headerRow }));
     try {
       const res = await fetch("/api/import", { method: "POST", body: fd });
       const data = await res.json();
@@ -209,7 +212,18 @@ export default function ImportPage() {
 
           {/* Column mapping */}
           <div className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl p-5 mb-5">
-            <h2 className="font-bold mb-3">ربط الأعمدة</h2>
+            <div className="flex items-center justify-between gap-3 flex-wrap mb-3">
+              <h2 className="font-bold">ربط الأعمدة</h2>
+              <div className="flex items-center gap-2">
+                <label className="text-xs font-semibold text-gray-500">صف العناوين:</label>
+                <input type="number" min={1} value={headerRow}
+                  onChange={(e) => setHeaderRow(Math.max(1, +e.target.value || 1))} onBlur={reprocess}
+                  className="field w-20 h-9 font-mono-en text-xs" />
+              </div>
+            </div>
+            {headers.length > 0 && (
+              <p className="text-xs text-gray-400 mb-3">الأعمدة المكتشفة: <span className="font-mono-en">{headers.join(" · ")}</span></p>
+            )}
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
               {FIELDS.map((f) => (
                 <div key={f.key}>
