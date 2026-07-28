@@ -1,7 +1,9 @@
 import { NextRequest, NextResponse } from "next/server";
+import bcrypt from "bcryptjs";
 import { getAuth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { logAction } from "@/lib/audit";
+import { getSetting } from "@/lib/settings";
 import {
   parseWorkbook, mapRow, autoMapHeaders, guessWorkStatus, IMPORT_FIELDS,
   type ImportField, type MappedRow,
@@ -10,6 +12,18 @@ import { VALID_WORK_STATUSES } from "@/lib/types";
 
 function adminOnly(user: any) {
   return user?.role === "admin" || user?.role === "ceo";
+}
+
+// If a private import passcode has been set, every import operation requires it
+// (sent in the x-import-passcode header) — regardless of role. Returns null when
+// allowed, or a NextResponse when blocked.
+async function checkPasscode(req: NextRequest): Promise<NextResponse | null> {
+  const hash = await getSetting("import_passcode", "");
+  if (!hash) return null; // no passcode configured → not gated
+  const provided = req.headers.get("x-import-passcode") || "";
+  const ok = provided && (await bcrypt.compare(provided, hash));
+  if (!ok) return NextResponse.json({ error: "كلمة سر الاستيراد مطلوبة", code: "passcode" }, { status: 403 });
+  return null;
 }
 
 interface Payload {
@@ -26,12 +40,13 @@ interface Payload {
 
 const DELIVERED = "delivered";
 
-export async function GET() {
+export async function GET(req: NextRequest) {
   // List recent import batches so the UI can offer an "undo".
   try {
     const session = await getAuth();
     if (!session) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     if (!adminOnly(session.user)) return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+    const gate = await checkPasscode(req); if (gate) return gate;
 
     const rows = (await prisma.$queryRaw`
       SELECT import_batch AS batch, COUNT(*)::int AS count, MIN(created_at) AS at
@@ -51,6 +66,7 @@ export async function POST(req: NextRequest) {
     if (!session) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     const user = session.user as any;
     if (!adminOnly(user)) return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+    const gate = await checkPasscode(req); if (gate) return gate;
 
     const form = await req.formData();
     const file = form.get("file") as File | null;
@@ -252,6 +268,7 @@ export async function DELETE(req: NextRequest) {
     if (!session) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     const user = session.user as any;
     if (!adminOnly(user)) return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+    const gate = await checkPasscode(req); if (gate) return gate;
 
     const batch = new URL(req.url).searchParams.get("batch");
     if (!batch) return NextResponse.json({ error: "Missing batch" }, { status: 400 });

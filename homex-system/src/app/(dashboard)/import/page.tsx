@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect, useCallback, useRef } from "react";
-import { Upload, FileSpreadsheet, Check, AlertTriangle, RotateCcw, Loader2, ArrowRight } from "lucide-react";
+import { Upload, FileSpreadsheet, Check, AlertTriangle, RotateCcw, Loader2, ArrowRight, Lock } from "lucide-react";
 import { WORK_STATUS_MAP } from "@/lib/types";
 import { useToast } from "@/components/toast";
 
@@ -71,10 +71,65 @@ export default function ImportPage() {
   const [result, setResult] = useState<{ created: number; skippedCount: number; reasonCounts?: Record<string, number>; skipped?: Array<{ row: number; order: string; reason: string }> } | null>(null);
   const [batches, setBatches] = useState<Array<{ batch: string; count: number; at: string }>>([]);
 
+  // Private import passcode (independent of roles). While a passcode is set the
+  // page stays locked until it's entered; the verified value is sent with every
+  // import request.
+  const [passSet, setPassSet] = useState<boolean | null>(null);
+  const [unlocked, setUnlocked] = useState(false);
+  const [pass, setPass] = useState("");        // verified passcode kept for headers
+  const [passInput, setPassInput] = useState("");
+  const [passBusy, setPassBusy] = useState(false);
+  const [showSetPass, setShowSetPass] = useState(false);
+  const [newPass, setNewPass] = useState("");
+  const [curPass, setCurPass] = useState("");
+
+  const ihdr = useCallback((): Record<string, string> => (pass ? { "x-import-passcode": pass } : {}), [pass]);
+
   const loadBatches = useCallback(() => {
-    fetch("/api/import").then((r) => (r.ok ? r.json() : { batches: [] })).then((d) => setBatches(d.batches || [])).catch(() => {});
+    fetch("/api/import", { headers: ihdr() }).then((r) => (r.ok ? r.json() : { batches: [] })).then((d) => setBatches(d.batches || [])).catch(() => {});
+  }, [ihdr]);
+
+  // On mount: is a passcode configured? If not, the page is open; if yes, lock.
+  useEffect(() => {
+    fetch("/api/import/passcode").then((r) => (r.ok ? r.json() : { isSet: false })).then((d) => {
+      setPassSet(!!d.isSet);
+      if (!d.isSet) { setUnlocked(true); }
+    }).catch(() => { setPassSet(false); setUnlocked(true); });
   }, []);
-  useEffect(() => { loadBatches(); }, [loadBatches]);
+
+  useEffect(() => { if (unlocked) loadBatches(); }, [unlocked, loadBatches]);
+
+  const unlock = async () => {
+    if (!passInput) return;
+    setPassBusy(true);
+    try {
+      const res = await fetch("/api/import/passcode", {
+        method: "POST", headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ action: "verify", passcode: passInput }),
+      });
+      const data = await res.json();
+      if (data.ok) { setPass(passInput); setPassInput(""); setUnlocked(true); }
+      else toast.error("كلمة السر غير صحيحة");
+    } catch { toast.error("تعذّر التحقق"); }
+    finally { setPassBusy(false); }
+  };
+
+  const savePasscode = async () => {
+    if (newPass.length < 4) { toast.error("كلمة السر قصيرة (4 أحرف على الأقل)"); return; }
+    setPassBusy(true);
+    try {
+      const res = await fetch("/api/import/passcode", {
+        method: "POST", headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ action: "set", newPasscode: newPass, currentPasscode: curPass }),
+      });
+      const data = await res.json();
+      if (!res.ok) { toast.error(data.error || "فشل الحفظ"); return; }
+      toast.success("تم حفظ كلمة سر الاستيراد");
+      setPass(newPass); setPassSet(true); setUnlocked(true);
+      setShowSetPass(false); setNewPass(""); setCurPass("");
+    } catch { toast.error("تعذّر الحفظ"); }
+    finally { setPassBusy(false); }
+  };
 
   const runPreview = useCallback(async (f: File, map: Record<string, string>, years: number[], sMap: Record<string, string>, dws: string, hRow?: number, undated?: boolean, uStatus?: string) => {
     setLoading(true);
@@ -83,7 +138,7 @@ export default function ImportPage() {
     fd.append("file", f);
     fd.append("payload", JSON.stringify({ action: "preview", mapping: map, years, statusMap: sMap, defaultWorkStatus: dws, headerRow: hRow, includeUndated: !!undated, undatedStatus: uStatus }));
     try {
-      const res = await fetch("/api/import", { method: "POST", body: fd });
+      const res = await fetch("/api/import", { method: "POST", body: fd, headers: ihdr() });
       const data = await res.json();
       if (!res.ok) { toast.error(data.error || "فشل التحليل"); return; }
       setPreview(data);
@@ -99,7 +154,7 @@ export default function ImportPage() {
     } finally {
       setLoading(false);
     }
-  }, [toast]);
+  }, [toast, ihdr]);
 
   const parseYears = (s: string): number[] =>
     Array.from(new Set((s.match(/\d{4}/g) || []).map(Number)));
@@ -123,7 +178,7 @@ export default function ImportPage() {
     fd.append("file", file);
     fd.append("payload", JSON.stringify({ action: "commit", mapping, years: parseYears(yearsInput), statusMap, defaultWorkStatus, headerRow, includeUndated, undatedStatus, editableDraft }));
     try {
-      const res = await fetch("/api/import", { method: "POST", body: fd });
+      const res = await fetch("/api/import", { method: "POST", body: fd, headers: ihdr() });
       const data = await res.json();
       if (!res.ok) { toast.error(data.error || "فشل الاستيراد"); return; }
       setResult({ created: data.created, skippedCount: data.skippedCount, reasonCounts: data.reasonCounts, skipped: data.skipped });
@@ -142,7 +197,7 @@ export default function ImportPage() {
   const undo = async (batch: string) => {
     if (!confirm("حذف كل طلبات وعملاء هذه الدفعة نهائياً؟")) return;
     try {
-      const res = await fetch(`/api/import?batch=${encodeURIComponent(batch)}`, { method: "DELETE" });
+      const res = await fetch(`/api/import?batch=${encodeURIComponent(batch)}`, { method: "DELETE", headers: ihdr() });
       const data = await res.json();
       if (!res.ok) { toast.error(data.error || "فشل التراجع"); return; }
       toast.success(`تم حذف ${data.quotations} طلب`);
@@ -154,12 +209,67 @@ export default function ImportPage() {
 
   const fmtCur = (n: number) => `${n.toFixed(3)}`;
 
+  // Passcode gate: while a passcode is set, nothing shows until it's entered.
+  if (passSet === null) return <div className="text-center py-20 text-gray-400">...</div>;
+  if (passSet && !unlocked) {
+    return (
+      <div className="max-w-sm mx-auto mt-16 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl p-6 text-center">
+        <Lock className="w-10 h-10 mx-auto mb-3 text-gray-400" />
+        <h1 className="text-lg font-bold mb-1">الاستيراد محمي بكلمة سر</h1>
+        <p className="text-sm text-gray-500 mb-4">أدخل كلمة السر الخاصة للوصول إلى الاستيراد.</p>
+        <input type="password" value={passInput} onChange={(e) => setPassInput(e.target.value)}
+          onKeyDown={(e) => { if (e.key === "Enter") unlock(); }} autoFocus
+          className="field text-center tracking-widest mb-3" placeholder="••••••" />
+        <button onClick={unlock} disabled={passBusy || !passInput}
+          className="w-full inline-flex items-center justify-center gap-2 h-11 rounded-lg bg-gray-900 dark:bg-white dark:text-gray-900 text-white text-sm font-bold disabled:opacity-50">
+          {passBusy ? <Loader2 className="w-4 h-4 animate-spin" /> : <Lock className="w-4 h-4" />} فتح
+        </button>
+      </div>
+    );
+  }
+
   return (
     <div className="max-w-5xl">
-      <div className="mb-6">
-        <h1 className="text-2xl font-bold flex items-center gap-2"><FileSpreadsheet className="w-6 h-6" /> استيراد من إكسل</h1>
-        <p className="text-sm text-gray-500 mt-1">استورد جدول التوصيل القديم إلى إدارة الأعمال — مع معاينة قبل الحفظ وإمكانية التراجع.</p>
+      <div className="flex items-start justify-between gap-3 mb-6">
+        <div>
+          <h1 className="text-2xl font-bold flex items-center gap-2"><FileSpreadsheet className="w-6 h-6" /> استيراد من إكسل</h1>
+          <p className="text-sm text-gray-500 mt-1">استورد جدول التوصيل القديم إلى إدارة الأعمال — مع معاينة قبل الحفظ وإمكانية التراجع.</p>
+        </div>
+        <button onClick={() => setShowSetPass(true)}
+          className="shrink-0 inline-flex items-center gap-1.5 px-3 h-9 rounded-lg border border-gray-200 dark:border-gray-700 text-xs font-bold text-gray-600 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700">
+          <Lock className="w-3.5 h-3.5" /> {passSet ? "تغيير كلمة السر" : "حماية بكلمة سر"}
+        </button>
       </div>
+
+      {!passSet && (
+        <div className="flex items-start gap-2 bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 rounded-xl p-4 mb-5 text-sm">
+          <AlertTriangle className="w-4 h-4 text-amber-600 shrink-0 mt-0.5" />
+          <p className="text-amber-800 dark:text-amber-200">
+            الاستيراد غير محمي حالياً. اضغط <b>«حماية بكلمة سر»</b> لتعيين كلمة سر خاصة فيك — بعدها لن يقدر أحد (حتى المدراء) على فتح الاستيراد أو حذف الدفعات بدونها.
+          </p>
+        </div>
+      )}
+
+      {/* Set / change passcode modal */}
+      {showSetPass && (
+        <div className="fixed inset-0 bg-black/40 z-50 flex items-center justify-center p-4" onClick={() => setShowSetPass(false)}>
+          <div className="bg-white dark:bg-gray-800 rounded-xl p-5 w-full max-w-sm" onClick={(e) => e.stopPropagation()}>
+            <h3 className="font-bold mb-3 flex items-center gap-2"><Lock className="w-4 h-4" /> {passSet ? "تغيير كلمة سر الاستيراد" : "تعيين كلمة سر الاستيراد"}</h3>
+            {passSet && (
+              <input type="password" value={curPass} onChange={(e) => setCurPass(e.target.value)}
+                className="field mb-2" placeholder="كلمة السر الحالية" />
+            )}
+            <input type="password" value={newPass} onChange={(e) => setNewPass(e.target.value)}
+              className="field mb-3" placeholder="كلمة السر الجديدة (4 أحرف على الأقل)" />
+            <div className="flex gap-2">
+              <button onClick={savePasscode} disabled={passBusy}
+                className="flex-1 h-10 rounded-lg bg-gray-900 dark:bg-white dark:text-gray-900 text-white text-sm font-bold disabled:opacity-50">حفظ</button>
+              <button onClick={() => setShowSetPass(false)} className="px-4 h-10 rounded-lg border border-gray-200 dark:border-gray-700 text-sm font-bold text-gray-600 dark:text-gray-300">إلغاء</button>
+            </div>
+            <p className="text-[11px] text-gray-400 mt-3">تنبيه: احفظها في مكان آمن — لا يمكن استرجاعها إذا نُسيت.</p>
+          </div>
+        </div>
+      )}
 
       {/* Upload */}
       <div className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl p-5 mb-5">
