@@ -227,12 +227,17 @@ export async function POST(req: NextRequest) {
         usedNums.add(quoteNumber);
         created++;
       } catch (e: any) {
+        console.error("Import row failed:", m.rowNumber, m.orderNumber, e?.message || e);
         skipped.push({ row: m.rowNumber, order: m.orderNumber, reason: "db_error" });
       }
     }
 
-    await logAction(user.id, "import", "quotation", batchId, JSON.stringify({ created, skipped: skipped.length }));
-    return NextResponse.json({ batchId, created, skippedCount: skipped.length, skipped: skipped.slice(0, 100) });
+    // Breakdown of skip reasons so the admin can see exactly what happened.
+    const reasonCounts: Record<string, number> = {};
+    for (const s of skipped) reasonCounts[s.reason] = (reasonCounts[s.reason] || 0) + 1;
+
+    await logAction(user.id, "import", "quotation", batchId, JSON.stringify({ created, skipped: skipped.length, reasonCounts }));
+    return NextResponse.json({ batchId, created, skippedCount: skipped.length, reasonCounts, skipped: skipped.slice(0, 200) });
   } catch (e) {
     console.error("API error [/api/import POST]:", e);
     return NextResponse.json({ error: "Server error" }, { status: 500 });

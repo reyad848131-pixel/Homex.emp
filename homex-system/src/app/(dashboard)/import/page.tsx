@@ -44,6 +44,7 @@ interface PreviewResult {
 const ERR_LABEL: Record<string, string> = {
   missing_name: "بدون اسم", missing_phone: "بدون هاتف",
   missing_order_number: "بدون رقم طلب", order_number_exists: "الرقم موجود مسبقاً",
+  db_error: "خطأ في الحفظ", duplicate_in_file: "مكرر في الملف",
 };
 
 export default function ImportPage() {
@@ -64,7 +65,7 @@ export default function ImportPage() {
   const [preview, setPreview] = useState<PreviewResult | null>(null);
   const [loading, setLoading] = useState(false);
   const [committing, setCommitting] = useState(false);
-  const [result, setResult] = useState<{ created: number; skippedCount: number } | null>(null);
+  const [result, setResult] = useState<{ created: number; skippedCount: number; reasonCounts?: Record<string, number>; skipped?: Array<{ row: number; order: string; reason: string }> } | null>(null);
   const [batches, setBatches] = useState<Array<{ batch: string; count: number; at: string }>>([]);
 
   const loadBatches = useCallback(() => {
@@ -122,7 +123,7 @@ export default function ImportPage() {
       const res = await fetch("/api/import", { method: "POST", body: fd });
       const data = await res.json();
       if (!res.ok) { toast.error(data.error || "فشل الاستيراد"); return; }
-      setResult({ created: data.created, skippedCount: data.skippedCount });
+      setResult({ created: data.created, skippedCount: data.skippedCount, reasonCounts: data.reasonCounts, skipped: data.skipped });
       toast.success(`تم استيراد ${data.created} طلب`);
       loadBatches();
       setPreview(null);
@@ -339,7 +340,39 @@ export default function ImportPage() {
       {result && (
         <div className="bg-emerald-50 dark:bg-emerald-900/20 border border-emerald-200 dark:border-emerald-800 rounded-xl p-5 mb-5">
           <p className="font-bold text-emerald-800 dark:text-emerald-200 flex items-center gap-2"><Check className="w-5 h-5" /> تم استيراد {result.created} طلب.</p>
-          {result.skippedCount > 0 && <p className="text-sm text-emerald-700 dark:text-emerald-300 mt-1">تم تخطّي {result.skippedCount} صف (أخطاء أو تكرار).</p>}
+          {result.skippedCount > 0 && (
+            <div className="mt-2 text-sm text-gray-700 dark:text-gray-300">
+              <p className="font-semibold mb-1">تم تخطّي {result.skippedCount} صف — التفصيل:</p>
+              <div className="flex flex-wrap gap-2 mb-2">
+                {Object.entries(result.reasonCounts || {}).map(([r, c]) => (
+                  <span key={r} className="px-2 py-1 rounded-full bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 text-xs font-bold">
+                    {ERR_LABEL[r] || r}: <span className="font-mono-en">{c}</span>
+                  </span>
+                ))}
+              </div>
+              {result.skipped && result.skipped.length > 0 && (
+                <details className="text-xs">
+                  <summary className="cursor-pointer text-gray-500 font-semibold">عرض الصفوف المتخطّاة</summary>
+                  <div className="max-h-56 overflow-y-auto mt-2 border border-gray-200 dark:border-gray-700 rounded-lg">
+                    <table className="w-full">
+                      <thead><tr className="text-gray-400 bg-gray-50 dark:bg-gray-900/40">
+                        <th className="text-right p-2">الصف</th><th className="text-right p-2">رقم الطلب</th><th className="text-right p-2">السبب</th>
+                      </tr></thead>
+                      <tbody>
+                        {result.skipped.map((s, i) => (
+                          <tr key={i} className="border-t border-gray-100 dark:border-gray-700">
+                            <td className="p-2 font-mono-en">{s.row}</td>
+                            <td className="p-2 font-mono-en">{s.order}</td>
+                            <td className="p-2">{ERR_LABEL[s.reason] || s.reason}</td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                </details>
+              )}
+            </div>
+          )}
         </div>
       )}
 
