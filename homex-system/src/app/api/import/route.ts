@@ -105,12 +105,17 @@ export async function POST(req: NextRequest) {
 
     if (payload.action === "preview") {
       const valid = inYear.filter((m) => evaluate(m).length === 0);
+      // Rows whose delivery date couldn't be read — these can't be placed in a
+      // year, so they're excluded when a year filter is set. Surfaced so the
+      // admin notices instead of silently losing them.
+      const noDateRows = mapped.filter((m) => !m.deliveryDate).length;
       return NextResponse.json({
         headers,
         totalRows: mapped.length,
         yearRows: inYear.length,
         validCount: valid.length,
         errorCount: inYear.length - valid.length,
+        noDateRows,
         distinctStatuses,
         fileDuplicates: [...fileDups],
         sample: inYear.slice(0, 25).map((m) => ({

@@ -34,6 +34,7 @@ interface PreviewResult {
   yearRows: number;
   validCount: number;
   errorCount: number;
+  noDateRows: number;
   distinctStatuses: Array<{ raw: string; count: number }>;
   fileDuplicates: string[];
   sample: Array<{
@@ -196,6 +197,15 @@ export default function ImportPage() {
               </div>
             ))}
           </div>
+
+          {preview.noDateRows > 0 && (
+            <div className="flex items-start gap-2 bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 rounded-xl p-4 mb-5 text-sm">
+              <AlertTriangle className="w-4 h-4 text-amber-600 shrink-0 mt-0.5" />
+              <p className="text-amber-800 dark:text-amber-200">
+                <span className="font-bold font-mono-en">{preview.noDateRows}</span> صف بدون تاريخ تسليم مقروء — لن تُحسب ضمن أي سنة. تأكد من تنسيق عمود «تاريخ التسليم» أو اترك خانة السنوات فارغة لاستيرادها.
+              </p>
+            </div>
+          )}
 
           {/* Column mapping */}
           <div className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl p-5 mb-5">
