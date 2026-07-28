@@ -16,7 +16,7 @@ interface Payload {
   action: "preview" | "commit";
   mapping?: Partial<Record<ImportField, string>>;
   statusMap?: Record<string, string>; // raw work-status text → system work status
-  year?: number | null;               // only import rows whose delivery year matches (null = all)
+  years?: number[] | null;            // only import rows whose delivery year is in this set (null/empty = all)
   defaultWorkStatus?: string;          // fallback when a raw status isn't mapped
 }
 
@@ -58,8 +58,9 @@ export async function POST(req: NextRequest) {
     const { headers, rows } = await parseWorkbook(buffer);
 
     const mapped = rows.map((r, i) => mapRow(r, i + 2, mapping)); // +2: header is row 1
-    const year = payload.year ?? null;
-    const inYear = year == null ? mapped : mapped.filter((m) => m.year === year);
+    const years = (payload.years || []).filter((y) => Number.isFinite(y));
+    const yearSet = new Set(years);
+    const inYear = yearSet.size === 0 ? mapped : mapped.filter((m) => m.year != null && yearSet.has(m.year));
 
     // Distinct raw work-status values (for the mapping UI).
     const statusCounts = new Map<string, number>();

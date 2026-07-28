@@ -54,7 +54,8 @@ export default function ImportPage() {
   const [file, setFile] = useState<File | null>(null);
   const [headers, setHeaders] = useState<string[]>([]);
   const [mapping, setMapping] = useState<Record<string, string>>(DEFAULT_MAPPING);
-  const [year, setYear] = useState<number | "">(2026);
+  // Comma/space separated years to include (empty = all years).
+  const [yearsInput, setYearsInput] = useState("2025, 2026");
   const [statusMap, setStatusMap] = useState<Record<string, string>>({});
   const [defaultWorkStatus, setDefaultWorkStatus] = useState("in_progress");
   const [preview, setPreview] = useState<PreviewResult | null>(null);
@@ -68,12 +69,12 @@ export default function ImportPage() {
   }, []);
   useEffect(() => { loadBatches(); }, [loadBatches]);
 
-  const runPreview = useCallback(async (f: File, map: Record<string, string>, yr: number | "", sMap: Record<string, string>, dws: string) => {
+  const runPreview = useCallback(async (f: File, map: Record<string, string>, years: number[], sMap: Record<string, string>, dws: string) => {
     setLoading(true);
     setResult(null);
     const fd = new FormData();
     fd.append("file", f);
-    fd.append("payload", JSON.stringify({ action: "preview", mapping: map, year: yr === "" ? null : yr, statusMap: sMap, defaultWorkStatus: dws }));
+    fd.append("payload", JSON.stringify({ action: "preview", mapping: map, years, statusMap: sMap, defaultWorkStatus: dws }));
     try {
       const res = await fetch("/api/import", { method: "POST", body: fd });
       const data = await res.json();
@@ -100,14 +101,17 @@ export default function ImportPage() {
     }
   }, [toast]);
 
+  const parseYears = (s: string): number[] =>
+    Array.from(new Set((s.match(/\d{4}/g) || []).map(Number)));
+
   const onFile = (f: File | null) => {
     setFile(f);
     setPreview(null);
     setResult(null);
-    if (f) runPreview(f, mapping, year, {}, defaultWorkStatus);
+    if (f) runPreview(f, mapping, parseYears(yearsInput), {}, defaultWorkStatus);
   };
 
-  const reprocess = () => { if (file) runPreview(file, mapping, year, statusMap, defaultWorkStatus); };
+  const reprocess = () => { if (file) runPreview(file, mapping, parseYears(yearsInput), statusMap, defaultWorkStatus); };
 
   const commit = async () => {
     if (!file || !preview) return;
@@ -115,7 +119,7 @@ export default function ImportPage() {
     setCommitting(true);
     const fd = new FormData();
     fd.append("file", file);
-    fd.append("payload", JSON.stringify({ action: "commit", mapping, year: year === "" ? null : year, statusMap, defaultWorkStatus }));
+    fd.append("payload", JSON.stringify({ action: "commit", mapping, years: parseYears(yearsInput), statusMap, defaultWorkStatus }));
     try {
       const res = await fetch("/api/import", { method: "POST", body: fd });
       const data = await res.json();
@@ -166,9 +170,9 @@ export default function ImportPage() {
             onChange={(e) => onFile(e.target.files?.[0] || null)} />
           {file && <span className="text-sm text-gray-500 font-mono-en">{file.name}</span>}
           <div className="flex-1" />
-          <label className="text-sm font-semibold text-gray-500">سنة الطلبات:</label>
-          <input type="number" value={year} onChange={(e) => setYear(e.target.value === "" ? "" : +e.target.value)}
-            onBlur={reprocess} className="field w-28 h-11 font-mono-en" placeholder="الكل" />
+          <label className="text-sm font-semibold text-gray-500">سنوات الطلبات:</label>
+          <input type="text" value={yearsInput} onChange={(e) => setYearsInput(e.target.value)}
+            onBlur={reprocess} className="field w-40 h-11 font-mono-en" placeholder="الكل (اتركها فارغة)" />
         </div>
       </div>
 
@@ -181,7 +185,7 @@ export default function ImportPage() {
           {/* Summary */}
           <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-5">
             {[
-              { label: `طلبات ${year || "الكل"}`, value: preview.yearRows, tone: "text-gray-900 dark:text-white" },
+              { label: `طلبات ${parseYears(yearsInput).length ? parseYears(yearsInput).join("، ") : "الكل"}`, value: preview.yearRows, tone: "text-gray-900 dark:text-white" },
               { label: "صالحة للاستيراد", value: preview.validCount, tone: "text-emerald-600" },
               { label: "بها أخطاء", value: preview.errorCount, tone: "text-red-600" },
               { label: "إجمالي صفوف الملف", value: preview.totalRows, tone: "text-gray-400" },
