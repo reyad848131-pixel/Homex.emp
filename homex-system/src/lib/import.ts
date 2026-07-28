@@ -214,6 +214,29 @@ export type SystemWorkStatus =
   | "needs_preparation" | "ready_to_execute" | "in_progress" | "completed"
   | "ready_for_delivery" | "delivered" | "ready_for_install" | "installed";
 
+// Classify a raw "Work Status" cell into a system work status, tolerant of
+// typos, casing and the sheet's quirks (e.g. "Delivey Done" missing an r, or a
+// target month written in the status column for in-progress orders).
+export function guessWorkStatus(raw: string): SystemWorkStatus {
+  const s = (raw || "").toLowerCase().trim();
+  if (!s) return "in_progress"; // blank → still being worked on
+  const has = (...subs: string[]) => subs.some((x) => s.includes(x));
+  // Delivered — "delivery done", "delivered", and the typo "delivey done".
+  if (has("deliv") && has("done", "delivered", "complete")) return "delivered";
+  if (s === "delivered" || s === "delivery done" || s === "delivey done") return "delivered";
+  // Installation.
+  if (has("install") && has("done", "complete", "finished")) return "installed";
+  if (has("ready") && has("install")) return "ready_for_install";
+  if (has("install")) return "installed";
+  // Ready for delivery.
+  if (has("ready") && has("deliv")) return "ready_for_delivery";
+  if (has("ready for del", "ready to del", "for delivery")) return "ready_for_delivery";
+  // Work finished (but not yet delivered).
+  if (has("finish", "complete", "done", "ready")) return "completed";
+  // Everything else (month names, "pending", "wip", blank-ish) → in progress.
+  return "in_progress";
+}
+
 // A normalized row after mapping — what the API turns into DB records.
 export interface MappedRow {
   rowNumber: number;

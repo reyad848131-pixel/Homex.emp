@@ -3,7 +3,7 @@ import { getAuth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { logAction } from "@/lib/audit";
 import {
-  parseWorkbook, mapRow, autoMapHeaders, IMPORT_FIELDS,
+  parseWorkbook, mapRow, autoMapHeaders, guessWorkStatus, IMPORT_FIELDS,
   type ImportField, type MappedRow,
 } from "@/lib/import";
 import { VALID_WORK_STATUSES } from "@/lib/types";
@@ -75,12 +75,15 @@ export async function POST(req: NextRequest) {
       .map(([raw, count]) => ({ raw, count }))
       .sort((a, b) => b.count - a.count);
 
-    const statusMap = payload.statusMap || {};
-    const fallback = payload.defaultWorkStatus && VALID_WORK_STATUSES.includes(payload.defaultWorkStatus)
-      ? payload.defaultWorkStatus : "in_progress";
+    // Auto-classify each distinct raw status (typo-tolerant), then let any
+    // explicit user overrides win. This is what makes the mapping "ready on the
+    // fly" without manual work.
+    const autoStatus: Record<string, string> = {};
+    for (const { raw } of distinctStatuses) autoStatus[raw] = guessWorkStatus(raw === "(فارغ)" ? "" : raw);
+    const statusMap = { ...autoStatus, ...(payload.statusMap || {}) };
     const resolveStatus = (m: MappedRow) => {
-      const mapped = statusMap[m.workStatusRaw || "(فارغ)"];
-      return mapped && VALID_WORK_STATUSES.includes(mapped) ? mapped : fallback;
+      const val = statusMap[m.workStatusRaw || "(فارغ)"];
+      return val && VALID_WORK_STATUSES.includes(val) ? val : guessWorkStatus(m.workStatusRaw);
     };
 
     // Duplicate order numbers: within the file and against existing quotations.
@@ -121,6 +124,7 @@ export async function POST(req: NextRequest) {
         validCount: valid.length,
         errorCount: inYear.length - valid.length,
         noDateRows,
+        statusMap,
         distinctStatuses,
         fileDuplicates: [...fileDups],
         sample: inYear.slice(0, 25).map((m) => ({

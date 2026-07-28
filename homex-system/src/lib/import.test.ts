@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { parseSheetDate, parseMoney, mapRow, DEFAULT_MAPPING, autoMapHeaders } from "./import";
+import { parseSheetDate, parseMoney, mapRow, DEFAULT_MAPPING, autoMapHeaders, guessWorkStatus } from "./import";
 
 const iso = (d: Date | null) => (d ? d.toISOString() : null);
 
@@ -82,6 +82,28 @@ describe("autoMapHeaders — the real sheet headers", () => {
     expect(m.total).toBe("Total");
     expect(m.deliveryDate).toBe("Delivery Date");
     expect(m.workStatus).toBe("Status");
+  });
+});
+
+describe("guessWorkStatus — the real status values in the sheet", () => {
+  it("maps delivered variants, including the 'Delivey Done' typo", () => {
+    expect(guessWorkStatus("Delivery Done")).toBe("delivered");
+    expect(guessWorkStatus("Delivey Done")).toBe("delivered"); // typo, missing r
+    expect(guessWorkStatus("delivered")).toBe("delivered");
+    expect(guessWorkStatus("DELIVERY DONE")).toBe("delivered");
+  });
+  it("maps finished work to completed", () => {
+    expect(guessWorkStatus("Finished")).toBe("completed");
+  });
+  it("treats month-named statuses (in-progress orders) as in_progress", () => {
+    expect(guessWorkStatus("February 02 '2025")).toBe("in_progress");
+    expect(guessWorkStatus("MARCH 03 '2025")).toBe("in_progress");
+    expect(guessWorkStatus("DECEMBER 12 '2025")).toBe("in_progress");
+    expect(guessWorkStatus("")).toBe("in_progress");
+  });
+  it("maps installation and ready-for-delivery variants", () => {
+    expect(guessWorkStatus("Installed")).toBe("installed");
+    expect(guessWorkStatus("Ready for Delivery")).toBe("ready_for_delivery");
   });
 });
 

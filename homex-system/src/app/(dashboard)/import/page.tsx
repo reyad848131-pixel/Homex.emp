@@ -31,6 +31,7 @@ interface PreviewResult {
   noDateRows: number;
   headerRow: number;
   mapping: Record<string, string>;
+  statusMap: Record<string, string>;
   distinctStatuses: Array<{ raw: string; count: number }>;
   fileDuplicates: string[];
   sample: Array<{
@@ -83,19 +84,8 @@ export default function ImportPage() {
       // the dropdowns reflect what was matched.
       if (typeof data.headerRow === "number") setHeaderRow(data.headerRow);
       if (data.mapping) setMapping(data.mapping);
-      // Seed status mapping for any new raw statuses (smart defaults).
-      setStatusMap((prev) => {
-        const next = { ...prev };
-        for (const s of data.distinctStatuses as Array<{ raw: string }>) {
-          if (next[s.raw]) continue;
-          const raw = s.raw.toLowerCase();
-          next[s.raw] = raw.includes("deliver") && raw.includes("done") ? "delivered"
-            : raw.includes("install") ? "installed"
-            : raw.includes("ready") ? "ready_for_delivery"
-            : "in_progress";
-        }
-        return next;
-      });
+      // Adopt the server's auto-classified status mapping (typo-tolerant).
+      if (data.statusMap) setStatusMap(data.statusMap);
     } catch {
       toast.error("تعذّر قراءة الملف");
     } finally {
