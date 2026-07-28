@@ -108,10 +108,10 @@ export async function POST(req: NextRequest) {
 
     if (payload.action === "preview") {
       const valid = inYear.filter((m) => evaluate(m).length === 0);
-      // Rows whose delivery date couldn't be read — these can't be placed in a
-      // year, so they're excluded when a year filter is set. Surfaced so the
-      // admin notices instead of silently losing them.
-      const noDateRows = mapped.filter((m) => !m.deliveryDate).length;
+      // Rows with no readable date at all (neither delivery nor booking) can't
+      // be placed in a year, so they're excluded when a year filter is set.
+      // Surfaced so the admin notices instead of silently losing them.
+      const noDateRows = mapped.filter((m) => m.year == null).length;
       return NextResponse.json({
         headers,
         headerRow,
@@ -191,6 +191,9 @@ export async function POST(req: NextRequest) {
             workStatus,
             deliveryDate: m.deliveryDate,
             deliveredAt: workStatus === DELIVERED ? (m.deliveredOn || m.deliveryDate) : null,
+            // Keep the record's date historically accurate (booking date, else
+            // delivery date); falls back to now() when neither is present.
+            ...(m.bookingDate || m.deliveryDate ? { createdAt: m.bookingDate || m.deliveryDate! } : {}),
             workNotes: notes,
             importBatch: batchId,
             ...(m.advance > 0

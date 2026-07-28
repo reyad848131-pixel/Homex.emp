@@ -13,7 +13,8 @@ export const IMPORT_FIELDS = [
   "place",       // area (governorate/wilayat)
   "total",       // total price
   "advance",     // amount already paid → recorded as a payment
-  "deliveryDate",// scheduled delivery date (also drives the year filter)
+  "deliveryDate",// scheduled delivery date (drives the year filter when present)
+  "bookingDate", // order/booking date (year fallback for in-progress orders)
   "deliveredOn", // actual delivery date (for delivered rows)
   "workStatus",  // raw status text, mapped to a system work status
   "description", // free-text summary of the items
@@ -30,6 +31,7 @@ export const DEFAULT_MAPPING: Record<ImportField, string> = {
   total: "Total Price",
   advance: "Advance",
   deliveryDate: "Delivery date",
+  bookingDate: "Booking Date",
   deliveredOn: "del.date",
   workStatus: "Work Status",
   description: "Melboard",
@@ -56,6 +58,7 @@ const FIELD_SYNONYMS: Record<ImportField, string[]> = {
   total: ["totalprice", "total", "grandtotal", "amount", "price", "netamount"],
   advance: ["advance", "advancepaid", "paid", "deposit", "downpayment"],
   deliveryDate: ["deliverydate", "promiseddate", "duedate", "targetdate", "deliverydt"],
+  bookingDate: ["bookingdate", "orderdate", "dateofbooking", "booking", "bookeddate"],
   deliveredOn: ["deldate", "delivereddate", "actualdelivery", "deliveredon", "deliverdate"],
   workStatus: ["workstatus", "orderstatus", "jobstatus", "status"],
   description: ["melboard", "description", "details", "item", "items", "product", "desc", "particulars"],
@@ -221,6 +224,7 @@ export interface MappedRow {
   total: number;
   advance: number;
   deliveryDate: Date | null;
+  bookingDate: Date | null;
   deliveredOn: Date | null;
   workStatusRaw: string;
   description: string;
@@ -236,6 +240,7 @@ export function mapRow(
 ): MappedRow {
   const get = (f: ImportField) => (mapping[f] ? (raw[mapping[f]] ?? "").trim() : "");
   const deliveryDate = parseSheetDate(get("deliveryDate"));
+  const bookingDate = parseSheetDate(get("bookingDate"));
   const errors: string[] = [];
   const name = get("name");
   const phone = get("phone").replace(/\s+/g, "");
@@ -246,6 +251,12 @@ export function mapRow(
   if (!phone) errors.push("missing_phone");
   if (!orderNumber) errors.push("missing_order_number");
 
+  // Year comes from the delivery date; for in-progress orders that have no
+  // delivery date yet, fall back to the booking (order) date so they're still
+  // included and land in the work board.
+  const year = deliveryDate ? deliveryDate.getUTCFullYear()
+    : bookingDate ? bookingDate.getUTCFullYear() : null;
+
   return {
     rowNumber,
     orderNumber,
@@ -255,11 +266,12 @@ export function mapRow(
     total,
     advance: parseMoney(get("advance")),
     deliveryDate,
+    bookingDate,
     deliveredOn: parseSheetDate(get("deliveredOn")),
     workStatusRaw: get("workStatus"),
     description: get("description"),
     remarks: get("remarks"),
-    year: deliveryDate ? deliveryDate.getUTCFullYear() : null,
+    year,
     errors,
   };
 }

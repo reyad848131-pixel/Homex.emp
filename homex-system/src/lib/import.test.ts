@@ -71,6 +71,7 @@ describe("autoMapHeaders — the real sheet headers", () => {
     expect(m.advance).toBe("Advance");
     expect(m.deliveryDate).toBe("Delivery date");
     expect(m.deliveredOn).toBe("del.date");
+    expect(m.bookingDate).toBe("Booking Date");
     expect(m.workStatus).toBe("Work Status"); // not "Payment Status"
     expect(m.orderNumber).toBe("Advance Bill No.");
   });
@@ -127,5 +128,15 @@ describe("mapRow — real sample rows", () => {
     const m = mapRow({ ...row1, "Delivery date": "12.06.2026" }, 2, DEFAULT_MAPPING);
     expect(m.year).toBe(2026);
     expect(iso(m.deliveryDate)).toBe("2026-06-12T00:00:00.000Z");
+  });
+
+  it("falls back to booking date for in-progress orders with no delivery date", () => {
+    const m = mapRow(
+      { ...row1, "Delivery date": "", "Booking Date": "1/8/2025", "Work Status": "In Progress" },
+      2, DEFAULT_MAPPING,
+    );
+    expect(m.deliveryDate).toBeNull();
+    expect(m.year).toBe(2025); // taken from the booking date
+    expect(m.errors).toEqual([]);
   });
 });
