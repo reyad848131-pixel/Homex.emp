@@ -152,6 +152,13 @@ describe("mapRow — real sample rows", () => {
     expect(iso(m.deliveryDate)).toBe("2026-06-12T00:00:00.000Z");
   });
 
+  it("marks a yellow-highlighted row (from Excel) as delivered-by-colour", () => {
+    const yellow = mapRow({ ...row1, "Delivery date": "", "Booking Date": "", __yellow: "1" }, 2, DEFAULT_MAPPING);
+    expect(yellow.deliveredByColor).toBe(true);
+    const normal = mapRow({ ...row1, __yellow: "" }, 2, DEFAULT_MAPPING);
+    expect(normal.deliveredByColor).toBe(false);
+  });
+
   it("falls back to booking date for in-progress orders with no delivery date", () => {
     const m = mapRow(
       { ...row1, "Delivery date": "", "Booking Date": "1/8/2025", "Work Status": "In Progress" },

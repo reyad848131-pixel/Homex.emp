@@ -65,9 +65,14 @@ export async function POST(req: NextRequest) {
     const years = (payload.years || []).filter((y) => Number.isFinite(y));
     const yearSet = new Set(years);
     const includeUndated = !!payload.includeUndated;
+    // Yellow-highlighted rows are delivered orders (per the sheet's convention);
+    // include them even when they have no date, regardless of the year filter.
     const inYear = yearSet.size === 0
       ? mapped
-      : mapped.filter((m) => (m.year != null && yearSet.has(m.year)) || (includeUndated && m.year == null));
+      : mapped.filter((m) =>
+          (m.year != null && yearSet.has(m.year)) ||
+          (includeUndated && m.year == null) ||
+          (m.deliveredByColor && m.year == null));
 
     // Distinct raw work-status values (for the mapping UI).
     const statusCounts = new Map<string, number>();
@@ -86,6 +91,8 @@ export async function POST(req: NextRequest) {
     for (const { raw } of distinctStatuses) autoStatus[raw] = guessWorkStatus(raw === "(فارغ)" ? "" : raw);
     const statusMap = { ...autoStatus, ...(payload.statusMap || {}) };
     const resolveStatus = (m: MappedRow) => {
+      // A yellow-highlighted row is delivered — that wins over the status text.
+      if (m.deliveredByColor) return "delivered";
       const val = statusMap[m.workStatusRaw || "(فارغ)"];
       return val && VALID_WORK_STATUSES.includes(val) ? val : guessWorkStatus(m.workStatusRaw);
     };
@@ -115,10 +122,11 @@ export async function POST(req: NextRequest) {
 
     if (payload.action === "preview") {
       const valid = inYear.filter((m) => evaluate(m).length === 0);
-      // Rows with no readable date at all (neither delivery nor booking) can't
-      // be placed in a year, so they're excluded when a year filter is set.
-      // Surfaced so the admin notices instead of silently losing them.
-      const noDateRows = mapped.filter((m) => m.year == null).length;
+      // Rows with no readable date AND not yellow (not delivered) can't be
+      // placed in a year, so they're excluded when a year filter is set.
+      // Yellow no-date rows are delivered and get included automatically.
+      const noDateRows = mapped.filter((m) => m.year == null && !m.deliveredByColor).length;
+      const yellowRows = inYear.filter((m) => m.deliveredByColor).length;
       return NextResponse.json({
         headers,
         headerRow,
@@ -128,6 +136,7 @@ export async function POST(req: NextRequest) {
         validCount: valid.length,
         errorCount: inYear.length - valid.length,
         noDateRows,
+        yellowRows,
         statusMap,
         distinctStatuses,
         fileDuplicates: [...fileDups],
