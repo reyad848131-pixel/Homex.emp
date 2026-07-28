@@ -191,6 +191,29 @@ export default function ImportPage() {
         </div>
       </div>
 
+      {/* Previous import batches / undo — kept near the top so it's easy to
+          find (delete an old batch before re-importing). */}
+      {batches.length > 0 && (
+        <div className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl p-5 mb-5">
+          <h2 className="font-bold mb-1">دفعات الاستيراد السابقة</h2>
+          <p className="text-xs text-gray-400 mb-3">احذف الدفعة القديمة قبل إعادة الاستيراد حتى لا تتكرر الأرقام.</p>
+          <div className="space-y-2">
+            {batches.map((b) => (
+              <div key={b.batch} className="flex items-center justify-between gap-3 p-3 rounded-lg border border-gray-100 dark:border-gray-700">
+                <div>
+                  <p className="text-sm font-bold font-mono-en">{b.batch}</p>
+                  <p className="text-xs text-gray-400"><span className="font-mono-en">{b.count}</span> طلب · {new Date(b.at).toLocaleString("en-GB")}</p>
+                </div>
+                <button onClick={() => undo(b.batch)}
+                  className="inline-flex items-center gap-1.5 px-3 h-9 rounded-lg border border-red-200 dark:border-red-800 text-red-600 dark:text-red-400 text-xs font-bold hover:bg-red-50 dark:hover:bg-red-900/20">
+                  <RotateCcw className="w-3.5 h-3.5" /> تراجع (حذف الدفعة)
+                </button>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
       {loading && (
         <div className="flex items-center gap-2 text-gray-500 text-sm mb-5"><Loader2 className="w-4 h-4 animate-spin" /> جارٍ التحليل...</div>
       )}
@@ -376,26 +399,6 @@ export default function ImportPage() {
         </div>
       )}
 
-      {/* Batches / undo */}
-      {batches.length > 0 && (
-        <div className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl p-5">
-          <h2 className="font-bold mb-3">دفعات الاستيراد السابقة</h2>
-          <div className="space-y-2">
-            {batches.map((b) => (
-              <div key={b.batch} className="flex items-center justify-between gap-3 p-3 rounded-lg border border-gray-100 dark:border-gray-700">
-                <div>
-                  <p className="text-sm font-bold font-mono-en">{b.batch}</p>
-                  <p className="text-xs text-gray-400"><span className="font-mono-en">{b.count}</span> طلب · {new Date(b.at).toLocaleString("en-GB")}</p>
-                </div>
-                <button onClick={() => undo(b.batch)}
-                  className="inline-flex items-center gap-1.5 px-3 h-9 rounded-lg border border-red-200 dark:border-red-800 text-red-600 dark:text-red-400 text-xs font-bold hover:bg-red-50 dark:hover:bg-red-900/20">
-                  <RotateCcw className="w-3.5 h-3.5" /> تراجع (حذف الدفعة)
-                </button>
-              </div>
-            ))}
-          </div>
-        </div>
-      )}
     </div>
   );
 }
