@@ -152,84 +152,78 @@ export async function POST(req: NextRequest) {
       });
     }
 
-    // ---- COMMIT ----
+    // ---- COMMIT (bulk, so hundreds of rows import in a few queries instead of
+    // hundreds of sequential round-trips that could time out) ----
     const batchId = `imp_${Date.now().toString(36)}`;
-    let created = 0;
     const skipped: Array<{ row: number; order: string; reason: string }> = [];
     const usedNums = new Set(existingNums);
-    // Cache customers created/matched in this run, keyed by phone.
-    const custByPhone = new Map<string, string>();
 
+    // 1) Decide which rows to create and assign a unique quote number to each.
+    const toCreate: Array<{ m: MappedRow; quoteNumber: string; suffixed: boolean }> = [];
     for (const m of inYear) {
-      // Skip only genuinely broken rows (missing name/phone/order number).
-      if (m.errors.length) {
-        skipped.push({ row: m.rowNumber, order: m.orderNumber || "-", reason: m.errors[0] });
-        continue;
-      }
-      // Already imported before (exists in the DB) → skip to avoid duplicating.
-      if (existingNums.has(m.orderNumber)) {
-        skipped.push({ row: m.rowNumber, order: m.orderNumber, reason: "order_number_exists" });
-        continue;
-      }
-      // A number that repeats WITHIN the file is kept (no data loss): the first
-      // keeps the original, the rest get a -2/-3 suffix (original noted below).
+      if (m.errors.length) { skipped.push({ row: m.rowNumber, order: m.orderNumber || "-", reason: m.errors[0] }); continue; }
+      if (existingNums.has(m.orderNumber)) { skipped.push({ row: m.rowNumber, order: m.orderNumber, reason: "order_number_exists" }); continue; }
       let quoteNumber = m.orderNumber;
       if (usedNums.has(quoteNumber)) {
         let i = 2;
         while (usedNums.has(`${m.orderNumber}-${i}`)) i++;
         quoteNumber = `${m.orderNumber}-${i}`;
       }
-      const suffixed = quoteNumber !== m.orderNumber;
-      try {
-        // Match/create customer by phone.
-        let customerId = custByPhone.get(m.phone);
-        if (!customerId) {
-          const existing = await prisma.customer.findFirst({ where: { phone: m.phone } });
-          if (existing) {
-            customerId = existing.id;
-          } else {
-            const c = await prisma.customer.create({
-              data: {
-                name: m.name, phone: m.phone, phoneCode: "+968",
-                governorate: m.place || "-", wilayat: m.place || "-",
-                createdBy: user.id, importBatch: batchId,
-              },
-            });
-            customerId = c.id;
-          }
-          custByPhone.set(m.phone, customerId);
-        }
+      usedNums.add(quoteNumber);
+      toCreate.push({ m, quoteNumber, suffixed: quoteNumber !== m.orderNumber });
+    }
 
-        const workStatus = resolveStatus(m);
-        const notes = [m.description, m.remarks, suffixed ? `رقم أصلي: ${m.orderNumber}` : ""]
-          .filter(Boolean).join(" — ") || null;
+    // 2) Customers — match existing by phone in one query, bulk-create the rest.
+    const phones = [...new Set(toCreate.map((x) => x.m.phone))];
+    const custByPhone = new Map<string, string>();
+    if (phones.length) {
+      const existingCust = await prisma.customer.findMany({ where: { phone: { in: phones } }, select: { id: true, phone: true } });
+      for (const c of existingCust) if (!custByPhone.has(c.phone)) custByPhone.set(c.phone, c.id);
+    }
+    const newPhones = phones.filter((p) => !custByPhone.has(p));
+    if (newPhones.length) {
+      const firstByPhone = new Map<string, MappedRow>();
+      for (const x of toCreate) if (newPhones.includes(x.m.phone) && !firstByPhone.has(x.m.phone)) firstByPhone.set(x.m.phone, x.m);
+      await prisma.customer.createMany({
+        data: newPhones.map((p) => {
+          const m = firstByPhone.get(p)!;
+          return { name: m.name, phone: p, phoneCode: "+968", governorate: m.place || "-", wilayat: m.place || "-", createdBy: user.id, importBatch: batchId };
+        }),
+      });
+      const createdCust = await prisma.customer.findMany({ where: { importBatch: batchId, phone: { in: newPhones } }, select: { id: true, phone: true } });
+      for (const c of createdCust) if (!custByPhone.has(c.phone)) custByPhone.set(c.phone, c.id);
+    }
 
-        await prisma.quotation.create({
-          data: {
-            quoteNumber,
-            customerId,
-            employeeId: user.id,
-            status: "accepted",
-            total: m.total,
-            workStatus,
-            deliveryDate: m.deliveryDate,
-            deliveredAt: workStatus === DELIVERED ? (m.deliveredOn || m.deliveryDate) : null,
-            // Keep the record's date historically accurate (booking date, else
-            // delivery date); falls back to now() when neither is present.
-            ...(m.bookingDate || m.deliveryDate ? { createdAt: m.bookingDate || m.deliveryDate! } : {}),
-            workNotes: notes,
-            importBatch: batchId,
-            ...(m.advance > 0
-              ? { payments: { create: { amount: m.advance, method: "cash", notes: "استيراد — دفعة مقدمة", recordedBy: user.id } } }
-              : {}),
-          },
-        });
-        usedNums.add(quoteNumber);
-        created++;
-      } catch (e: any) {
-        console.error("Import row failed:", m.rowNumber, m.orderNumber, e?.message || e);
-        skipped.push({ row: m.rowNumber, order: m.orderNumber, reason: "db_error" });
-      }
+    // 3) Bulk-create the quotations.
+    const quoteData = toCreate.map(({ m, quoteNumber, suffixed }) => {
+      const workStatus = resolveStatus(m);
+      const notes = [m.description, m.remarks, suffixed ? `رقم أصلي: ${m.orderNumber}` : ""].filter(Boolean).join(" — ") || null;
+      return {
+        quoteNumber,
+        customerId: custByPhone.get(m.phone)!,
+        employeeId: user.id,
+        status: "accepted",
+        total: m.total,
+        workStatus,
+        deliveryDate: m.deliveryDate,
+        deliveredAt: workStatus === DELIVERED ? (m.deliveredOn || m.deliveryDate) : null,
+        createdAt: (m.bookingDate || m.deliveryDate) ?? undefined,
+        workNotes: notes,
+        importBatch: batchId,
+      };
+    }).filter((q) => q.customerId);
+    const createRes = await prisma.quotation.createMany({ data: quoteData, skipDuplicates: true });
+    const created = createRes.count;
+
+    // 4) Bulk-create the advance payments (look up the new quotation ids once).
+    const advanceRows = toCreate.filter((x) => x.m.advance > 0);
+    if (advanceRows.length) {
+      const createdQuotes = await prisma.quotation.findMany({ where: { importBatch: batchId }, select: { id: true, quoteNumber: true } });
+      const idByNum = new Map(createdQuotes.map((q) => [q.quoteNumber, q.id]));
+      const payData = advanceRows
+        .map((x) => ({ quotationId: idByNum.get(x.quoteNumber)!, amount: x.m.advance, method: "cash", notes: "استيراد — دفعة مقدمة", recordedBy: user.id }))
+        .filter((p) => p.quotationId);
+      if (payData.length) await prisma.payment.createMany({ data: payData });
     }
 
     // Breakdown of skip reasons so the admin can see exactly what happened.
