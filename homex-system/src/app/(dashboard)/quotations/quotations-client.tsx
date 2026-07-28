@@ -3,10 +3,11 @@
 import { useState, useEffect, useRef } from "react";
 import Link from "next/link";
 import { STATUS_MAP } from "@/lib/types";
-import { Search, FilePlus, FileText, Calendar } from "lucide-react";
+import { Search, FilePlus, FileText, Calendar, Trash2, X, Loader2 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useDebouncedValue } from "@/lib/hooks";
 import { useI18n, type TranslationKey } from "@/lib/i18n";
+import { useToast } from "@/components/toast";
 import { EmptyState } from "@/components/empty-state";
 import { TableSkeleton } from "@/components/skeleton";
 
@@ -45,8 +46,56 @@ export function QuotationsClient({ initialData }: { initialData: { quotations: Q
   const limit = 20;
   const debouncedSearch = useDebouncedValue(search);
   const { t, dateLocale } = useI18n();
+  const toast = useToast();
   // The first page is already server-rendered; skip the initial client refetch.
   const firstRun = useRef(true);
+
+  // Multi-select delete (managers only) — soft-deletes to Trash.
+  const [selected, setSelected] = useState<Set<string>>(new Set());
+  const [canDelete, setCanDelete] = useState(false);
+  const [deleting, setDeleting] = useState(false);
+
+  useEffect(() => {
+    fetch("/api/me").then((r) => (r.ok ? r.json() : null)).then((m) => {
+      if (m) setCanDelete(m.role === "admin" || m.role === "ceo" || m.role === "manager" || (m.permissions || []).includes("trash"));
+    }).catch(() => {});
+  }, []);
+
+  const toggleOne = (id: string) => setSelected((prev) => {
+    const next = new Set(prev);
+    next.has(id) ? next.delete(id) : next.add(id);
+    return next;
+  });
+  const allOnPageSelected = quotations.length > 0 && quotations.every((q) => selected.has(q.id));
+  const toggleAllOnPage = () => setSelected((prev) => {
+    const next = new Set(prev);
+    if (allOnPageSelected) quotations.forEach((q) => next.delete(q.id));
+    else quotations.forEach((q) => next.add(q.id));
+    return next;
+  });
+
+  const bulkDelete = async () => {
+    const ids = [...selected];
+    if (ids.length === 0) return;
+    if (!confirm(`نقل ${ids.length} عرض إلى المحذوفات؟ (يمكن استرجاعها من المحذوفات)`)) return;
+    setDeleting(true);
+    try {
+      const res = await fetch("/api/quotations/bulk-delete", {
+        method: "POST", headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ ids }),
+      });
+      const data = await res.json();
+      if (!res.ok) { toast.error(data.error || "فشل الحذف"); return; }
+      toast.success(`تم نقل ${data.deleted} عرض إلى المحذوفات`);
+      setQuotations((prev) => prev.filter((q) => !selected.has(q.id)));
+      setTotal((tot) => Math.max(0, tot - data.deleted));
+      setSelected(new Set());
+    } catch {
+      toast.error("تعذّر الحذف");
+    } finally {
+      setDeleting(false);
+    }
+  };
 
   const fmtCur = (n: number) => `${n.toFixed(3)} ${t("omr")}`;
 
@@ -126,6 +175,22 @@ export function QuotationsClient({ initialData }: { initialData: { quotations: Q
         </div>
       </div>
 
+      {canDelete && selected.size > 0 && (
+        <div className="flex items-center justify-between gap-3 mb-3 p-3 rounded-lg bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800">
+          <span className="text-sm font-bold text-red-700 dark:text-red-300">تم تحديد <span className="font-mono-en">{selected.size}</span> عرض</span>
+          <div className="flex items-center gap-2">
+            <button onClick={() => setSelected(new Set())}
+              className="inline-flex items-center gap-1.5 px-3 h-9 rounded-lg border border-gray-200 dark:border-gray-700 text-xs font-bold text-gray-600 dark:text-gray-300 hover:bg-white dark:hover:bg-gray-700">
+              <X className="w-3.5 h-3.5" /> إلغاء التحديد
+            </button>
+            <button onClick={bulkDelete} disabled={deleting}
+              className="inline-flex items-center gap-1.5 px-4 h-9 rounded-lg bg-red-600 hover:bg-red-700 text-white text-xs font-bold disabled:opacity-50">
+              {deleting ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Trash2 className="w-3.5 h-3.5" />} حذف المحدد
+            </button>
+          </div>
+        </div>
+      )}
+
       <div className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded overflow-hidden">
         {loading ? (
           <TableSkeleton rows={8} />
@@ -141,6 +206,12 @@ export function QuotationsClient({ initialData }: { initialData: { quotations: Q
             <table className="w-full text-sm">
               <thead>
                 <tr className="border-b border-gray-100 dark:border-gray-700 bg-gray-50/50">
+                  {canDelete && (
+                    <th className="p-3 pr-5 w-8">
+                      <input type="checkbox" checked={allOnPageSelected} onChange={toggleAllOnPage}
+                        className="w-4 h-4 accent-red-600 align-middle" title="تحديد كل الصفحة" />
+                    </th>
+                  )}
                   <th className="text-right p-3 px-5 text-xs text-gray-400 font-semibold">{t("quoteNumber")}</th>
                   <th className="text-right p-3 text-xs text-gray-400 font-semibold">{t("customer")}</th>
                   <th className="text-right p-3 text-xs text-gray-400 font-semibold">{t("region")}</th>
@@ -155,7 +226,13 @@ export function QuotationsClient({ initialData }: { initialData: { quotations: Q
                   const status = STATUS_MAP[q.status] || STATUS_MAP.draft;
                   const statusKey = STATUS_KEYS[q.status];
                   return (
-                    <tr key={q.id} className="border-b border-gray-50 hover:bg-gray-50/50 transition-colors">
+                    <tr key={q.id} className={cn("border-b border-gray-50 hover:bg-gray-50/50 transition-colors", selected.has(q.id) && "bg-red-50/50 dark:bg-red-900/10")}>
+                      {canDelete && (
+                        <td className="p-3 pr-5 w-8">
+                          <input type="checkbox" checked={selected.has(q.id)} onChange={() => toggleOne(q.id)}
+                            className="w-4 h-4 accent-red-600 align-middle" />
+                        </td>
+                      )}
                       <td className="p-3 px-5">
                         <Link href={`/quotations/${q.id}`} className="font-mono-en font-bold text-gray-900 hover:underline">
                           {q.quoteNumber}
