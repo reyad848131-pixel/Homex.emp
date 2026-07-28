@@ -51,10 +51,14 @@ export function QuotationsClient({ initialData }: { initialData: { quotations: Q
   // The first page is already server-rendered; skip the initial client refetch.
   const firstRun = useRef(true);
 
-  // Multi-select delete (managers only) — soft-deletes to Trash.
+  // Multi-select delete (managers only) — off until "Select" is pressed, so
+  // checkboxes can't be ticked (and mass-deleted) by accident.
+  const [selectMode, setSelectMode] = useState(false);
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const [canDelete, setCanDelete] = useState(false);
   const [deleting, setDeleting] = useState(false);
+
+  const exitSelectMode = () => { setSelectMode(false); setSelected(new Set()); };
 
   useEffect(() => {
     fetch("/api/me").then((r) => (r.ok ? r.json() : null)).then((m) => {
@@ -78,7 +82,7 @@ export function QuotationsClient({ initialData }: { initialData: { quotations: Q
   const bulkDelete = async () => {
     const ids = [...selected];
     if (ids.length === 0) return;
-    if (!confirm(`نقل ${ids.length} عرض إلى المحذوفات؟ (يمكن استرجاعها من المحذوفات)`)) return;
+    if (!confirm(`سيتم نقل ${ids.length} عرض إلى المحذوفات.\nهل أنت متأكد؟ (يمكن استرجاعها لاحقاً من صفحة المحذوفات)`)) return;
     setDeleting(true);
     try {
       const res = await fetch("/api/quotations/bulk-delete", {
@@ -90,7 +94,7 @@ export function QuotationsClient({ initialData }: { initialData: { quotations: Q
       toast.success(`تم نقل ${data.deleted} عرض إلى المحذوفات`);
       setQuotations((prev) => prev.filter((q) => !selected.has(q.id)));
       setTotal((tot) => Math.max(0, tot - data.deleted));
-      setSelected(new Set());
+      exitSelectMode();
     } catch {
       toast.error("تعذّر الحذف");
     } finally {
@@ -133,11 +137,26 @@ export function QuotationsClient({ initialData }: { initialData: { quotations: Q
           <h1 className="text-2xl font-bold">{t("quotationsList")}</h1>
           <p className="text-sm text-gray-500 mt-1">{total} {t("quotationCount")}</p>
         </div>
-        <Link href="/quotations/new"
-          className="flex items-center gap-2 bg-gray-900 text-white px-5 py-2.5 rounded text-sm font-bold hover:bg-gray-800 transition-colors">
-          <FilePlus className="w-4 h-4" />
-          {t("newQuotation")}
-        </Link>
+        <div className="flex items-center gap-2">
+          {canDelete && (
+            selectMode ? (
+              <button onClick={exitSelectMode}
+                className="flex items-center gap-2 border border-gray-200 dark:border-gray-700 text-gray-600 dark:text-gray-300 px-4 py-2.5 rounded text-sm font-bold hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors">
+                <X className="w-4 h-4" /> إلغاء التحديد
+              </button>
+            ) : (
+              <button onClick={() => setSelectMode(true)}
+                className="flex items-center gap-2 border border-gray-200 dark:border-gray-700 text-gray-600 dark:text-gray-300 px-4 py-2.5 rounded text-sm font-bold hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors">
+                <Trash2 className="w-4 h-4" /> تحديد للحذف
+              </button>
+            )
+          )}
+          <Link href="/quotations/new"
+            className="flex items-center gap-2 bg-gray-900 text-white px-5 py-2.5 rounded text-sm font-bold hover:bg-gray-800 transition-colors">
+            <FilePlus className="w-4 h-4" />
+            {t("newQuotation")}
+          </Link>
+        </div>
       </div>
 
       <div className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded p-4 mb-4">
@@ -166,7 +185,7 @@ export function QuotationsClient({ initialData }: { initialData: { quotations: Q
           created-date range so it's easy to find & clean up a period. */}
       <DateDrillNav onChange={(range) => { setDateFrom(range?.from || ""); setDateTo(range?.to || ""); }} />
 
-      {canDelete && selected.size > 0 && (
+      {canDelete && selectMode && selected.size > 0 && (
         <div className="flex items-center justify-between gap-3 mb-3 p-3 rounded-lg bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800">
           <span className="text-sm font-bold text-red-700 dark:text-red-300">تم تحديد <span className="font-mono-en">{selected.size}</span> عرض</span>
           <div className="flex items-center gap-2">
@@ -197,7 +216,7 @@ export function QuotationsClient({ initialData }: { initialData: { quotations: Q
             <table className="w-full text-sm">
               <thead>
                 <tr className="border-b border-gray-100 dark:border-gray-700 bg-gray-50/50">
-                  {canDelete && (
+                  {canDelete && selectMode && (
                     <th className="p-3 pr-5 w-8">
                       <input type="checkbox" checked={allOnPageSelected} onChange={toggleAllOnPage}
                         className="w-4 h-4 accent-red-600 align-middle" title="تحديد كل الصفحة" />
@@ -217,8 +236,8 @@ export function QuotationsClient({ initialData }: { initialData: { quotations: Q
                   const status = STATUS_MAP[q.status] || STATUS_MAP.draft;
                   const statusKey = STATUS_KEYS[q.status];
                   return (
-                    <tr key={q.id} className={cn("border-b border-gray-50 hover:bg-gray-50/50 transition-colors", selected.has(q.id) && "bg-red-50/50 dark:bg-red-900/10")}>
-                      {canDelete && (
+                    <tr key={q.id} className={cn("border-b border-gray-50 hover:bg-gray-50/50 transition-colors", selectMode && selected.has(q.id) && "bg-red-50/50 dark:bg-red-900/10")}>
+                      {canDelete && selectMode && (
                         <td className="p-3 pr-5 w-8">
                           <input type="checkbox" checked={selected.has(q.id)} onChange={() => toggleOne(q.id)}
                             className="w-4 h-4 accent-red-600 align-middle" />
