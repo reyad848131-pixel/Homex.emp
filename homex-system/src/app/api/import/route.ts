@@ -18,6 +18,7 @@ interface Payload {
   statusMap?: Record<string, string>; // raw work-status text → system work status
   years?: number[] | null;            // only import rows whose delivery year is in this set (null/empty = all)
   includeUndated?: boolean;           // also include rows that have no readable date (in-progress orders)
+  undatedStatus?: string;             // forced work status for rows with no date
   defaultWorkStatus?: string;          // fallback when a raw status isn't mapped
   headerRow?: number;                  // 1-based header row (auto-detected when omitted)
 }
@@ -85,7 +86,11 @@ export async function POST(req: NextRequest) {
     const autoStatus: Record<string, string> = {};
     for (const { raw } of distinctStatuses) autoStatus[raw] = guessWorkStatus(raw === "(فارغ)" ? "" : raw);
     const statusMap = { ...autoStatus, ...(payload.statusMap || {}) };
+    const undatedStatus = payload.undatedStatus && VALID_WORK_STATUSES.includes(payload.undatedStatus)
+      ? payload.undatedStatus : null;
     const resolveStatus = (m: MappedRow) => {
+      // Rows with no date get the admin-chosen status (e.g. delivered).
+      if (m.year == null && undatedStatus) return undatedStatus;
       const val = statusMap[m.workStatusRaw || "(فارغ)"];
       return val && VALID_WORK_STATUSES.includes(val) ? val : guessWorkStatus(m.workStatusRaw);
     };

@@ -55,8 +55,10 @@ export default function ImportPage() {
   const [headerRow, setHeaderRow] = useState<number>(1);
   // Comma/space separated years to include (empty = all years).
   const [yearsInput, setYearsInput] = useState("2025, 2026");
-  // Also bring in rows that have no readable date (in-progress orders).
+  // Also bring in rows that have no readable date (in-progress orders), and the
+  // work status to force on them.
   const [includeUndated, setIncludeUndated] = useState(false);
+  const [undatedStatus, setUndatedStatus] = useState("delivered");
   const [statusMap, setStatusMap] = useState<Record<string, string>>({});
   const [defaultWorkStatus, setDefaultWorkStatus] = useState("in_progress");
   const [preview, setPreview] = useState<PreviewResult | null>(null);
@@ -70,12 +72,12 @@ export default function ImportPage() {
   }, []);
   useEffect(() => { loadBatches(); }, [loadBatches]);
 
-  const runPreview = useCallback(async (f: File, map: Record<string, string>, years: number[], sMap: Record<string, string>, dws: string, hRow?: number, undated?: boolean) => {
+  const runPreview = useCallback(async (f: File, map: Record<string, string>, years: number[], sMap: Record<string, string>, dws: string, hRow?: number, undated?: boolean, uStatus?: string) => {
     setLoading(true);
     setResult(null);
     const fd = new FormData();
     fd.append("file", f);
-    fd.append("payload", JSON.stringify({ action: "preview", mapping: map, years, statusMap: sMap, defaultWorkStatus: dws, headerRow: hRow, includeUndated: !!undated }));
+    fd.append("payload", JSON.stringify({ action: "preview", mapping: map, years, statusMap: sMap, defaultWorkStatus: dws, headerRow: hRow, includeUndated: !!undated, undatedStatus: uStatus }));
     try {
       const res = await fetch("/api/import", { method: "POST", body: fd });
       const data = await res.json();
@@ -104,10 +106,10 @@ export default function ImportPage() {
     setResult(null);
     setMapping({});
     // First pass: let the server auto-detect the header row + mapping.
-    if (f) runPreview(f, {}, parseYears(yearsInput), {}, defaultWorkStatus, undefined, includeUndated);
+    if (f) runPreview(f, {}, parseYears(yearsInput), {}, defaultWorkStatus, undefined, includeUndated, undatedStatus);
   };
 
-  const reprocess = () => { if (file) runPreview(file, mapping, parseYears(yearsInput), statusMap, defaultWorkStatus, headerRow, includeUndated); };
+  const reprocess = () => { if (file) runPreview(file, mapping, parseYears(yearsInput), statusMap, defaultWorkStatus, headerRow, includeUndated, undatedStatus); };
 
   const commit = async () => {
     if (!file || !preview) return;
@@ -115,7 +117,7 @@ export default function ImportPage() {
     setCommitting(true);
     const fd = new FormData();
     fd.append("file", file);
-    fd.append("payload", JSON.stringify({ action: "commit", mapping, years: parseYears(yearsInput), statusMap, defaultWorkStatus, headerRow, includeUndated }));
+    fd.append("payload", JSON.stringify({ action: "commit", mapping, years: parseYears(yearsInput), statusMap, defaultWorkStatus, headerRow, includeUndated, undatedStatus }));
     try {
       const res = await fetch("/api/import", { method: "POST", body: fd });
       const data = await res.json();
@@ -171,10 +173,20 @@ export default function ImportPage() {
             onBlur={reprocess} className="field w-40 h-11 font-mono-en" placeholder="الكل (اتركها فارغة)" />
           <label className="flex items-center gap-2 text-sm font-semibold text-gray-500 cursor-pointer">
             <input type="checkbox" checked={includeUndated}
-              onChange={(e) => { setIncludeUndated(e.target.checked); if (file) runPreview(file, mapping, parseYears(yearsInput), statusMap, defaultWorkStatus, headerRow, e.target.checked); }}
+              onChange={(e) => { setIncludeUndated(e.target.checked); if (file) runPreview(file, mapping, parseYears(yearsInput), statusMap, defaultWorkStatus, headerRow, e.target.checked, undatedStatus); }}
               className="w-4 h-4 accent-gray-900" />
             ضمّن الصفوف بدون تاريخ
           </label>
+          {includeUndated && (
+            <div className="flex items-center gap-2">
+              <label className="text-sm font-semibold text-gray-500">حالتها:</label>
+              <select value={undatedStatus}
+                onChange={(e) => { setUndatedStatus(e.target.value); if (file) runPreview(file, mapping, parseYears(yearsInput), statusMap, defaultWorkStatus, headerRow, includeUndated, e.target.value); }}
+                className="field h-11 w-40 text-sm">
+                {WORK_STATUS_OPTIONS.map((o) => <option key={o.key} value={o.key}>{o.label}</option>)}
+              </select>
+            </div>
+          )}
         </div>
       </div>
 
