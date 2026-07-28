@@ -25,6 +25,7 @@ import {
   Camera,
   AlertTriangle,
   Trash2,
+  FileSpreadsheet,
 } from "lucide-react";
 import { useState, useEffect } from "react";
 import { DarkModeToggle } from "@/components/dark-mode-toggle";
@@ -66,6 +67,7 @@ const allItems: Array<{ href: string; labelKey: TranslationKey; icon: any; perm?
   { href: "/categories", labelKey: "categories", icon: Layers, perm: ["categories"] },
   { href: "/audit-logs", labelKey: "auditLogs", icon: ScrollText, perm: ["audit"] },
   { href: "/error-logs", labelKey: "errorLogs", icon: AlertTriangle, perm: ["audit"] },
+  { href: "/import", labelKey: "importExcel", icon: FileSpreadsheet, perm: ["settings"] },
   { href: "/settings", labelKey: "settings", icon: Settings, perm: ["settings"] },
   { href: "/trash", labelKey: "trash", icon: Trash2, perm: ["trash"] },
 ];

@@ -149,6 +149,7 @@ const translations = {
   edit: { ar: "تعديل", en: "Edit" },
   save: { ar: "حفظ", en: "Save" },
   cancel: { ar: "إلغاء", en: "Cancel" },
+  importExcel: { ar: "استيراد من إكسل", en: "Import from Excel" },
   appIcon: { ar: "أيقونة التطبيق", en: "App Icon" },
   uploadIcon: { ar: "رفع أيقونة", en: "Upload icon" },
   resetIcon: { ar: "استعادة الافتراضي", en: "Reset to default" },

@@ -43,6 +43,7 @@ model Customer {
   createdBy   String   @map("created_by")
   deletedAt   DateTime? @map("deleted_at")
   deletedBy   String?   @map("deleted_by")
+  importBatch String?  @map("import_batch")
   createdAt   DateTime @default(now()) @map("created_at")
   updatedAt   DateTime @updatedAt @map("updated_at")
 
@@ -142,6 +143,9 @@ model Quotation {
   // until restored or permanently removed.
   deletedAt     DateTime? @map("deleted_at")
   deletedBy     String?   @map("deleted_by")
+  // Bulk import: tags records created by an Excel import so a whole batch can
+  // be previewed and undone as a unit.
+  importBatch   String?   @map("import_batch")
   createdAt     DateTime  @default(now()) @map("created_at")
   updatedAt     DateTime  @updatedAt @map("updated_at")
 
@@ -166,6 +170,7 @@ model Quotation {
   @@index([workStatus, deliveryDate])
   @@index([workStatus, installDate])
   @@index([photoStatus])
+  @@index([importBatch])
   @@index([status, createdAt])
   @@index([employeeId, createdAt])
   @@map("quotations")
