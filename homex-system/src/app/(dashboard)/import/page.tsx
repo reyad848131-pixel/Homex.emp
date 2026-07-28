@@ -60,6 +60,9 @@ export default function ImportPage() {
   // work status to force on them.
   const [includeUndated, setIncludeUndated] = useState(false);
   const [undatedStatus, setUndatedStatus] = useState("delivered");
+  // Import as editable drafts + keep the sheet total as a reference, so items
+  // can be filled in manually and checked against it (for 2026 orders).
+  const [editableDraft, setEditableDraft] = useState(false);
   const [statusMap, setStatusMap] = useState<Record<string, string>>({});
   const [defaultWorkStatus, setDefaultWorkStatus] = useState("in_progress");
   const [preview, setPreview] = useState<PreviewResult | null>(null);
@@ -118,7 +121,7 @@ export default function ImportPage() {
     setCommitting(true);
     const fd = new FormData();
     fd.append("file", file);
-    fd.append("payload", JSON.stringify({ action: "commit", mapping, years: parseYears(yearsInput), statusMap, defaultWorkStatus, headerRow, includeUndated, undatedStatus }));
+    fd.append("payload", JSON.stringify({ action: "commit", mapping, years: parseYears(yearsInput), statusMap, defaultWorkStatus, headerRow, includeUndated, undatedStatus, editableDraft }));
     try {
       const res = await fetch("/api/import", { method: "POST", body: fd });
       const data = await res.json();
@@ -188,6 +191,11 @@ export default function ImportPage() {
               </select>
             </div>
           )}
+          <label className="flex items-center gap-2 text-sm font-semibold text-gray-500 cursor-pointer w-full sm:w-auto" title="تُستورد كمسودة قابلة للتعديل، والإجمالي يبقى مرجعاً لإضافة الأصناف يدوياً">
+            <input type="checkbox" checked={editableDraft} onChange={(e) => setEditableDraft(e.target.checked)}
+              className="w-4 h-4 accent-gray-900" />
+            قابلة للتعديل + حفظ الإجمالي كمرجع (لإضافة الأصناف)
+          </label>
         </div>
       </div>
 

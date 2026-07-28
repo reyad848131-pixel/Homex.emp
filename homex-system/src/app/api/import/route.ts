@@ -21,6 +21,7 @@ interface Payload {
   undatedStatus?: string;             // forced work status for rows with no date
   defaultWorkStatus?: string;          // fallback when a raw status isn't mapped
   headerRow?: number;                  // 1-based header row (auto-detected when omitted)
+  editableDraft?: boolean;            // import as an editable draft + keep the total as a reference
 }
 
 const DELIVERED = "delivered";
@@ -194,16 +195,21 @@ export async function POST(req: NextRequest) {
       for (const c of createdCust) if (!custByPhone.has(c.phone)) custByPhone.set(c.phone, c.id);
     }
 
-    // 3) Bulk-create the quotations.
+    // 3) Bulk-create the quotations. In "editable draft" mode they come in as a
+    // draft (freely editable, not locked) with the sheet total kept as a
+    // reference so items can be filled in and checked against it.
+    const editableDraft = !!payload.editableDraft;
     const quoteData = toCreate.map(({ m, quoteNumber, suffixed }) => {
       const workStatus = resolveStatus(m);
-      const notes = [m.description, m.remarks, suffixed ? `رقم أصلي: ${m.orderNumber}` : ""].filter(Boolean).join(" — ") || null;
+      const advanceNote = editableDraft && m.advance > 0 ? `دفعة مقدمة (مرجع): ${m.advance.toFixed(3)}` : "";
+      const notes = [m.description, m.remarks, suffixed ? `رقم أصلي: ${m.orderNumber}` : "", advanceNote].filter(Boolean).join(" — ") || null;
       return {
         quoteNumber,
         customerId: custByPhone.get(m.phone)!,
         employeeId: user.id,
-        status: "accepted",
+        status: editableDraft ? "draft" : "accepted",
         total: m.total,
+        importedTotal: editableDraft ? m.total : null,
         workStatus,
         deliveryDate: m.deliveryDate,
         deliveredAt: workStatus === DELIVERED ? (m.deliveredOn || m.deliveryDate) : null,
@@ -215,8 +221,9 @@ export async function POST(req: NextRequest) {
     const createRes = await prisma.quotation.createMany({ data: quoteData, skipDuplicates: true });
     const created = createRes.count;
 
-    // 4) Bulk-create the advance payments (look up the new quotation ids once).
-    const advanceRows = toCreate.filter((x) => x.m.advance > 0);
+    // 4) Advance payments. Skipped in editable-draft mode (a payment would lock
+    // the quote); the advance is noted in workNotes for reference instead.
+    const advanceRows = editableDraft ? [] : toCreate.filter((x) => x.m.advance > 0);
     if (advanceRows.length) {
       const createdQuotes = await prisma.quotation.findMany({ where: { importBatch: batchId }, select: { id: true, quoteNumber: true } });
       const idByNum = new Map(createdQuotes.map((q) => [q.quoteNumber, q.id]));

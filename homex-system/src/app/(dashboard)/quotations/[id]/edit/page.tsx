@@ -65,6 +65,9 @@ export default function EditQuotationPage({ params }: { params: Promise<{ id: st
   const [builderInitial, setBuilderInitial] = useState<Record<string, any> | undefined>(undefined);
   const [locked, setLocked] = useState(false);
   const [editReason, setEditReason] = useState("");
+  // Reference total from an Excel import — shown so the user can add items until
+  // the quote matches the confirmed paper total.
+  const [importedTotal, setImportedTotal] = useState<number | null>(null);
 
   useEffect(() => {
     Promise.all([
@@ -89,6 +92,7 @@ export default function EditQuotationPage({ params }: { params: Promise<{ id: st
       setNotes(q.notes || "");
       setDeliveryDate(q.deliveryDate ? new Date(q.deliveryDate).toISOString().split("T")[0] : "");
       setDeliveryTime(q.deliveryTime || "");
+      setImportedTotal(typeof q.importedTotal === "number" ? q.importedTotal : null);
       // A financially-locked quote can only be edited by a manager (server-
       // enforced) and requires a justification captured below.
       setLocked(!!q.invoice || (q.payments?.length ?? 0) > 0 || q.status === "accepted");
@@ -257,6 +261,29 @@ export default function EditQuotationPage({ params }: { params: Promise<{ id: st
         </Link>
         <h1 className="text-2xl font-bold">{t("editQuotation")} <span className="font-mono-en text-gray-400">{quoteNumber}</span></h1>
       </div>
+
+      {importedTotal != null && (() => {
+        const diff = Math.round((total - importedTotal) * 1000) / 1000;
+        const matched = Math.abs(diff) < 0.001;
+        return (
+          <div className={cn("max-w-3xl mx-auto mb-5 rounded-lg border p-4",
+            matched ? "bg-emerald-50 dark:bg-emerald-900/20 border-emerald-200 dark:border-emerald-800"
+              : "bg-blue-50 dark:bg-blue-900/20 border-blue-200 dark:border-blue-800")}>
+            <p className={cn("text-sm font-bold mb-2", matched ? "text-emerald-800 dark:text-emerald-200" : "text-blue-800 dark:text-blue-200")}>
+              💡 الإجمالي المستورد للمراجعة — أضف الأصناف حتى يتطابق مع سعرك النهائي
+            </p>
+            <div className="flex flex-wrap items-center gap-x-6 gap-y-1 text-sm font-mono-en">
+              <span className="text-gray-600 dark:text-gray-300">المستورد: <b>{fmtCur(importedTotal)}</b></span>
+              <span className="text-gray-600 dark:text-gray-300">الحالي: <b>{fmtCur(total)}</b></span>
+              {matched ? (
+                <span className="font-bold text-emerald-700 dark:text-emerald-300">✓ مطابق</span>
+              ) : (
+                <span className="font-bold text-blue-700 dark:text-blue-300">الفرق: {fmtCur(Math.abs(diff))} {diff > 0 ? "(زائد)" : "(ناقص)"}</span>
+              )}
+            </div>
+          </div>
+        );
+      })()}
 
       {locked && (
         <div className="max-w-3xl mx-auto mb-5 rounded-lg bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 p-4">

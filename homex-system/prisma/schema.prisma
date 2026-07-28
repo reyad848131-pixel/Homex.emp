@@ -146,6 +146,9 @@ model Quotation {
   // Bulk import: tags records created by an Excel import so a whole batch can
   // be previewed and undone as a unit.
   importBatch   String?   @map("import_batch")
+  // Reference total from the imported sheet — shown while items are added
+  // manually so the user can confirm the itemized quote matches the paper.
+  importedTotal Float?    @map("imported_total")
   createdAt     DateTime  @default(now()) @map("created_at")
   updatedAt     DateTime  @updatedAt @map("updated_at")
 
