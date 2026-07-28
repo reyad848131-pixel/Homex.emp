@@ -127,13 +127,6 @@ export async function parseWorkbook(buffer: Buffer, headerRowOverride?: number):
 
   const headers = readCells(headerRow);
 
-  const rowIsYellow = (r: number): boolean => {
-    const row = ws.getRow(r);
-    let yellow = false;
-    row.eachCell({ includeEmpty: false }, (cell) => { if (cellIsYellow(cell)) yellow = true; });
-    return yellow;
-  };
-
   const rows: Record<string, string>[] = [];
   for (let r = headerRow + 1; r <= ws.rowCount; r++) {
     const cells = readCells(r);
@@ -145,34 +138,9 @@ export async function parseWorkbook(buffer: Buffer, headerRowOverride?: number):
       obj[key] = v;
       if (v) any = true;
     }
-    // Reserved key: whether the row is highlighted yellow (= delivered).
-    if (any) { obj.__yellow = rowIsYellow(r) ? "1" : ""; rows.push(obj); }
+    if (any) rows.push(obj);
   }
   return { headers: headers.filter(Boolean), rows, headerRow };
-}
-
-// --- Cell colour detection ------------------------------------------------
-// The company's sheet highlights delivered orders in yellow (sometimes without
-// writing a delivery date), so a yellow row means "delivered".
-function argbToRgb(argb: string): { r: number; g: number; b: number } | null {
-  const hex = argb.length === 8 ? argb.slice(2) : argb;
-  if (!/^[0-9a-fA-F]{6}$/.test(hex)) return null;
-  const n = parseInt(hex, 16);
-  return { r: (n >> 16) & 255, g: (n >> 8) & 255, b: n & 255 };
-}
-function isYellow(color: any): boolean {
-  if (!color) return false;
-  const argb: string | undefined = color.argb || color.rgb;
-  if (!argb) return false;
-  const rgb = argbToRgb(argb);
-  if (!rgb) return false;
-  // Yellow / amber highlight: strong red + green, low blue.
-  return rgb.r > 200 && rgb.g > 170 && rgb.b < 140;
-}
-function cellIsYellow(cell: ExcelJS.Cell): boolean {
-  const fill: any = (cell as any).fill;
-  if (!fill || fill.type !== "pattern" || fill.pattern === "none") return false;
-  return isYellow(fill.fgColor) || isYellow(fill.bgColor);
 }
 
 function cellText(value: ExcelJS.CellValue): string {
@@ -284,7 +252,6 @@ export interface MappedRow {
   workStatusRaw: string;
   description: string;
   remarks: string;
-  deliveredByColor: boolean; // row highlighted yellow in the sheet = delivered
   year: number | null;
   errors: string[];
 }
@@ -327,7 +294,6 @@ export function mapRow(
     workStatusRaw: get("workStatus"),
     description: get("description"),
     remarks: get("remarks"),
-    deliveredByColor: raw.__yellow === "1",
     year,
     errors,
   };

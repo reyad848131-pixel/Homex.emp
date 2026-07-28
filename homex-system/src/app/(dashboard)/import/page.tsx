@@ -29,7 +29,6 @@ interface PreviewResult {
   validCount: number;
   errorCount: number;
   noDateRows: number;
-  yellowRows: number;
   headerRow: number;
   mapping: Record<string, string>;
   statusMap: Record<string, string>;
@@ -199,15 +198,6 @@ export default function ImportPage() {
               </div>
             ))}
           </div>
-
-          {preview.yellowRows > 0 && (
-            <div className="flex items-start gap-2 bg-amber-50 dark:bg-amber-900/20 border border-amber-300 dark:border-amber-700 rounded-xl p-4 mb-5 text-sm">
-              <Check className="w-4 h-4 text-amber-600 shrink-0 mt-0.5" />
-              <p className="text-amber-800 dark:text-amber-200">
-                <span className="font-bold font-mono-en">{preview.yellowRows}</span> صف مظلَّل بالأصفر في الإكسل — اعتُبرت <b>تم التوصيل</b> تلقائياً (حتى بدون تاريخ).
-              </p>
-            </div>
-          )}
 
           {preview.noDateRows > 0 && (
             <div className={`flex items-start gap-2 rounded-xl p-4 mb-5 text-sm border ${includeUndated ? "bg-emerald-50 dark:bg-emerald-900/20 border-emerald-200 dark:border-emerald-800" : "bg-amber-50 dark:bg-amber-900/20 border-amber-200 dark:border-amber-800"}`}>
