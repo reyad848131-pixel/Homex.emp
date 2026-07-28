@@ -156,16 +156,25 @@ export async function POST(req: NextRequest) {
     const custByPhone = new Map<string, string>();
 
     for (const m of inYear) {
-      const errs = evaluate(m);
-      if (m.orderNumber && usedNums.has(m.orderNumber) && !existingNums.has(m.orderNumber)) {
-        // second occurrence of a file-duplicate number
-        skipped.push({ row: m.rowNumber, order: m.orderNumber, reason: "duplicate_in_file" });
+      // Skip only genuinely broken rows (missing name/phone/order number).
+      if (m.errors.length) {
+        skipped.push({ row: m.rowNumber, order: m.orderNumber || "-", reason: m.errors[0] });
         continue;
       }
-      if (errs.length) {
-        skipped.push({ row: m.rowNumber, order: m.orderNumber || "-", reason: errs[0] });
+      // Already imported before (exists in the DB) → skip to avoid duplicating.
+      if (existingNums.has(m.orderNumber)) {
+        skipped.push({ row: m.rowNumber, order: m.orderNumber, reason: "order_number_exists" });
         continue;
       }
+      // A number that repeats WITHIN the file is kept (no data loss): the first
+      // keeps the original, the rest get a -2/-3 suffix (original noted below).
+      let quoteNumber = m.orderNumber;
+      if (usedNums.has(quoteNumber)) {
+        let i = 2;
+        while (usedNums.has(`${m.orderNumber}-${i}`)) i++;
+        quoteNumber = `${m.orderNumber}-${i}`;
+      }
+      const suffixed = quoteNumber !== m.orderNumber;
       try {
         // Match/create customer by phone.
         let customerId = custByPhone.get(m.phone);
@@ -187,11 +196,12 @@ export async function POST(req: NextRequest) {
         }
 
         const workStatus = resolveStatus(m);
-        const notes = [m.description, m.remarks].filter(Boolean).join(" — ") || null;
+        const notes = [m.description, m.remarks, suffixed ? `رقم أصلي: ${m.orderNumber}` : ""]
+          .filter(Boolean).join(" — ") || null;
 
         await prisma.quotation.create({
           data: {
-            quoteNumber: m.orderNumber,
+            quoteNumber,
             customerId,
             employeeId: user.id,
             status: "accepted",
@@ -209,7 +219,7 @@ export async function POST(req: NextRequest) {
               : {}),
           },
         });
-        usedNums.add(m.orderNumber);
+        usedNums.add(quoteNumber);
         created++;
       } catch (e: any) {
         skipped.push({ row: m.rowNumber, order: m.orderNumber, reason: "db_error" });

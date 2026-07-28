@@ -199,6 +199,15 @@ export default function ImportPage() {
             ))}
           </div>
 
+          {preview.fileDuplicates.length > 0 && (
+            <div className="flex items-start gap-2 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-xl p-4 mb-5 text-sm">
+              <AlertTriangle className="w-4 h-4 text-blue-600 shrink-0 mt-0.5" />
+              <p className="text-blue-800 dark:text-blue-200">
+                <span className="font-bold font-mono-en">{preview.fileDuplicates.length}</span> رقم طلب مكرّر داخل الملف — <b>كل الصفوف تُحفظ</b> (المكرر ياخذ لاحقة مثل «-2»، والرقم الأصلي يُسجَّل في الملاحظات).
+              </p>
+            </div>
+          )}
+
           {preview.noDateRows > 0 && (
             <div className={`flex items-start gap-2 rounded-xl p-4 mb-5 text-sm border ${includeUndated ? "bg-emerald-50 dark:bg-emerald-900/20 border-emerald-200 dark:border-emerald-800" : "bg-amber-50 dark:bg-amber-900/20 border-amber-200 dark:border-amber-800"}`}>
               <AlertTriangle className={`w-4 h-4 shrink-0 mt-0.5 ${includeUndated ? "text-emerald-600" : "text-amber-600"}`} />
