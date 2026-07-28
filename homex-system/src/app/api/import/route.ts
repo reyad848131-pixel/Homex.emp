@@ -17,6 +17,7 @@ interface Payload {
   mapping?: Partial<Record<ImportField, string>>;
   statusMap?: Record<string, string>; // raw work-status text → system work status
   years?: number[] | null;            // only import rows whose delivery year is in this set (null/empty = all)
+  includeUndated?: boolean;           // also include rows that have no readable date (in-progress orders)
   defaultWorkStatus?: string;          // fallback when a raw status isn't mapped
   headerRow?: number;                  // 1-based header row (auto-detected when omitted)
 }
@@ -63,7 +64,10 @@ export async function POST(req: NextRequest) {
     const mapped = rows.map((r, i) => mapRow(r, i + 2, mapping)); // +2: header is row 1
     const years = (payload.years || []).filter((y) => Number.isFinite(y));
     const yearSet = new Set(years);
-    const inYear = yearSet.size === 0 ? mapped : mapped.filter((m) => m.year != null && yearSet.has(m.year));
+    const includeUndated = !!payload.includeUndated;
+    const inYear = yearSet.size === 0
+      ? mapped
+      : mapped.filter((m) => (m.year != null && yearSet.has(m.year)) || (includeUndated && m.year == null));
 
     // Distinct raw work-status values (for the mapping UI).
     const statusCounts = new Map<string, number>();

@@ -55,6 +55,8 @@ export default function ImportPage() {
   const [headerRow, setHeaderRow] = useState<number>(1);
   // Comma/space separated years to include (empty = all years).
   const [yearsInput, setYearsInput] = useState("2025, 2026");
+  // Also bring in rows that have no readable date (in-progress orders).
+  const [includeUndated, setIncludeUndated] = useState(false);
   const [statusMap, setStatusMap] = useState<Record<string, string>>({});
   const [defaultWorkStatus, setDefaultWorkStatus] = useState("in_progress");
   const [preview, setPreview] = useState<PreviewResult | null>(null);
@@ -68,12 +70,12 @@ export default function ImportPage() {
   }, []);
   useEffect(() => { loadBatches(); }, [loadBatches]);
 
-  const runPreview = useCallback(async (f: File, map: Record<string, string>, years: number[], sMap: Record<string, string>, dws: string, hRow?: number) => {
+  const runPreview = useCallback(async (f: File, map: Record<string, string>, years: number[], sMap: Record<string, string>, dws: string, hRow?: number, undated?: boolean) => {
     setLoading(true);
     setResult(null);
     const fd = new FormData();
     fd.append("file", f);
-    fd.append("payload", JSON.stringify({ action: "preview", mapping: map, years, statusMap: sMap, defaultWorkStatus: dws, headerRow: hRow }));
+    fd.append("payload", JSON.stringify({ action: "preview", mapping: map, years, statusMap: sMap, defaultWorkStatus: dws, headerRow: hRow, includeUndated: !!undated }));
     try {
       const res = await fetch("/api/import", { method: "POST", body: fd });
       const data = await res.json();
@@ -102,10 +104,10 @@ export default function ImportPage() {
     setResult(null);
     setMapping({});
     // First pass: let the server auto-detect the header row + mapping.
-    if (f) runPreview(f, {}, parseYears(yearsInput), {}, defaultWorkStatus, undefined);
+    if (f) runPreview(f, {}, parseYears(yearsInput), {}, defaultWorkStatus, undefined, includeUndated);
   };
 
-  const reprocess = () => { if (file) runPreview(file, mapping, parseYears(yearsInput), statusMap, defaultWorkStatus, headerRow); };
+  const reprocess = () => { if (file) runPreview(file, mapping, parseYears(yearsInput), statusMap, defaultWorkStatus, headerRow, includeUndated); };
 
   const commit = async () => {
     if (!file || !preview) return;
@@ -113,7 +115,7 @@ export default function ImportPage() {
     setCommitting(true);
     const fd = new FormData();
     fd.append("file", file);
-    fd.append("payload", JSON.stringify({ action: "commit", mapping, years: parseYears(yearsInput), statusMap, defaultWorkStatus, headerRow }));
+    fd.append("payload", JSON.stringify({ action: "commit", mapping, years: parseYears(yearsInput), statusMap, defaultWorkStatus, headerRow, includeUndated }));
     try {
       const res = await fetch("/api/import", { method: "POST", body: fd });
       const data = await res.json();
@@ -167,6 +169,12 @@ export default function ImportPage() {
           <label className="text-sm font-semibold text-gray-500">سنوات الطلبات:</label>
           <input type="text" value={yearsInput} onChange={(e) => setYearsInput(e.target.value)}
             onBlur={reprocess} className="field w-40 h-11 font-mono-en" placeholder="الكل (اتركها فارغة)" />
+          <label className="flex items-center gap-2 text-sm font-semibold text-gray-500 cursor-pointer">
+            <input type="checkbox" checked={includeUndated}
+              onChange={(e) => { setIncludeUndated(e.target.checked); if (file) runPreview(file, mapping, parseYears(yearsInput), statusMap, defaultWorkStatus, headerRow, e.target.checked); }}
+              className="w-4 h-4 accent-gray-900" />
+            ضمّن الصفوف بدون تاريخ
+          </label>
         </div>
       </div>
 
@@ -192,10 +200,13 @@ export default function ImportPage() {
           </div>
 
           {preview.noDateRows > 0 && (
-            <div className="flex items-start gap-2 bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 rounded-xl p-4 mb-5 text-sm">
-              <AlertTriangle className="w-4 h-4 text-amber-600 shrink-0 mt-0.5" />
-              <p className="text-amber-800 dark:text-amber-200">
-                <span className="font-bold font-mono-en">{preview.noDateRows}</span> صف بدون تاريخ تسليم ولا حجز مقروء — لن تُحسب ضمن أي سنة. تأكد من تنسيق أعمدة التواريخ أو اترك خانة السنوات فارغة لاستيرادها.
+            <div className={`flex items-start gap-2 rounded-xl p-4 mb-5 text-sm border ${includeUndated ? "bg-emerald-50 dark:bg-emerald-900/20 border-emerald-200 dark:border-emerald-800" : "bg-amber-50 dark:bg-amber-900/20 border-amber-200 dark:border-amber-800"}`}>
+              <AlertTriangle className={`w-4 h-4 shrink-0 mt-0.5 ${includeUndated ? "text-emerald-600" : "text-amber-600"}`} />
+              <p className={includeUndated ? "text-emerald-800 dark:text-emerald-200" : "text-amber-800 dark:text-amber-200"}>
+                <span className="font-bold font-mono-en">{preview.noDateRows}</span> صف بدون تاريخ تسليم ولا حجز مقروء.
+                {includeUndated
+                  ? " ✓ مُضمَّنة الآن (تدخل إدارة الأعمال بدون تاريخ)."
+                  : " لن تُحسب ضمن أي سنة — فعّل «ضمّن الصفوف بدون تاريخ» أعلاه لإدخالها."}
               </p>
             </div>
           )}
