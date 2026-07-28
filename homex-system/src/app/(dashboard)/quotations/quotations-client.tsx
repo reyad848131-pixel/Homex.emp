@@ -3,13 +3,14 @@
 import { useState, useEffect, useRef } from "react";
 import Link from "next/link";
 import { STATUS_MAP } from "@/lib/types";
-import { Search, FilePlus, FileText, Calendar, Trash2, X, Loader2 } from "lucide-react";
+import { Search, FilePlus, FileText, Trash2, X, Loader2 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useDebouncedValue } from "@/lib/hooks";
 import { useI18n, type TranslationKey } from "@/lib/i18n";
 import { useToast } from "@/components/toast";
 import { EmptyState } from "@/components/empty-state";
 import { TableSkeleton } from "@/components/skeleton";
+import { DateDrillNav } from "@/components/date-drill-nav";
 
 const STATUS_KEYS: Record<string, TranslationKey> = {
   all: "statusAll",
@@ -159,21 +160,11 @@ export function QuotationsClient({ initialData }: { initialData: { quotations: Q
             ))}
           </div>
         </div>
-        <div className="flex items-center gap-3 mt-3 pt-3 border-t border-gray-100">
-          <Calendar className="w-4 h-4 text-gray-400 shrink-0" />
-          <div className="flex items-center gap-2 flex-1">
-            <input type="date" value={dateFrom} onChange={(e) => setDateFrom(e.target.value)}
-              className="field font-mono-en flex-1 min-w-0" />
-            <span className="text-xs text-gray-400">{t("to")}</span>
-            <input type="date" value={dateTo} onChange={(e) => setDateTo(e.target.value)}
-              className="field font-mono-en flex-1 min-w-0" />
-          </div>
-          {(dateFrom || dateTo) && (
-            <button onClick={() => { setDateFrom(""); setDateTo(""); }}
-              className="text-xs text-red-500 font-bold hover:text-red-700">{t("clear")}</button>
-          )}
-        </div>
       </div>
+
+      {/* Year → month → week/day filter (same as the work board), driving the
+          created-date range so it's easy to find & clean up a period. */}
+      <DateDrillNav onChange={(range) => { setDateFrom(range?.from || ""); setDateTo(range?.to || ""); }} />
 
       {canDelete && selected.size > 0 && (
         <div className="flex items-center justify-between gap-3 mb-3 p-3 rounded-lg bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800">
