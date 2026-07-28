@@ -86,9 +86,10 @@ export const SYSTEM_ROLES: RoleDef[] = [
     permissions: ["quotes", "quotes_create", "view_all_quotes", "approve", "payments", "invoices", "edit_locked", "work_orders", "deliveries", "photography", "financials", "reports", "customers", "trash"],
   },
   { key: "sales", label: "مبيعات", system: true, permissions: ["quotes", "quotes_create", "customers", "payments", "financials"] },
-  // Accountant: sees every quotation + customers + reports, records payments and
-  // issues invoices; cannot create quotes, and no settings / employees / pricing.
-  { key: "accountant", label: "محاسب", system: true, permissions: ["quotes", "view_all_quotes", "customers", "payments", "invoices", "financials", "reports"] },
+  // Accountant: full financial visibility + creates/edits quotations, records
+  // payments, issues invoices, and runs the work board & delivery schedules.
+  // No settings / employees / pricing (categories).
+  { key: "accountant", label: "محاسب", system: true, permissions: ["quotes", "quotes_create", "view_all_quotes", "customers", "payments", "invoices", "financials", "reports", "work_orders", "deliveries"] },
   // Driver: field ops only — delivery / installation schedules & service. No
   // access to the work board (can't drive job stages) and no money.
   { key: "driver", label: "سائق", system: true, permissions: ["deliveries"] },
