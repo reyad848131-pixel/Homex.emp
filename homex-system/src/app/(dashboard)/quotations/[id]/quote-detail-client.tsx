@@ -122,6 +122,13 @@ export default function QuoteDetailClient({
   const [statusBusy, setStatusBusy] = useState(false);
   const [deleting, setDeleting] = useState(false);
   const [duplicating, setDuplicating] = useState(false);
+  // Reassign-to-another-customer modal state.
+  const [showReassign, setShowReassign] = useState(false);
+  const [reassignBusy, setReassignBusy] = useState(false);
+  const [reassignSearch, setReassignSearch] = useState("");
+  const [reassignResults, setReassignResults] = useState<Array<{ id: string; name: string; phone: string; governorate: string }>>([]);
+  const [reassignMode, setReassignMode] = useState<"existing" | "new">("existing");
+  const [newCust, setNewCust] = useState({ name: "", phone: "", governorate: "", wilayat: "" });
   const [whatsapping, setWhatsapping] = useState(false);
 
   const fmtCur = (n: number) => `${n.toFixed(3)} ${t("omr")}`;
@@ -298,6 +305,40 @@ export default function QuoteDetailClient({
   const quoteLocked = !!q.invoice || q.payments.length > 0 || q.status === "accepted" || !!q.signedAt;
   const canManageMoney = isManager || (!quoteLocked && isOwner);
 
+  // --- Reassign to another customer ---------------------------------------
+  useEffect(() => {
+    if (!showReassign || reassignMode !== "existing") return;
+    const term = reassignSearch.trim();
+    if (term.length < 2) { setReassignResults([]); return; }
+    const ctrl = new AbortController();
+    const timer = setTimeout(() => {
+      fetch(`/api/search?q=${encodeURIComponent(term)}`, { signal: ctrl.signal })
+        .then((r) => (r.ok ? r.json() : { customers: [] }))
+        .then((d) => setReassignResults(d.customers || []))
+        .catch(() => {});
+    }, 300);
+    return () => { clearTimeout(timer); ctrl.abort(); };
+  }, [reassignSearch, showReassign, reassignMode]);
+
+  const doReassign = async (payload: object, label: string) => {
+    setReassignBusy(true);
+    try {
+      const res = await fetch(`/api/quotations/${id}/reassign`, {
+        method: "POST", headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload),
+      });
+      const data = await res.json();
+      if (!res.ok) { toast.error(data.error || "فشل النقل"); return; }
+      setQ((prev) => prev ? { ...prev, customer: { ...prev.customer, name: data.name } } : prev);
+      toast.success(`تم نقل الطلب إلى ${label}`);
+      setShowReassign(false);
+      setReassignSearch(""); setReassignResults([]);
+      setNewCust({ name: "", phone: "", governorate: "", wilayat: "" });
+      router.refresh();
+    } catch { toast.error("تعذّر النقل"); }
+    finally { setReassignBusy(false); }
+  };
+
   const groupedItems: Record<string, typeof q.items> = {};
   q.items.forEach((item) => {
     const cat = locale === "en" && item.category.nameEn ? item.category.nameEn : item.category.nameAr;
@@ -413,9 +454,18 @@ export default function QuoteDetailClient({
 
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
           <div className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded p-5">
-            <h2 className="text-sm font-bold text-gray-400 uppercase tracking-wider mb-4 flex items-center gap-2">
-              <User className="w-4 h-4" /> {t("customerInfo")}
-            </h2>
+            <div className="flex items-center justify-between gap-2 mb-4">
+              <h2 className="text-sm font-bold text-gray-400 uppercase tracking-wider flex items-center gap-2">
+                <User className="w-4 h-4" /> {t("customerInfo")}
+              </h2>
+              {isManager && (
+                <button onClick={() => setShowReassign(true)}
+                  className="inline-flex items-center gap-1 text-xs font-bold text-indigo-600 dark:text-indigo-400 hover:underline print:hidden"
+                  title="نقل هذا الطلب إلى عميل آخر أو عميل جديد (دون تعديل العميل الحالي)">
+                  <RotateCcw className="w-3.5 h-3.5" /> نقل لعميل آخر
+                </button>
+              )}
+            </div>
             <div className="space-y-3">
               <div>
                 <p className="text-lg font-bold">{q.customer.name}</p>
@@ -704,6 +754,60 @@ export default function QuoteDetailClient({
           );
         })()}
       </div>
+
+      {/* Reassign-to-another-customer modal */}
+      {showReassign && (
+        <div className="fixed inset-0 bg-black/40 z-50 flex items-center justify-center p-4 print:hidden" onClick={() => setShowReassign(false)}>
+          <div className="bg-white dark:bg-gray-800 rounded-xl p-5 w-full max-w-md max-h-[85vh] overflow-y-auto" onClick={(e) => e.stopPropagation()}>
+            <h3 className="font-bold mb-1 flex items-center gap-2"><RotateCcw className="w-4 h-4" /> نقل الطلب لعميل آخر</h3>
+            <p className="text-xs text-gray-400 mb-3">الطلب حالياً باسم <b>{q.customer.name}</b>. النقل يغيّر عميل هذا الطلب فقط — لا يمسّ طلبات العميل الحالي الأخرى.</p>
+            <div className="inline-flex rounded-lg border border-gray-200 dark:border-gray-700 overflow-hidden mb-3 text-sm">
+              <button onClick={() => setReassignMode("existing")}
+                className={cn("px-3 py-1.5 font-semibold", reassignMode === "existing" ? "bg-gray-900 text-white dark:bg-white dark:text-gray-900" : "text-gray-500")}>عميل موجود</button>
+              <button onClick={() => setReassignMode("new")}
+                className={cn("px-3 py-1.5 font-semibold border-r border-gray-200 dark:border-gray-700", reassignMode === "new" ? "bg-gray-900 text-white dark:bg-white dark:text-gray-900" : "text-gray-500")}>عميل جديد</button>
+            </div>
+
+            {reassignMode === "existing" ? (
+              <div>
+                <input value={reassignSearch} onChange={(e) => setReassignSearch(e.target.value)} autoFocus
+                  className="field mb-2" placeholder="ابحث بالاسم أو رقم الهاتف (حرفين على الأقل)" />
+                <div className="space-y-1.5 max-h-64 overflow-y-auto">
+                  {reassignResults.length === 0 && reassignSearch.trim().length >= 2 && (
+                    <p className="text-xs text-gray-400 py-2">لا نتائج — جرّب «عميل جديد».</p>
+                  )}
+                  {reassignResults.map((c) => (
+                    <button key={c.id} disabled={reassignBusy} onClick={() => doReassign({ customerId: c.id }, c.name)}
+                      className="w-full text-right p-2.5 rounded-lg border border-gray-100 dark:border-gray-700 hover:bg-indigo-50 dark:hover:bg-indigo-900/20 disabled:opacity-50">
+                      <p className="text-sm font-bold">{c.name}</p>
+                      <p className="text-xs text-gray-400 font-mono-en">{c.phone} · {c.governorate}</p>
+                    </button>
+                  ))}
+                </div>
+              </div>
+            ) : (
+              <div className="space-y-2">
+                <input value={newCust.name} onChange={(e) => setNewCust({ ...newCust, name: e.target.value })}
+                  className="field" placeholder="اسم العميل *" autoFocus />
+                <input value={newCust.phone} onChange={(e) => setNewCust({ ...newCust, phone: e.target.value })}
+                  className="field font-mono-en" placeholder="رقم الهاتف (9XXXXXXX)" />
+                <div className="grid grid-cols-2 gap-2">
+                  <input value={newCust.governorate} onChange={(e) => setNewCust({ ...newCust, governorate: e.target.value })}
+                    className="field" placeholder="المحافظة" />
+                  <input value={newCust.wilayat} onChange={(e) => setNewCust({ ...newCust, wilayat: e.target.value })}
+                    className="field" placeholder="الولاية" />
+                </div>
+                <button disabled={reassignBusy || !newCust.name.trim()}
+                  onClick={() => doReassign({ newCustomer: newCust }, newCust.name.trim())}
+                  className="w-full h-10 rounded-lg bg-gray-900 dark:bg-white dark:text-gray-900 text-white text-sm font-bold disabled:opacity-50">
+                  إنشاء العميل ونقل الطلب إليه
+                </button>
+              </div>
+            )}
+            <button onClick={() => setShowReassign(false)} className="mt-3 text-xs font-semibold text-gray-400 hover:text-gray-600 dark:hover:text-gray-200">إغلاق</button>
+          </div>
+        </div>
+      )}
 
       {/* Print View */}
       <div className="hidden print:block p-8" dir="rtl">
