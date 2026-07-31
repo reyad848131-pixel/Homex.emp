@@ -165,6 +165,9 @@ export async function PATCH(
             ...(body.deliveryDate !== undefined ? {
               deliveryDate: body.deliveryDate ? new Date(body.deliveryDate) : null,
               deliveryTime: body.deliveryDate ? (body.deliveryTime || null) : null,
+              // A date saved from the edit screen is a manual confirmation, so
+              // it's no longer an import estimate.
+              deliveryDateEstimated: false,
               ...(body.deliveryDate && !quotation.workStatus ? { workStatus: "needs_preparation" } : {}),
             } : {}),
             items: {

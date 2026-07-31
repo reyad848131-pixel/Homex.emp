@@ -74,7 +74,11 @@ export async function PATCH(req: NextRequest) {
     if (deliveryDriver !== undefined) data.deliveryDriver = deliveryDriver || null;
     if (deliveryLocation !== undefined) data.deliveryLocation = (typeof deliveryLocation === "string" ? deliveryLocation.trim() : "") || null;
     if (apptConfirmed !== undefined) data.apptConfirmed = Boolean(apptConfirmed);
-    if (deliveryDate !== undefined) data.deliveryDate = deliveryDate ? new Date(deliveryDate) : null;
+    if (deliveryDate !== undefined) {
+      data.deliveryDate = deliveryDate ? new Date(deliveryDate) : null;
+      // Rescheduling with a real date confirms it — drop any import estimate.
+      data.deliveryDateEstimated = false;
+    }
     if (deliveryTime !== undefined) data.deliveryTime = deliveryTime || null;
     if (installTechnician !== undefined) data.installTechnician = installTechnician || null;
     if (installDate !== undefined) data.installDate = installDate ? new Date(installDate) : null;

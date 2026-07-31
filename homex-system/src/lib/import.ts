@@ -251,6 +251,10 @@ export interface MappedRow {
   total: number;
   advance: number;
   deliveryDate: Date | null;
+  // True when deliveryDate below was not in the sheet but estimated from the
+  // rows around it (see estimateMissingDates). The value is only for ordering;
+  // the real date is still entered manually and the UI flags it as "تقديري".
+  deliveryDateEstimated: boolean;
   bookingDate: Date | null;
   deliveredOn: Date | null;
   workStatusRaw: string;
@@ -293,6 +297,7 @@ export function mapRow(
     total,
     advance: parseMoney(get("advance")),
     deliveryDate,
+    deliveryDateEstimated: false,
     bookingDate,
     deliveredOn: parseSheetDate(get("deliveredOn")),
     workStatusRaw: get("workStatus"),
@@ -301,4 +306,58 @@ export function mapRow(
     year,
     errors,
   };
+}
+
+const DAY_MS = 24 * 60 * 60 * 1000;
+
+// Fill an ESTIMATED delivery date for rows that have none, inferred from where
+// the row sits in the sheet: take the nearest dated row above and the nearest
+// dated row below (by file order) and interpolate a date between them by row
+// distance. A row at the very top/bottom with a neighbour on only one side
+// inherits that neighbour's date. This lets undated rows sort into the right
+// chronological place in the site; deliveryDateEstimated marks them so the UI
+// shows a "تقديري" badge and the real date is still entered manually.
+// Mutates and returns the same array (which must be in original file order).
+export function estimateMissingDates(rows: MappedRow[]): MappedRow[] {
+  const n = rows.length;
+  // Index of the nearest dated row at or before each position.
+  const prev: number[] = new Array(n).fill(-1);
+  let last = -1;
+  for (let i = 0; i < n; i++) {
+    if (rows[i].deliveryDate) last = i;
+    prev[i] = last;
+  }
+  // Index of the nearest dated row at or after each position.
+  const next: number[] = new Array(n).fill(-1);
+  let fwd = -1;
+  for (let i = n - 1; i >= 0; i--) {
+    if (rows[i].deliveryDate) fwd = i;
+    next[i] = fwd;
+  }
+  for (let i = 0; i < n; i++) {
+    const m = rows[i];
+    if (m.deliveryDate) continue; // already dated → leave untouched
+    const p = prev[i];
+    const q = next[i];
+    let est: Date | null = null;
+    if (p >= 0 && q >= 0 && p !== q) {
+      const pd = rows[p].deliveryDate!.getTime();
+      const qd = rows[q].deliveryDate!.getTime();
+      const frac = (i - p) / (q - p);
+      const t = Math.round((pd + (qd - pd) * frac) / DAY_MS) * DAY_MS;
+      est = new Date(t);
+    } else if (p >= 0) {
+      est = rows[p].deliveryDate; // only a neighbour above → inherit it
+    } else if (q >= 0) {
+      est = rows[q].deliveryDate; // only a neighbour below → inherit it
+    }
+    if (est) {
+      m.deliveryDate = est;
+      m.deliveryDateEstimated = true;
+      // Recompute the year now that the row has a (estimated) date, so it
+      // passes the year filter and lands in the right chronological view.
+      m.year = est.getUTCFullYear();
+    }
+  }
+  return rows;
 }

@@ -6,7 +6,7 @@ import { prisma } from "@/lib/prisma";
 import { logAction } from "@/lib/audit";
 import { getSetting } from "@/lib/settings";
 import {
-  parseWorkbook, mapRow, autoMapHeaders, guessWorkStatus, IMPORT_FIELDS,
+  parseWorkbook, mapRow, autoMapHeaders, guessWorkStatus, estimateMissingDates, IMPORT_FIELDS,
   type ImportField, type MappedRow,
 } from "@/lib/import";
 import { VALID_WORK_STATUSES } from "@/lib/types";
@@ -40,6 +40,7 @@ interface Payload {
   sheetName?: string;                  // which worksheet (tab) to read
   autoNumber?: boolean;               // generate a number for rows that have none (instead of skipping)
   importIncomplete?: boolean;         // import every row, filling placeholders for missing name/phone/number
+  estimateDates?: boolean;            // estimate missing delivery dates from neighbouring rows (for ordering)
 }
 
 const DELIVERED = "delivered";
@@ -84,6 +85,11 @@ export async function POST(req: NextRequest) {
     const mapping = { ...autoMapHeaders(headers), ...(payload.mapping || {}) } as Record<ImportField, string>;
 
     const mapped = rows.map((r, i) => mapRow(r, i + 2, mapping)); // +2: header is row 1
+    // Estimate missing delivery dates from neighbouring rows (file order) so
+    // undated rows sort into the right chronological place. Runs before the
+    // year filter so estimated rows gain a year and are included. Defaults on;
+    // the estimate is flagged (deliveryDateEstimated) for manual confirmation.
+    if (payload.estimateDates !== false) estimateMissingDates(mapped);
     const years = (payload.years || []).filter((y) => Number.isFinite(y));
     const yearSet = new Set(years);
     const includeUndated = !!payload.includeUndated;
@@ -161,6 +167,7 @@ export async function POST(req: NextRequest) {
       // be placed in a year, so they're excluded when a year filter is set.
       // Surfaced so the admin notices instead of silently losing them.
       const noDateRows = mapped.filter((m) => m.year == null).length;
+      const estimatedDateRows = inYear.filter((m) => m.deliveryDateEstimated).length;
       return NextResponse.json({
         headers,
         headerRow,
@@ -172,6 +179,7 @@ export async function POST(req: NextRequest) {
         validCount: valid.length,
         errorCount: inYear.length - valid.length,
         noDateRows,
+        estimatedDateRows,
         statusMap,
         distinctStatuses,
         fileDuplicates: [...fileDups],
@@ -184,6 +192,7 @@ export async function POST(req: NextRequest) {
           total: m.total,
           advance: m.advance,
           deliveryDate: m.deliveryDate ? m.deliveryDate.toISOString() : null,
+          deliveryDateEstimated: m.deliveryDateEstimated,
           workStatusRaw: m.workStatusRaw,
           systemWorkStatus: resolveStatus(m),
           errors: evaluate(m),
@@ -266,6 +275,7 @@ export async function POST(req: NextRequest) {
         importedTotal: editableDraft ? m.total : null,
         workStatus,
         deliveryDate: m.deliveryDate,
+        deliveryDateEstimated: m.deliveryDateEstimated,
         deliveredAt: workStatus === DELIVERED ? (m.deliveredOn || m.deliveryDate) : null,
         createdAt: (m.bookingDate || m.deliveryDate) ?? undefined,
         workNotes: notes,

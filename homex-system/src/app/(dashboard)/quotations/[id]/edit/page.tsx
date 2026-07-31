@@ -50,6 +50,7 @@ export default function EditQuotationPage({ params }: { params: Promise<{ id: st
   const [employeeName, setEmployeeName] = useState("");
   const [createdAt, setCreatedAt] = useState("");
   const [deliveryDate, setDeliveryDate] = useState("");
+  const [deliveryDateEstimated, setDeliveryDateEstimated] = useState(false);
   const [deliveryTime, setDeliveryTime] = useState("");
 
   const [customer, setCustomer] = useState<CustomerData>({
@@ -91,6 +92,7 @@ export default function EditQuotationPage({ params }: { params: Promise<{ id: st
       setVatRate(q.vatRate ?? 0.05);
       setNotes(q.notes || "");
       setDeliveryDate(q.deliveryDate ? new Date(q.deliveryDate).toISOString().split("T")[0] : "");
+      setDeliveryDateEstimated(!!q.deliveryDateEstimated);
       setDeliveryTime(q.deliveryTime || "");
       setImportedTotal(typeof q.importedTotal === "number" ? q.importedTotal : null);
       // A financially-locked quote can only be edited by a manager (server-
@@ -338,11 +340,16 @@ export default function EditQuotationPage({ params }: { params: Promise<{ id: st
               <label className="block text-sm font-semibold text-gray-600 mb-1.5">{t("deliveryDateLabel")}</label>
               <div className="flex gap-2">
                 <input type="date" value={deliveryDate} onChange={(e) => setDeliveryDate(e.target.value)}
-                  className={cn(fieldBase, "flex-1 min-w-0 font-mono-en")} />
+                  className={cn(fieldBase, "flex-1 min-w-0 font-mono-en", deliveryDateEstimated && "ring-2 ring-indigo-400/60")} />
                 <input type="time" value={deliveryTime} onChange={(e) => setDeliveryTime(e.target.value)}
                   aria-label={t("deliveryTimeLabel")} title={t("deliveryTimeLabel")}
                   className={cn(fieldBase, "w-28 shrink-0 font-mono-en")} />
               </div>
+              {deliveryDateEstimated && (
+                <p className="mt-1.5 text-xs font-semibold text-indigo-600 dark:text-indigo-400">
+                  📅 تاريخ تقديري من الاستيراد (مأخوذ من الصفوف المجاورة للترتيب فقط) — أدخل التاريخ الصحيح واحفظ لتأكيده.
+                </p>
+              )}
             </div>
             <div>
               <label className="block text-sm font-semibold text-gray-600 mb-1.5">{t("advancePctLabel")}</label>

@@ -29,6 +29,7 @@ interface PreviewResult {
   validCount: number;
   errorCount: number;
   noDateRows: number;
+  estimatedDateRows: number;
   headerRow: number;
   sheets: string[];
   sheetName: string;
@@ -38,7 +39,7 @@ interface PreviewResult {
   fileDuplicates: string[];
   sample: Array<{
     rowNumber: number; orderNumber: string; name: string; phone: string; place: string;
-    total: number; advance: number; deliveryDate: string | null;
+    total: number; advance: number; deliveryDate: string | null; deliveryDateEstimated: boolean;
     workStatusRaw: string; systemWorkStatus: string; errors: string[];
   }>;
 }
@@ -73,6 +74,10 @@ export default function ImportPage() {
   // Import every row even if incomplete (placeholders for missing name/phone/number).
   const [importIncomplete, setImportIncomplete] = useState(false);
   const importIncompleteRef = useRef(false);
+  // Estimate a delivery date for rows that have none, from neighbouring rows,
+  // so they sort into the right place (flagged "تقديري", entered manually).
+  const [estimateDates, setEstimateDates] = useState(true);
+  const estimateDatesRef = useRef(true);
   const [statusMap, setStatusMap] = useState<Record<string, string>>({});
   const [defaultWorkStatus, setDefaultWorkStatus] = useState("in_progress");
   const [preview, setPreview] = useState<PreviewResult | null>(null);
@@ -146,7 +151,7 @@ export default function ImportPage() {
     setResult(null);
     const fd = new FormData();
     fd.append("file", f);
-    fd.append("payload", JSON.stringify({ action: "preview", mapping: map, years, statusMap: sMap, defaultWorkStatus: dws, headerRow: hRow, includeUndated: !!undated, undatedStatus: uStatus, sheetName: sheet, autoNumber: autoNumberRef.current, importIncomplete: importIncompleteRef.current }));
+    fd.append("payload", JSON.stringify({ action: "preview", mapping: map, years, statusMap: sMap, defaultWorkStatus: dws, headerRow: hRow, includeUndated: !!undated, undatedStatus: uStatus, sheetName: sheet, autoNumber: autoNumberRef.current, importIncomplete: importIncompleteRef.current, estimateDates: estimateDatesRef.current }));
     try {
       const res = await fetch("/api/import", { method: "POST", body: fd, headers: ihdr() });
       const data = await res.json();
@@ -195,7 +200,7 @@ export default function ImportPage() {
     setCommitting(true);
     const fd = new FormData();
     fd.append("file", file);
-    fd.append("payload", JSON.stringify({ action: "commit", mapping, years: parseYears(yearsInput), statusMap, defaultWorkStatus, headerRow, includeUndated, undatedStatus, editableDraft, sheetName, autoNumber, importIncomplete }));
+    fd.append("payload", JSON.stringify({ action: "commit", mapping, years: parseYears(yearsInput), statusMap, defaultWorkStatus, headerRow, includeUndated, undatedStatus, editableDraft, sheetName, autoNumber, importIncomplete, estimateDates }));
     try {
       const res = await fetch("/api/import", { method: "POST", body: fd, headers: ihdr() });
       const data = await res.json();
@@ -345,6 +350,12 @@ export default function ImportPage() {
               className="w-4 h-4 accent-red-600" />
             استورد كل الصفوف حتى الناقصة (تُصحَّح لاحقاً)
           </label>
+          <label className="flex items-center gap-2 text-sm font-semibold text-indigo-600 dark:text-indigo-400 cursor-pointer w-full sm:w-auto" title="الصفوف بلا تاريخ تسليم تأخذ تاريخاً تقديرياً من الصفوف المجاورة (الأعلى/الأسفل) لترتيبها في مكانها الصحيح — يظهر بشارة «تقديري» ويُكتب التاريخ النهائي يدوياً">
+            <input type="checkbox" checked={estimateDates}
+              onChange={(e) => { setEstimateDates(e.target.checked); estimateDatesRef.current = e.target.checked; reprocess(); }}
+              className="w-4 h-4 accent-indigo-600" />
+            رتّب الصفوف بلا تاريخ حسب جيرانها (تاريخ تقديري)
+          </label>
         </div>
       </div>
 
@@ -397,6 +408,15 @@ export default function ImportPage() {
               <AlertTriangle className="w-4 h-4 text-blue-600 shrink-0 mt-0.5" />
               <p className="text-blue-800 dark:text-blue-200">
                 <span className="font-bold font-mono-en">{preview.fileDuplicates.length}</span> رقم طلب مكرّر داخل الملف — <b>كل الصفوف تُحفظ</b> (المكرر ياخذ لاحقة مثل «-2»، والرقم الأصلي يُسجَّل في الملاحظات).
+              </p>
+            </div>
+          )}
+
+          {estimateDates && preview.estimatedDateRows > 0 && (
+            <div className="flex items-start gap-2 rounded-xl p-4 mb-5 text-sm border bg-indigo-50 dark:bg-indigo-900/20 border-indigo-200 dark:border-indigo-800">
+              <AlertTriangle className="w-4 h-4 shrink-0 mt-0.5 text-indigo-600" />
+              <p className="text-indigo-800 dark:text-indigo-200">
+                <span className="font-bold font-mono-en">{preview.estimatedDateRows}</span> صف بلا تاريخ أخذ <b>تاريخاً تقديرياً</b> من الصفوف المجاورة ليُرتَّب في مكانه الصحيح. يظهر مع بشارة «تقديري» — <b>أكِّد التاريخ النهائي يدوياً</b> من صفحة العرض.
               </p>
             </div>
           )}
@@ -492,7 +512,7 @@ export default function ImportPage() {
                         <td className="p-2 font-mono-en">{r.phone || "—"}</td>
                         <td className="p-2">{r.place || "—"}</td>
                         <td className="p-2 font-mono-en">{fmtCur(r.total)}</td>
-                        <td className="p-2 font-mono-en">{r.deliveryDate ? new Date(r.deliveryDate).toLocaleDateString("en-GB") : "—"}</td>
+                        <td className="p-2 font-mono-en whitespace-nowrap">{r.deliveryDate ? new Date(r.deliveryDate).toLocaleDateString("en-GB") : "—"}{r.deliveryDateEstimated && <span className="mr-1 align-middle rounded px-1 py-0.5 text-[10px] font-sans font-bold bg-indigo-100 text-indigo-700 dark:bg-indigo-900/40 dark:text-indigo-300">تقديري</span>}</td>
                         <td className="p-2"><span className={`px-2 py-0.5 rounded-full text-[10px] font-bold ${ws?.badgeColor || "bg-gray-100 text-gray-600"}`}>{ws?.label || r.systemWorkStatus}</span></td>
                         <td className="p-2">
                           {bad && <span className="inline-flex items-center gap-1 text-red-600 text-[11px] font-bold"><AlertTriangle className="w-3 h-3" /> {r.errors.map((e) => ERR_LABEL[e] || e).join("، ")}</span>}

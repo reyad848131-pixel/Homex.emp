@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { parseSheetDate, parseMoney, mapRow, DEFAULT_MAPPING, autoMapHeaders, guessWorkStatus } from "./import";
+import { parseSheetDate, parseMoney, mapRow, estimateMissingDates, DEFAULT_MAPPING, autoMapHeaders, guessWorkStatus, type MappedRow } from "./import";
 
 const iso = (d: Date | null) => (d ? d.toISOString() : null);
 
@@ -160,5 +160,50 @@ describe("mapRow — real sample rows", () => {
     expect(m.deliveryDate).toBeNull();
     expect(m.year).toBe(2025); // taken from the booking date
     expect(m.errors).toEqual([]);
+  });
+});
+
+describe("estimateMissingDates — order undated rows by their neighbours", () => {
+  // Build a minimal row carrying only what the estimator reads/writes.
+  const mk = (deliveryDate: Date | null): MappedRow => ({
+    rowNumber: 0, orderNumber: "", name: "", phone: "", place: "",
+    total: 0, advance: 0, deliveryDate, deliveryDateEstimated: false,
+    bookingDate: null, deliveredOn: null, workStatusRaw: "",
+    description: "", remarks: "", year: deliveryDate ? deliveryDate.getUTCFullYear() : null, errors: [],
+  });
+  const d = (s: string) => new Date(s + "T00:00:00.000Z");
+
+  it("interpolates a date between the nearest dated rows above and below", () => {
+    const rows = [mk(d("2026-01-10")), mk(null), mk(d("2026-01-20"))];
+    estimateMissingDates(rows);
+    // Midpoint between Jan 10 and Jan 20 → Jan 15.
+    expect(iso(rows[1].deliveryDate)).toBe("2026-01-15T00:00:00.000Z");
+    expect(rows[1].deliveryDateEstimated).toBe(true);
+    expect(rows[1].year).toBe(2026);
+    // Real dates are never touched.
+    expect(rows[0].deliveryDateEstimated).toBe(false);
+    expect(rows[2].deliveryDateEstimated).toBe(false);
+  });
+
+  it("keeps two undated rows in order between the same neighbours", () => {
+    const rows = [mk(d("2026-01-10")), mk(null), mk(null), mk(d("2026-01-22"))];
+    estimateMissingDates(rows);
+    expect(rows[1].deliveryDate!.getTime()).toBeLessThan(rows[2].deliveryDate!.getTime());
+  });
+
+  it("inherits the neighbour's date at the top and bottom edges", () => {
+    const rows = [mk(null), mk(d("2026-03-05")), mk(null)];
+    estimateMissingDates(rows);
+    expect(iso(rows[0].deliveryDate)).toBe("2026-03-05T00:00:00.000Z"); // only a neighbour below
+    expect(iso(rows[2].deliveryDate)).toBe("2026-03-05T00:00:00.000Z"); // only a neighbour above
+    expect(rows[0].deliveryDateEstimated).toBe(true);
+    expect(rows[2].deliveryDateEstimated).toBe(true);
+  });
+
+  it("leaves rows undated when the whole file has no dates", () => {
+    const rows = [mk(null), mk(null)];
+    estimateMissingDates(rows);
+    expect(rows[0].deliveryDate).toBeNull();
+    expect(rows[0].deliveryDateEstimated).toBe(false);
   });
 });

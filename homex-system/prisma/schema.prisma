@@ -104,6 +104,11 @@ model Quotation {
   signedAt      DateTime? @map("signed_at")
   signerIp      String?   @map("signer_ip")
   deliveryDate  DateTime? @map("delivery_date")
+  // True when deliveryDate was ESTIMATED from neighbouring rows during import
+  // (the original sheet had no date). Used only to place the row in the right
+  // chronological position; the real date is still confirmed/entered manually,
+  // and the UI shows a "تقديري" badge until then.
+  deliveryDateEstimated Boolean @default(false) @map("delivery_date_estimated")
   // Optional time-of-day for the delivery (stored as "HH:MM"); pairs with
   // deliveryDate to schedule the delivery precisely.
   deliveryTime  String?   @map("delivery_time")

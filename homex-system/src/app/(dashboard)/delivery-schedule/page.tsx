@@ -18,6 +18,7 @@ interface DeliveryQuotation {
   quoteNumber: string;
   total: number;
   deliveryDate: string;
+  deliveryDateEstimated?: boolean;
   deliveryTime: string | null;
   deliveryDriver: string | null;
   deliveryLocation: string | null;
@@ -358,6 +359,9 @@ export default function DeliverySchedulePage() {
                           <p className="text-sm font-bold text-gray-900 dark:text-white flex items-center gap-1.5">
                             <CalendarClock className="w-4 h-4 text-teal-600" />
                             <span className="font-mono-en">{fmtDate(q.deliveryDate)}</span>
+                            {q.deliveryDateEstimated && (
+                              <span className="rounded px-1 py-0.5 text-[10px] font-bold bg-indigo-100 text-indigo-700 dark:bg-indigo-900/40 dark:text-indigo-300" title="تاريخ تقديري من الاستيراد — يُرجى تأكيده يدوياً">تقديري</span>
+                            )}
                           </p>
                           {q.deliveryTime && (
                             <p className="text-xs text-gray-500 mt-0.5 flex items-center gap-1 justify-end">
