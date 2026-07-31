@@ -28,6 +28,24 @@ export const DEFAULT_WA_DELIVERY =
 {company}
 {companyPhone}`;
 
+export const DEFAULT_WA_COMPLETED =
+`مرحباً {customer} 👋
+يسعدنا إبلاغكم أن طلبكم {number} قد اكتمل تجهيزه ✅
+سنتواصل معكم قريباً لترتيب التوصيل.
+شكراً لثقتكم 🙏
+
+{company}
+{companyPhone}`;
+
+export const DEFAULT_WA_READY =
+`مرحباً {customer} 👋
+طلبكم {number} أصبح جاهزاً للتوصيل 🚚
+{date}
+يرجى إبلاغنا بالوقت المناسب لكم 🙏
+
+{company}
+{companyPhone}`;
+
 // Fill a template with values and clean up the result: unknown placeholders are
 // dropped, blank lines collapsed, and leading/trailing whitespace trimmed.
 export function renderWaTemplate(tpl: string, vars: Record<string, string>): string {
