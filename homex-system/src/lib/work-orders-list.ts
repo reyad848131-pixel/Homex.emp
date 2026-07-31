@@ -1,5 +1,6 @@
 import { prisma } from "@/lib/prisma";
 import { VALID_WORK_STATUSES } from "@/lib/types";
+import { UPCOMING_FIRST_ORDER } from "@/lib/schedule-order";
 
 export interface WorkOrdersParams {
   workStatus?: string | null;
@@ -50,7 +51,7 @@ export async function getWorkOrders(p: WorkOrdersParams) {
         items: { include: { category: { select: { nameAr: true, nameEn: true } } }, orderBy: { sortOrder: "asc" } },
         payments: { select: { amount: true } },
       },
-      orderBy: [{ deliveryDate: "asc" }, { deliveryTime: "asc" }],
+      orderBy: UPCOMING_FIRST_ORDER,
     }),
     prisma.quotation.groupBy({ by: ["workStatus"], where: deliveryWhere, _count: true }),
     prisma.quotation.count({ where: deliveryWhere }),

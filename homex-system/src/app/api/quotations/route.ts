@@ -26,6 +26,7 @@ export async function GET(req: NextRequest) {
       search: searchParams.get("search"),
       dateFrom: searchParams.get("dateFrom"),
       dateTo: searchParams.get("dateTo"),
+      sort: searchParams.get("sort") === "delivery" ? "delivery" : "recent",
       page: parseIntParam(searchParams.get("page"), 1),
       limit: parseIntParam(searchParams.get("limit"), 20, 1, 100),
     });

@@ -44,6 +44,8 @@ export function QuotationsClient({ initialData }: { initialData: { quotations: Q
   const [page, setPage] = useState(1);
   const [dateFrom, setDateFrom] = useState("");
   const [dateTo, setDateTo] = useState("");
+  // "recent" = newest first (default) · "delivery" = nearest delivery first.
+  const [sort, setSort] = useState<"recent" | "delivery">("recent");
   const limit = 20;
   const debouncedSearch = useDebouncedValue(search);
   const { t, dateLocale } = useI18n();
@@ -116,6 +118,7 @@ export function QuotationsClient({ initialData }: { initialData: { quotations: Q
     if (statusFilter !== "all") params.set("status", statusFilter);
     if (dateFrom) params.set("dateFrom", dateFrom);
     if (dateTo) params.set("dateTo", dateTo);
+    if (sort !== "recent") params.set("sort", sort);
     params.set("page", String(page));
     params.set("limit", String(limit));
 
@@ -126,7 +129,7 @@ export function QuotationsClient({ initialData }: { initialData: { quotations: Q
         setTotal(data.total || 0);
       })
       .finally(() => setLoading(false));
-  }, [debouncedSearch, statusFilter, dateFrom, dateTo, page]);
+  }, [debouncedSearch, statusFilter, dateFrom, dateTo, sort, page]);
 
   const statuses = ["all", ...Object.keys(STATUS_MAP)];
 
@@ -184,6 +187,21 @@ export function QuotationsClient({ initialData }: { initialData: { quotations: Q
       {/* Year → month → week/day filter (same as the work board), driving the
           created-date range so it's easy to find & clean up a period. */}
       <DateDrillNav onChange={(range) => { setDateFrom(range?.from || ""); setDateTo(range?.to || ""); }} />
+
+      {/* Sort toggle: newest created (default) vs nearest delivery first. */}
+      <div className="flex items-center gap-2 mb-4 text-sm">
+        <span className="text-gray-400 font-semibold">الترتيب:</span>
+        <div className="inline-flex rounded-lg border border-gray-200 dark:border-gray-700 overflow-hidden">
+          <button type="button" onClick={() => { setSort("recent"); setPage(1); }}
+            className={cn("px-3 py-1.5 font-semibold transition-colors", sort === "recent" ? "bg-gray-900 text-white dark:bg-gray-100 dark:text-gray-900" : "text-gray-500 hover:bg-gray-50 dark:hover:bg-gray-700/50")}>
+            الأحدث
+          </button>
+          <button type="button" onClick={() => { setSort("delivery"); setPage(1); }}
+            className={cn("px-3 py-1.5 font-semibold transition-colors border-r border-gray-200 dark:border-gray-700", sort === "delivery" ? "bg-teal-600 text-white" : "text-gray-500 hover:bg-gray-50 dark:hover:bg-gray-700/50")}>
+            الأقرب تسليماً
+          </button>
+        </div>
+      </div>
 
       {canDelete && selectMode && selected.size > 0 && (
         <div className="flex items-center justify-between gap-3 mb-3 p-3 rounded-lg bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800">

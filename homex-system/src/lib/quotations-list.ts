@@ -1,4 +1,5 @@
 import { prisma } from "@/lib/prisma";
+import { UPCOMING_FIRST_ORDER } from "@/lib/schedule-order";
 
 export interface QuotationListParams {
   userId: string;
@@ -7,6 +8,9 @@ export interface QuotationListParams {
   search?: string | null;
   dateFrom?: string | null;
   dateTo?: string | null;
+  // "recent" = newest created first (default). "delivery" = nearest delivery
+  // first (overdue on top, delivered history at the bottom).
+  sort?: "recent" | "delivery" | null;
   page?: number;
   limit?: number;
 }
@@ -40,7 +44,7 @@ export async function getQuotationsList(p: QuotationListParams) {
         employee: { select: { name: true } },
         _count: { select: { items: true } },
       },
-      orderBy: { createdAt: "desc" },
+      orderBy: p.sort === "delivery" ? UPCOMING_FIRST_ORDER : { createdAt: "desc" },
       skip: (page - 1) * limit,
       take: limit,
     }),
