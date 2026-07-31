@@ -3,7 +3,7 @@
 import { useState, useEffect, useRef } from "react";
 import Link from "next/link";
 import { STATUS_MAP } from "@/lib/types";
-import { Search, FilePlus, FileText, Trash2, X, Loader2 } from "lucide-react";
+import { Search, FilePlus, FileText, Trash2, X, Loader2, Download } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useDebouncedValue } from "@/lib/hooks";
 import { useI18n, type TranslationKey } from "@/lib/i18n";
@@ -59,13 +59,17 @@ export function QuotationsClient({ initialData }: { initialData: { quotations: Q
   const [selectMode, setSelectMode] = useState(false);
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const [canDelete, setCanDelete] = useState(false);
+  const [canExport, setCanExport] = useState(false);
   const [deleting, setDeleting] = useState(false);
 
   const exitSelectMode = () => { setSelectMode(false); setSelected(new Set()); };
 
   useEffect(() => {
     fetch("/api/me").then((r) => (r.ok ? r.json() : null)).then((m) => {
-      if (m) setCanDelete(m.role === "admin" || m.role === "ceo" || m.role === "manager" || (m.permissions || []).includes("trash"));
+      if (m) {
+        setCanDelete(m.role === "admin" || m.role === "ceo" || m.role === "manager" || (m.permissions || []).includes("trash"));
+        setCanExport(m.role !== "sales"); // the export API forbids sales
+      }
     }).catch(() => {});
   }, []);
 
@@ -142,6 +146,13 @@ export function QuotationsClient({ initialData }: { initialData: { quotations: Q
           <p className="text-sm text-gray-500 mt-1">{total} {t("quotationCount")}</p>
         </div>
         <div className="flex items-center gap-2">
+          {canExport && !selectMode && (
+            <a href="/api/export?type=quotations"
+              className="flex items-center gap-2 border border-gray-200 dark:border-gray-700 text-gray-600 dark:text-gray-300 px-4 py-2.5 rounded text-sm font-bold hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors"
+              title="تنزيل كل العروض كملف Excel/CSV">
+              <Download className="w-4 h-4" /> تصدير
+            </a>
+          )}
           {canDelete && (
             selectMode ? (
               <button onClick={exitSelectMode}

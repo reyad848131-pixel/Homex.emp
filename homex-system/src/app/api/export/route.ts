@@ -28,11 +28,12 @@ export async function GET(req: NextRequest) {
       orderBy: { createdAt: "desc" },
     });
 
-    const header = ["رقم العرض", "العميل", "الهاتف", "المحافظة", "الموظف", "الحالة", "المجموع", "الضريبة", "الإجمالي", "الدفعة المقدمة", "عدد البنود", "التاريخ"];
+    const header = ["رقم العرض", "الرقم المرجعي", "العميل", "الهاتف", "المحافظة", "الموظف", "الحالة", "المجموع", "الضريبة", "الإجمالي", "الدفعة المقدمة", "عدد البنود", "التاريخ"];
     const statusLabels: Record<string, string> = { draft: "مسودة", pending: "قيد المراجعة", approved: "معتمد", declined: "مرفوض" };
 
     const rows = quotations.map((q) => [
       q.quoteNumber,
+      q.originalNumber || "",
       q.customer.name,
       `${q.customer.phoneCode}${q.customer.phone}`,
       q.customer.governorate,

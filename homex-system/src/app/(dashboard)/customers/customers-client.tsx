@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import Link from "next/link";
-import { Users, Phone, MapPin, Search } from "lucide-react";
+import { Users, Phone, MapPin, Search, Download } from "lucide-react";
 import { useI18n } from "@/lib/i18n";
 import { EmptyState } from "@/components/empty-state";
 
@@ -39,6 +39,11 @@ export function CustomersClient({ customers }: { customers: Customer[] }) {
           <h1 className="text-2xl font-bold">{t("customersTitle")}</h1>
           <p className="text-sm text-gray-500 mt-1">{customers.length} {t("customerCount")}</p>
         </div>
+        <a href="/api/export?type=customers"
+          className="flex items-center gap-2 border border-gray-200 dark:border-gray-700 text-gray-600 dark:text-gray-300 px-4 py-2.5 rounded text-sm font-bold hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors"
+          title="تنزيل العملاء كملف Excel/CSV">
+          <Download className="w-4 h-4" /> تصدير
+        </a>
       </div>
 
       {customers.length > 0 && (
