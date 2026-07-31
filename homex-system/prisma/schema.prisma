@@ -154,6 +154,10 @@ model Quotation {
   // Reference total from the imported sheet — shown while items are added
   // manually so the user can confirm the itemized quote matches the paper.
   importedTotal Float?    @map("imported_total")
+  // The original number the order carried before a bulk renumber (e.g. the old
+  // sheet number "SW-655"). Kept as a searchable reference so paper records
+  // still map to the record after unifying quote numbers.
+  originalNumber String?  @map("original_number")
   createdAt     DateTime  @default(now()) @map("created_at")
   updatedAt     DateTime  @updatedAt @map("updated_at")
 

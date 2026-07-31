@@ -18,6 +18,7 @@ import Link from "next/link";
 interface QuotationDetail {
   id: string;
   quoteNumber: string;
+  originalNumber?: string | null;
   status: string;
   statusComment: string | null;
   subtotal: number;
@@ -312,8 +313,13 @@ export default function QuoteDetailClient({
             <ArrowRight className="w-5 h-5" />
           </Link>
           <div className="flex-1">
-            <h1 className="text-2xl font-bold flex items-center gap-3">
+            <h1 className="text-2xl font-bold flex items-center gap-3 flex-wrap">
               <span className="font-mono-en">{q.quoteNumber}</span>
+              {q.originalNumber && (
+                <span className="text-xs font-bold font-mono-en px-2 py-0.5 rounded bg-gray-100 dark:bg-gray-700 text-gray-500 dark:text-gray-300" title="الرقم المرجعي القديم">
+                  مرجع: {q.originalNumber}
+                </span>
+              )}
               <span className={`text-xs px-2.5 py-1 rounded-full font-bold ${status.color}`}>{statusLabel}</span>
             </h1>
             <p className="text-sm text-gray-400 mt-1">

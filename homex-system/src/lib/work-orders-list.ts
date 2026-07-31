@@ -28,6 +28,7 @@ export async function getWorkOrders(p: WorkOrdersParams) {
   if (p.search) {
     where.OR = [
       { quoteNumber: { contains: p.search, mode: "insensitive" as const } },
+      { originalNumber: { contains: p.search, mode: "insensitive" as const } },
       { customer: { name: { contains: p.search, mode: "insensitive" as const } } },
     ];
   }

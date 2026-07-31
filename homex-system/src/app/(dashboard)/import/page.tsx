@@ -289,6 +289,26 @@ export default function ImportPage() {
     }
   };
 
+  const [renumBusy, setRenumBusy] = useState("");
+  const renumberBatch = async (batch: string) => {
+    if (!confirm("توحيد ترقيم كل طلبات هذه الدفعة إلى نمط HX-YYYY-####؟\nرقمك القديم (SW-###) يُحفظ كرقم مرجعي على كل طلب.")) return;
+    setRenumBusy(batch);
+    try {
+      const res = await fetch("/api/import/renumber", {
+        method: "POST", headers: { "Content-Type": "application/json", ...ihdr() },
+        body: JSON.stringify({ batch }),
+      });
+      const data = await res.json();
+      if (!res.ok) { toast.error(data.error || "فشل التوحيد"); return; }
+      toast.success(`تم توحيد ${data.count} طلب — تبدأ من ${data.first}`);
+      loadBatches();
+    } catch {
+      toast.error("تعذّر التوحيد");
+    } finally {
+      setRenumBusy("");
+    }
+  };
+
   const fmtCur = (n: number) => `${n.toFixed(3)}`;
 
   // Passcode gate: while a passcode is set, nothing shows until it's entered.
@@ -465,10 +485,16 @@ export default function ImportPage() {
                   <p className="text-sm font-bold font-mono-en">{b.batch}</p>
                   <p className="text-xs text-gray-400"><span className="font-mono-en">{b.count}</span> طلب · {new Date(b.at).toLocaleString("en-GB")}</p>
                 </div>
-                <button onClick={() => undo(b.batch)}
-                  className="inline-flex items-center gap-1.5 px-3 h-9 rounded-lg border border-red-200 dark:border-red-800 text-red-600 dark:text-red-400 text-xs font-bold hover:bg-red-50 dark:hover:bg-red-900/20">
-                  <RotateCcw className="w-3.5 h-3.5" /> تراجع (حذف الدفعة)
-                </button>
+                <div className="flex items-center gap-2 shrink-0">
+                  <button onClick={() => renumberBatch(b.batch)} disabled={renumBusy === b.batch}
+                    className="inline-flex items-center gap-1.5 px-3 h-9 rounded-lg border border-indigo-200 dark:border-indigo-800 text-indigo-600 dark:text-indigo-400 text-xs font-bold hover:bg-indigo-50 dark:hover:bg-indigo-900/20 disabled:opacity-50">
+                    {renumBusy === b.batch ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <FileSpreadsheet className="w-3.5 h-3.5" />} توحيد الترقيم (HX)
+                  </button>
+                  <button onClick={() => undo(b.batch)}
+                    className="inline-flex items-center gap-1.5 px-3 h-9 rounded-lg border border-red-200 dark:border-red-800 text-red-600 dark:text-red-400 text-xs font-bold hover:bg-red-50 dark:hover:bg-red-900/20">
+                    <RotateCcw className="w-3.5 h-3.5" /> تراجع (حذف الدفعة)
+                  </button>
+                </div>
               </div>
             ))}
           </div>
