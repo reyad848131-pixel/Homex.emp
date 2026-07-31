@@ -127,6 +127,9 @@ export default function QuoteDetailClient({
   const [statusBusy, setStatusBusy] = useState(false);
   const [deleting, setDeleting] = useState(false);
   const [duplicating, setDuplicating] = useState(false);
+  // Per-order activity log (audit trail for this quotation).
+  const [showActivity, setShowActivity] = useState(false);
+  const [activity, setActivity] = useState<Array<{ id: string; action: string; details: string | null; by: string; at: string }> | null>(null);
   // Reassign-to-another-customer modal state.
   const [showReassign, setShowReassign] = useState(false);
   const [reassignBusy, setReassignBusy] = useState(false);
@@ -342,6 +345,23 @@ export default function QuoteDetailClient({
       router.refresh();
     } catch { toast.error("تعذّر النقل"); }
     finally { setReassignBusy(false); }
+  };
+
+  const ACTION_LABELS: Record<string, string> = {
+    create: "إنشاء", update: "تعديل", reassign: "نقل لعميل آخر", renumber: "توحيد الترقيم",
+    import: "استيراد", import_undo: "تراجع استيراد", delete: "حذف", restore: "استرجاع",
+    status: "تغيير الحالة", status_change: "تغيير الحالة", manager_override_edit: "تعديل إداري",
+    payment: "دفعة",
+  };
+  const toggleActivity = () => {
+    const next = !showActivity;
+    setShowActivity(next);
+    if (next && activity === null) {
+      fetch(`/api/quotations/${id}/activity`)
+        .then((r) => (r.ok ? r.json() : { items: [] }))
+        .then((d) => setActivity(d.items || []))
+        .catch(() => setActivity([]));
+    }
   };
 
   const groupedItems: Record<string, typeof q.items> = {};
@@ -758,6 +778,38 @@ export default function QuoteDetailClient({
             </div>
           );
         })()}
+      </div>
+
+      {/* Activity log */}
+      <div className="mt-6 print:hidden">
+        <button onClick={toggleActivity}
+          className="inline-flex items-center gap-2 text-sm font-bold text-gray-500 hover:text-gray-900 dark:hover:text-white">
+          <Clock className="w-4 h-4" /> سجل النشاط {showActivity ? "▲" : "▼"}
+        </button>
+        {showActivity && (
+          <div className="mt-3 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded p-4">
+            {activity === null ? (
+              <p className="text-sm text-gray-400 flex items-center gap-2"><Clock className="w-4 h-4 animate-spin" /> جارٍ التحميل...</p>
+            ) : activity.length === 0 ? (
+              <p className="text-sm text-gray-400">لا يوجد نشاط مُسجَّل لهذا الطلب.</p>
+            ) : (
+              <ul className="space-y-2.5">
+                {activity.map((a) => (
+                  <li key={a.id} className="flex items-start gap-3 text-sm">
+                    <span className="mt-1.5 w-2 h-2 rounded-full bg-indigo-400 shrink-0" />
+                    <div className="flex-1 min-w-0">
+                      <p className="font-bold">{ACTION_LABELS[a.action] || a.action}
+                        <span className="font-normal text-gray-400"> — {a.by}</span>
+                      </p>
+                      {a.details && <p className="text-xs text-gray-500 break-words">{a.details}</p>}
+                      <p className="text-xs text-gray-400 font-mono-en">{new Date(a.at).toLocaleString(dateLocale)}</p>
+                    </div>
+                  </li>
+                ))}
+              </ul>
+            )}
+          </div>
+        )}
       </div>
 
       {/* Reassign-to-another-customer modal */}
