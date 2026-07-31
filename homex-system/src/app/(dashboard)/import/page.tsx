@@ -67,6 +67,9 @@ export default function ImportPage() {
   // Import as editable drafts + keep the sheet total as a reference, so items
   // can be filled in manually and checked against it (for 2026 orders).
   const [editableDraft, setEditableDraft] = useState(false);
+  // Generate a number for rows that have none (instead of skipping them).
+  const [autoNumber, setAutoNumber] = useState(false);
+  const autoNumberRef = useRef(false);
   const [statusMap, setStatusMap] = useState<Record<string, string>>({});
   const [defaultWorkStatus, setDefaultWorkStatus] = useState("in_progress");
   const [preview, setPreview] = useState<PreviewResult | null>(null);
@@ -140,7 +143,7 @@ export default function ImportPage() {
     setResult(null);
     const fd = new FormData();
     fd.append("file", f);
-    fd.append("payload", JSON.stringify({ action: "preview", mapping: map, years, statusMap: sMap, defaultWorkStatus: dws, headerRow: hRow, includeUndated: !!undated, undatedStatus: uStatus, sheetName: sheet }));
+    fd.append("payload", JSON.stringify({ action: "preview", mapping: map, years, statusMap: sMap, defaultWorkStatus: dws, headerRow: hRow, includeUndated: !!undated, undatedStatus: uStatus, sheetName: sheet, autoNumber: autoNumberRef.current }));
     try {
       const res = await fetch("/api/import", { method: "POST", body: fd, headers: ihdr() });
       const data = await res.json();
@@ -189,7 +192,7 @@ export default function ImportPage() {
     setCommitting(true);
     const fd = new FormData();
     fd.append("file", file);
-    fd.append("payload", JSON.stringify({ action: "commit", mapping, years: parseYears(yearsInput), statusMap, defaultWorkStatus, headerRow, includeUndated, undatedStatus, editableDraft, sheetName }));
+    fd.append("payload", JSON.stringify({ action: "commit", mapping, years: parseYears(yearsInput), statusMap, defaultWorkStatus, headerRow, includeUndated, undatedStatus, editableDraft, sheetName, autoNumber }));
     try {
       const res = await fetch("/api/import", { method: "POST", body: fd, headers: ihdr() });
       const data = await res.json();
@@ -326,6 +329,12 @@ export default function ImportPage() {
             <input type="checkbox" checked={editableDraft} onChange={(e) => setEditableDraft(e.target.checked)}
               className="w-4 h-4 accent-gray-900" />
             قابلة للتعديل + حفظ الإجمالي كمرجع (لإضافة الأصناف)
+          </label>
+          <label className="flex items-center gap-2 text-sm font-semibold text-gray-500 cursor-pointer w-full sm:w-auto" title="الطلبات التي لا تحمل رقماً في الملف تأخذ رقماً تلقائياً (IMP-0001…) بدل تخطّيها">
+            <input type="checkbox" checked={autoNumber}
+              onChange={(e) => { setAutoNumber(e.target.checked); autoNumberRef.current = e.target.checked; reprocess(); }}
+              className="w-4 h-4 accent-gray-900" />
+            ولّد رقماً تلقائياً للطلبات بدون رقم
           </label>
         </div>
       </div>

@@ -37,6 +37,7 @@ interface Payload {
   headerRow?: number;                  // 1-based header row (auto-detected when omitted)
   editableDraft?: boolean;            // import as an editable draft + keep the total as a reference
   sheetName?: string;                  // which worksheet (tab) to read
+  autoNumber?: boolean;               // generate a number for rows that have none (instead of skipping)
 }
 
 const DELIVERED = "delivered";
@@ -136,8 +137,10 @@ export async function POST(req: NextRequest) {
         : []
     );
 
+    // When auto-numbering, a missing order number is no longer an error.
+    const autoNumber = !!payload.autoNumber;
     const evaluate = (m: MappedRow) => {
-      const errs = [...m.errors];
+      const errs = m.errors.filter((e) => !(autoNumber && e === "missing_order_number"));
       if (m.orderNumber && existingNums.has(m.orderNumber)) errs.push("order_number_exists");
       return errs;
     };
@@ -184,19 +187,29 @@ export async function POST(req: NextRequest) {
     const skipped: Array<{ row: number; order: string; reason: string }> = [];
     const usedNums = new Set(existingNums);
 
+    // Generate the next free "IMP-####" number for rows that have none.
+    let autoSeq = 1;
+    const nextAutoNumber = () => {
+      let num: string;
+      do { num = `IMP-${String(autoSeq).padStart(4, "0")}`; autoSeq++; } while (usedNums.has(num));
+      return num;
+    };
+
     // 1) Decide which rows to create and assign a unique quote number to each.
     const toCreate: Array<{ m: MappedRow; quoteNumber: string; suffixed: boolean }> = [];
     for (const m of inYear) {
-      if (m.errors.length) { skipped.push({ row: m.rowNumber, order: m.orderNumber || "-", reason: m.errors[0] }); continue; }
-      if (existingNums.has(m.orderNumber)) { skipped.push({ row: m.rowNumber, order: m.orderNumber, reason: "order_number_exists" }); continue; }
-      let quoteNumber = m.orderNumber;
-      if (usedNums.has(quoteNumber)) {
+      // Missing order number is skipped unless auto-numbering is on.
+      const errs = m.errors.filter((e) => !(autoNumber && e === "missing_order_number"));
+      if (errs.length) { skipped.push({ row: m.rowNumber, order: m.orderNumber || "-", reason: errs[0] }); continue; }
+      if (m.orderNumber && existingNums.has(m.orderNumber)) { skipped.push({ row: m.rowNumber, order: m.orderNumber, reason: "order_number_exists" }); continue; }
+      let quoteNumber = m.orderNumber || nextAutoNumber();
+      if (m.orderNumber && usedNums.has(quoteNumber)) {
         let i = 2;
         while (usedNums.has(`${m.orderNumber}-${i}`)) i++;
         quoteNumber = `${m.orderNumber}-${i}`;
       }
       usedNums.add(quoteNumber);
-      toCreate.push({ m, quoteNumber, suffixed: quoteNumber !== m.orderNumber });
+      toCreate.push({ m, quoteNumber, suffixed: !!m.orderNumber && quoteNumber !== m.orderNumber });
     }
 
     // 2) Customers — match existing by phone in one query, bulk-create the rest.
