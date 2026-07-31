@@ -3,6 +3,7 @@ import { getAuth } from "@/lib/auth";
 import { createSnapshot } from "@/lib/backup";
 import { buildExportWorkbook } from "@/lib/excel";
 import { isEmailConfigured, sendMail } from "@/lib/email";
+import { notifyAdmins } from "@/lib/notifications";
 
 // Emails a full Excel workbook of the data as an off-site backup. No-op unless
 // email is configured (RESEND_API_KEY + BACKUP_EMAIL).
@@ -49,9 +50,17 @@ export async function GET(req: NextRequest) {
       email = await emailExcelBackup();
     }
 
+    // If the off-site email backup was attempted but failed, alert admins.
+    if (email && email.startsWith("error:")) {
+      await notifyAdmins("تعذّر إرسال النسخة الاحتياطية بالبريد", `فشل إرسال نسخة Excel الاحتياطية: ${email}`, "warning", "/settings").catch(() => {});
+    }
+
     return NextResponse.json({ ok: true, backup: row, ...(email ? { email } : {}) });
   } catch (err) {
     console.error("Cron backup error:", err);
+    // A failed automatic backup is a reliability risk — alert admins in-app so
+    // it isn't missed (best-effort; never let notifying mask the original error).
+    await notifyAdmins("فشل النسخ الاحتياطي التلقائي", `لم تكتمل النسخة الاحتياطية: ${(err as any)?.message || "خطأ غير معروف"}`, "error", "/settings").catch(() => {});
     return NextResponse.json({ error: "Backup failed" }, { status: 500 });
   }
 }
