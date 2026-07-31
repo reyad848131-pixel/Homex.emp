@@ -59,6 +59,7 @@ const allItems: Array<{ href: string; labelKey: TranslationKey; icon: any; perm?
   { href: "/customers", labelKey: "customers", icon: Users, perm: ["customers", "customers_view"] },
   { href: "/work-orders", labelKey: "workOrders", icon: Truck, perm: ["work_orders"] },
   { href: "/delivery-schedule", labelKey: "deliverySchedule", icon: CalendarClock, perm: ["deliveries", "deliveries_view"] },
+  { href: "/estimated-dates", labelKey: "estimatedDatesNav", icon: CalendarClock, perm: ["work_orders"] },
   { href: "/installation-schedule", labelKey: "installSchedule", icon: Wrench, perm: ["deliveries"] },
   { href: "/service-requests", labelKey: "serviceRequests", icon: LifeBuoy, perm: ["deliveries"] },
   { href: "/photography", labelKey: "photography", icon: Camera, perm: ["photography"] },

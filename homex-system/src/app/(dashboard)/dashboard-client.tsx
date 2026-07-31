@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { useI18n, type TranslationKey } from "@/lib/i18n";
 import { formatCurrency } from "@/lib/utils";
-import { FileText, FilePlus, Users, TrendingUp, Clock, ArrowUpRight, AlertTriangle, Camera } from "lucide-react";
+import { FileText, FilePlus, Users, TrendingUp, Clock, ArrowUpRight, AlertTriangle, Camera, CalendarClock } from "lucide-react";
 
 const STATUS_KEYS: Record<string, TranslationKey> = {
   draft: "statusDraft",
@@ -33,6 +33,7 @@ interface DashboardData {
   conversionRate: string;
   photoQueueCount: number;
   overdueDeliveries: number;
+  estimatedDateCount: number;
   canSeeFinancials: boolean;
   expiringQuotations: Array<{
     id: string;
@@ -126,6 +127,22 @@ export function DashboardClient({ data }: { data: DashboardData }) {
             <p className="text-xs text-red-600 dark:text-red-400">{t("overdueDeliveriesSub")}</p>
           </div>
           <ArrowUpRight className="w-5 h-5 text-red-500 shrink-0" />
+        </Link>
+      )}
+
+      {data.estimatedDateCount > 0 && (
+        <Link href="/estimated-dates"
+          className="flex items-center gap-3 bg-indigo-50 dark:bg-indigo-900/20 border border-indigo-200 dark:border-indigo-800 rounded p-4 mb-4 hover:bg-indigo-100 dark:hover:bg-indigo-900/30 transition-colors">
+          <div className="w-10 h-10 rounded-lg bg-indigo-100 dark:bg-indigo-900/40 text-indigo-600 dark:text-indigo-300 flex items-center justify-center shrink-0">
+            <CalendarClock className="w-5 h-5" />
+          </div>
+          <div className="flex-1 min-w-0">
+            <p className="text-sm font-bold text-indigo-800 dark:text-indigo-200">
+              <span className="font-mono-en">{data.estimatedDateCount}</span> {t("estimatedDatesTitle")}
+            </p>
+            <p className="text-xs text-indigo-600 dark:text-indigo-400">{t("estimatedDatesSub")}</p>
+          </div>
+          <ArrowUpRight className="w-5 h-5 text-indigo-500 shrink-0" />
         </Link>
       )}
 
