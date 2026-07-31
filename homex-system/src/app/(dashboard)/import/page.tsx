@@ -292,8 +292,8 @@ export default function ImportPage() {
             ضمّن الصفوف بدون تاريخ
           </label>
           {includeUndated && (
-            <div className="flex items-center gap-2">
-              <label className="text-sm font-semibold text-gray-500">حالتها:</label>
+            <div className="flex items-center gap-2" title="تُطبَّق فقط على الطلبات التي لا تحمل أي حالة في الملف؛ الطلبات التي لها حالة تحتفظ بحالتها">
+              <label className="text-sm font-semibold text-gray-500">حالة الطلب بدون حالة:</label>
               <select value={undatedStatus}
                 onChange={(e) => { setUndatedStatus(e.target.value); if (file) runPreview(file, mapping, parseYears(yearsInput), statusMap, defaultWorkStatus, headerRow, includeUndated, e.target.value); }}
                 className="field h-11 w-40 text-sm">

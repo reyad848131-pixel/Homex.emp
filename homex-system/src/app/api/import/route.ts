@@ -106,10 +106,16 @@ export async function POST(req: NextRequest) {
     const undatedStatus = payload.undatedStatus && VALID_WORK_STATUSES.includes(payload.undatedStatus)
       ? payload.undatedStatus : null;
     const resolveStatus = (m: MappedRow) => {
-      // Rows with no date get the admin-chosen status (e.g. delivered).
-      if (m.year == null && undatedStatus) return undatedStatus;
-      const val = statusMap[m.workStatusRaw || "(فارغ)"];
-      return val && VALID_WORK_STATUSES.includes(val) ? val : guessWorkStatus(m.workStatusRaw);
+      const raw = (m.workStatusRaw || "").trim();
+      // Every order keeps its OWN status from the sheet — so each lands in the
+      // right place (work board / delivery queue / installed / ...).
+      if (raw) {
+        const val = statusMap[raw];
+        return val && VALID_WORK_STATUSES.includes(val) ? val : guessWorkStatus(raw);
+      }
+      // Only rows with no status at all fall back to the chosen default.
+      if (undatedStatus) return undatedStatus;
+      return guessWorkStatus(raw);
     };
 
     // Duplicate order numbers: within the file and against existing quotations.
