@@ -97,6 +97,13 @@ export default function ImportPage() {
   const [showSetPass, setShowSetPass] = useState(false);
   const [newPass, setNewPass] = useState("");
   const [curPass, setCurPass] = useState("");
+  // Owner-only recovery key: set alongside the passcode, used to reset it if
+  // forgotten (no current passcode needed).
+  const [hasRecovery, setHasRecovery] = useState(false);
+  const [recoveryKey, setRecoveryKey] = useState("");
+  const [showReset, setShowReset] = useState(false);
+  const [resetRecovery, setResetRecovery] = useState("");
+  const [resetNewPass, setResetNewPass] = useState("");
 
   const ihdr = useCallback((): Record<string, string> => (pass ? { "x-import-passcode": pass } : {}), [pass]);
 
@@ -108,6 +115,7 @@ export default function ImportPage() {
   useEffect(() => {
     fetch("/api/import/passcode").then((r) => (r.ok ? r.json() : { isSet: false })).then((d) => {
       setPassSet(!!d.isSet);
+      setHasRecovery(!!d.hasRecovery);
       if (!d.isSet) { setUnlocked(true); }
     }).catch(() => { setPassSet(false); setUnlocked(true); });
   }, []);
@@ -131,18 +139,38 @@ export default function ImportPage() {
 
   const savePasscode = async () => {
     if (newPass.length < 4) { toast.error("كلمة السر قصيرة (4 أحرف على الأقل)"); return; }
+    if (recoveryKey && recoveryKey.length < 8) { toast.error("مفتاح الاسترجاع قصير (8 أحرف على الأقل)"); return; }
     setPassBusy(true);
     try {
       const res = await fetch("/api/import/passcode", {
         method: "POST", headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ action: "set", newPasscode: newPass, currentPasscode: curPass }),
+        body: JSON.stringify({ action: "set", newPasscode: newPass, currentPasscode: curPass, recoveryKey: recoveryKey || undefined }),
       });
       const data = await res.json();
       if (!res.ok) { toast.error(data.error || "فشل الحفظ"); return; }
       toast.success("تم حفظ كلمة سر الاستيراد");
       setPass(newPass); setPassSet(true); setUnlocked(true);
-      setShowSetPass(false); setNewPass(""); setCurPass("");
+      if (recoveryKey) setHasRecovery(true);
+      setShowSetPass(false); setNewPass(""); setCurPass(""); setRecoveryKey("");
     } catch { toast.error("تعذّر الحفظ"); }
+    finally { setPassBusy(false); }
+  };
+
+  const resetPasscode = async () => {
+    if (!resetRecovery) { toast.error("أدخل مفتاح الاسترجاع"); return; }
+    if (resetNewPass.length < 4) { toast.error("كلمة السر الجديدة قصيرة (4 أحرف على الأقل)"); return; }
+    setPassBusy(true);
+    try {
+      const res = await fetch("/api/import/passcode", {
+        method: "POST", headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ action: "reset", recoveryKey: resetRecovery, newPasscode: resetNewPass }),
+      });
+      const data = await res.json();
+      if (!res.ok) { toast.error(data.error || "فشل الاسترجاع"); return; }
+      toast.success("تم تعيين كلمة سر جديدة");
+      setPass(resetNewPass); setUnlocked(true);
+      setShowReset(false); setResetRecovery(""); setResetNewPass("");
+    } catch { toast.error("تعذّر الاسترجاع"); }
     finally { setPassBusy(false); }
   };
 
@@ -239,15 +267,42 @@ export default function ImportPage() {
     return (
       <div className="max-w-sm mx-auto mt-16 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl p-6 text-center">
         <Lock className="w-10 h-10 mx-auto mb-3 text-gray-400" />
-        <h1 className="text-lg font-bold mb-1">الاستيراد محمي بكلمة سر</h1>
-        <p className="text-sm text-gray-500 mb-4">أدخل كلمة السر الخاصة للوصول إلى الاستيراد.</p>
-        <input type="password" value={passInput} onChange={(e) => setPassInput(e.target.value)}
-          onKeyDown={(e) => { if (e.key === "Enter") unlock(); }} autoFocus
-          className="field text-center tracking-widest mb-3" placeholder="••••••" />
-        <button onClick={unlock} disabled={passBusy || !passInput}
-          className="w-full inline-flex items-center justify-center gap-2 h-11 rounded-lg bg-gray-900 dark:bg-white dark:text-gray-900 text-white text-sm font-bold disabled:opacity-50">
-          {passBusy ? <Loader2 className="w-4 h-4 animate-spin" /> : <Lock className="w-4 h-4" />} فتح
-        </button>
+        {!showReset ? (
+          <>
+            <h1 className="text-lg font-bold mb-1">الاستيراد محمي بكلمة سر</h1>
+            <p className="text-sm text-gray-500 mb-4">أدخل كلمة السر الخاصة للوصول إلى الاستيراد.</p>
+            <input type="password" value={passInput} onChange={(e) => setPassInput(e.target.value)}
+              onKeyDown={(e) => { if (e.key === "Enter") unlock(); }} autoFocus
+              className="field text-center tracking-widest mb-3" placeholder="••••••" />
+            <button onClick={unlock} disabled={passBusy || !passInput}
+              className="w-full inline-flex items-center justify-center gap-2 h-11 rounded-lg bg-gray-900 dark:bg-white dark:text-gray-900 text-white text-sm font-bold disabled:opacity-50">
+              {passBusy ? <Loader2 className="w-4 h-4 animate-spin" /> : <Lock className="w-4 h-4" />} فتح
+            </button>
+            {hasRecovery && (
+              <button onClick={() => setShowReset(true)} className="mt-4 text-xs font-semibold text-gray-400 hover:text-gray-600 dark:hover:text-gray-200">
+                نسيت كلمة السر؟ استخدم مفتاح الاسترجاع
+              </button>
+            )}
+          </>
+        ) : (
+          <>
+            <h1 className="text-lg font-bold mb-1">استرجاع كلمة السر</h1>
+            <p className="text-sm text-gray-500 mb-4">أدخل مفتاح الاسترجاع الخاص بك وكلمة سر جديدة.</p>
+            <input type="password" value={resetRecovery} onChange={(e) => setResetRecovery(e.target.value)}
+              className="field mb-2" placeholder="مفتاح الاسترجاع" />
+            <input type="password" value={resetNewPass} onChange={(e) => setResetNewPass(e.target.value)}
+              onKeyDown={(e) => { if (e.key === "Enter") resetPasscode(); }}
+              className="field mb-3" placeholder="كلمة السر الجديدة (4 أحرف على الأقل)" />
+            <button onClick={resetPasscode} disabled={passBusy || !resetRecovery || !resetNewPass}
+              className="w-full inline-flex items-center justify-center gap-2 h-11 rounded-lg bg-gray-900 dark:bg-white dark:text-gray-900 text-white text-sm font-bold disabled:opacity-50">
+              {passBusy ? <Loader2 className="w-4 h-4 animate-spin" /> : <Lock className="w-4 h-4" />} تعيين كلمة سر جديدة
+            </button>
+            <button onClick={() => { setShowReset(false); setResetRecovery(""); setResetNewPass(""); }}
+              className="mt-4 text-xs font-semibold text-gray-400 hover:text-gray-600 dark:hover:text-gray-200">
+              رجوع
+            </button>
+          </>
+        )}
       </div>
     );
   }
@@ -285,12 +340,20 @@ export default function ImportPage() {
             )}
             <input type="password" value={newPass} onChange={(e) => setNewPass(e.target.value)}
               className="field mb-3" placeholder="كلمة السر الجديدة (4 أحرف على الأقل)" />
+            <div className="border-t border-gray-100 dark:border-gray-700 pt-3 mb-3">
+              <label className="block text-xs font-semibold text-gray-500 mb-1.5">
+                مفتاح الاسترجاع {hasRecovery ? <span className="text-emerald-600">(مُعيَّن — اتركه فارغاً للإبقاء عليه)</span> : <span className="text-gray-400">(يُنصح به بشدة)</span>}
+              </label>
+              <input type="password" value={recoveryKey} onChange={(e) => setRecoveryKey(e.target.value)}
+                className="field" placeholder="مفتاح استرجاع خاص (8 أحرف على الأقل)" />
+              <p className="text-[11px] text-gray-400 mt-1.5">سر ثانٍ تحفظه في مكان آمن — لو نسيت كلمة السر تعيد تعيينها به دون الحاجة للقديمة.</p>
+            </div>
             <div className="flex gap-2">
               <button onClick={savePasscode} disabled={passBusy}
                 className="flex-1 h-10 rounded-lg bg-gray-900 dark:bg-white dark:text-gray-900 text-white text-sm font-bold disabled:opacity-50">حفظ</button>
               <button onClick={() => setShowSetPass(false)} className="px-4 h-10 rounded-lg border border-gray-200 dark:border-gray-700 text-sm font-bold text-gray-600 dark:text-gray-300">إلغاء</button>
             </div>
-            <p className="text-[11px] text-gray-400 mt-3">تنبيه: احفظها في مكان آمن — لا يمكن استرجاعها إذا نُسيت.</p>
+            <p className="text-[11px] text-gray-400 mt-3">تنبيه: احفظ كلمة السر ومفتاح الاسترجاع في مكان آمن.</p>
           </div>
         </div>
       )}
