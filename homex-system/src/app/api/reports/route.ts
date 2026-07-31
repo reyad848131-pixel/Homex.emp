@@ -43,9 +43,23 @@ export async function GET(req: NextRequest) {
   const categoryCounts: Record<string, { name: string; count: number; total: number }> = {};
   const governorateCounts: Record<string, number> = {};
   const dailyData: Record<string, { count: number; total: number }> = {};
+  // Operational KPIs.
+  let deliveredCount = 0, deliveredWithDate = 0, onTimeCount = 0, sumDeliverDays = 0, deliverDaysCount = 0;
 
   for (const q of quotations) {
     statusCounts[q.status] = (statusCounts[q.status] || 0) + 1;
+
+    if (q.deliveredAt) {
+      deliveredCount++;
+      const deliveredDay = q.deliveredAt.toISOString().split("T")[0];
+      if (q.deliveryDate) {
+        deliveredWithDate++;
+        const scheduledDay = q.deliveryDate.toISOString().split("T")[0];
+        if (deliveredDay <= scheduledDay) onTimeCount++; // delivered on/before its date
+      }
+      const days = (q.deliveredAt.getTime() - q.createdAt.getTime()) / (24 * 60 * 60 * 1000);
+      if (days >= 0) { sumDeliverDays += days; deliverDaysCount++; }
+    }
     totalRevenue = roundMoney(totalRevenue + q.total);
     if (q.status === "approved") totalApproved = roundMoney(totalApproved + q.total);
 
@@ -82,6 +96,11 @@ export async function GET(req: NextRequest) {
       totalApproved: totalApproved.toFixed(3),
       conversionRate,
       statusCounts,
+    },
+    operations: {
+      deliveredCount,
+      onTimeRate: deliveredWithDate > 0 ? ((onTimeCount / deliveredWithDate) * 100).toFixed(0) : null,
+      avgDaysToDeliver: deliverDaysCount > 0 ? (sumDeliverDays / deliverDaysCount).toFixed(1) : null,
     },
     employeeStats: Object.values(employeeStats).sort((a, b) => b.total - a.total),
     categoryCounts: Object.values(categoryCounts).sort((a, b) => b.total - a.total),

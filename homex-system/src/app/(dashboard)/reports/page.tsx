@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { BarChart3, TrendingUp, Users, MapPin, FileText, Calendar, Printer } from "lucide-react";
+import { BarChart3, TrendingUp, Users, MapPin, FileText, Calendar, Printer, Truck, Clock } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { STATUS_MAP } from "@/lib/types";
 import { useI18n } from "@/lib/i18n";
@@ -89,6 +89,11 @@ interface ReportData {
     conversionRate: string;
     statusCounts: Record<string, number>;
   };
+  operations?: {
+    deliveredCount: number;
+    onTimeRate: string | null;
+    avgDaysToDeliver: string | null;
+  };
   employeeStats: Array<{ name: string; count: number; total: number; approved: number }>;
   categoryCounts: Array<{ name: string; count: number; total: number }>;
   governorateCounts: Array<{ name: string; count: number }>;
@@ -169,6 +174,25 @@ export default function ReportsPage() {
           </div>
         ))}
       </div>
+
+      {/* Operational KPIs (delivery performance) */}
+      {data.operations && data.operations.deliveredCount > 0 && (
+        <div className="grid grid-cols-3 gap-4 mb-6">
+          {[
+            { label: "طلبات مُسلَّمة", value: String(data.operations.deliveredCount), icon: Truck, color: "text-teal-600" },
+            { label: "التسليم في الوقت", value: data.operations.onTimeRate != null ? `${data.operations.onTimeRate}%` : "—", icon: Clock, color: "text-emerald-600" },
+            { label: "متوسط مدة التنفيذ", value: data.operations.avgDaysToDeliver != null ? `${data.operations.avgDaysToDeliver} يوم` : "—", icon: Calendar, color: "text-indigo-600" },
+          ].map((card) => (
+            <div key={card.label} className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded p-4">
+              <div className="flex items-center gap-2 mb-2">
+                <card.icon className={cn("w-4 h-4", card.color)} />
+                <span className="text-xs text-gray-400 font-bold">{card.label}</span>
+              </div>
+              <p className="text-xl font-black font-mono-en">{card.value}</p>
+            </div>
+          ))}
+        </div>
+      )}
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
         <div className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded p-5">
