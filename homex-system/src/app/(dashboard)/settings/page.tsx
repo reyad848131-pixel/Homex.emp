@@ -1,7 +1,8 @@
 "use client";
 
 import { useState, useEffect, useRef } from "react";
-import { Settings, Save, Building2, Download, Database, FileSpreadsheet, ScrollText, Upload, Trash2, ImageIcon, ShieldCheck, Smartphone } from "lucide-react";
+import { Settings, Save, Building2, Download, Database, FileSpreadsheet, ScrollText, Upload, Trash2, ImageIcon, ShieldCheck, Smartphone, MessageCircle } from "lucide-react";
+import { DEFAULT_WA_QUOTE, DEFAULT_WA_DELIVERY } from "@/lib/wa";
 import { useI18n } from "@/lib/i18n";
 import { AppIconEditor } from "@/components/app-icon-editor";
 
@@ -239,6 +240,28 @@ export default function SettingsPage() {
               <input type="url" value={settings.company_website || ""} onChange={(e) => update("company_website", e.target.value)}
                 className="field font-mono-en" dir="ltr" />
             </div>
+          </div>
+        </div>
+
+        {/* WhatsApp message templates */}
+        <div className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded p-6">
+          <h2 className="text-base font-bold mb-1 flex items-center gap-2"><MessageCircle className="w-4 h-4 text-gray-400" /> قوالب رسائل واتساب</h2>
+          <p className="text-xs text-gray-400 mb-4">
+            عدّل نصّ الرسائل الجاهزة. المتغيّرات المتاحة تُستبدَل تلقائياً:{" "}
+            <code className="font-mono-en" dir="ltr">{"{customer} {number} {total} {advance} {advancePct} {link} {date} {time} {location} {company} {companyPhone}"}</code>
+          </p>
+          <div className="space-y-4">
+            <div>
+              <label className="block text-sm font-semibold text-gray-600 mb-1.5">رسالة عرض السعر</label>
+              <textarea rows={7} value={settings.wa_template_quote ?? ""} onChange={(e) => update("wa_template_quote", e.target.value)}
+                className="field font-mono-en text-sm" dir="rtl" placeholder={DEFAULT_WA_QUOTE} />
+            </div>
+            <div>
+              <label className="block text-sm font-semibold text-gray-600 mb-1.5">رسالة تأكيد موعد التوصيل</label>
+              <textarea rows={6} value={settings.wa_template_delivery ?? ""} onChange={(e) => update("wa_template_delivery", e.target.value)}
+                className="field font-mono-en text-sm" dir="rtl" placeholder={DEFAULT_WA_DELIVERY} />
+            </div>
+            <p className="text-[11px] text-gray-400">اترك الحقل فارغاً لاستخدام النص الافتراضي المعروض كتلميح.</p>
           </div>
         </div>
 

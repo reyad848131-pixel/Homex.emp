@@ -7,6 +7,7 @@ import { useI18n } from "@/lib/i18n";
 import { useDebouncedValue } from "@/lib/hooks";
 import { CardsSkeleton } from "@/components/skeleton";
 import { daysUntil, URGENCY_GROUPS, NEUTRAL_TONE, daysRemainingLabel } from "@/lib/schedule-utils";
+import { renderWaTemplate, waLinkFor, DEFAULT_WA_DELIVERY } from "@/lib/wa";
 import {
   CalendarClock, Phone, MessageCircle, Check, FileText, Search,
   MapPin, Clock, Package, Truck, Printer, Wallet, User, CalendarDays,
@@ -55,10 +56,16 @@ export default function DeliverySchedulePage() {
   // financial access never see money. Default to full access until /api/me loads.
   const [canEdit, setCanEdit] = useState(true);
   const [canMoney, setCanMoney] = useState(true);
+  // Editable WhatsApp template + company signature (from settings).
+  const [waTemplate, setWaTemplate] = useState("");
+  const [company, setCompany] = useState({ name: "", phone: "" });
 
   useEffect(() => {
     fetch("/api/me").then((r) => (r.ok ? r.json() : null)).then((m) => {
       if (m) { setCanEdit(m.canEditDeliveries !== false); setCanMoney(m.canSeeFinancials !== false); }
+    }).catch(() => {});
+    fetch("/api/settings").then((r) => (r.ok ? r.json() : null)).then((s) => {
+      if (s) { setWaTemplate(s.wa_template_delivery || ""); setCompany({ name: s.company_name || "", phone: s.company_phone || "" }); }
     }).catch(() => {});
   }, []);
 
@@ -157,10 +164,16 @@ export default function DeliverySchedulePage() {
   const daysLabel = (d: number) => daysRemainingLabel(d, t);
 
   const waLink = (q: DeliveryQuotation) => {
-    const num = `${q.customer.phoneCode}${q.customer.phone}`.replace(/[^0-9]/g, "");
-    const when = `${fmtDate(q.deliveryDate)}${q.deliveryTime ? ` - ${q.deliveryTime}` : ""}`;
-    const msg = `${t("waGreeting")} ${q.customer.name} 👋\n${t("waReadyMsg")}.\n${t("waAppointment")}: ${when}\n${t("waConfirmAsk")} 🙏`;
-    return `https://wa.me/${num}?text=${encodeURIComponent(msg)}`;
+    const msg = renderWaTemplate(waTemplate || DEFAULT_WA_DELIVERY, {
+      customer: q.customer.name,
+      number: q.quoteNumber,
+      date: fmtDate(q.deliveryDate),
+      time: q.deliveryTime || "",
+      location: q.deliveryLocation || "",
+      company: company.name,
+      companyPhone: company.phone,
+    });
+    return waLinkFor(q.customer.phoneCode || "+968", q.customer.phone, msg);
   };
 
   const mapsLink = (q: DeliveryQuotation) => {

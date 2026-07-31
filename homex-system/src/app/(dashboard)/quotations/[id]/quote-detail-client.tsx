@@ -8,6 +8,7 @@ import { useI18n, type TranslationKey } from "@/lib/i18n";
 import { useToast } from "@/components/toast";
 import { normalizeNumeric } from "@/components/quote-builders";
 import { SignaturePad } from "@/components/signature-pad";
+import { renderWaTemplate, waLinkFor, DEFAULT_WA_QUOTE } from "@/lib/wa";
 import {
   ArrowRight, Printer, Trash2, CheckCircle, XCircle, Send,
   Clock, FileText, User, MapPin, Phone, Pencil, Download, Copy, MessageCircle, CalendarDays,
@@ -89,12 +90,16 @@ export default function QuoteDetailClient({
   initialTerms,
   initialSelfApprove,
   initialMe,
+  initialWaTemplate = "",
+  initialCompany = { name: "", phone: "" },
 }: {
   id: string;
   initialQuote: QuotationDetail | null;
   initialTerms: string;
   initialSelfApprove: boolean;
   initialMe: { id: string; role: string } | null;
+  initialWaTemplate?: string;
+  initialCompany?: { name: string; phone: string };
 }) {
   const router = useRouter();
   const { t, locale, dateLocale } = useI18n();
@@ -246,18 +251,18 @@ export default function QuoteDetailClient({
     let link = "";
     try { link = await ensureShareUrl(); } catch { /* fall back to summary only */ }
     setWhatsapping(false);
-    const text = encodeURIComponent(
-      `*${t("quotePrint")} - ${q.quoteNumber}*\n` +
-      `${t("customer")}: ${q.customer.name}\n` +
-      `${t("grandTotal")}: ${fmtCur(q.total)}\n` +
-      `${t("advancePayment")} (${q.advancePct}%): ${fmtCur(q.advanceAmount)}\n` +
-      (link ? `\n${t("viewAndApprove")}:\n${link}\n` : "") +
-      `\n--- ${q.quoteNumber} ---`
-    );
-    const phone = q.customer.phone.replace(/\D/g, "");
-    const code = (q.customer.phoneCode || "+968").replace(/\D/g, "");
-    const fullPhone = phone.startsWith(code) ? phone : `${code}${phone}`;
-    window.open(`https://wa.me/${fullPhone}?text=${text}`, "_blank");
+    // Use the company's editable template when set, else a sensible default.
+    const message = renderWaTemplate(initialWaTemplate || DEFAULT_WA_QUOTE, {
+      customer: q.customer.name,
+      number: q.quoteNumber,
+      total: fmtCur(q.total),
+      advance: fmtCur(q.advanceAmount),
+      advancePct: String(q.advancePct),
+      link,
+      company: initialCompany.name,
+      companyPhone: initialCompany.phone,
+    });
+    window.open(waLinkFor(q.customer.phoneCode || "+968", q.customer.phone, message), "_blank");
   };
 
   const handleAddPayment = async () => {
