@@ -30,6 +30,8 @@ interface PreviewResult {
   errorCount: number;
   noDateRows: number;
   headerRow: number;
+  sheets: string[];
+  sheetName: string;
   mapping: Record<string, string>;
   statusMap: Record<string, string>;
   distinctStatuses: Array<{ raw: string; count: number }>;
@@ -54,6 +56,8 @@ export default function ImportPage() {
   const [headers, setHeaders] = useState<string[]>([]);
   const [mapping, setMapping] = useState<Record<string, string>>({});
   const [headerRow, setHeaderRow] = useState<number>(1);
+  const [sheets, setSheets] = useState<string[]>([]);
+  const [sheetName, setSheetName] = useState<string>("");
   // Comma/space separated years to include (empty = all years).
   const [yearsInput, setYearsInput] = useState("2025, 2026");
   // Also bring in rows that have no readable date (in-progress orders), and the
@@ -131,12 +135,12 @@ export default function ImportPage() {
     finally { setPassBusy(false); }
   };
 
-  const runPreview = useCallback(async (f: File, map: Record<string, string>, years: number[], sMap: Record<string, string>, dws: string, hRow?: number, undated?: boolean, uStatus?: string) => {
+  const runPreview = useCallback(async (f: File, map: Record<string, string>, years: number[], sMap: Record<string, string>, dws: string, hRow?: number, undated?: boolean, uStatus?: string, sheet?: string) => {
     setLoading(true);
     setResult(null);
     const fd = new FormData();
     fd.append("file", f);
-    fd.append("payload", JSON.stringify({ action: "preview", mapping: map, years, statusMap: sMap, defaultWorkStatus: dws, headerRow: hRow, includeUndated: !!undated, undatedStatus: uStatus }));
+    fd.append("payload", JSON.stringify({ action: "preview", mapping: map, years, statusMap: sMap, defaultWorkStatus: dws, headerRow: hRow, includeUndated: !!undated, undatedStatus: uStatus, sheetName: sheet }));
     try {
       const res = await fetch("/api/import", { method: "POST", body: fd, headers: ihdr() });
       const data = await res.json();
@@ -146,6 +150,8 @@ export default function ImportPage() {
       // Adopt the server's detected header row and effective (auto) mapping so
       // the dropdowns reflect what was matched.
       if (typeof data.headerRow === "number") setHeaderRow(data.headerRow);
+      if (data.sheets) setSheets(data.sheets);
+      if (data.sheetName) setSheetName(data.sheetName);
       if (data.mapping) setMapping(data.mapping);
       // Adopt the server's auto-classified status mapping (typo-tolerant).
       if (data.statusMap) setStatusMap(data.statusMap);
@@ -164,11 +170,18 @@ export default function ImportPage() {
     setPreview(null);
     setResult(null);
     setMapping({});
-    // First pass: let the server auto-detect the header row + mapping.
-    if (f) runPreview(f, {}, parseYears(yearsInput), {}, defaultWorkStatus, undefined, includeUndated, undatedStatus);
+    // First pass: let the server auto-detect the sheet, header row + mapping.
+    setSheetName(""); setSheets([]);
+    if (f) runPreview(f, {}, parseYears(yearsInput), {}, defaultWorkStatus, undefined, includeUndated, undatedStatus, undefined);
   };
 
-  const reprocess = () => { if (file) runPreview(file, mapping, parseYears(yearsInput), statusMap, defaultWorkStatus, headerRow, includeUndated, undatedStatus); };
+  const reprocess = () => { if (file) runPreview(file, mapping, parseYears(yearsInput), statusMap, defaultWorkStatus, headerRow, includeUndated, undatedStatus, sheetName); };
+
+  // Switching tabs re-detects the header row + mapping for that sheet.
+  const changeSheet = (name: string) => {
+    setSheetName(name); setMapping({});
+    if (file) runPreview(file, {}, parseYears(yearsInput), {}, defaultWorkStatus, undefined, includeUndated, undatedStatus, name);
+  };
 
   const commit = async () => {
     if (!file || !preview) return;
@@ -176,7 +189,7 @@ export default function ImportPage() {
     setCommitting(true);
     const fd = new FormData();
     fd.append("file", file);
-    fd.append("payload", JSON.stringify({ action: "commit", mapping, years: parseYears(yearsInput), statusMap, defaultWorkStatus, headerRow, includeUndated, undatedStatus, editableDraft }));
+    fd.append("payload", JSON.stringify({ action: "commit", mapping, years: parseYears(yearsInput), statusMap, defaultWorkStatus, headerRow, includeUndated, undatedStatus, editableDraft, sheetName }));
     try {
       const res = await fetch("/api/import", { method: "POST", body: fd, headers: ihdr() });
       const data = await res.json();
@@ -281,6 +294,14 @@ export default function ImportPage() {
           <input ref={fileRef} type="file" accept=".xlsx,.csv" className="hidden"
             onChange={(e) => onFile(e.target.files?.[0] || null)} />
           {file && <span className="text-sm text-gray-500 font-mono-en">{file.name}</span>}
+          {sheets.length > 1 && (
+            <div className="flex items-center gap-2">
+              <label className="text-sm font-semibold text-gray-500">الصفحة (التبويب):</label>
+              <select value={sheetName} onChange={(e) => changeSheet(e.target.value)} className="field h-11 w-48 text-sm">
+                {sheets.map((s) => <option key={s} value={s}>{s}</option>)}
+              </select>
+            </div>
+          )}
           <div className="flex-1" />
           <label className="text-sm font-semibold text-gray-500">سنوات الطلبات:</label>
           <input type="text" value={yearsInput} onChange={(e) => setYearsInput(e.target.value)}

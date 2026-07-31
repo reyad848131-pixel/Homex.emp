@@ -36,6 +36,7 @@ interface Payload {
   defaultWorkStatus?: string;          // fallback when a raw status isn't mapped
   headerRow?: number;                  // 1-based header row (auto-detected when omitted)
   editableDraft?: boolean;            // import as an editable draft + keep the total as a reference
+  sheetName?: string;                  // which worksheet (tab) to read
 }
 
 const DELIVERED = "delivered";
@@ -74,7 +75,7 @@ export async function POST(req: NextRequest) {
     if (!file) return NextResponse.json({ error: "No file" }, { status: 400 });
 
     const buffer = Buffer.from(await file.arrayBuffer());
-    const { headers, rows, headerRow } = await parseWorkbook(buffer, payload.headerRow);
+    const { headers, rows, headerRow, sheets, sheetName } = await parseWorkbook(buffer, payload.headerRow, payload.sheetName);
     // Auto-map by header name, then let any explicit user overrides win. An
     // override to "" (—) clears an auto-mapped field.
     const mapping = { ...autoMapHeaders(headers), ...(payload.mapping || {}) } as Record<ImportField, string>;
@@ -150,6 +151,8 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({
         headers,
         headerRow,
+        sheets,
+        sheetName,
         mapping,
         totalRows: mapped.length,
         yearRows: inYear.length,

@@ -41,7 +41,9 @@ export const DEFAULT_MAPPING: Record<ImportField, string> = {
 export interface ParsedSheet {
   headers: string[];
   rows: Record<string, string>[];
-  headerRow: number; // 1-based row where headers were found
+  headerRow: number;   // 1-based row where headers were found
+  sheets: string[];    // names of all worksheets (tabs) in the workbook
+  sheetName: string;   // the worksheet that was actually read
 }
 
 // Normalize a header for fuzzy matching: lowercase, keep only a-z0-9.
@@ -102,11 +104,13 @@ function headerScore(cells: string[]): number {
 
 // Read the first worksheet into headers + string rows. The header row is
 // auto-detected (scanning the first rows) unless headerRowOverride is given.
-export async function parseWorkbook(buffer: Buffer, headerRowOverride?: number): Promise<ParsedSheet> {
+export async function parseWorkbook(buffer: Buffer, headerRowOverride?: number, sheetName?: string): Promise<ParsedSheet> {
   const wb = new ExcelJS.Workbook();
   await wb.xlsx.load(buffer as any);
-  const ws = wb.worksheets[0];
-  if (!ws) return { headers: [], rows: [], headerRow: 1 };
+  const sheets = wb.worksheets.map((w) => w.name);
+  // Pick the requested tab, else the first one.
+  const ws = (sheetName ? wb.worksheets.find((w) => w.name === sheetName) : null) || wb.worksheets[0];
+  if (!ws) return { headers: [], rows: [], headerRow: 1, sheets, sheetName: "" };
 
   const readCells = (r: number): string[] => {
     const row = ws.getRow(r);
@@ -140,7 +144,7 @@ export async function parseWorkbook(buffer: Buffer, headerRowOverride?: number):
     }
     if (any) rows.push(obj);
   }
-  return { headers: headers.filter(Boolean), rows, headerRow };
+  return { headers: headers.filter(Boolean), rows, headerRow, sheets, sheetName: ws.name };
 }
 
 function cellText(value: ExcelJS.CellValue): string {
