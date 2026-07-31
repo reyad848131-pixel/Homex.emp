@@ -131,6 +131,28 @@ export default async function PublicQuotePage({ params }: { params: Promise<{ to
           </div>
         </div>
 
+        {q.status === "accepted" && (() => {
+          const WS: Record<string, string> = {
+            needs_preparation: "قيد التحضير", ready_to_execute: "قيد التنفيذ", in_progress: "قيد التنفيذ",
+            completed: "اكتمل التصنيع", ready_for_delivery: "جاهز للتوصيل", delivered: "تم التوصيل ✅",
+            ready_for_install: "جاهز للتركيب", installed: "تم التركيب ✅",
+          };
+          const done = q.workStatus === "delivered" || q.workStatus === "installed";
+          const label = q.workStatus ? (WS[q.workStatus] || "قيد المتابعة") : "قيد المتابعة";
+          return (
+            <div className={`rounded-2xl shadow-sm p-6 ${done ? "bg-emerald-50" : "bg-white"}`}>
+              <p className="text-xs font-bold text-gray-400 mb-2">حالة الطلب</p>
+              <p className={`text-lg font-black ${done ? "text-emerald-700" : "text-gray-900"}`}>{label}</p>
+              {q.deliveryDate && (
+                <p className="text-sm text-gray-500 mt-1">
+                  موعد التوصيل: <span className="font-mono-en font-bold">{new Date(q.deliveryDate).toLocaleDateString("en-GB")}</span>
+                  {q.deliveryTime ? <span className="font-mono-en"> — {q.deliveryTime}</span> : null}
+                </p>
+              )}
+            </div>
+          );
+        })()}
+
         {terms && (
           <div className="bg-white rounded-2xl shadow-sm p-6">
             <p className="text-xs font-bold text-gray-400 mb-2">الشروط والأحكام</p>
