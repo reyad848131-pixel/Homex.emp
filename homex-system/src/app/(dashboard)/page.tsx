@@ -28,10 +28,11 @@ export default async function DashboardPage() {
 
   const now = new Date();
   const monthStart = new Date(now.getFullYear(), now.getMonth(), 1);
+  const startOfToday = new Date(now.getFullYear(), now.getMonth(), now.getDate());
 
   const sevenDaysFromNow = new Date(now.getTime() + 7 * 24 * 60 * 60 * 1000);
 
-  const [totalQuotes, totalCustomers, quotations, monthlyQuotes, statusGroupBy, expiringQuotations, revenueAgg, collectedAgg, photoQueueCount] = await Promise.all([
+  const [totalQuotes, totalCustomers, quotations, monthlyQuotes, statusGroupBy, expiringQuotations, revenueAgg, collectedAgg, photoQueueCount, overdueDeliveries] = await Promise.all([
     prisma.quotation.count({ where: whereClause }),
     prisma.customer.count({ where: isAdmin ? {} : { createdBy: userId } }),
     prisma.quotation.findMany({
@@ -66,6 +67,15 @@ export default async function DashboardPage() {
     }),
     // Jobs waiting to be photographed (global — the queue isn't per-employee).
     prisma.quotation.count({ where: { photoStatus: "ready" } }),
+    // Deliveries whose date has passed but haven't been delivered/installed yet.
+    prisma.quotation.count({
+      where: {
+        ...whereClause,
+        deliveryDate: { lt: startOfToday },
+        deliveredAt: null,
+        workStatus: { notIn: ["delivered", "installed"] },
+      },
+    }),
   ]);
 
   const statusMap = Object.fromEntries(statusGroupBy.map((s) => [s.status, s._count]));
@@ -96,6 +106,7 @@ export default async function DashboardPage() {
     outstandingAmount,
     conversionRate,
     photoQueueCount,
+    overdueDeliveries,
     canSeeFinancials,
     expiringQuotations: expiringQuotations.map((q) => ({
       id: q.id,

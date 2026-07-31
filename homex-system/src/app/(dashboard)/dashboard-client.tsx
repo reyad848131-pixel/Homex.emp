@@ -32,6 +32,7 @@ interface DashboardData {
   outstandingAmount: number;
   conversionRate: string;
   photoQueueCount: number;
+  overdueDeliveries: number;
   canSeeFinancials: boolean;
   expiringQuotations: Array<{
     id: string;
@@ -111,6 +112,22 @@ export function DashboardClient({ data }: { data: DashboardData }) {
           </div>
         ))}
       </div>
+
+      {data.overdueDeliveries > 0 && (
+        <Link href="/delivery-schedule"
+          className="flex items-center gap-3 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded p-4 mb-4 hover:bg-red-100 dark:hover:bg-red-900/30 transition-colors">
+          <div className="w-10 h-10 rounded-lg bg-red-100 dark:bg-red-900/40 text-red-600 dark:text-red-300 flex items-center justify-center shrink-0">
+            <AlertTriangle className="w-5 h-5" />
+          </div>
+          <div className="flex-1 min-w-0">
+            <p className="text-sm font-bold text-red-800 dark:text-red-200">
+              <span className="font-mono-en">{data.overdueDeliveries}</span> {t("overdueDeliveriesTitle")}
+            </p>
+            <p className="text-xs text-red-600 dark:text-red-400">{t("overdueDeliveriesSub")}</p>
+          </div>
+          <ArrowUpRight className="w-5 h-5 text-red-500 shrink-0" />
+        </Link>
+      )}
 
       {data.photoQueueCount > 0 && (
         <Link href="/photography"

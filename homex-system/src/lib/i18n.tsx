@@ -221,6 +221,8 @@ const translations = {
   tabPhotoQueue: { ar: "قائمة التصوير", en: "Photo queue" },
   tabPhotographed: { ar: "تم التصوير", en: "Photographed" },
   photoCount: { ar: "عمل للتصوير", en: "to photograph" },
+  overdueDeliveriesTitle: { ar: "توصيلة متأخّرة عن موعدها", en: "overdue deliveries" },
+  overdueDeliveriesSub: { ar: "طلبات فات موعد تسليمها ولم تُسلَّم بعد — راجعها في جدول التوصيل", en: "Past their delivery date and not delivered yet — review in the delivery schedule" },
   noPhotoJobs: { ar: "لا يوجد أعمال جاهزة للتصوير حالياً", en: "No jobs ready for photography yet" },
   noPhotoJobsHint: { ar: "اضغط «قابل للتصوير» على أي عمل تم توصيله أو تركيبه في إدارة الأعمال لإضافته هنا", en: "Mark a delivered or installed job as 'Ready for photo' in Work Orders to add it here" },
   noPhotographedYet: { ar: "لا يوجد أعمال تم تصويرها بعد", en: "No photographed jobs yet" },
