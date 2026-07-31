@@ -9,8 +9,9 @@ export interface QuotationListParams {
   dateFrom?: string | null;
   dateTo?: string | null;
   // "recent" = newest created first (default). "delivery" = nearest delivery
-  // first (overdue on top, delivered history at the bottom).
-  sort?: "recent" | "delivery" | null;
+  // first (overdue on top, delivered history at the bottom). "number" = by
+  // quote number ascending (to verify the unified sequence in order).
+  sort?: "recent" | "delivery" | "number" | null;
   page?: number;
   limit?: number;
 }
@@ -45,7 +46,10 @@ export async function getQuotationsList(p: QuotationListParams) {
         employee: { select: { name: true } },
         _count: { select: { items: true } },
       },
-      orderBy: p.sort === "delivery" ? UPCOMING_FIRST_ORDER : { createdAt: "desc" },
+      orderBy:
+        p.sort === "delivery" ? UPCOMING_FIRST_ORDER
+        : p.sort === "number" ? { quoteNumber: "asc" }
+        : { createdAt: "desc" },
       skip: (page - 1) * limit,
       take: limit,
     }),

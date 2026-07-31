@@ -44,8 +44,9 @@ export function QuotationsClient({ initialData }: { initialData: { quotations: Q
   const [page, setPage] = useState(1);
   const [dateFrom, setDateFrom] = useState("");
   const [dateTo, setDateTo] = useState("");
-  // "recent" = newest first (default) · "delivery" = nearest delivery first.
-  const [sort, setSort] = useState<"recent" | "delivery">("recent");
+  // "recent" = newest first (default) · "delivery" = nearest delivery first ·
+  // "number" = by quote number ascending (verify the unified sequence).
+  const [sort, setSort] = useState<"recent" | "delivery" | "number">("recent");
   const limit = 20;
   const debouncedSearch = useDebouncedValue(search);
   const { t, dateLocale } = useI18n();
@@ -199,6 +200,10 @@ export function QuotationsClient({ initialData }: { initialData: { quotations: Q
           <button type="button" onClick={() => { setSort("delivery"); setPage(1); }}
             className={cn("px-3 py-1.5 font-semibold transition-colors border-r border-gray-200 dark:border-gray-700", sort === "delivery" ? "bg-teal-600 text-white" : "text-gray-500 hover:bg-gray-50 dark:hover:bg-gray-700/50")}>
             الأقرب تسليماً
+          </button>
+          <button type="button" onClick={() => { setSort("number"); setPage(1); }}
+            className={cn("px-3 py-1.5 font-semibold transition-colors border-r border-gray-200 dark:border-gray-700", sort === "number" ? "bg-indigo-600 text-white" : "text-gray-500 hover:bg-gray-50 dark:hover:bg-gray-700/50")}>
+            حسب الرقم
           </button>
         </div>
       </div>
