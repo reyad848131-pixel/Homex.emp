@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import bcrypt from "bcryptjs";
+import { randomUUID } from "crypto";
 import { getAuth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { logAction } from "@/lib/audit";
@@ -38,6 +39,7 @@ interface Payload {
   editableDraft?: boolean;            // import as an editable draft + keep the total as a reference
   sheetName?: string;                  // which worksheet (tab) to read
   autoNumber?: boolean;               // generate a number for rows that have none (instead of skipping)
+  importIncomplete?: boolean;         // import every row, filling placeholders for missing name/phone/number
 }
 
 const DELIVERED = "delivered";
@@ -137,10 +139,18 @@ export async function POST(req: NextRequest) {
         : []
     );
 
-    // When auto-numbering, a missing order number is no longer an error.
-    const autoNumber = !!payload.autoNumber;
+    // "Import incomplete" imports every row (placeholders for missing fields);
+    // auto-numbering just fills a missing order number. Compute which of the
+    // per-row errors still block a row.
+    const forceAll = !!payload.importIncomplete;
+    const autoNumber = !!payload.autoNumber || forceAll;
+    const blockingErrors = (m: MappedRow) => m.errors.filter((e) => {
+      if (autoNumber && e === "missing_order_number") return false;
+      if (forceAll && (e === "missing_name" || e === "missing_phone")) return false;
+      return true;
+    });
     const evaluate = (m: MappedRow) => {
-      const errs = m.errors.filter((e) => !(autoNumber && e === "missing_order_number"));
+      const errs = blockingErrors(m);
       if (m.orderNumber && existingNums.has(m.orderNumber)) errs.push("order_number_exists");
       return errs;
     };
@@ -198,8 +208,7 @@ export async function POST(req: NextRequest) {
     // 1) Decide which rows to create and assign a unique quote number to each.
     const toCreate: Array<{ m: MappedRow; quoteNumber: string; suffixed: boolean }> = [];
     for (const m of inYear) {
-      // Missing order number is skipped unless auto-numbering is on.
-      const errs = m.errors.filter((e) => !(autoNumber && e === "missing_order_number"));
+      const errs = blockingErrors(m);
       if (errs.length) { skipped.push({ row: m.rowNumber, order: m.orderNumber || "-", reason: errs[0] }); continue; }
       if (m.orderNumber && existingNums.has(m.orderNumber)) { skipped.push({ row: m.rowNumber, order: m.orderNumber, reason: "order_number_exists" }); continue; }
       let quoteNumber = m.orderNumber || nextAutoNumber();
@@ -212,25 +221,32 @@ export async function POST(req: NextRequest) {
       toCreate.push({ m, quoteNumber, suffixed: !!m.orderNumber && quoteNumber !== m.orderNumber });
     }
 
-    // 2) Customers — match existing by phone in one query, bulk-create the rest.
-    const phones = [...new Set(toCreate.map((x) => x.m.phone))];
-    const custByPhone = new Map<string, string>();
-    if (phones.length) {
-      const existingCust = await prisma.customer.findMany({ where: { phone: { in: phones } }, select: { id: true, phone: true } });
-      for (const c of existingCust) if (!custByPhone.has(c.phone)) custByPhone.set(c.phone, c.id);
+    // Customer key: real phone groups a customer's orders; a row with no phone
+    // gets its own customer (keyed by its quote number) so incomplete orders
+    // don't collapse into one. Placeholders fill the missing name/phone.
+    const custKey = (m: MappedRow, quoteNumber: string) => m.phone || `#${quoteNumber}`;
+
+    // 2) Customers — match existing by (real) phone, then bulk-create the rest
+    // with generated ids (so placeholder-phone customers stay distinct).
+    const custByKey = new Map<string, string>();
+    const realPhones = [...new Set(toCreate.filter((x) => x.m.phone).map((x) => x.m.phone))];
+    if (realPhones.length) {
+      const existingCust = await prisma.customer.findMany({ where: { phone: { in: realPhones } }, select: { id: true, phone: true } });
+      for (const c of existingCust) if (!custByKey.has(c.phone)) custByKey.set(c.phone, c.id);
     }
-    const newPhones = phones.filter((p) => !custByPhone.has(p));
-    if (newPhones.length) {
-      const firstByPhone = new Map<string, MappedRow>();
-      for (const x of toCreate) if (newPhones.includes(x.m.phone) && !firstByPhone.has(x.m.phone)) firstByPhone.set(x.m.phone, x.m);
+    const newCust: Array<{ id: string; key: string; name: string; phone: string; place: string }> = [];
+    const seenKey = new Set(custByKey.keys());
+    for (const x of toCreate) {
+      const key = custKey(x.m, x.quoteNumber);
+      if (seenKey.has(key)) continue;
+      seenKey.add(key);
+      newCust.push({ id: randomUUID(), key, name: x.m.name || "بدون اسم", phone: x.m.phone || "-", place: x.m.place });
+    }
+    if (newCust.length) {
       await prisma.customer.createMany({
-        data: newPhones.map((p) => {
-          const m = firstByPhone.get(p)!;
-          return { name: m.name, phone: p, phoneCode: "+968", governorate: m.place || "-", wilayat: m.place || "-", createdBy: user.id, importBatch: batchId };
-        }),
+        data: newCust.map((c) => ({ id: c.id, name: c.name, phone: c.phone, phoneCode: "+968", governorate: c.place || "-", wilayat: c.place || "-", createdBy: user.id, importBatch: batchId })),
       });
-      const createdCust = await prisma.customer.findMany({ where: { importBatch: batchId, phone: { in: newPhones } }, select: { id: true, phone: true } });
-      for (const c of createdCust) if (!custByPhone.has(c.phone)) custByPhone.set(c.phone, c.id);
+      for (const c of newCust) custByKey.set(c.key, c.id);
     }
 
     // 3) Bulk-create the quotations. In "editable draft" mode they come in as a
@@ -243,7 +259,7 @@ export async function POST(req: NextRequest) {
       const notes = [m.description, m.remarks, suffixed ? `رقم أصلي: ${m.orderNumber}` : "", advanceNote].filter(Boolean).join(" — ") || null;
       return {
         quoteNumber,
-        customerId: custByPhone.get(m.phone)!,
+        customerId: custByKey.get(custKey(m, quoteNumber))!,
         employeeId: user.id,
         status: editableDraft ? "draft" : "accepted",
         total: m.total,

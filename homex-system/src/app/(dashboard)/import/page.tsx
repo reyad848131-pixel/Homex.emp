@@ -70,6 +70,9 @@ export default function ImportPage() {
   // Generate a number for rows that have none (instead of skipping them).
   const [autoNumber, setAutoNumber] = useState(false);
   const autoNumberRef = useRef(false);
+  // Import every row even if incomplete (placeholders for missing name/phone/number).
+  const [importIncomplete, setImportIncomplete] = useState(false);
+  const importIncompleteRef = useRef(false);
   const [statusMap, setStatusMap] = useState<Record<string, string>>({});
   const [defaultWorkStatus, setDefaultWorkStatus] = useState("in_progress");
   const [preview, setPreview] = useState<PreviewResult | null>(null);
@@ -143,7 +146,7 @@ export default function ImportPage() {
     setResult(null);
     const fd = new FormData();
     fd.append("file", f);
-    fd.append("payload", JSON.stringify({ action: "preview", mapping: map, years, statusMap: sMap, defaultWorkStatus: dws, headerRow: hRow, includeUndated: !!undated, undatedStatus: uStatus, sheetName: sheet, autoNumber: autoNumberRef.current }));
+    fd.append("payload", JSON.stringify({ action: "preview", mapping: map, years, statusMap: sMap, defaultWorkStatus: dws, headerRow: hRow, includeUndated: !!undated, undatedStatus: uStatus, sheetName: sheet, autoNumber: autoNumberRef.current, importIncomplete: importIncompleteRef.current }));
     try {
       const res = await fetch("/api/import", { method: "POST", body: fd, headers: ihdr() });
       const data = await res.json();
@@ -192,7 +195,7 @@ export default function ImportPage() {
     setCommitting(true);
     const fd = new FormData();
     fd.append("file", file);
-    fd.append("payload", JSON.stringify({ action: "commit", mapping, years: parseYears(yearsInput), statusMap, defaultWorkStatus, headerRow, includeUndated, undatedStatus, editableDraft, sheetName, autoNumber }));
+    fd.append("payload", JSON.stringify({ action: "commit", mapping, years: parseYears(yearsInput), statusMap, defaultWorkStatus, headerRow, includeUndated, undatedStatus, editableDraft, sheetName, autoNumber, importIncomplete }));
     try {
       const res = await fetch("/api/import", { method: "POST", body: fd, headers: ihdr() });
       const data = await res.json();
@@ -335,6 +338,12 @@ export default function ImportPage() {
               onChange={(e) => { setAutoNumber(e.target.checked); autoNumberRef.current = e.target.checked; reprocess(); }}
               className="w-4 h-4 accent-gray-900" />
             ولّد رقماً تلقائياً للطلبات بدون رقم
+          </label>
+          <label className="flex items-center gap-2 text-sm font-semibold text-red-600 dark:text-red-400 cursor-pointer w-full sm:w-auto" title="تستورد كل صف حتى الناقص — يُوضع «بدون اسم» / رقم مؤقت مكان الناقص لتصحيحه لاحقاً">
+            <input type="checkbox" checked={importIncomplete}
+              onChange={(e) => { setImportIncomplete(e.target.checked); importIncompleteRef.current = e.target.checked; reprocess(); }}
+              className="w-4 h-4 accent-red-600" />
+            استورد كل الصفوف حتى الناقصة (تُصحَّح لاحقاً)
           </label>
         </div>
       </div>
