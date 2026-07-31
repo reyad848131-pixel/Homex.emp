@@ -27,6 +27,22 @@
   --color-gray-950: #121211;
 }
 
+/* === Dark-mode contrast lift ==============================================
+   The warm brand grays compress the mid-tones, so secondary text
+   (text-gray-400 / text-gray-500 — ~500 uses, mostly labels, hints and meta)
+   sat too close in luminance to the dark backgrounds (gray-800 #3d3d3d /
+   gray-900) and was hard to read. Those tones are used ONLY for text, borders
+   and scrollbars in dark mode (never as an element background — verified), so
+   lifting them here fixes readability across the whole app in one place —
+   dark mode only, no component changes, light theme untouched. `html.dark`
+   outranks the :root theme values so the override always wins. */
+html.dark {
+  --color-gray-400: #b9bab1; /* secondary text — ≈5.5:1 on gray-800 */
+  --color-gray-500: #a7a89f; /* dimmer secondary text — ≈4.7:1 on gray-800 */
+  --color-gray-600: #8f9088; /* rarely text in dark; kept legible */
+  --color-gray-700: #57574f; /* borders/dividers a touch more visible */
+}
+
 body {
   font-family: var(--font-cairo), 'Cairo', sans-serif;
   /* Safety net for phones: never let a stray wide element scroll the whole
@@ -105,6 +121,9 @@ input:focus, select:focus, textarea:focus {
   .dark .field,
   .dark .field-textarea { background: var(--color-gray-800); }
   .dark .field-ro { background: var(--color-gray-900); color: var(--color-gray-400); }
+  /* Keep placeholders legible (not near-invisible) on dark field backgrounds. */
+  .dark .field::placeholder,
+  .dark .field-textarea::placeholder { color: var(--color-gray-500); opacity: 1; }
 }
 
 ::-webkit-scrollbar {
