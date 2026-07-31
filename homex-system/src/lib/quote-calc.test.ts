@@ -62,4 +62,18 @@ describe("computeQuoteTotals", () => {
     expect(totals.subtotal).toBe(99.999);
     expect(totals.vatAmount).toBe(5); // 99.999 * 0.05 = 4.99995 -> 5.000
   });
+
+  it("returns all-zero totals for an empty quote", () => {
+    const totals = computeQuoteTotals([], 0.05, 15);
+    expect(totals.subtotal).toBe(0);
+    expect(totals.vatAmount).toBe(0);
+    expect(totals.total).toBe(0);
+    expect(totals.advanceAmount).toBe(0);
+  });
+
+  it("includes per-line extras in the subtotal", () => {
+    const totals = computeQuoteTotals([{ categoryId: "c1", quantity: 2, unitPrice: 100, extras: 25 }], 0, 0);
+    expect(totals.subtotal).toBe(225); // 2*100 + 25
+    expect(totals.total).toBe(225);    // no VAT
+  });
 });
