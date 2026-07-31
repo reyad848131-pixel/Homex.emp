@@ -44,6 +44,13 @@ interface PreviewResult {
   }>;
 }
 
+interface ConflictsResult {
+  checked: number;
+  matched: number;
+  conflictsCount: number;
+  conflicts: Array<{ id: string; quoteNumber: string; sheetName: string; systemName: string; phone: string; place: string; deliveryDate: string | null }>;
+}
+
 const ERR_LABEL: Record<string, string> = {
   missing_name: "بدون اسم", missing_phone: "بدون هاتف",
   missing_order_number: "بدون رقم طلب", order_number_exists: "الرقم موجود مسبقاً",
@@ -78,6 +85,9 @@ export default function ImportPage() {
   // so they sort into the right place (flagged "تقديري", entered manually).
   const [estimateDates, setEstimateDates] = useState(true);
   const estimateDatesRef = useRef(true);
+  // Post-import name-conflict report (row name vs linked customer name).
+  const [conflicts, setConflicts] = useState<ConflictsResult | null>(null);
+  const [conflictBusy, setConflictBusy] = useState(false);
   const [statusMap, setStatusMap] = useState<Record<string, string>>({});
   const [defaultWorkStatus, setDefaultWorkStatus] = useState("in_progress");
   const [preview, setPreview] = useState<PreviewResult | null>(null);
@@ -220,6 +230,26 @@ export default function ImportPage() {
   const changeSheet = (name: string) => {
     setSheetName(name); setMapping({});
     if (file) runPreview(file, {}, parseYears(yearsInput), {}, defaultWorkStatus, undefined, includeUndated, undatedStatus, name);
+  };
+
+  const runConflicts = async () => {
+    if (!file) { toast.error("اختر ملف الإكسل الذي استوردته أولاً"); return; }
+    setConflictBusy(true);
+    setConflicts(null);
+    const fd = new FormData();
+    fd.append("file", file);
+    fd.append("payload", JSON.stringify({ action: "conflicts", mapping, headerRow, sheetName, estimateDates }));
+    try {
+      const res = await fetch("/api/import", { method: "POST", body: fd, headers: ihdr() });
+      const data = await res.json();
+      if (!res.ok) { toast.error(data.error || "فشل الفحص"); return; }
+      setConflicts(data);
+      if (data.conflictsCount === 0) toast.success("لا يوجد تعارض في الأسماء ✓");
+    } catch {
+      toast.error("تعذّر الفحص");
+    } finally {
+      setConflictBusy(false);
+    }
   };
 
   const commit = async () => {
@@ -444,6 +474,66 @@ export default function ImportPage() {
           </div>
         </div>
       )}
+
+      {/* Name-conflict report: after importing, re-check the same file to find
+          orders whose name differs from the linked customer (phone collision). */}
+      <div className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl p-5 mb-5">
+        <div className="flex items-center justify-between gap-3 flex-wrap">
+          <div>
+            <h2 className="font-bold mb-1">فحص تعارض الأسماء (بعد الاستيراد)</h2>
+            <p className="text-xs text-gray-400">اختر نفس ملف الإكسل الذي استوردته، ثم افحص الطلبات التي يختلف اسمها في الموقع عن اسم صفّها في الملف (بسبب تطابق رقم الهاتف مع عميل موجود).</p>
+          </div>
+          <button onClick={runConflicts} disabled={conflictBusy || !file}
+            className="shrink-0 inline-flex items-center gap-2 px-4 h-10 rounded-lg border border-indigo-300 dark:border-indigo-700 text-indigo-700 dark:text-indigo-300 text-sm font-bold hover:bg-indigo-50 dark:hover:bg-indigo-900/20 disabled:opacity-50">
+            {conflictBusy ? <Loader2 className="w-4 h-4 animate-spin" /> : <AlertTriangle className="w-4 h-4" />} افحص التعارض
+          </button>
+        </div>
+        {!file && <p className="text-xs text-amber-600 mt-2">↑ اختر ملف الإكسل من قسم الرفع أعلاه أولاً.</p>}
+        {conflicts && (
+          <div className="mt-4">
+            {conflicts.conflictsCount === 0 ? (
+              <p className="text-sm font-semibold text-emerald-600">✓ لا يوجد تعارض — فُحص <span className="font-mono-en">{conflicts.checked}</span> صف، طوبق <span className="font-mono-en">{conflicts.matched}</span> طلب.</p>
+            ) : (
+              <>
+                <p className="text-sm font-semibold text-red-600 mb-3">
+                  <span className="font-mono-en">{conflicts.conflictsCount}</span> طلب اسمه في الموقع يختلف عن الملف. افتح كل طلب وصحّح الاسم (وإن كان العميل مشتركاً مع طلبات أخرى، تواصل معي لإضافة «نقل لعميل جديد»).
+                </p>
+                <div className="overflow-x-auto rounded-lg border border-gray-100 dark:border-gray-700">
+                  <table className="w-full text-sm">
+                    <thead className="bg-gray-50 dark:bg-gray-700/40 text-gray-500 text-xs">
+                      <tr>
+                        <th className="p-2 text-right">رقم الطلب</th>
+                        <th className="p-2 text-right">الاسم في الموقع (خطأ)</th>
+                        <th className="p-2 text-right">الاسم في الملف (الصحيح)</th>
+                        <th className="p-2 text-right">الهاتف</th>
+                        <th className="p-2 text-right">التاريخ</th>
+                        <th className="p-2"></th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {conflicts.conflicts.map((c) => (
+                        <tr key={c.id} className="border-t border-gray-100 dark:border-gray-700">
+                          <td className="p-2 font-mono-en font-bold">{c.quoteNumber}</td>
+                          <td className="p-2 text-red-600 dark:text-red-400 line-through decoration-red-400/60">{c.systemName}</td>
+                          <td className="p-2 font-bold text-emerald-700 dark:text-emerald-400">{c.sheetName}</td>
+                          <td className="p-2 font-mono-en text-gray-500">{c.phone}</td>
+                          <td className="p-2 font-mono-en text-gray-500 whitespace-nowrap">{c.deliveryDate ? new Date(c.deliveryDate).toLocaleDateString("en-GB") : "—"}</td>
+                          <td className="p-2">
+                            <a href={`/quotations/${c.id}/edit`} target="_blank" rel="noreferrer"
+                              className="inline-flex items-center gap-1 text-indigo-600 dark:text-indigo-400 font-semibold hover:underline">
+                              فتح للتصحيح
+                            </a>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              </>
+            )}
+          </div>
+        )}
+      </div>
 
       {loading && (
         <div className="flex items-center gap-2 text-gray-500 text-sm mb-5"><Loader2 className="w-4 h-4 animate-spin" /> جارٍ التحليل...</div>

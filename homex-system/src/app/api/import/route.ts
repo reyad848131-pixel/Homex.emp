@@ -28,7 +28,7 @@ async function checkPasscode(req: NextRequest): Promise<NextResponse | null> {
 }
 
 interface Payload {
-  action: "preview" | "commit";
+  action: "preview" | "commit" | "conflicts";
   mapping?: Partial<Record<ImportField, string>>;
   statusMap?: Record<string, string>; // raw work-status text → system work status
   years?: number[] | null;            // only import rows whose delivery year is in this set (null/empty = all)
@@ -160,6 +160,41 @@ export async function POST(req: NextRequest) {
       if (m.orderNumber && existingNums.has(m.orderNumber)) errs.push("order_number_exists");
       return errs;
     };
+
+    if (payload.action === "conflicts") {
+      // Post-import diagnostic: re-read the sheet and find already-imported
+      // orders whose linked customer name differs from the name in the sheet
+      // row. This happens when an order's phone matched a pre-existing customer
+      // (with a different name) at import time — the row's own name was then
+      // dropped. Matched by quote number (= the sheet's order number).
+      const norm = (s: string) => (s || "").trim().replace(/\s+/g, " ").toLowerCase();
+      const withNum = mapped.filter((m) => m.orderNumber && m.name);
+      const nums = [...new Set(withNum.map((m) => m.orderNumber))];
+      const quotes = nums.length
+        ? await prisma.quotation.findMany({
+            where: { quoteNumber: { in: nums } },
+            select: { id: true, quoteNumber: true, deliveryDate: true, customer: { select: { name: true, phone: true } } },
+          })
+        : [];
+      const byNum = new Map(quotes.map((q) => [q.quoteNumber, q]));
+      const conflicts: Array<{ id: string; quoteNumber: string; sheetName: string; systemName: string; phone: string; place: string; deliveryDate: string | null }> = [];
+      for (const m of withNum) {
+        const q = byNum.get(m.orderNumber);
+        if (!q) continue; // row not imported (or renumbered) → skip
+        if (norm(q.customer.name) !== norm(m.name)) {
+          conflicts.push({
+            id: q.id,
+            quoteNumber: q.quoteNumber,
+            sheetName: m.name,
+            systemName: q.customer.name,
+            phone: m.phone || q.customer.phone,
+            place: m.place,
+            deliveryDate: (q.deliveryDate || m.deliveryDate)?.toISOString() || null,
+          });
+        }
+      }
+      return NextResponse.json({ checked: withNum.length, matched: quotes.length, conflictsCount: conflicts.length, conflicts: conflicts.slice(0, 500) });
+    }
 
     if (payload.action === "preview") {
       const valid = inYear.filter((m) => evaluate(m).length === 0);
