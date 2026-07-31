@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { roundMoney, formatCurrency, parseIntParam, withUniqueRetry } from "./utils";
+import { roundMoney, formatCurrency, parseIntParam, withUniqueRetry, generateQuoteNumber } from "./utils";
 
 describe("roundMoney", () => {
   it("rounds to 3 decimals", () => {
@@ -9,6 +9,32 @@ describe("roundMoney", () => {
   it("treats invalid input as 0", () => {
     expect(roundMoney(NaN)).toBe(0);
     expect(roundMoney(undefined as unknown as number)).toBe(0);
+  });
+});
+
+describe("generateQuoteNumber — unified yearly HX-YYYY-####", () => {
+  const year = new Date().getFullYear();
+  // Minimal prisma stub returning canned quote_number rows for $queryRaw.
+  const fakePrisma = (numbers: string[]) => ({
+    $queryRaw: async () => numbers.map((n) => ({ quote_number: n })),
+  });
+
+  it("starts at 0001 for a fresh year", async () => {
+    expect(await generateQuoteNumber(fakePrisma([]))).toBe(`HX-${year}-0001`);
+  });
+
+  it("continues from the highest suffix of the year (no monthly reset)", async () => {
+    const n = await generateQuoteNumber(fakePrisma([`HX-${year}-0001`, `HX-${year}-0007`, `HX-${year}-0003`]));
+    expect(n).toBe(`HX-${year}-0008`);
+  });
+
+  it("stays numeric past 9999", async () => {
+    expect(await generateQuoteNumber(fakePrisma([`HX-${year}-9999`]))).toBe(`HX-${year}-10000`);
+  });
+
+  it("ignores imported numbers with other prefixes", async () => {
+    // Query already filters by prefix; the parser must not trip on odd values.
+    expect(await generateQuoteNumber(fakePrisma([`HX-${year}-0002`]))).toBe(`HX-${year}-0003`);
   });
 });
 

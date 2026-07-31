@@ -57,26 +57,27 @@ export async function withUniqueRetry<T>(
 }
 
 export async function generateQuoteNumber(prisma: any): Promise<string> {
+  // Unified format: HX-YYYY-#### — one continuous sequence per YEAR (it does
+  // not reset each month), starting fresh at the beginning of every year.
   const now = new Date();
-  const y = now.getFullYear().toString().slice(-2);
-  const m = (now.getMonth() + 1).toString().padStart(2, "0");
-  const prefix = `HX-${y}${m}-`;
+  const prefix = `HX-${now.getFullYear()}-`;
 
   // Raw query so it sees EVERY quote number, including soft-deleted (trashed)
   // ones — those numbers are still reserved by the unique constraint, so the
   // model-level soft-delete filter must not hide them here (it would cause a
-  // duplicate quote_number collision on create).
+  // duplicate quote_number collision on create). Imported numbers (SW-###,
+  // IMP-###) have a different prefix, so they never interfere with this series.
   const rows = (await prisma.$queryRaw`
     SELECT quote_number FROM quotations
     WHERE quote_number LIKE ${prefix + "%"}
-    ORDER BY quote_number DESC
-    LIMIT 1
   `) as Array<{ quote_number: string }>;
 
+  // Take the highest numeric suffix (parsed, not string-sorted, so it stays
+  // correct even past 9999 in a year).
   let seq = 1;
-  if (rows.length > 0) {
-    const lastNum = parseInt(rows[0].quote_number.split("-").pop() || "0", 10);
-    seq = lastNum + 1;
+  for (const r of rows) {
+    const n = parseInt(r.quote_number.split("-").pop() || "0", 10);
+    if (Number.isFinite(n) && n >= seq) seq = n + 1;
   }
 
   return `${prefix}${seq.toString().padStart(4, "0")}`;
