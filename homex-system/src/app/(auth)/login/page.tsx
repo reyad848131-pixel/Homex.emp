@@ -112,11 +112,15 @@ export default function LoginPage() {
               <label className="block text-sm font-semibold text-gray-600 dark:text-gray-300 mb-1.5">{t("civilId")}</label>
               <input
                 type="text"
+                inputMode="numeric"
                 value={civilId}
                 onChange={(e) => setCivilId(e.target.value)}
                 className="w-full border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 rounded px-4 py-3 text-center font-mono text-lg tracking-widest focus:outline-none focus:border-gray-900 dark:focus:border-gray-400 transition-colors"
                 placeholder="••••"
                 autoComplete="username"
+                autoCapitalize="off"
+                autoCorrect="off"
+                spellCheck={false}
                 autoFocus
               />
             </div>
@@ -130,6 +134,9 @@ export default function LoginPage() {
                 className="w-full border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 rounded px-4 py-3 text-center font-mono text-lg tracking-widest focus:outline-none focus:border-gray-900 dark:focus:border-gray-400 transition-colors"
                 placeholder="••••"
                 autoComplete="current-password"
+                autoCapitalize="off"
+                autoCorrect="off"
+                spellCheck={false}
               />
             </div>
 

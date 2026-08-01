@@ -42,10 +42,21 @@ export async function verifyCredentials(
   // Also fold Arabic-Indic/Persian digits to ASCII so an Arabic keyboard entry
   // matches the ASCII value stored in the DB (the common "works on my device,
   // fails on his" cause).
-  civilId = normalizeDigits((civilId ?? "").trim());
-  password = normalizeDigits((password ?? "").trim());
+  const civilIdRaw = (civilId ?? "").trim();
+  const passwordRaw = (password ?? "").trim();
+  civilId = normalizeDigits(civilIdRaw);
+  password = normalizeDigits(passwordRaw);
 
-  const employee = await prisma.employee.findUnique({ where: { civilId } });
+  // Primary lookup on the normalized (ASCII) civil ID.
+  let employee = await prisma.employee.findUnique({ where: { civilId } });
+  // Fallback: the STORED civil ID itself may contain Arabic-Indic digits (an
+  // employee created on an Arabic-keyboard device before normalization). Match
+  // on the normalized value so an ASCII entry still finds them. (Cheap — the
+  // staff list is small, and this only runs when the exact lookup misses.)
+  if (!employee) {
+    const all = await prisma.employee.findMany();
+    employee = all.find((e) => normalizeDigits(e.civilId) === civilId) ?? null;
+  }
 
   // Currently locked?
   if (employee?.lockedUntil && employee.lockedUntil > new Date()) {
@@ -56,7 +67,12 @@ export async function verifyCredentials(
   }
 
   // Always run a comparison (dummy when no account) to keep timing uniform.
-  const valid = await bcrypt.compare(password, employee?.password ?? DUMMY_HASH);
+  // Try the normalized password, then the raw entry — so a password whose hash
+  // was stored from Arabic digits still matches when typed the same way.
+  const hash = employee?.password ?? DUMMY_HASH;
+  const valid =
+    (await bcrypt.compare(password, hash)) ||
+    (passwordRaw !== password && (await bcrypt.compare(passwordRaw, hash)));
 
   if (!employee || !employee.isActive || !valid) {
     // Only track attempts against a real, active account.
