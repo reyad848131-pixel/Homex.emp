@@ -4,7 +4,7 @@ import { prisma } from "@/lib/prisma";
 import { logAction } from "@/lib/audit";
 import { parseBody, employeeUpdateSchema } from "@/lib/schemas";
 import { getAllRoles } from "@/lib/permissions";
-import { normalizeDigits } from "@/lib/login-guard";
+import { normalizeCredential } from "@/lib/login-guard";
 import bcrypt from "bcryptjs";
 
 export async function PATCH(
@@ -74,7 +74,7 @@ export async function PATCH(
     if (body.phoneCode !== undefined) data.phoneCode = body.phoneCode;
     if (body.role !== undefined) data.role = body.role;
     if (body.isActive !== undefined) data.isActive = body.isActive;
-    if (body.password) data.password = await bcrypt.hash(normalizeDigits(String(body.password).trim()), 10);
+    if (body.password) data.password = await bcrypt.hash(normalizeCredential(String(body.password)), 10);
 
     const employee = await prisma.employee.update({
       where: { id },

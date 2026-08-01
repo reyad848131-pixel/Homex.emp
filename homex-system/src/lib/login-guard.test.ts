@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { normalizeDigits } from "./login-guard";
+import { normalizeDigits, stripInvisible, normalizeCredential } from "./login-guard";
 
 describe("normalizeDigits", () => {
   it("converts Arabic-Indic digits to ASCII", () => {
@@ -11,11 +11,28 @@ describe("normalizeDigits", () => {
   it("leaves ASCII and letters untouched", () => {
     expect(normalizeDigits("Homex12345678")).toBe("Homex12345678");
   });
-  it("handles a mixed password (Arabic digits inside ASCII text)", () => {
-    expect(normalizeDigits("Homex١٢٣٤٥٦٧٨")).toBe("Homex12345678");
+});
+
+describe("stripInvisible", () => {
+  it("removes a leading Right-to-Left Mark (U+200F) — the iOS RTL bug", () => {
+    const withRlm = "‏1383";
+    expect(withRlm.length).toBe(5);
+    expect(stripInvisible(withRlm)).toBe("1383");
+  });
+  it("removes zero-width, LRM/RLM, bidi isolates and BOM", () => {
+    expect(stripInvisible("​‎1‏3⁦﻿83")).toBe("1383");
+  });
+  it("leaves normal text untouched", () => {
+    expect(stripInvisible("Homex1383")).toBe("Homex1383");
+  });
+});
+
+describe("normalizeCredential", () => {
+  it("strips the RTL mark, folds Arabic digits and trims — all in one", () => {
+    expect(normalizeCredential(" ‏١٣٨٣ ")).toBe("1383");
   });
   it("is safe on empty/undefined input", () => {
-    expect(normalizeDigits("")).toBe("");
-    expect(normalizeDigits(undefined as unknown as string)).toBe("");
+    expect(normalizeCredential("")).toBe("");
+    expect(normalizeCredential(undefined as unknown as string)).toBe("");
   });
 });
