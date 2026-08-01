@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { GOVERNORATES } from "@/lib/types";
 import { X, Save } from "lucide-react";
 import { useI18n } from "@/lib/i18n";
+import { normalizePhone } from "@/lib/text";
 
 interface Props {
   customer: {
@@ -89,7 +90,7 @@ export function EditCustomerModal({ customer, onClose }: Props) {
                 <option value="+966">+966</option>
               </select>
               <input type="tel" value={form.phone}
-                onChange={(e) => setForm({ ...form, phone: e.target.value.replace(/\D/g, "").slice(0, 8) })}
+                onChange={(e) => setForm({ ...form, phone: normalizePhone(e.target.value).slice(0, 8) })}
                 pattern="[0-9]{8}" maxLength={8}
                 className="field flex-1 min-w-0 font-mono-en" placeholder="9XXXXXXX" />
             </div>

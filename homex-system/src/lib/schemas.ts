@@ -1,4 +1,10 @@
 import { z } from "zod";
+import { normalizePhone } from "@/lib/text";
+
+// Phone field that folds Arabic digits / strips invisible marks to digits-only
+// before validating — so a number typed on an Arabic keyboard is stored the
+// same way it's searched and displayed.
+const phoneField = z.string().transform(normalizePhone).pipe(z.string().min(1));
 
 // Centralized request-body validation schemas. Applied at the top of mutation
 // routes so malformed input is rejected with a clear message before it can
@@ -12,7 +18,7 @@ export const loginSchema = z.object({
 
 export const customerSchema = z.object({
   name: z.string().trim().min(1),
-  phone: z.string().trim().min(1),
+  phone: phoneField,
   phoneCode: z.string().trim().optional(),
   governorate: z.string().trim().min(1),
   wilayat: z.string().trim().min(1),
@@ -22,7 +28,7 @@ export const customerSchema = z.object({
 export const customerUpdateSchema = z
   .object({
     name: z.string().trim().min(1),
-    phone: z.string().trim().min(1),
+    phone: phoneField,
     phoneCode: z.string().trim(),
     governorate: z.string().trim().min(1),
     wilayat: z.string().trim().min(1),
@@ -66,7 +72,7 @@ export const ROLES = ["admin", "manager", "sales", "accountant", "driver"] as co
 export const employeeCreateSchema = z.object({
   name: z.string().trim().min(1),
   civilId: z.string().trim().min(1),
-  phone: z.string().trim().nullish(),
+  phone: z.string().transform(normalizePhone).nullish(),
   phoneCode: z.string().trim().nullish(),
   // Any role key; the route verifies it exists among system + custom roles.
   role: z.string().trim().min(1).default("sales"),

@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { GOVERNORATES } from "@/lib/types";
 import { cn } from "@/lib/utils";
 import { useI18n } from "@/lib/i18n";
+import { normalizePhone } from "@/lib/text";
 import { useToast } from "@/components/toast";
 import { CategoryBuilder, NumField, type Category } from "@/components/quote-builders";
 import {
@@ -409,7 +410,7 @@ export default function NewQuotationPage() {
                   <option value="+971">+971</option>
                   <option value="+966">+966</option>
                 </select>
-                <input type="tel" value={customer.phone} onChange={(e) => setCustomer({ ...customer, phone: e.target.value.replace(/\D/g, "").slice(0, 8) })}
+                <input type="tel" value={customer.phone} onChange={(e) => setCustomer({ ...customer, phone: normalizePhone(e.target.value).slice(0, 8) })}
                   pattern="[0-9]{8}" maxLength={8}
                   className={cn(fieldBase, "flex-1 min-w-0 font-mono-en")} placeholder="9XXXXXXX" />
               </div>

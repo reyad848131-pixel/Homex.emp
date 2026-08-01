@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { normalizeDigits, stripInvisible, normalizeCredential } from "./login-guard";
+import { normalizeDigits, stripInvisible, normalizeCredential, normalizePhone } from "./text";
 
 describe("normalizeDigits", () => {
   it("converts Arabic-Indic digits to ASCII", () => {
@@ -34,5 +34,14 @@ describe("normalizeCredential", () => {
   it("is safe on empty/undefined input", () => {
     expect(normalizeCredential("")).toBe("");
     expect(normalizeCredential(undefined as unknown as string)).toBe("");
+  });
+});
+
+describe("normalizePhone", () => {
+  it("keeps digits only and folds Arabic digits (not wiping them)", () => {
+    expect(normalizePhone("٩١٢٣ ٤٥٦٧")).toBe("91234567");
+  });
+  it("drops invisible marks and separators", () => {
+    expect(normalizePhone("‏9123-4567")).toBe("91234567");
   });
 });

@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { getAuth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { parseBody, changePasswordSchema } from "@/lib/schemas";
+import { normalizePhone } from "@/lib/text";
 import bcrypt from "bcryptjs";
 
 export async function GET() {
@@ -55,7 +56,7 @@ export async function PUT(req: NextRequest) {
       await prisma.employee.update({
         where: { id: user.id },
         data: {
-          phone: body.phone,
+          phone: normalizePhone(String(body.phone ?? "")),
           ...(typeof body.phoneCode === "string" && body.phoneCode ? { phoneCode: body.phoneCode } : {}),
         },
       });

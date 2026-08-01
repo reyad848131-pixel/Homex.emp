@@ -1,6 +1,7 @@
 import { prisma } from "@/lib/prisma";
 import { VALID_WORK_STATUSES } from "@/lib/types";
 import { UPCOMING_FIRST_ORDER } from "@/lib/schedule-order";
+import { normalizeCredential } from "@/lib/text";
 
 export interface WorkOrdersParams {
   workStatus?: string | null;
@@ -25,11 +26,12 @@ export async function getWorkOrders(p: WorkOrdersParams) {
   if (p.workStatus && VALID_WORK_STATUSES.includes(p.workStatus)) where.workStatus = p.workStatus;
   if (p.hasOrange) where.hasOrangeAlert = true;
   if (p.hasRed) where.hasRedAlert = true;
-  if (p.search) {
+  const search = p.search ? normalizeCredential(p.search) : "";
+  if (search) {
     where.OR = [
-      { quoteNumber: { contains: p.search, mode: "insensitive" as const } },
-      { originalNumber: { contains: p.search, mode: "insensitive" as const } },
-      { customer: { name: { contains: p.search, mode: "insensitive" as const } } },
+      { quoteNumber: { contains: search, mode: "insensitive" as const } },
+      { originalNumber: { contains: search, mode: "insensitive" as const } },
+      { customer: { name: { contains: search, mode: "insensitive" as const } } },
     ];
   }
   if (p.customer) {

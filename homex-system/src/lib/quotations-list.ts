@@ -1,5 +1,6 @@
 import { prisma } from "@/lib/prisma";
 import { UPCOMING_FIRST_ORDER } from "@/lib/schedule-order";
+import { normalizeCredential } from "@/lib/text";
 
 export interface QuotationListParams {
   userId: string;
@@ -29,12 +30,13 @@ export async function getQuotationsList(p: QuotationListParams) {
     if (p.dateFrom) where.createdAt.gte = new Date(p.dateFrom);
     if (p.dateTo) where.createdAt.lte = new Date(p.dateTo + "T23:59:59.999Z");
   }
-  if (p.search) {
+  const search = p.search ? normalizeCredential(p.search) : "";
+  if (search) {
     where.OR = [
-      { quoteNumber: { contains: p.search, mode: "insensitive" as const } },
-      { originalNumber: { contains: p.search, mode: "insensitive" as const } },
-      { customer: { name: { contains: p.search, mode: "insensitive" as const } } },
-      { customer: { phone: { contains: p.search } } },
+      { quoteNumber: { contains: search, mode: "insensitive" as const } },
+      { originalNumber: { contains: search, mode: "insensitive" as const } },
+      { customer: { name: { contains: search, mode: "insensitive" as const } } },
+      { customer: { phone: { contains: search } } },
     ];
   }
 

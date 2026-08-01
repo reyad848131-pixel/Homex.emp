@@ -4,6 +4,7 @@ import { useState, useEffect } from "react";
 import { UsersRound, Plus, X, Shield, UserCheck, UserX, KeyRound, Copy } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useI18n, type TranslationKey } from "@/lib/i18n";
+import { normalizePhone } from "@/lib/text";
 
 interface Employee {
   id: string;
@@ -341,7 +342,7 @@ export default function EmployeesPage() {
                   <option value="+966">+966</option>
                 </select>
                 <input type="tel" value={form.phone}
-                  onChange={(e) => setForm({ ...form, phone: e.target.value.replace(/\D/g, "").slice(0, 8) })}
+                  onChange={(e) => setForm({ ...form, phone: normalizePhone(e.target.value).slice(0, 8) })}
                   maxLength={8} placeholder="9XXXXXXX"
                   className="field flex-1 min-w-0 font-mono-en" />
               </div>

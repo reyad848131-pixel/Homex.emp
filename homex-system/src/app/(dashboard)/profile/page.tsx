@@ -3,6 +3,7 @@
 import { useState, useEffect } from "react";
 import { User, Phone, Shield, Calendar, Lock, Save, Check } from "lucide-react";
 import { useI18n, type TranslationKey } from "@/lib/i18n";
+import { normalizePhone } from "@/lib/text";
 
 const ROLE_KEYS: Record<string, TranslationKey> = {
   admin: "roleAdmin",
@@ -153,7 +154,7 @@ export default function ProfilePage() {
                 <input
                   type="tel"
                   value={phone}
-                  onChange={(e) => { setPhone(e.target.value.replace(/\D/g, "").slice(0, 8)); setPhoneSaved(false); }}
+                  onChange={(e) => { setPhone(normalizePhone(e.target.value).slice(0, 8)); setPhoneSaved(false); }}
                   maxLength={8}
                   className="field flex-1 min-w-0 font-mono-en"
                   placeholder="9XXXXXXX"

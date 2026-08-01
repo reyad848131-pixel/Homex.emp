@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getAuth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
+import { normalizeCredential } from "@/lib/text";
 
 // Global search across quotations and customers. Sales see only their own
 // quotes; managers/admins see everything.
@@ -11,7 +12,7 @@ export async function GET(req: NextRequest) {
     const user = session.user as any;
     const isAdmin = (user.role === "admin" || user.role === "ceo") || user.role === "manager";
 
-    const q = (new URL(req.url).searchParams.get("q") || "").trim();
+    const q = normalizeCredential(new URL(req.url).searchParams.get("q") || "");
     if (q.length < 2) return NextResponse.json({ quotations: [], customers: [] });
 
     const like = { contains: q, mode: "insensitive" as const };
