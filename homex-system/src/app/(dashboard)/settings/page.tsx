@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useRef } from "react";
 import { Settings, Save, Building2, Download, Database, FileSpreadsheet, ScrollText, Upload, Trash2, ImageIcon, ShieldCheck, Smartphone, MessageCircle } from "lucide-react";
-import { DEFAULT_WA_QUOTE, DEFAULT_WA_DELIVERY, DEFAULT_WA_COMPLETED, DEFAULT_WA_READY } from "@/lib/wa";
+import { DEFAULT_WA_QUOTE, DEFAULT_WA_DELIVERY, DEFAULT_WA_COMPLETED, DEFAULT_WA_READY, DEFAULT_WA_DELIVERED } from "@/lib/wa";
 import { useI18n } from "@/lib/i18n";
 import { AppIconEditor } from "@/components/app-icon-editor";
 
@@ -270,6 +270,11 @@ export default function SettingsPage() {
               <label className="block text-sm font-semibold text-gray-600 mb-1.5">رسالة «جاهز للتوصيل»</label>
               <textarea rows={6} value={settings.wa_template_ready ?? ""} onChange={(e) => update("wa_template_ready", e.target.value)}
                 className="field font-mono-en text-sm" dir="rtl" placeholder={DEFAULT_WA_READY} />
+            </div>
+            <div>
+              <label className="block text-sm font-semibold text-gray-600 mb-1.5">رسالة «تم التوصيل» (شكر بعد الاستلام)</label>
+              <textarea rows={6} value={settings.wa_template_delivered ?? ""} onChange={(e) => update("wa_template_delivered", e.target.value)}
+                className="field font-mono-en text-sm" dir="rtl" placeholder={DEFAULT_WA_DELIVERED} />
             </div>
             <p className="text-[11px] text-gray-400">اترك الحقل فارغاً لاستخدام النص الافتراضي المعروض كتلميح.</p>
           </div>

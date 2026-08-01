@@ -8,7 +8,7 @@ import { useDebouncedValue } from "@/lib/hooks";
 import { useI18n, useTranslatedMonths, type TranslationKey } from "@/lib/i18n";
 import { TableSkeleton, CardsSkeleton } from "@/components/skeleton";
 import { DateDrillNav, type DateRange } from "@/components/date-drill-nav";
-import { renderWaTemplate, waLinkFor, DEFAULT_WA_COMPLETED, DEFAULT_WA_READY } from "@/lib/wa";
+import { renderWaTemplate, waLinkFor, DEFAULT_WA_COMPLETED, DEFAULT_WA_READY, DEFAULT_WA_DELIVERED } from "@/lib/wa";
 import {
   Truck,
   Search,
@@ -134,9 +134,9 @@ export function WorkOrdersClient({ initialData }: { initialData: { quotations: W
   const [showFilters, setShowFilters] = useState(false);
   // WhatsApp notify-on-status-change: editable templates + company signature,
   // and the pending confirmation prompt.
-  const [waTemplates, setWaTemplates] = useState<{ completed: string; ready: string }>({ completed: "", ready: "" });
+  const [waTemplates, setWaTemplates] = useState<{ completed: string; ready: string; delivered: string }>({ completed: "", ready: "", delivered: "" });
   const [waCompany, setWaCompany] = useState({ name: "", phone: "" });
-  const [waPrompt, setWaPrompt] = useState<{ q: WorkQuotation; status: "completed" | "ready_for_delivery" } | null>(null);
+  const [waPrompt, setWaPrompt] = useState<{ q: WorkQuotation; status: "completed" | "ready_for_delivery" | "delivered" } | null>(null);
   const debouncedSearch = useDebouncedValue(search);
   // The default view is already server-rendered; skip the first client refetch.
   const firstRun = useRef(true);
@@ -177,7 +177,7 @@ export function WorkOrdersClient({ initialData }: { initialData: { quotations: W
   useEffect(() => {
     fetch("/api/settings").then((r) => (r.ok ? r.json() : null)).then((s) => {
       if (s) {
-        setWaTemplates({ completed: s.wa_template_completed || "", ready: s.wa_template_ready || "" });
+        setWaTemplates({ completed: s.wa_template_completed || "", ready: s.wa_template_ready || "", delivered: s.wa_template_delivered || "" });
         setWaCompany({ name: s.company_name || "", phone: s.company_phone || "" });
       }
     }).catch(() => {});
@@ -224,8 +224,8 @@ export function WorkOrdersClient({ initialData }: { initialData: { quotations: W
     if (workStatus === "delivered") patch.hasRedAlert = false;
     updateLocal(id, patch);
     patchApi({ id, workStatus });
-    // Offer to notify the customer on the two milestones the business cares about.
-    if (workStatus === "completed" || workStatus === "ready_for_delivery") {
+    // Offer to notify the customer on the milestones the business cares about.
+    if (workStatus === "completed" || workStatus === "ready_for_delivery" || workStatus === "delivered") {
       const q = data?.quotations.find((x) => x.id === id);
       if (q && q.customer?.phone) setWaPrompt({ q, status: workStatus });
     }
@@ -237,6 +237,8 @@ export function WorkOrdersClient({ initialData }: { initialData: { quotations: W
     const { q, status } = waPrompt;
     const tpl = status === "completed"
       ? (waTemplates.completed || DEFAULT_WA_COMPLETED)
+      : status === "delivered"
+      ? (waTemplates.delivered || DEFAULT_WA_DELIVERED)
       : (waTemplates.ready || DEFAULT_WA_READY);
     const msg = renderWaTemplate(tpl, {
       customer: q.customer.name,
@@ -765,7 +767,7 @@ export function WorkOrdersClient({ initialData }: { initialData: { quotations: W
         <div className="fixed inset-0 bg-black/40 z-50 flex items-center justify-center p-4" onClick={() => setWaPrompt(null)}>
           <div className="bg-white dark:bg-gray-800 rounded-xl p-5 w-full max-w-sm" onClick={(e) => e.stopPropagation()}>
             <h3 className="font-bold mb-1 flex items-center gap-2">
-              <Truck className="w-4 h-4" /> {waPrompt.status === "completed" ? "اكتمل الطلب" : "جاهز للتوصيل"}
+              <Truck className="w-4 h-4" /> {waPrompt.status === "completed" ? "اكتمل الطلب" : waPrompt.status === "delivered" ? "تم التوصيل" : "جاهز للتوصيل"}
             </h3>
             <p className="text-sm text-gray-500 mb-4">
               تبي ترسل رسالة واتساب إلى <b>{waPrompt.q.customer.name}</b> تُعلمه؟

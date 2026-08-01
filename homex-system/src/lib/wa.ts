@@ -46,6 +46,15 @@ export const DEFAULT_WA_READY =
 {company}
 {companyPhone}`;
 
+export const DEFAULT_WA_DELIVERED =
+`مرحباً {customer} 🌟
+تم توصيل طلبكم {number} بنجاح ✅
+نتمنى أن ينال إعجابكم، ونسعد بخدمتكم دائماً.
+شكراً لثقتكم بنا 🙏
+
+{company}
+{companyPhone}`;
+
 // Fill a template with values and clean up the result: unknown placeholders are
 // dropped, blank lines collapsed, and leading/trailing whitespace trimmed.
 export function renderWaTemplate(tpl: string, vars: Record<string, string>): string {
