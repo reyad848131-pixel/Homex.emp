@@ -203,6 +203,11 @@ export async function POST(req: NextRequest) {
       // Surfaced so the admin notices instead of silently losing them.
       const noDateRows = mapped.filter((m) => m.year == null).length;
       const estimatedDateRows = inYear.filter((m) => m.deliveryDateEstimated).length;
+      // Rows whose order number already exists in the system — a re-import
+      // simply SKIPS these (no duplicate, existing quotations untouched). Shown
+      // separately from real errors so re-importing to add the missing ones is
+      // clearly safe.
+      const alreadyExists = inYear.filter((m) => m.orderNumber && existingNums.has(m.orderNumber)).length;
       return NextResponse.json({
         headers,
         headerRow,
@@ -213,6 +218,7 @@ export async function POST(req: NextRequest) {
         yearRows: inYear.length,
         validCount: valid.length,
         errorCount: inYear.length - valid.length,
+        alreadyExists,
         noDateRows,
         estimatedDateRows,
         statusMap,

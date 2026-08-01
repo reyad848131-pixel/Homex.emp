@@ -28,6 +28,7 @@ interface PreviewResult {
   yearRows: number;
   validCount: number;
   errorCount: number;
+  alreadyExists: number;
   noDateRows: number;
   estimatedDateRows: number;
   headerRow: number;
@@ -568,11 +569,12 @@ export default function ImportPage() {
       {preview && (
         <>
           {/* Summary */}
-          <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-5">
+          <div className="grid grid-cols-2 sm:grid-cols-5 gap-3 mb-5">
             {[
               { label: `طلبات ${parseYears(yearsInput).length ? parseYears(yearsInput).join("، ") : "الكل"}`, value: preview.yearRows, tone: "text-gray-900 dark:text-white" },
-              { label: "صالحة للاستيراد", value: preview.validCount, tone: "text-emerald-600" },
-              { label: "بها أخطاء", value: preview.errorCount, tone: "text-red-600" },
+              { label: "جديدة (ستُضاف)", value: preview.validCount, tone: "text-emerald-600" },
+              { label: "موجودة مسبقاً (تُتخطّى)", value: preview.alreadyExists, tone: "text-blue-600" },
+              { label: "بها أخطاء", value: Math.max(0, preview.errorCount - preview.alreadyExists), tone: "text-red-600" },
               { label: "إجمالي صفوف الملف", value: preview.totalRows, tone: "text-gray-400" },
             ].map((k, i) => (
               <div key={i} className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl px-4 py-3">
@@ -581,6 +583,15 @@ export default function ImportPage() {
               </div>
             ))}
           </div>
+
+          {preview.alreadyExists > 0 && (
+            <div className="flex items-start gap-2 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-xl p-4 mb-5 text-sm">
+              <AlertTriangle className="w-4 h-4 text-blue-600 shrink-0 mt-0.5" />
+              <p className="text-blue-800 dark:text-blue-200">
+                <span className="font-bold font-mono-en">{preview.alreadyExists}</span> طلب موجود مسبقاً في النظام — <b>سيُتخطّى تلقائياً</b> ولن يتكرّر. الكوتيشنات الموجودة وتواريخها <b>لن تتأثّر</b>. سيُضاف فقط <span className="font-bold font-mono-en">{preview.validCount}</span> طلب جديد.
+              </p>
+            </div>
+          )}
 
           {preview.fileDuplicates.length > 0 && (
             <div className="flex items-start gap-2 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-xl p-4 mb-5 text-sm">
