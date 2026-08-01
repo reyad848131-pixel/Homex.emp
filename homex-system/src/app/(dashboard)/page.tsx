@@ -5,6 +5,7 @@ import { roundMoney } from "@/lib/utils";
 import { getSettings } from "@/lib/settings";
 import { getRolePermissions } from "@/lib/permissions";
 import { DashboardClient } from "./dashboard-client";
+import { FieldDashboard } from "./field-dashboard";
 import { ReadinessBanner } from "@/components/readiness-banner";
 
 // Essential company settings that should be filled before quoting.
@@ -14,6 +15,30 @@ export default async function DashboardPage() {
   const session = await getAuth();
   const userId = (session?.user as any)?.id;
   const role = (session?.user as any)?.role;
+
+  const now = new Date();
+  const startOfDay = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+
+  // Field roles (driver / photographer) get a focused dashboard pointing them
+  // straight to their work — no quote stats or money they can't act on.
+  if (role === "driver" || role === "photographer") {
+    const endOfDay = new Date(startOfDay.getTime() + 24 * 60 * 60 * 1000);
+    const pending = { deliveredAt: null, workStatus: { notIn: ["delivered", "installed"] } };
+    const [todayDeliveries, overdueDeliveries, photoQueue] = await Promise.all([
+      prisma.quotation.count({ where: { ...pending, deliveryDate: { gte: startOfDay, lt: endOfDay } } }),
+      prisma.quotation.count({ where: { ...pending, deliveryDate: { lt: startOfDay } } }),
+      prisma.quotation.count({ where: { photoStatus: "ready" } }),
+    ]);
+    return (
+      <FieldDashboard
+        userName={session?.user?.name || ""}
+        role={role}
+        todayDeliveries={todayDeliveries}
+        overdueDeliveries={overdueDeliveries}
+        photoQueue={photoQueue}
+      />
+    );
+  }
 
   const isAdmin = role === "admin" || role === "ceo" || role === "manager";
   const whereClause = isAdmin ? {} : { employeeId: userId };
@@ -26,9 +51,8 @@ export default async function DashboardPage() {
     ? await getSettings().then((s) => READINESS_KEYS.filter((k) => !s[k] || !String(s[k]).trim()))
     : [];
 
-  const now = new Date();
   const monthStart = new Date(now.getFullYear(), now.getMonth(), 1);
-  const startOfToday = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+  const startOfToday = startOfDay;
 
   const sevenDaysFromNow = new Date(now.getTime() + 7 * 24 * 60 * 60 * 1000);
 
