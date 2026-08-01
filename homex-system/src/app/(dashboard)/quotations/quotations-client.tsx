@@ -111,6 +111,18 @@ export function QuotationsClient({ initialData }: { initialData: { quotations: Q
 
   const fmtCur = (n: number) => `${n.toFixed(3)} ${t("omr")}`;
 
+  // Restore filters/sort/page from the URL on mount, so a shared or reopened
+  // link lands on the same view (client-only — window isn't available in SSR).
+  useEffect(() => {
+    const sp = new URLSearchParams(window.location.search);
+    const s = sp.get("search"); if (s) setSearch(s);
+    const st = sp.get("status"); if (st) setStatusFilter(st);
+    const so = sp.get("sort"); if (so === "delivery" || so === "number") setSort(so);
+    const df = sp.get("dateFrom"); if (df) setDateFrom(df);
+    const dt = sp.get("dateTo"); if (dt) setDateTo(dt);
+    const pg = parseInt(sp.get("page") || "", 10); if (pg > 1) setPage(pg);
+  }, []);
+
   useEffect(() => {
     setPage(1);
   }, [debouncedSearch, statusFilter, dateFrom, dateTo]);
@@ -126,6 +138,18 @@ export function QuotationsClient({ initialData }: { initialData: { quotations: Q
     if (sort !== "recent") params.set("sort", sort);
     params.set("page", String(page));
     params.set("limit", String(limit));
+
+    // Reflect the current view in the address bar (without the internal limit),
+    // so it can be bookmarked/shared and survives a reload.
+    const urlp = new URLSearchParams();
+    if (debouncedSearch) urlp.set("search", debouncedSearch);
+    if (statusFilter !== "all") urlp.set("status", statusFilter);
+    if (dateFrom) urlp.set("dateFrom", dateFrom);
+    if (dateTo) urlp.set("dateTo", dateTo);
+    if (sort !== "recent") urlp.set("sort", sort);
+    if (page > 1) urlp.set("page", String(page));
+    const qs = urlp.toString();
+    window.history.replaceState(null, "", qs ? `?${qs}` : window.location.pathname);
 
     fetch(`/api/quotations?${params}`)
       .then((r) => r.json())
