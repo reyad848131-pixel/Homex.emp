@@ -10,6 +10,16 @@ export const LOCK_MINUTES = 15;
 // does not exist, so timing does not reveal whether a civil ID is registered.
 const DUMMY_HASH = "$2b$10$CwTycUXWue0Thq9StjUM0uJ8./uPqA7q0Y1eR3F1wdmS3rF0aXhy";
 
+// Convert Arabic-Indic (٠-٩) and Persian (۰-۹) digits to ASCII 0-9. Arabic
+// keyboards commonly enter the civil ID / password digits as Arabic-Indic,
+// which never matches the ASCII values stored in the DB — so the SAME correct
+// credentials fail on an Arabic-keyboard device but work on an English one.
+export function normalizeDigits(s: string): string {
+  return (s ?? "")
+    .replace(/[٠-٩]/g, (c) => String(c.charCodeAt(0) - 0x0660))
+    .replace(/[۰-۹]/g, (c) => String(c.charCodeAt(0) - 0x06F0));
+}
+
 export type CredentialResult =
   | { ok: true; employee: Employee }
   | { ok: false; code: "invalid"; remaining?: number }
@@ -29,8 +39,11 @@ export async function verifyCredentials(
   // exact lookup or the password compare and surface as "wrong password" even
   // when the employee typed it correctly. Passwords in this system never
   // contain surrounding spaces, so trimming them is safe too.
-  civilId = (civilId ?? "").trim();
-  password = (password ?? "").trim();
+  // Also fold Arabic-Indic/Persian digits to ASCII so an Arabic keyboard entry
+  // matches the ASCII value stored in the DB (the common "works on my device,
+  // fails on his" cause).
+  civilId = normalizeDigits((civilId ?? "").trim());
+  password = normalizeDigits((password ?? "").trim());
 
   const employee = await prisma.employee.findUnique({ where: { civilId } });
 

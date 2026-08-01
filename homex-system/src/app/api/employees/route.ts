@@ -4,6 +4,7 @@ import { prisma } from "@/lib/prisma";
 import { logAction } from "@/lib/audit";
 import { parseBody, employeeCreateSchema } from "@/lib/schemas";
 import { getAllRoles } from "@/lib/permissions";
+import { normalizeDigits } from "@/lib/login-guard";
 import bcrypt from "bcryptjs";
 
 export async function GET() {
@@ -44,7 +45,11 @@ export async function POST(req: NextRequest) {
 
     const parsed = parseBody(employeeCreateSchema, await req.json());
     if (!parsed.ok) return NextResponse.json({ error: parsed.error, code: "invalid" }, { status: 400 });
-    const { name, civilId, phone, phoneCode, role, password } = parsed.data;
+    const { name, phone, phoneCode, role } = parsed.data;
+    // Fold Arabic-Indic digits to ASCII so a civil ID / password entered on an
+    // Arabic keyboard is stored the same way it will be typed at login.
+    const civilId = normalizeDigits(parsed.data.civilId);
+    const password = normalizeDigits(parsed.data.password);
 
     const roles = await getAllRoles();
     const roleDef = roles.find((r) => r.key === role);
