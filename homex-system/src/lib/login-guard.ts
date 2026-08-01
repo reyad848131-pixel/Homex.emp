@@ -24,6 +24,14 @@ export async function verifyCredentials(
   civilId: string,
   password: string
 ): Promise<CredentialResult> {
+  // Normalize input: civil IDs are stored trimmed, but tablets/phones (and
+  // copy-paste) often add a stray leading/trailing space, which would break the
+  // exact lookup or the password compare and surface as "wrong password" even
+  // when the employee typed it correctly. Passwords in this system never
+  // contain surrounding spaces, so trimming them is safe too.
+  civilId = (civilId ?? "").trim();
+  password = (password ?? "").trim();
+
   const employee = await prisma.employee.findUnique({ where: { civilId } });
 
   // Currently locked?
