@@ -47,6 +47,7 @@ export default function EmployeesPage() {
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
   const [resetting, setResetting] = useState(false);
+  const [resettingId, setResettingId] = useState<string>("");
   const [resetResult, setResetResult] = useState<Array<{ name: string; civilId: string; password: string }> | null>(null);
   // Roles & permissions management.
   const [roles, setRoles] = useState<RoleDef[]>([]);
@@ -108,6 +109,21 @@ export default function EmployeesPage() {
       }
     } catch { setError(t("serverConnectionError")); }
     finally { setResetting(false); }
+  };
+
+  const resetOne = async (emp: Employee) => {
+    if (!confirm(`تصفير كلمة سر ${emp.name} إلى Homex${emp.civilId}؟ (يفكّ القفل أيضاً)`)) return;
+    setResettingId(emp.id);
+    try {
+      const res = await fetch(`/api/employees/${emp.id}/reset-password`, { method: "POST" });
+      if (res.ok) {
+        const data = await res.json();
+        setResetResult([{ name: data.name, civilId: data.civilId, password: data.password }]);
+      } else {
+        setError(t("addFailed"));
+      }
+    } catch { setError(t("serverConnectionError")); }
+    finally { setResettingId(""); }
   };
 
   const load = () => fetch("/api/employees").then((r) => r.json()).then(setEmployees);
@@ -414,6 +430,10 @@ export default function EmployeesPage() {
                     <button onClick={() => startEdit(emp)}
                       className="text-xs font-bold text-gray-500 hover:text-gray-900 px-2 py-1 border border-gray-200 rounded hover:bg-gray-50">
                       {t("edit")}
+                    </button>
+                    <button onClick={() => resetOne(emp)} disabled={resettingId === emp.id}
+                      className="text-xs font-bold text-amber-600 border-amber-200 px-2 py-1 border rounded hover:bg-amber-50 disabled:opacity-50">
+                      تصفير كلمة السر
                     </button>
                     <button onClick={() => toggleActive(emp)}
                       className={cn("text-xs font-bold px-2 py-1 border rounded",
