@@ -351,6 +351,7 @@ const translations = {
   itemDetails: { ar: "تفاصيل البنود", en: "Item Details" },
   item: { ar: "البند", en: "Item" },
   quantity: { ar: "الكمية", en: "Qty" },
+  pricePerMeter: { ar: "سعر المتر", en: "Price/m" },
   unitPriceShort: { ar: "السعر", en: "Price" },
   extrasShort: { ar: "إضافات", en: "Extras" },
   deleteAction: { ar: "حذف", en: "Delete" },
