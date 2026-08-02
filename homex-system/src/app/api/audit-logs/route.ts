@@ -17,9 +17,19 @@ export async function GET(req: NextRequest) {
   const page = parseIntParam(searchParams.get("page"), 1);
   const limit = parseIntParam(searchParams.get("limit"), 30, 1, 100);
   const entity = searchParams.get("entity");
+  const action = searchParams.get("action");
+  const search = (searchParams.get("search") || "").trim();
 
   const where: any = {};
   if (entity) where.entity = entity;
+  if (action) where.action = action;
+  if (search) {
+    where.OR = [
+      { details: { contains: search, mode: "insensitive" as const } },
+      { entityId: { contains: search, mode: "insensitive" as const } },
+      { employee: { name: { contains: search, mode: "insensitive" as const } } },
+    ];
+  }
 
   const [logs, total] = await Promise.all([
     prisma.auditLog.findMany({

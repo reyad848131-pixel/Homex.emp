@@ -40,13 +40,22 @@ export default function AuditLogsPage() {
   const [data, setData] = useState<{ logs: AuditEntry[]; total: number; totalPages: number }>({ logs: [], total: 0, totalPages: 0 });
   const [page, setPage] = useState(1);
   const [entity, setEntity] = useState("");
+  const [action, setAction] = useState("");
+  const [search, setSearch] = useState("");
   const { t, dateLocale } = useI18n();
 
   useEffect(() => {
     const params = new URLSearchParams({ page: String(page), limit: "30" });
     if (entity) params.set("entity", entity);
-    fetch(`/api/audit-logs?${params}`).then((r) => r.json()).then(setData);
-  }, [page, entity]);
+    if (action) params.set("action", action);
+    if (search.trim()) params.set("search", search.trim());
+    const timer = setTimeout(() => {
+      fetch(`/api/audit-logs?${params}`).then((r) => r.json()).then(setData);
+    }, 250);
+    return () => clearTimeout(timer);
+  }, [page, entity, action, search]);
+
+  useEffect(() => { setPage(1); }, [entity, action, search]);
 
   return (
     <div>
@@ -58,13 +67,30 @@ export default function AuditLogsPage() {
           </h1>
           <p className="text-sm text-gray-500 mt-1">{data.total} {t("logCount")}</p>
         </div>
-        <select value={entity} onChange={(e) => { setEntity(e.target.value); setPage(1); }}
-          className="field w-auto">
-          <option value="">{t("allTypes")}</option>
-          <option value="quotation">{t("quotationsType")}</option>
-          <option value="employee">{t("employeesType")}</option>
-          <option value="settings">{t("settingsType")}</option>
-        </select>
+        <div className="flex items-center gap-2 flex-wrap">
+          <input type="text" value={search} onChange={(e) => setSearch(e.target.value)}
+            placeholder="بحث (موظف / تفاصيل / رقم)" className="field w-auto min-w-[12rem]" />
+          <select value={action} onChange={(e) => setAction(e.target.value)} className="field w-auto">
+            <option value="">كل الإجراءات</option>
+            <option value="create">إنشاء</option>
+            <option value="update">تعديل</option>
+            <option value="status_change">تغيير حالة</option>
+            <option value="reassign">نقل لعميل</option>
+            <option value="renumber">توحيد ترقيم</option>
+            <option value="import">استيراد</option>
+            <option value="import_undo">تراجع استيراد</option>
+            <option value="delete">حذف</option>
+            <option value="reset_password">تصفير كلمة سر</option>
+            <option value="reset_passwords">تصفير كل الكلمات</option>
+          </select>
+          <select value={entity} onChange={(e) => setEntity(e.target.value)}
+            className="field w-auto">
+            <option value="">{t("allTypes")}</option>
+            <option value="quotation">{t("quotationsType")}</option>
+            <option value="employee">{t("employeesType")}</option>
+            <option value="settings">{t("settingsType")}</option>
+          </select>
+        </div>
       </div>
 
       <div className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded overflow-hidden">
