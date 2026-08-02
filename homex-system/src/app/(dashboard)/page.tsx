@@ -1,5 +1,6 @@
 import { getAuth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
+import { Prisma } from "@prisma/client";
 import { STATUS_MAP } from "@/lib/types";
 import { roundMoney } from "@/lib/utils";
 import { getSettings } from "@/lib/settings";
@@ -104,6 +105,25 @@ export default async function DashboardPage() {
     isAdmin ? prisma.quotation.count({ where: { deliveryDateEstimated: true } }) : Promise.resolve(0),
   ]);
 
+  // Top outstanding receivables (approved orders with a remaining balance),
+  // for roles that can see money. Computed in one grouped query.
+  const topReceivables = canSeeFinancials
+    ? ((await prisma.$queryRaw(Prisma.sql`
+        SELECT q.id, q.quote_number AS "quoteNumber", q.total::float AS total,
+               COALESCE(SUM(p.amount), 0)::float AS paid, c.name AS "customerName"
+        FROM quotations q
+        JOIN customers c ON c.id = q.customer_id
+        LEFT JOIN payments p ON p.quotation_id = q.id
+        WHERE q.status = 'approved' AND q.deleted_at IS NULL
+          ${isAdmin ? Prisma.empty : Prisma.sql`AND q.employee_id = ${userId}`}
+        GROUP BY q.id, c.name
+        HAVING q.total > COALESCE(SUM(p.amount), 0)
+        ORDER BY (q.total - COALESCE(SUM(p.amount), 0)) DESC
+        LIMIT 8
+      `)) as Array<{ id: string; quoteNumber: string; total: number; paid: number; customerName: string }>)
+        .map((r) => ({ ...r, remaining: roundMoney(r.total - r.paid) }))
+    : [];
+
   const statusMap = Object.fromEntries(statusGroupBy.map((s) => [s.status, s._count]));
   const draftCount = statusMap.draft || 0;
   const pendingCount = statusMap.pending || 0;
@@ -135,6 +155,7 @@ export default async function DashboardPage() {
     overdueDeliveries,
     estimatedDateCount,
     canSeeFinancials,
+    topReceivables,
     expiringQuotations: expiringQuotations.map((q) => ({
       id: q.id,
       quoteNumber: q.quoteNumber,

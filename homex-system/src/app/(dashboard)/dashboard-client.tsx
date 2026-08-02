@@ -35,6 +35,7 @@ interface DashboardData {
   overdueDeliveries: number;
   estimatedDateCount: number;
   canSeeFinancials: boolean;
+  topReceivables: Array<{ id: string; quoteNumber: string; customerName: string; total: number; paid: number; remaining: number }>;
   expiringQuotations: Array<{
     id: string;
     quoteNumber: string;
@@ -187,6 +188,28 @@ export function DashboardClient({ data }: { data: DashboardData }) {
           </div>
         );
       })()}
+
+      {data.canSeeFinancials && data.topReceivables.length > 0 && (
+        <div className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded p-5 mb-6">
+          <h2 className="text-sm font-bold text-gray-400 uppercase tracking-wider mb-3 flex items-center gap-2">
+            <TrendingUp className="w-4 h-4 text-red-500" /> أكبر الذمم (متبقٍّ على العملاء)
+          </h2>
+          <div className="divide-y divide-gray-100 dark:divide-gray-700">
+            {data.topReceivables.map((r) => (
+              <Link key={r.id} href={`/quotations/${r.id}`} className="flex items-center justify-between gap-3 py-2.5 hover:bg-gray-50 dark:hover:bg-gray-700/40 rounded px-1 transition-colors">
+                <div className="min-w-0">
+                  <p className="text-sm font-bold truncate">{r.customerName}</p>
+                  <p className="text-xs text-gray-400 font-mono-en">{r.quoteNumber}</p>
+                </div>
+                <div className="text-left shrink-0">
+                  <p className="text-sm font-black font-mono-en text-red-600">{formatCurrency(r.remaining, t("omr"))}</p>
+                  <p className="text-[11px] text-gray-400 font-mono-en">من {formatCurrency(r.total, t("omr"))}</p>
+                </div>
+              </Link>
+            ))}
+          </div>
+        </div>
+      )}
 
       {data.expiringQuotations.length > 0 && (
         <div className="bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-700 rounded p-4 mb-6">
