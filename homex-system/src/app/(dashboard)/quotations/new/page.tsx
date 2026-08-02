@@ -536,7 +536,7 @@ export default function NewQuotationPage() {
                   <div className="grid grid-cols-2 gap-4 mt-4">
                     <div>
                       <label className="block text-sm font-semibold text-gray-600 mb-1.5">{t("quantity")}</label>
-                      <NumField value={builderQty} onChange={setBuilderQty} min={1} int
+                      <NumField value={builderQty} onChange={setBuilderQty} min={0.1}
                         className="field text-center font-mono-en" />
                     </div>
                     <div className="flex items-end">

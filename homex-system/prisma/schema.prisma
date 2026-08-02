@@ -247,7 +247,9 @@ model QuoteItem {
   categoryId  String  @map("category_id")
   description String
   details     String?
-  quantity    Int     @default(1)
+  // Float (not Int) so measurement-based items (e.g. seating sets priced per
+  // metre) can use fractional amounts like 1.5 or 3.4.
+  quantity    Float   @default(1)
   unitPrice   Float   @map("unit_price")
   extras      Float   @default(0)
   lineTotal   Float   @map("line_total")

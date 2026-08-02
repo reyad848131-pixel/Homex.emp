@@ -39,7 +39,10 @@ export interface SanitizedItem {
  * from the client cannot lower (or inflate) the amount that gets stored.
  */
 export function sanitizeItem(item: RawItem, sortOrder: number): SanitizedItem {
-  const quantity = Math.max(1, Math.round(num(item.quantity, 1)));
+  // Allow fractional quantities (e.g. metres: 1.5, 3.4), rounded to 3 decimals.
+  // A non-positive or invalid value falls back to 1.
+  const rawQty = round3(num(item.quantity, 1));
+  const quantity = rawQty > 0 ? rawQty : 1;
   const unitPrice = Math.max(0, num(item.unitPrice, 0));
   const extras = Math.max(0, num(item.extras, 0));
   const lineTotal = round3(quantity * unitPrice + extras);

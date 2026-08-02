@@ -10,7 +10,13 @@ describe("sanitizeItem", () => {
     expect(item.lineTotal).toBe(25); // 2*10 + 5, not the sent 1
   });
 
-  it("clamps quantity to a minimum of 1", () => {
+  it("keeps a fractional quantity (metre-based items like 1.5)", () => {
+    const item = sanitizeItem({ categoryId: "c1", quantity: 1.5, unitPrice: 80 }, 0);
+    expect(item.quantity).toBe(1.5);
+    expect(item.lineTotal).toBe(120); // 1.5 × 80
+  });
+
+  it("falls back to 1 for a non-positive quantity", () => {
     const item = sanitizeItem({ categoryId: "c1", quantity: 0, unitPrice: 10 }, 0);
     expect(item.quantity).toBe(1);
     expect(item.lineTotal).toBe(10);
