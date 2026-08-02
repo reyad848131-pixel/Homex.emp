@@ -67,6 +67,13 @@ export default function EditQuotationPage({ params }: { params: Promise<{ id: st
   const [builderInitial, setBuilderInitial] = useState<Record<string, any> | undefined>(undefined);
   const [locked, setLocked] = useState(false);
   const [editReason, setEditReason] = useState("");
+  const [isManager, setIsManager] = useState(true);
+
+  useEffect(() => {
+    fetch("/api/me").then((r) => (r.ok ? r.json() : null)).then((m) => {
+      if (m) setIsManager(m.role === "admin" || m.role === "ceo" || m.role === "manager");
+    }).catch(() => {});
+  }, []);
   // Reference total from an Excel import — shown so the user can add items until
   // the quote matches the confirmed paper total.
   const [importedTotal, setImportedTotal] = useState<number | null>(null);
@@ -288,7 +295,7 @@ export default function EditQuotationPage({ params }: { params: Promise<{ id: st
         );
       })()}
 
-      {locked && (
+      {locked && isManager && (
         <div className="max-w-3xl mx-auto mb-5 rounded-lg bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 p-4">
           <p className="flex items-center gap-2 text-sm font-bold text-amber-800 dark:text-amber-200 mb-2">
             <ShieldAlert className="w-4 h-4" /> {t("managerEditWarning")}
@@ -296,6 +303,14 @@ export default function EditQuotationPage({ params }: { params: Promise<{ id: st
           <label className="block text-xs font-semibold text-amber-800 dark:text-amber-200 mb-1">{t("editReasonLabel")}</label>
           <input type="text" value={editReason} onChange={(e) => setEditReason(e.target.value)}
             className="field" placeholder={t("editReasonPlaceholder")} />
+        </div>
+      )}
+
+      {locked && !isManager && (
+        <div className="max-w-3xl mx-auto mb-5 rounded-lg bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 p-4">
+          <p className="flex items-center gap-2 text-sm font-bold text-red-700 dark:text-red-300">
+            <ShieldAlert className="w-4 h-4" /> هذا العرض معتمد أو مفوتر أو له دفعات — لا يمكن تعديل بنوده. تواصل مع المدير لأي تعديل.
+          </p>
         </div>
       )}
 
@@ -693,7 +708,7 @@ export default function EditQuotationPage({ params }: { params: Promise<{ id: st
             {t("next")} <ArrowLeft className="w-4 h-4" />
           </button>
         ) : (
-          <button onClick={handleSave} disabled={saving || items.length === 0}
+          <button onClick={handleSave} disabled={saving || items.length === 0 || (locked && !isManager)}
             className="flex items-center gap-2 bg-green-700 text-white px-6 py-2.5 rounded text-sm font-bold hover:bg-green-800 disabled:opacity-30 transition-colors">
             <Save className="w-4 h-4" /> {saving ? t("savingText") : t("saveChanges")}
           </button>
@@ -714,7 +729,7 @@ export default function EditQuotationPage({ params }: { params: Promise<{ id: st
             <Eye className="w-3.5 h-3.5" />
             {t("previewBtn")}
           </button>
-          <button onClick={handleSave} disabled={saving}
+          <button onClick={handleSave} disabled={saving || (locked && !isManager)}
             className="flex items-center gap-1 px-3 py-1.5 bg-emerald-600 hover:bg-emerald-700 rounded-lg text-xs font-bold transition-colors disabled:opacity-50">
             <Save className="w-3.5 h-3.5" />
             {t("save")}
