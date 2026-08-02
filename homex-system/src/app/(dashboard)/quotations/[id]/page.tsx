@@ -51,7 +51,7 @@ export default async function QuotationDetailPage({ params }: { params: Promise<
       id={id}
       initialQuote={initialQuote}
       initialTerms={settings.terms_conditions || ""}
-      initialSelfApprove={settings.allow_self_approve === "true"}
+      initialSelfApprove={settings.allow_self_approve !== "false"}
       initialMe={user ? { id: user.id, role: user.role } : null}
       initialWaTemplate={settings.wa_template_quote || ""}
       initialCompany={{ name: settings.company_name || "", phone: settings.company_phone || "" }}

@@ -31,9 +31,12 @@ export function canSetStatus(params: {
 }): StatusDecision {
   const isManager = params.role === "admin" || params.role === "ceo" || params.role === "manager";
   if (isManager) return { ok: true };
-  // Simplified workflow: any employee may approve their own quotation directly
-  // (ownership is enforced in the route). Only a manager can decline.
-  if (params.status === "approved") return { ok: true };
+  // Sales may approve their own quotation only when self-approval is enabled
+  // (ownership is enforced in the route). When it's disabled, a manager must
+  // approve. Only a manager can decline.
+  if (params.status === "approved") {
+    return params.selfApprove ? { ok: true } : { ok: false, reason: "needs_approval_role" };
+  }
   if (params.status === "declined") return { ok: false, reason: "sales_decline" };
   return { ok: true };
 }

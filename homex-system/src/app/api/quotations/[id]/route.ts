@@ -113,7 +113,9 @@ export async function PATCH(
       if (!VALID_STATUSES.includes(body.status)) {
         return NextResponse.json({ error: "Invalid status" }, { status: 400 });
       }
-      const selfApprove = (await getSetting("allow_self_approve", "false")) === "true";
+      // Default ON (unset = enabled) so behavior is unchanged until an admin
+      // explicitly turns self-approval off to require manager approval.
+      const selfApprove = (await getSetting("allow_self_approve", "true")) !== "false";
       const decision = canSetStatus({ role: user.role, status: body.status, selfApprove });
       if (!decision.ok) {
         return NextResponse.json({ error: "Insufficient permissions" }, { status: 403 });
