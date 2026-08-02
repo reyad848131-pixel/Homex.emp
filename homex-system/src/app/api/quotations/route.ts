@@ -6,7 +6,7 @@ import { logAction } from "@/lib/audit";
 import { getSettings } from "@/lib/settings";
 import { computeQuoteTotals } from "@/lib/quote-calc";
 import { parseBody, createQuotationSchema } from "@/lib/schemas";
-import { curtainMinCount } from "@/lib/order-rules";
+import { findCurtainViolation } from "@/lib/order-rules";
 import { getQuotationsList } from "@/lib/quotations-list";
 import { userCan } from "@/lib/permissions";
 
@@ -55,21 +55,13 @@ export async function POST(req: NextRequest) {
     const { customer: customerData, items, notes, advancePct, deliveryDate, deliveryTime } = parsed.data;
 
     // Enforce the curtain minimum for the customer's wilayat (5 for Bahla/
-    // Nizwa/Al Hamra, 8 otherwise). Curtain items carry their count in the
-    // description, e.g. "ستائر ... (6 ستارة) - ...".
-    const minCurtains = curtainMinCount(customerData.wilayat);
-    for (const it of items as Array<{ description?: string }>) {
-      const desc = it.description || "";
-      if (desc.startsWith("ستائر")) {
-        const m = desc.match(/\((\d+)\s*ستارة\)/);
-        const n = m ? parseInt(m[1], 10) : 0;
-        if (n > 0 && n < minCurtains) {
-          return NextResponse.json(
-            { error: `الحد الأدنى للستائر في هذه الولاية هو ${minCurtains} ستارة`, code: "curtain_min" },
-            { status: 400 }
-          );
-        }
-      }
+    // Nizwa/Al Hamra, 8 otherwise).
+    const violation = findCurtainViolation(items as Array<{ description?: string }>, customerData.wilayat);
+    if (violation) {
+      return NextResponse.json(
+        { error: `الحد الأدنى للستائر في هذه الولاية هو ${violation.min} ستارة (الطلب ${violation.count})`, code: "curtain_min" },
+        { status: 400 }
+      );
     }
 
     let customer = await prisma.customer.findFirst({
