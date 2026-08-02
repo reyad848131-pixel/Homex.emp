@@ -11,7 +11,7 @@ import { renderWaTemplate, waLinkFor, DEFAULT_WA_DELIVERY } from "@/lib/wa";
 import {
   CalendarClock, Phone, MessageCircle, Check, FileText, Search,
   MapPin, Clock, Package, Truck, Printer, Wallet, User, CalendarDays,
-  BadgeCheck, RotateCcw,
+  BadgeCheck, RotateCcw, Download,
 } from "lucide-react";
 
 interface DeliveryQuotation {
@@ -245,6 +245,9 @@ export default function DeliverySchedulePage() {
               <Wallet className="w-4 h-4" /> <span className="font-mono-en">{fmtCur(totalToCollect)}</span>
             </span>
           )}
+          <a href="/api/export?type=deliveries" className="no-print inline-flex items-center gap-2 self-start border border-gray-200 dark:border-gray-700 text-gray-600 dark:text-gray-300 px-4 h-11 rounded-lg text-sm font-bold hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors" title="تنزيل جدول التوصيل Excel/CSV">
+            <Download className="w-4 h-4" /> تصدير
+          </a>
           <span className="inline-flex items-center gap-2 self-start bg-teal-600 text-white px-4 h-11 rounded-lg text-sm font-bold">
             <Truck className="w-4 h-4" />
             <span className="font-mono-en">{total}</span> {t("deliveryCount")}

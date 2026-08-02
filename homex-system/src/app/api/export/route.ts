@@ -84,6 +84,40 @@ export async function GET(req: NextRequest) {
     });
   }
 
+  if (type === "deliveries") {
+    // Delivery schedule: dated orders, upcoming first.
+    const orders = await prisma.quotation.findMany({
+      where: { deliveryDate: { not: null } },
+      include: { customer: { select: { name: true, phone: true, phoneCode: true, governorate: true, wilayat: true } } },
+      orderBy: [{ deliveryDate: "asc" }, { deliveryTime: "asc" }],
+      take: 5000,
+    });
+    const WS: Record<string, string> = {
+      needs_preparation: "قيد التحضير", ready_to_execute: "قيد التنفيذ", in_progress: "قيد التنفيذ",
+      completed: "اكتمل", ready_for_delivery: "جاهز للتوصيل", delivered: "تم التوصيل",
+      ready_for_install: "جاهز للتركيب", installed: "تم التركيب",
+    };
+    const header = ["رقم الطلب", "العميل", "الهاتف", "المحافظة", "الولاية", "تاريخ التسليم", "الوقت", "السائق", "الحالة"];
+    const rows = orders.map((q) => [
+      q.quoteNumber,
+      q.customer.name,
+      `${q.customer.phoneCode}${q.customer.phone}`,
+      q.customer.governorate,
+      q.customer.wilayat,
+      q.deliveryDate ? new Date(q.deliveryDate).toLocaleDateString("en-GB") : "",
+      q.deliveryTime || "",
+      q.deliveryDriver || "",
+      q.workStatus ? (WS[q.workStatus] || q.workStatus) : "",
+    ]);
+    const csv = "﻿" + [header, ...rows].map((r) => r.map((c) => csvSafe(c)).join(",")).join("\n");
+    return new NextResponse(csv, {
+      headers: {
+        "Content-Type": "text/csv; charset=utf-8",
+        "Content-Disposition": `attachment; filename="deliveries-${new Date().toISOString().split("T")[0]}.csv"`,
+      },
+    });
+  }
+
     return NextResponse.json({ error: "Invalid type" }, { status: 400 });
   } catch (e) {
     console.error("API error [/api/export]:", e);
