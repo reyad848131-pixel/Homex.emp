@@ -104,7 +104,18 @@ export default function ReportsPage() {
   const [data, setData] = useState<ReportData | null>(null);
   const [period, setPeriod] = useState("month");
   const [loading, setLoading] = useState(true);
+  // Curtain-below-minimum audit (on-demand).
+  const [audit, setAudit] = useState<{ count: number; scanned: number; violations: Array<{ id: string; quoteNumber: string; customerName: string; wilayat: string; count: number; min: number }> } | null>(null);
+  const [auditLoading, setAuditLoading] = useState(false);
   const { t } = useI18n();
+
+  const runCurtainAudit = () => {
+    setAuditLoading(true);
+    fetch("/api/quotations/curtain-audit")
+      .then((r) => (r.ok ? r.json() : { count: 0, violations: [] }))
+      .then(setAudit)
+      .finally(() => setAuditLoading(false));
+  };
 
   const fmtCur = (n: number | string) => `${Number(n).toFixed(3)} ${t("omr")}`;
 
@@ -322,6 +333,50 @@ export default function ReportsPage() {
             <p className="text-sm text-gray-400 text-center py-4 col-span-full">{t("noData")}</p>
           )}
         </div>
+      </div>
+
+      {/* Curtain-below-minimum audit */}
+      <div className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded p-5 mt-6">
+        <div className="flex items-center justify-between gap-3 flex-wrap">
+          <div>
+            <h2 className="text-sm font-bold text-gray-400 uppercase tracking-wider">فحص الستائر تحت الحد الأدنى</h2>
+            <p className="text-xs text-gray-400 mt-1">طلبات تحمل ستائر أقل من الحد الأدنى لولاية العميل (قديمة/مستوردة) لتصحيحها.</p>
+          </div>
+          <button onClick={runCurtainAudit} disabled={auditLoading}
+            className="shrink-0 inline-flex items-center gap-2 px-4 h-10 rounded-lg border border-amber-300 dark:border-amber-700 text-amber-700 dark:text-amber-300 text-sm font-bold hover:bg-amber-50 dark:hover:bg-amber-900/20 disabled:opacity-50">
+            {auditLoading ? "جارٍ الفحص..." : "افحص الآن"}
+          </button>
+        </div>
+        {audit && (
+          <div className="mt-4">
+            {audit.count === 0 ? (
+              <p className="text-sm font-semibold text-emerald-600">✓ لا توجد طلبات تحت الحد الأدنى (فُحص <span className="font-mono-en">{audit.scanned}</span> طلب ستائر).</p>
+            ) : (
+              <>
+                <p className="text-sm font-semibold text-amber-700 dark:text-amber-400 mb-3"><span className="font-mono-en">{audit.count}</span> طلب تحت الحد الأدنى:</p>
+                <div className="overflow-x-auto rounded-lg border border-gray-100 dark:border-gray-700">
+                  <table className="w-full text-sm">
+                    <thead className="bg-gray-50 dark:bg-gray-700/40 text-gray-500 text-xs">
+                      <tr><th className="p-2 text-right">رقم الطلب</th><th className="p-2 text-right">العميل</th><th className="p-2 text-right">الولاية</th><th className="p-2 text-right">العدد</th><th className="p-2 text-right">الحد</th><th className="p-2"></th></tr>
+                    </thead>
+                    <tbody>
+                      {audit.violations.map((v) => (
+                        <tr key={v.id} className="border-t border-gray-100 dark:border-gray-700">
+                          <td className="p-2 font-mono-en font-bold">{v.quoteNumber}</td>
+                          <td className="p-2">{v.customerName}</td>
+                          <td className="p-2 text-gray-500">{v.wilayat}</td>
+                          <td className="p-2 font-mono-en text-red-600 font-bold">{v.count}</td>
+                          <td className="p-2 font-mono-en text-gray-500">{v.min}</td>
+                          <td className="p-2"><a href={`/quotations/${v.id}/edit`} target="_blank" rel="noreferrer" className="text-indigo-600 dark:text-indigo-400 font-semibold hover:underline">فتح للتصحيح</a></td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              </>
+            )}
+          </div>
+        )}
       </div>
     </div>
   );
