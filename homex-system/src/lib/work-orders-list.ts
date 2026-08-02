@@ -51,10 +51,16 @@ export async function getWorkOrders(p: WorkOrdersParams) {
       include: {
         customer: { select: { name: true, phone: true, phoneCode: true, governorate: true, wilayat: true, address: true } },
         employee: { select: { name: true } },
-        items: { include: { category: { select: { nameAr: true, nameEn: true } } }, orderBy: { sortOrder: "asc" } },
+        // Only the fields the board/schedule actually render — dropping the
+        // per-item money fields (unitPrice/extras/lineTotal/details) noticeably
+        // shrinks the payload on this list, especially on mobile.
+        items: { select: { description: true, quantity: true, category: { select: { nameAr: true, nameEn: true } } }, orderBy: { sortOrder: "asc" } },
         payments: { select: { amount: true } },
       },
       orderBy: UPCOMING_FIRST_ORDER,
+      // Safety cap so the list stays bounded as data grows (upcoming/overdue
+      // load first; ancient delivered history beyond this isn't needed here).
+      take: 1500,
     }),
     prisma.quotation.groupBy({ by: ["workStatus"], where: deliveryWhere, _count: true }),
     prisma.quotation.count({ where: deliveryWhere }),
