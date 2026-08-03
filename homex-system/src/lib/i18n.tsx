@@ -354,6 +354,8 @@ const translations = {
   pricePerMeter: { ar: "سعر المتر", en: "Price/m" },
   leads: { ar: "العملاء المحتملون", en: "Leads" },
   leadsFromWebsite: { ar: "طلبات من الموقع", en: "Website enquiries" },
+  newLeadsTitle: { ar: "طلب جديد من الموقع بانتظار المتابعة", en: "new website enquiries awaiting follow-up" },
+  newLeadsSub: { ar: "اضغط لعرض العملاء المحتملين وتحويلهم لعملاء", en: "Tap to view leads and convert them" },
   unitPriceShort: { ar: "السعر", en: "Price" },
   extrasShort: { ar: "إضافات", en: "Extras" },
   deleteAction: { ar: "حذف", en: "Delete" },

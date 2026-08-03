@@ -136,6 +136,9 @@ export default async function DashboardPage() {
   const outstandingAmount = roundMoney(Math.max(totalRevenue - collectedAmount, 0));
   const conversionRate = totalQuotes > 0 ? ((approvedCount / totalQuotes) * 100).toFixed(0) : "0";
 
+  // Pending website enquiries awaiting follow-up.
+  const newLeadsCount = await prisma.lead.count({ where: { status: "new" } }).catch(() => 0);
+
   const data = {
     userName: session?.user?.name || "",
     isAdmin,
@@ -154,6 +157,7 @@ export default async function DashboardPage() {
     photoQueueCount,
     overdueDeliveries,
     estimatedDateCount,
+    newLeadsCount,
     canSeeFinancials,
     topReceivables,
     expiringQuotations: expiringQuotations.map((q) => ({

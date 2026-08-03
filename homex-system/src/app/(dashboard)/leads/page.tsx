@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect, useCallback } from "react";
-import { Inbox, Phone, MapPin, Check, UserPlus, Archive, Loader2 } from "lucide-react";
+import { Inbox, Phone, MapPin, Check, UserPlus, Archive, Loader2, Download } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 interface Lead {
@@ -35,7 +35,36 @@ export default function LeadsPage() {
   const [leads, setLeads] = useState<Lead[]>([]);
   const [loading, setLoading] = useState(true);
   const [filter, setFilter] = useState<string>("new");
+  const [query, setQuery] = useState("");
   const [busy, setBusy] = useState<string | null>(null);
+
+  const q = query.trim().toLowerCase();
+  const shown = q
+    ? leads.filter((l) =>
+        [l.name, l.phone, l.governorate, l.wilayat, l.service, l.message]
+          .filter(Boolean)
+          .some((v) => (v as string).toLowerCase().includes(q))
+      )
+    : leads;
+
+  function exportCsv() {
+    const head = ["الاسم", "الجوال", "المحافظة", "الولاية", "الخدمة", "الرسالة", "الحالة", "التاريخ"];
+    const rows = shown.map((l) => [
+      l.name, l.phone || "", l.governorate || "", l.wilayat || "",
+      l.service || "", (l.message || "").replace(/\n/g, " "),
+      STATUS_META[l.status]?.label || l.status,
+      new Date(l.createdAt).toLocaleString("ar"),
+    ]);
+    const csv = [head, ...rows]
+      .map((r) => r.map((c) => `"${String(c).replace(/"/g, '""')}"`).join(","))
+      .join("\n");
+    const blob = new Blob(["﻿" + csv], { type: "text/csv;charset=utf-8" });
+    const a = document.createElement("a");
+    a.href = URL.createObjectURL(blob);
+    a.download = `leads-${new Date().toISOString().slice(0, 10)}.csv`;
+    a.click();
+    URL.revokeObjectURL(a.href);
+  }
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -74,26 +103,36 @@ export default function LeadsPage() {
       </div>
       <p className="text-sm text-gray-500 mb-6">طلبات واردة من موقع الشركة — راجعها وحوّل الجاد منها إلى عميل.</p>
 
-      <div className="flex gap-1.5 flex-wrap mb-5">
-        {FILTERS.map(([k, l]) => (
-          <button key={k} onClick={() => setFilter(k)}
-            className={cn("px-4 py-1.5 rounded-full text-xs font-bold border transition-colors",
-              filter === k ? "bg-gray-900 border-gray-900 text-white" : "bg-white dark:bg-gray-800 border-gray-200 dark:border-gray-700 text-gray-500")}>
-            {l}
-          </button>
-        ))}
+      <div className="flex gap-2 flex-wrap items-center mb-5">
+        <div className="flex gap-1.5 flex-wrap">
+          {FILTERS.map(([k, l]) => (
+            <button key={k} onClick={() => setFilter(k)}
+              className={cn("px-4 py-1.5 rounded-full text-xs font-bold border transition-colors",
+                filter === k ? "bg-gray-900 border-gray-900 text-white" : "bg-white dark:bg-gray-800 border-gray-200 dark:border-gray-700 text-gray-500")}>
+              {l}
+            </button>
+          ))}
+        </div>
+        <div className="flex-1 min-w-[160px]">
+          <input value={query} onChange={(e) => setQuery(e.target.value)} placeholder="بحث بالاسم أو الجوال…"
+            className="field text-sm w-full" />
+        </div>
+        <button onClick={exportCsv} disabled={!shown.length}
+          className="px-3 py-1.5 rounded border border-gray-200 dark:border-gray-700 text-xs font-bold text-gray-600 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700 disabled:opacity-40 flex items-center gap-1.5">
+          <Download className="w-3.5 h-3.5" /> تصدير
+        </button>
       </div>
 
       {loading ? (
         <div className="flex justify-center py-20"><Loader2 className="w-6 h-6 animate-spin text-gray-400" /></div>
-      ) : leads.length === 0 ? (
+      ) : shown.length === 0 ? (
         <div className="text-center py-20 text-gray-400">
           <Inbox className="w-10 h-10 mx-auto mb-3 opacity-40" />
-          لا توجد طلبات في هذا التصنيف
+          {query ? "لا نتائج للبحث" : "لا توجد طلبات في هذا التصنيف"}
         </div>
       ) : (
         <div className="space-y-3">
-          {leads.map((l) => {
+          {shown.map((l) => {
             const st = STATUS_META[l.status] ?? STATUS_META.new;
             return (
               <div key={l.id} className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg p-4">

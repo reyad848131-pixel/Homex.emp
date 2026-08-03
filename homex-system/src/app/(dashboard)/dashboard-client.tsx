@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { useI18n, type TranslationKey } from "@/lib/i18n";
 import { formatCurrency } from "@/lib/utils";
-import { FileText, FilePlus, Users, TrendingUp, Clock, ArrowUpRight, AlertTriangle, Camera, CalendarClock } from "lucide-react";
+import { FileText, FilePlus, Users, TrendingUp, Clock, ArrowUpRight, AlertTriangle, Camera, CalendarClock, Inbox } from "lucide-react";
 
 const STATUS_KEYS: Record<string, TranslationKey> = {
   draft: "statusDraft",
@@ -34,6 +34,7 @@ interface DashboardData {
   photoQueueCount: number;
   overdueDeliveries: number;
   estimatedDateCount: number;
+  newLeadsCount: number;
   canSeeFinancials: boolean;
   topReceivables: Array<{ id: string; quoteNumber: string; customerName: string; total: number; paid: number; remaining: number }>;
   expiringQuotations: Array<{
@@ -128,6 +129,22 @@ export function DashboardClient({ data }: { data: DashboardData }) {
             <p className="text-xs text-red-600 dark:text-red-400">{t("overdueDeliveriesSub")}</p>
           </div>
           <ArrowUpRight className="w-5 h-5 text-red-500 shrink-0" />
+        </Link>
+      )}
+
+      {data.newLeadsCount > 0 && (
+        <Link href="/leads"
+          className="flex items-center gap-3 bg-emerald-50 dark:bg-emerald-900/20 border border-emerald-200 dark:border-emerald-800 rounded p-4 mb-4 hover:bg-emerald-100 dark:hover:bg-emerald-900/30 transition-colors">
+          <div className="w-10 h-10 rounded-lg bg-emerald-100 dark:bg-emerald-900/40 text-emerald-600 dark:text-emerald-300 flex items-center justify-center shrink-0">
+            <Inbox className="w-5 h-5" />
+          </div>
+          <div className="flex-1 min-w-0">
+            <p className="text-sm font-bold text-emerald-800 dark:text-emerald-200">
+              <span className="font-mono-en">{data.newLeadsCount}</span> {t("newLeadsTitle")}
+            </p>
+            <p className="text-xs text-emerald-600 dark:text-emerald-400">{t("newLeadsSub")}</p>
+          </div>
+          <ArrowUpRight className="w-5 h-5 text-emerald-500 shrink-0" />
         </Link>
       )}
 
