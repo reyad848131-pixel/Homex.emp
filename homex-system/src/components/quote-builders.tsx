@@ -284,6 +284,9 @@ function CabinetBuilder({ config, onUpdate, initial }: { config: any; onUpdate: 
   const [width, setWidth] = useState(initial?.width ?? 1.5);
   const [height, setHeight] = useState(initial?.height ?? 2.4);
   const [shape, setShape] = useState(initial?.shape ?? "single");
+  const [glassEnabled, setGlassEnabled] = useState<boolean>(
+    initial?.glassEnabled ?? (initial?.glassDoors ?? 0) > 0
+  );
   const [glassDoors, setGlassDoors] = useState(initial?.glassDoors ?? 0);
   const [glassType, setGlassType] = useState<string>(initial?.glassType ?? "3");
   const [leds, setLeds] = useState(initial?.leds ?? 0);
@@ -301,15 +304,20 @@ function CabinetBuilder({ config, onUpdate, initial }: { config: any; onUpdate: 
   const glassPrice = GLASS_OPTIONS.find((o) => o.key === glassType)?.price ?? 60;
   const glassLabel = GLASS_OPTIONS.find((o) => o.key === glassType)?.label ?? "";
 
+  // الإضاءة موجودة فقط داخل الأبواب الزجاجية، فلا تُحتسب إلا عند تفعيل الزجاج.
+  const glassCount = glassEnabled ? glassDoors : 0;
+  const ledCount = glassEnabled ? leds : 0;
+
   useEffect(() => {
     const area = width * height;
     const price = area * (config.basePrice || 54);
     const backCost = back18 ? backSqm * backRate : 0;
-    const extras = glassDoors * glassPrice + leds * (config.led || 25) + backCost;
-    const glassNote = glassDoors > 0 ? ` + ${glassDoors} باب زجاج (${glassLabel})` : "";
-    const desc = `خزانة ${shape === "L" ? "L" : shape === "U" ? "U" : "عادية"} - ${width}×${height}م${glassNote}${back18 ? ` + خلفية ١٨ ملي (${backSqm} م²)` : ""}`;
-    onUpdate(desc, price, extras, { width, height, shape, glassDoors, glassType, leds, back18, backSqm });
-  }, [width, height, shape, glassDoors, glassType, glassPrice, glassLabel, leds, back18, backSqm, backRate, config, onUpdate]);
+    const extras = glassCount * glassPrice + ledCount * (config.led || 25) + backCost;
+    const glassNote = glassCount > 0 ? ` + ${glassCount} باب زجاج (${glassLabel})` : "";
+    const ledNote = glassEnabled && ledCount > 0 ? ` + إضاءة ${ledCount}` : "";
+    const desc = `خزانة ${shape === "L" ? "L" : shape === "U" ? "U" : "عادية"} - ${width}×${height}م${glassNote}${ledNote}${back18 ? ` + خلفية ١٨ ملي (${backSqm} م²)` : ""}`;
+    onUpdate(desc, price, extras, { width, height, shape, glassEnabled, glassDoors, glassType, leds, back18, backSqm });
+  }, [width, height, shape, glassEnabled, glassCount, ledCount, glassDoors, glassType, glassPrice, glassLabel, leds, back18, backSqm, backRate, config, onUpdate]);
 
   return (
     <div className="space-y-4">
@@ -337,35 +345,50 @@ function CabinetBuilder({ config, onUpdate, initial }: { config: any; onUpdate: 
             className="field font-mono-en text-center" />
         </div>
       </div>
-      <div className="grid grid-cols-2 gap-4">
-        <div>
-          <label className="block text-sm font-semibold text-gray-600 mb-1.5">{t("glassDoors")} ({t("countLabel")})</label>
-          <NumField value={glassDoors} onChange={setGlassDoors} min={0} int
-            className="field font-mono-en text-center" />
-        </div>
-        <div>
-          <label className="block text-sm font-semibold text-gray-600 mb-1.5">{t("ledLighting")} ({config.led || 25} {t("omr")})</label>
-          <NumField value={leds} onChange={setLeds} min={0} int
-            className="field font-mono-en text-center" />
-        </div>
-      </div>
-      {glassDoors > 0 && (
-        <div>
-          <label className="block text-sm font-semibold text-gray-600 mb-2">ارتفاع الباب الزجاجي</label>
-          <div className="grid grid-cols-3 gap-2">
-            {GLASS_OPTIONS.map((o) => (
-              <button key={o.key} type="button" onClick={() => setGlassType(o.key)}
-                className={cn("py-2.5 rounded text-xs font-bold border transition-colors leading-tight",
-                  glassType === o.key ? "bg-gray-900 text-white border-gray-900" : "bg-white border-gray-200 text-gray-600")}>
-                {o.label}<br /><span className="font-mono-en">{o.price} {t("omr")}</span>
-              </button>
-            ))}
+      <div>
+        <button type="button" onClick={() => setGlassEnabled((v) => !v)}
+          className={cn("w-full flex items-center justify-between px-4 py-3 rounded border text-sm font-bold transition-colors",
+            glassEnabled ? "bg-gray-900 text-white border-gray-900" : "bg-white border-gray-200 text-gray-600")}>
+          <span>{t("glassDoors")}</span>
+          <span>{glassEnabled ? "✓" : ""}</span>
+        </button>
+
+        {glassEnabled && (
+          <div className="mt-3 space-y-4 pr-3 border-r-2 border-gray-100">
+            <div>
+              <label className="block text-sm font-semibold text-gray-600 mb-1.5">{t("countLabel")}</label>
+              <NumField value={glassDoors} onChange={setGlassDoors} min={0} int
+                className="field font-mono-en text-center" />
+            </div>
+
+            {glassDoors > 0 && (
+              <>
+                <div>
+                  <label className="block text-sm font-semibold text-gray-600 mb-2">القياسات (ارتفاع الباب الزجاجي)</label>
+                  <div className="grid grid-cols-3 gap-2">
+                    {GLASS_OPTIONS.map((o) => (
+                      <button key={o.key} type="button" onClick={() => setGlassType(o.key)}
+                        className={cn("py-2.5 rounded text-xs font-bold border transition-colors leading-tight",
+                          glassType === o.key ? "bg-gray-900 text-white border-gray-900" : "bg-white border-gray-200 text-gray-600")}>
+                        {o.label}<br /><span className="font-mono-en">{o.price} {t("omr")}</span>
+                      </button>
+                    ))}
+                  </div>
+                  <p className="text-xs text-gray-400 mt-2 font-mono-en text-center">
+                    {glassDoors} × {glassPrice} = {(glassDoors * glassPrice).toFixed(3)}
+                  </p>
+                </div>
+
+                <div>
+                  <label className="block text-sm font-semibold text-gray-600 mb-1.5">{t("ledLighting")} ({config.led || 25} {t("omr")})</label>
+                  <NumField value={leds} onChange={setLeds} min={0} int
+                    className="field font-mono-en text-center" />
+                </div>
+              </>
+            )}
           </div>
-          <p className="text-xs text-gray-400 mt-2 font-mono-en text-center">
-            {glassDoors} × {glassPrice} = {(glassDoors * glassPrice).toFixed(3)}
-          </p>
-        </div>
-      )}
+        )}
+      </div>
       <div>
         <button type="button" onClick={() => setBack18((v) => !v)}
           className={cn("w-full flex items-center justify-between px-4 py-3 rounded border text-sm font-bold transition-colors",
