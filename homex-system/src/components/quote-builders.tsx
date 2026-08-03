@@ -52,14 +52,33 @@ export function normalizeNumeric(raw: string): string {
 // decimal-separator variant (see normalizeNumeric), shows the decimal keypad on
 // iPad, and clamps on blur — so decimals type smoothly everywhere.
 export function NumField({
-  value, onChange, min, max, int, className, placeholder,
+  value, onChange, min, max, int, stepper, className, placeholder,
 }: {
   value: number;
   onChange: (n: number) => void;
-  min?: number; max?: number; int?: boolean;
+  min?: number; max?: number; int?: boolean; stepper?: boolean;
   className?: string; placeholder?: string;
 }) {
   const [text, setText] = useState<string>(value != null ? String(value) : "");
+
+  // Stepper mode: circular − / + buttons around the value, for whole-number
+  // counts (glass doors, lights, curtains…). Clamps to min/max on each press.
+  if (stepper) {
+    const lo = min ?? 0;
+    const dec = () => onChange(Math.max(lo, value - 1));
+    const inc = () => onChange(max != null ? Math.min(max, value + 1) : value + 1);
+    return (
+      <div className="flex items-center justify-center gap-3">
+        <button type="button" onClick={inc} aria-label="+"
+          className="w-11 h-11 rounded-full border border-gray-300 text-gray-700 font-bold text-xl leading-none flex items-center justify-center hover:bg-gray-100 disabled:opacity-30"
+          disabled={max != null && value >= max}>+</button>
+        <span className="w-10 text-center font-mono-en font-black text-lg text-gray-900">{value}</span>
+        <button type="button" onClick={dec} aria-label="−"
+          className="w-11 h-11 rounded-full border border-gray-300 text-gray-700 font-bold text-xl leading-none flex items-center justify-center hover:bg-gray-100 disabled:opacity-30"
+          disabled={value <= lo}>−</button>
+      </div>
+    );
+  }
 
   // Re-sync when the value is changed from outside (e.g. a slider).
   useEffect(() => {
@@ -409,7 +428,7 @@ function CabinetBuilder({ config, onUpdate, initial }: { config: any; onUpdate: 
       </div>
       <div>
         <label className="block text-sm font-semibold text-gray-600 mb-1.5">{t("ledLighting")} ({config.led || 25} {t("omr")})</label>
-        <NumField value={leds} onChange={setLeds} min={0} int
+        <NumField value={leds} onChange={setLeds} min={0} int stepper
           className="field font-mono-en text-center" />
       </div>
       <div>
@@ -506,7 +525,7 @@ function CurtainBuilder({ config, wilayat, onUpdate, initial }: { config: any; w
 
       <div>
         <label className="block text-sm font-semibold text-gray-600 mb-1.5">{t("curtainCount")}</label>
-        <NumField value={count} onChange={setCount} min={minCount} int
+        <NumField value={count} onChange={setCount} min={minCount} int stepper
           className="field font-mono-en text-center" />
         <p className="text-xs text-amber-600 mt-1 font-semibold">{t("curtainMinPrefix")}: {minCount} {t("curtainsUnit")}</p>
       </div>
@@ -738,7 +757,7 @@ function CladdingBuilder({ config, onUpdate, initial }: { config: any; onUpdate:
         {lighting && (
           <div className="mt-2">
             <label className="block text-xs text-gray-500 mb-1">{t("lightPointsCount")}</label>
-            <NumField value={lightCount} onChange={setLightCount} min={1} int
+            <NumField value={lightCount} onChange={setLightCount} min={1} int stepper
               className="w-full border border-gray-200 rounded px-3 py-2 text-sm font-mono-en text-center" />
             <p className="text-xs text-emerald-600 mt-1">
               {lightCount} × {LIGHT_PRICE.toFixed(3)} {t("omr")} = {lightSurcharge.toFixed(3)} {t("omr")}
@@ -902,7 +921,7 @@ function DressingBuilder({ config, onUpdate, initial }: { config: any; onUpdate:
         {lighting && (
           <div className="mt-3">
             <label className="block text-sm font-semibold text-gray-600 mb-1.5">{t("lightingsCount")} ({config.lighting || 20} {t("omr")})</label>
-            <NumField value={lightCount} onChange={setLightCount} min={1} int
+            <NumField value={lightCount} onChange={setLightCount} min={1} int stepper
               className="field font-mono-en text-center" />
           </div>
         )}
@@ -950,7 +969,7 @@ function LaundryBuilder({ config, onUpdate, initial }: { config: any; onUpdate: 
         {lighting && (
           <div className="mt-3">
             <label className="block text-sm font-semibold text-gray-600 mb-1.5">{t("lightingsCount")} ({config.lighting || 20} {t("omr")})</label>
-            <NumField value={lightCount} onChange={setLightCount} min={1} int
+            <NumField value={lightCount} onChange={setLightCount} min={1} int stepper
               className="field font-mono-en text-center" />
           </div>
         )}
