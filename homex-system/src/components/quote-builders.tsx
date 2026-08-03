@@ -286,9 +286,9 @@ function CabinetBuilder({ config, onUpdate, initial }: { config: any; onUpdate: 
   const [shape, setShape] = useState(initial?.shape ?? "single");
   // سعر الباب الزجاجي حسب الارتفاع (قابل للضبط عبر config.glassDoorPrices).
   const GLASS_OPTIONS = [
-    { key: "3", label: "ارتفاع ٣ م", price: config.glassDoorPrices?.["3"] ?? 60 },
-    { key: "2.4", label: "ارتفاع ٢.٤ م", price: config.glassDoorPrices?.["2.4"] ?? 45 },
-    { key: "storage", label: "ستوريج علوي ٦٠ سم", price: config.glassDoorPrices?.storage ?? 28 },
+    { key: "3", label: "ارتفاع ٣ م", short: "٣م", price: config.glassDoorPrices?.["3"] ?? 60 },
+    { key: "2.4", label: "ارتفاع ٢.٤ م", short: "٢.٤م", price: config.glassDoorPrices?.["2.4"] ?? 45 },
+    { key: "storage", label: "ستوريج علوي ٦٠ سم", short: "ستوريج", price: config.glassDoorPrices?.storage ?? 28 },
   ];
 
   // عدد الأبواب لكل قياس على حدة، مثل { "3": 6, "2.4": 5, storage: 3 }.
@@ -325,11 +325,14 @@ function CabinetBuilder({ config, onUpdate, initial }: { config: any; onUpdate: 
     const backCost = back18 ? backSqm * backRate : 0;
     const extras = glassCost + ledCount * (config.led || 25) + backCost;
     const glassParts = GLASS_OPTIONS.filter((o) => (glassCounts[o.key] || 0) > 0).map(
-      (o) => `${glassCounts[o.key]} ${o.label}`
+      (o) => `${o.short}×${glassCounts[o.key]}`
     );
-    const glassNote = glassParts.length ? ` + زجاج (${glassParts.join("، ")})` : "";
-    const ledNote = glassEnabled && ledCount > 0 ? ` + إضاءة ${ledCount}` : "";
-    const desc = `خزانة ${shape === "L" ? "L" : shape === "U" ? "U" : "عادية"} - ${width}×${height}م${glassNote}${ledNote}${back18 ? ` + خلفية ١٨ ملي (${backSqm} م²)` : ""}`;
+    const shapeName = shape === "L" ? "L" : shape === "U" ? "U" : "عادية";
+    const parts = [`خزانة ${shapeName} ${width}×${height}م`];
+    if (glassParts.length) parts.push(`زجاج: ${glassParts.join("، ")}`);
+    if (glassEnabled && ledCount > 0) parts.push(`إضاءة ×${ledCount}`);
+    if (back18) parts.push(`خلفية ١٨ملي ${backSqm}م²`);
+    const desc = parts.join(" · ");
     onUpdate(desc, price, extras, { width, height, shape, glassEnabled, glassCounts, leds, back18, backSqm });
   }, [width, height, shape, glassEnabled, glassCounts, glassCost, ledCount, leds, back18, backSqm, backRate, config, onUpdate]);
 
@@ -368,29 +371,40 @@ function CabinetBuilder({ config, onUpdate, initial }: { config: any; onUpdate: 
         </button>
 
         {glassEnabled && (
-          <div className="mt-3 space-y-3 pr-3 border-r-2 border-gray-100">
-            <label className="block text-sm font-semibold text-gray-600">القياسات (عدد الأبواب لكل ارتفاع)</label>
+          <div className="mt-3 space-y-2.5">
+            <label className="block text-xs font-semibold text-gray-400 uppercase tracking-wide">القياسات — عدد الأبواب لكل ارتفاع</label>
             {GLASS_OPTIONS.map((o) => {
               const c = glassCounts[o.key] || 0;
+              const active = c > 0;
               return (
-                <div key={o.key} className="flex items-center gap-3">
-                  <div className="flex-1 text-sm font-semibold text-gray-600 leading-tight">
-                    {o.label} <span className="text-gray-400 font-mono-en">({o.price} {t("omr")})</span>
+                <div key={o.key}
+                  className={cn("flex items-center gap-3 rounded-lg border px-3 py-2.5 transition-colors",
+                    active ? "border-gray-900 bg-gray-50" : "border-gray-200 bg-white")}>
+                  <div className="flex-1 min-w-0">
+                    <p className="text-sm font-bold text-gray-800 leading-tight">{o.label}</p>
+                    <p className="text-xs text-gray-400 font-mono-en">{o.price} {t("omr")} / باب</p>
                   </div>
-                  <div className="w-24">
-                    <NumField value={c} onChange={(n) => setGlassCount(o.key, n)} min={0} int
-                      className="field font-mono-en text-center" />
+                  <div className="flex items-center gap-1.5 flex-shrink-0">
+                    <button type="button" onClick={() => setGlassCount(o.key, Math.max(0, c - 1))}
+                      className="w-8 h-8 rounded-full border border-gray-300 text-gray-700 font-bold text-lg leading-none flex items-center justify-center hover:bg-gray-100 disabled:opacity-30"
+                      disabled={c === 0} aria-label="−">−</button>
+                    <span className="w-8 text-center font-mono-en font-black text-gray-900">{c}</span>
+                    <button type="button" onClick={() => setGlassCount(o.key, c + 1)}
+                      className="w-8 h-8 rounded-full border border-gray-300 text-gray-700 font-bold text-lg leading-none flex items-center justify-center hover:bg-gray-100"
+                      aria-label="+">+</button>
                   </div>
-                  <div className="w-24 text-left text-xs text-gray-400 font-mono-en">
-                    {c > 0 ? `= ${(c * o.price).toFixed(3)}` : ""}
+                  <div className="w-20 text-left flex-shrink-0">
+                    {active && <span className="text-xs font-bold text-gray-600 font-mono-en">{(c * o.price).toFixed(3)}</span>}
                   </div>
                 </div>
               );
             })}
+
             {totalGlass > 0 && (
-              <p className="text-xs font-bold text-gray-600 font-mono-en text-left border-t border-gray-100 pt-2">
-                {t("glassDoors")}: {totalGlass} — {glassCost.toFixed(3)} {t("omr")}
-              </p>
+              <div className="flex items-center justify-between rounded-lg bg-gray-900 text-white px-4 py-2.5">
+                <span className="text-sm font-bold">{t("glassDoors")} — {totalGlass} باب</span>
+                <span className="font-mono-en font-black">{glassCost.toFixed(3)} {t("omr")}</span>
+              </div>
             )}
 
             {totalGlass > 0 && (
