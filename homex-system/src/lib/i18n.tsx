@@ -736,6 +736,7 @@ const translations = {
   itemDescriptionLabel: { ar: "وصف البند", en: "Item Description" },
   customItemLabel: { ar: "بند مخصص", en: "Custom item" },
   perDoor: { ar: "ر.ع/باب", en: "OMR/door" },
+  countLabel: { ar: "العدد", en: "Count" },
   motorLabel: { ar: "موتور", en: "Motor" },
 
   // Currency & Units

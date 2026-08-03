@@ -285,20 +285,31 @@ function CabinetBuilder({ config, onUpdate, initial }: { config: any; onUpdate: 
   const [height, setHeight] = useState(initial?.height ?? 2.4);
   const [shape, setShape] = useState(initial?.shape ?? "single");
   const [glassDoors, setGlassDoors] = useState(initial?.glassDoors ?? 0);
+  const [glassType, setGlassType] = useState<string>(initial?.glassType ?? "3");
   const [leds, setLeds] = useState(initial?.leds ?? 0);
   const [back18, setBack18] = useState<boolean>(Boolean(initial?.back18));
   const [backSqm, setBackSqm] = useState<number>(initial?.backSqm ?? 1);
 
   const backRate = config.back18 || 40; // سعر المتر المربع للخلفية ١٨ ملي
 
+  // سعر الباب الزجاجي حسب الارتفاع (قابل للضبط عبر config.glassDoorPrices).
+  const GLASS_OPTIONS = [
+    { key: "3", label: "ارتفاع ٣ م", price: config.glassDoorPrices?.["3"] ?? 60 },
+    { key: "2.4", label: "ارتفاع ٢.٤ م", price: config.glassDoorPrices?.["2.4"] ?? 45 },
+    { key: "storage", label: "ستوريج علوي ٦٠ سم", price: config.glassDoorPrices?.storage ?? 28 },
+  ];
+  const glassPrice = GLASS_OPTIONS.find((o) => o.key === glassType)?.price ?? 60;
+  const glassLabel = GLASS_OPTIONS.find((o) => o.key === glassType)?.label ?? "";
+
   useEffect(() => {
     const area = width * height;
     const price = area * (config.basePrice || 54);
     const backCost = back18 ? backSqm * backRate : 0;
-    const extras = glassDoors * (config.glassDoor || 60) + leds * (config.led || 25) + backCost;
-    const desc = `خزانة ${shape === "L" ? "L" : shape === "U" ? "U" : "عادية"} - ${width}×${height}م${back18 ? ` + خلفية ١٨ ملي (${backSqm} م²)` : ""}`;
-    onUpdate(desc, price, extras, { width, height, shape, glassDoors, leds, back18, backSqm });
-  }, [width, height, shape, glassDoors, leds, back18, backSqm, backRate, config, onUpdate]);
+    const extras = glassDoors * glassPrice + leds * (config.led || 25) + backCost;
+    const glassNote = glassDoors > 0 ? ` + ${glassDoors} باب زجاج (${glassLabel})` : "";
+    const desc = `خزانة ${shape === "L" ? "L" : shape === "U" ? "U" : "عادية"} - ${width}×${height}م${glassNote}${back18 ? ` + خلفية ١٨ ملي (${backSqm} م²)` : ""}`;
+    onUpdate(desc, price, extras, { width, height, shape, glassDoors, glassType, leds, back18, backSqm });
+  }, [width, height, shape, glassDoors, glassType, glassPrice, glassLabel, leds, back18, backSqm, backRate, config, onUpdate]);
 
   return (
     <div className="space-y-4">
@@ -328,7 +339,7 @@ function CabinetBuilder({ config, onUpdate, initial }: { config: any; onUpdate: 
       </div>
       <div className="grid grid-cols-2 gap-4">
         <div>
-          <label className="block text-sm font-semibold text-gray-600 mb-1.5">{t("glassDoors")} ({config.glassDoor || 60} {t("perDoor")})</label>
+          <label className="block text-sm font-semibold text-gray-600 mb-1.5">{t("glassDoors")} ({t("countLabel")})</label>
           <NumField value={glassDoors} onChange={setGlassDoors} min={0} int
             className="field font-mono-en text-center" />
         </div>
@@ -338,6 +349,23 @@ function CabinetBuilder({ config, onUpdate, initial }: { config: any; onUpdate: 
             className="field font-mono-en text-center" />
         </div>
       </div>
+      {glassDoors > 0 && (
+        <div>
+          <label className="block text-sm font-semibold text-gray-600 mb-2">ارتفاع الباب الزجاجي</label>
+          <div className="grid grid-cols-3 gap-2">
+            {GLASS_OPTIONS.map((o) => (
+              <button key={o.key} type="button" onClick={() => setGlassType(o.key)}
+                className={cn("py-2.5 rounded text-xs font-bold border transition-colors leading-tight",
+                  glassType === o.key ? "bg-gray-900 text-white border-gray-900" : "bg-white border-gray-200 text-gray-600")}>
+                {o.label}<br /><span className="font-mono-en">{o.price} {t("omr")}</span>
+              </button>
+            ))}
+          </div>
+          <p className="text-xs text-gray-400 mt-2 font-mono-en text-center">
+            {glassDoors} × {glassPrice} = {(glassDoors * glassPrice).toFixed(3)}
+          </p>
+        </div>
+      )}
       <div>
         <button type="button" onClick={() => setBack18((v) => !v)}
           className={cn("w-full flex items-center justify-between px-4 py-3 rounded border text-sm font-bold transition-colors",
