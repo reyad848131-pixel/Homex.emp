@@ -352,6 +352,8 @@ const translations = {
   item: { ar: "البند", en: "Item" },
   quantity: { ar: "الكمية", en: "Qty" },
   pricePerMeter: { ar: "سعر المتر", en: "Price/m" },
+  leads: { ar: "العملاء المحتملون", en: "Leads" },
+  leadsFromWebsite: { ar: "طلبات من الموقع", en: "Website enquiries" },
   unitPriceShort: { ar: "السعر", en: "Price" },
   extrasShort: { ar: "إضافات", en: "Extras" },
   deleteAction: { ar: "حذف", en: "Delete" },

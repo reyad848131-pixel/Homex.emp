@@ -327,3 +327,29 @@ model Backup {
   @@index([createdAt])
   @@map("backups")
 }
+
+// Incoming enquiries captured from the public company website's "request a
+// quote" form. Kept separate from Customer so unqualified web enquiries don't
+// pollute the real customer list; staff review a lead and convert it into a
+// Customer when it's genuine. status: new | contacted | converted | archived.
+model Lead {
+  id          String    @id @default(cuid())
+  name        String
+  phone       String?
+  phoneCode   String    @default("+968") @map("phone_code")
+  governorate String?
+  wilayat     String?
+  service     String?
+  message     String?
+  source      String    @default("website")
+  status      String    @default("new")
+  // Set when a lead is turned into a real customer, for traceability.
+  convertedCustomerId String? @map("converted_customer_id")
+  handledBy   String?   @map("handled_by")
+  createdAt   DateTime  @default(now()) @map("created_at")
+  updatedAt   DateTime  @updatedAt @map("updated_at")
+
+  @@index([status])
+  @@index([createdAt])
+  @@map("leads")
+}
