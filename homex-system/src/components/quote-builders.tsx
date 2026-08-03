@@ -310,31 +310,29 @@ function CabinetBuilder({ config, onUpdate, initial }: { config: any; onUpdate: 
   const setGlassCount = (key: string, n: number) =>
     setGlassCounts((prev) => ({ ...prev, [key]: n }));
 
-  // الإضاءة موجودة فقط داخل الأبواب الزجاجية، فلا تُحتسب إلا عند تفعيل الزجاج.
   const totalGlass = glassEnabled
     ? GLASS_OPTIONS.reduce((s, o) => s + (glassCounts[o.key] || 0), 0)
     : 0;
   const glassCost = glassEnabled
     ? GLASS_OPTIONS.reduce((s, o) => s + (glassCounts[o.key] || 0) * o.price, 0)
     : 0;
-  const ledCount = glassEnabled ? leds : 0;
 
   useEffect(() => {
     const area = width * height;
     const price = area * (config.basePrice || 54);
     const backCost = back18 ? backSqm * backRate : 0;
-    const extras = glassCost + ledCount * (config.led || 25) + backCost;
+    const extras = glassCost + leds * (config.led || 25) + backCost;
     const glassParts = GLASS_OPTIONS.filter((o) => (glassCounts[o.key] || 0) > 0).map(
       (o) => `${o.short}×${glassCounts[o.key]}`
     );
     const shapeName = shape === "L" ? "L" : shape === "U" ? "U" : "عادية";
     const parts = [`خزانة ${shapeName} ${width}×${height}م`];
     if (glassParts.length) parts.push(`زجاج: ${glassParts.join("، ")}`);
-    if (glassEnabled && ledCount > 0) parts.push(`إضاءة ×${ledCount}`);
+    if (leds > 0) parts.push(`إضاءة ×${leds}`);
     if (back18) parts.push(`خلفية ١٨ملي ${backSqm}م²`);
     const desc = parts.join(" · ");
     onUpdate(desc, price, extras, { width, height, shape, glassEnabled, glassCounts, leds, back18, backSqm });
-  }, [width, height, shape, glassEnabled, glassCounts, glassCost, ledCount, leds, back18, backSqm, backRate, config, onUpdate]);
+  }, [width, height, shape, glassEnabled, glassCounts, glassCost, leds, back18, backSqm, backRate, config, onUpdate]);
 
   return (
     <div className="space-y-4">
@@ -406,16 +404,13 @@ function CabinetBuilder({ config, onUpdate, initial }: { config: any; onUpdate: 
                 <span className="font-mono-en font-black">{glassCost.toFixed(3)} {t("omr")}</span>
               </div>
             )}
-
-            {totalGlass > 0 && (
-              <div className="pt-1">
-                <label className="block text-sm font-semibold text-gray-600 mb-1.5">{t("ledLighting")} ({config.led || 25} {t("omr")})</label>
-                <NumField value={leds} onChange={setLeds} min={0} int
-                  className="field font-mono-en text-center" />
-              </div>
-            )}
           </div>
         )}
+      </div>
+      <div>
+        <label className="block text-sm font-semibold text-gray-600 mb-1.5">{t("ledLighting")} ({config.led || 25} {t("omr")})</label>
+        <NumField value={leds} onChange={setLeds} min={0} int
+          className="field font-mono-en text-center" />
       </div>
       <div>
         <button type="button" onClick={() => setBack18((v) => !v)}
