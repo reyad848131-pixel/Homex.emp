@@ -343,6 +343,8 @@ model Lead {
   message     String?
   source      String    @default("website")
   status      String    @default("new")
+  // Staff note added while following up (call summary, next step…).
+  note        String?
   // Set when a lead is turned into a real customer, for traceability.
   convertedCustomerId String? @map("converted_customer_id")
   handledBy   String?   @map("handled_by")

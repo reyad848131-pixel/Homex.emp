@@ -18,7 +18,7 @@ export async function GET(req: NextRequest) {
     const where: { status?: string } = {};
     if (status && status !== "all") where.status = status;
 
-    const [leads, total, newCount] = await Promise.all([
+    const [leads, total, grouped] = await Promise.all([
       prisma.lead.findMany({
         where,
         orderBy: { createdAt: "desc" },
@@ -26,10 +26,11 @@ export async function GET(req: NextRequest) {
         take: limit,
       }),
       prisma.lead.count({ where }),
-      prisma.lead.count({ where: { status: "new" } }),
+      prisma.lead.groupBy({ by: ["status"], _count: true }),
     ]);
 
-    return NextResponse.json({ leads, total, newCount, page, limit });
+    const stats = Object.fromEntries(grouped.map((g) => [g.status, g._count]));
+    return NextResponse.json({ leads, total, stats, newCount: stats.new || 0, page, limit });
   } catch {
     return NextResponse.json({ error: "خطأ في الخادم" }, { status: 500 });
   }

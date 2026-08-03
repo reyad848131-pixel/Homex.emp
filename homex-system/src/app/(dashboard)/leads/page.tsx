@@ -12,6 +12,7 @@ interface Lead {
   wilayat: string | null;
   service: string | null;
   message: string | null;
+  note: string | null;
   status: string;
   convertedCustomerId: string | null;
   createdAt: string;
@@ -33,6 +34,7 @@ const FILTERS = [
 
 export default function LeadsPage() {
   const [leads, setLeads] = useState<Lead[]>([]);
+  const [stats, setStats] = useState<Record<string, number>>({});
   const [loading, setLoading] = useState(true);
   const [filter, setFilter] = useState<string>("new");
   const [query, setQuery] = useState("");
@@ -71,8 +73,17 @@ export default function LeadsPage() {
     const res = await fetch(`/api/leads?status=${filter}&limit=100`);
     const data = await res.json().catch(() => ({ leads: [] }));
     setLeads(data.leads || []);
+    setStats(data.stats || {});
     setLoading(false);
   }, [filter]);
+
+  async function saveNote(id: string, note: string) {
+    await fetch(`/api/leads/${id}`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ note }),
+    }).catch(() => {});
+  }
 
   useEffect(() => { load(); }, [load]);
 
@@ -101,7 +112,21 @@ export default function LeadsPage() {
         <Inbox className="w-6 h-6 text-gray-700 dark:text-gray-300" />
         <h1 className="text-2xl font-bold">العملاء المحتملون</h1>
       </div>
-      <p className="text-sm text-gray-500 mb-6">طلبات واردة من موقع الشركة — راجعها وحوّل الجاد منها إلى عميل.</p>
+      <p className="text-sm text-gray-500 mb-5">طلبات واردة من موقع الشركة — راجعها وحوّل الجاد منها إلى عميل.</p>
+
+      <div className="grid grid-cols-4 gap-3 mb-6">
+        {([
+          ["new", "جديدة", "text-emerald-600"],
+          ["contacted", "تم التواصل", "text-amber-600"],
+          ["converted", "محوّلة لعملاء", "text-blue-600"],
+          ["archived", "مؤرشفة", "text-gray-500"],
+        ] as const).map(([k, l, c]) => (
+          <div key={k} className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg p-3 text-center">
+            <div className={cn("text-2xl font-black font-mono-en", c)}>{stats[k] || 0}</div>
+            <div className="text-[11px] font-bold text-gray-500 mt-1">{l}</div>
+          </div>
+        ))}
+      </div>
 
       <div className="flex gap-2 flex-wrap items-center mb-5">
         <div className="flex gap-1.5 flex-wrap">
@@ -149,6 +174,12 @@ export default function LeadsPage() {
                       <span className="text-xs text-gray-400 font-mono-en">{new Date(l.createdAt).toLocaleString("ar")}</span>
                     </div>
                     {l.message && <p className="mt-2 text-sm text-gray-600 dark:text-gray-300 bg-gray-50 dark:bg-gray-900 rounded p-2.5">{l.message}</p>}
+                    <textarea
+                      defaultValue={l.note || ""}
+                      onBlur={(e) => { if (e.target.value !== (l.note || "")) saveNote(l.id, e.target.value); }}
+                      placeholder="ملاحظة المتابعة (تُحفظ تلقائياً)…"
+                      rows={1}
+                      className="field-textarea mt-2 w-full text-xs resize-y min-h-[36px]" />
                   </div>
                   <div className="flex items-center gap-1.5 flex-shrink-0">
                     {l.phone && (

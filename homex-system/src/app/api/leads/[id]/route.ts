@@ -40,12 +40,25 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
       return NextResponse.json({ ok: true, customerId: customer.id });
     }
 
-    // Otherwise a plain status change.
+    // Save a follow-up note (optionally on its own, without a status change).
+    if (typeof body.note === "string" && body.status === undefined) {
+      await prisma.lead.update({ where: { id }, data: { note: body.note.slice(0, 2000), handledBy: user.id } });
+      return NextResponse.json({ ok: true });
+    }
+
+    // Otherwise a plain status change (may carry a note too).
     const status = typeof body.status === "string" ? body.status : "";
     if (!STATUSES.includes(status)) {
       return NextResponse.json({ error: "حالة غير صحيحة" }, { status: 400 });
     }
-    await prisma.lead.update({ where: { id }, data: { status, handledBy: user.id } });
+    await prisma.lead.update({
+      where: { id },
+      data: {
+        status,
+        handledBy: user.id,
+        ...(typeof body.note === "string" ? { note: body.note.slice(0, 2000) } : {}),
+      },
+    });
     return NextResponse.json({ ok: true });
   } catch {
     return NextResponse.json({ error: "خطأ في الخادم" }, { status: 500 });
