@@ -286,14 +286,18 @@ function CabinetBuilder({ config, onUpdate, initial }: { config: any; onUpdate: 
   const [shape, setShape] = useState(initial?.shape ?? "single");
   const [glassDoors, setGlassDoors] = useState(initial?.glassDoors ?? 0);
   const [leds, setLeds] = useState(initial?.leds ?? 0);
+  const [back18, setBack18] = useState<boolean>(Boolean(initial?.back18));
+
+  const backRate = config.back18 || 40; // سعر المتر المربع للخلفية ١٨ ملي
 
   useEffect(() => {
     const area = width * height;
     const price = area * (config.basePrice || 54);
-    const extras = glassDoors * (config.glassDoor || 60) + leds * (config.led || 25);
-    const desc = `خزانة ${shape === "L" ? "L" : shape === "U" ? "U" : "عادية"} - ${width}×${height}م`;
-    onUpdate(desc, price, extras, { width, height, shape, glassDoors, leds });
-  }, [width, height, shape, glassDoors, leds, config, onUpdate]);
+    const backCost = back18 ? area * backRate : 0;
+    const extras = glassDoors * (config.glassDoor || 60) + leds * (config.led || 25) + backCost;
+    const desc = `خزانة ${shape === "L" ? "L" : shape === "U" ? "U" : "عادية"} - ${width}×${height}م${back18 ? " + خلفية ١٨ ملي" : ""}`;
+    onUpdate(desc, price, extras, { width, height, shape, glassDoors, leds, back18 });
+  }, [width, height, shape, glassDoors, leds, back18, backRate, config, onUpdate]);
 
   return (
     <div className="space-y-4">
@@ -333,6 +337,12 @@ function CabinetBuilder({ config, onUpdate, initial }: { config: any; onUpdate: 
             className="field font-mono-en text-center" />
         </div>
       </div>
+      <button type="button" onClick={() => setBack18((v) => !v)}
+        className={cn("w-full flex items-center justify-between px-4 py-3 rounded border text-sm font-bold transition-colors",
+          back18 ? "bg-gray-900 text-white border-gray-900" : "bg-white border-gray-200 text-gray-600")}>
+        <span>خلفية ١٨ ملي ({backRate} {t("omrPerSqm")})</span>
+        <span className="font-mono-en">{back18 ? `+ ${(width * height * backRate).toFixed(3)}` : "—"}</span>
+      </button>
     </div>
   );
 }
