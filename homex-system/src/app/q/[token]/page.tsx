@@ -132,23 +132,52 @@ export default async function PublicQuotePage({ params }: { params: Promise<{ to
         </div>
 
         {q.status === "accepted" && (() => {
-          const WS: Record<string, string> = {
-            needs_preparation: "قيد التحضير", ready_to_execute: "قيد التنفيذ", in_progress: "قيد التنفيذ",
-            completed: "اكتمل التصنيع", ready_for_delivery: "جاهز للتوصيل", delivered: "تم التوصيل ✅",
-            ready_for_install: "جاهز للتركيب", installed: "تم التركيب ✅",
+          // Simplified customer-facing stages, in order. `reached` = index of the
+          // stage currently active (earlier stages are done); a value beyond the
+          // last stage means the whole order is complete.
+          const STAGES = ["تأكيد الطلب", "التصنيع", "التوصيل", "التركيب"];
+          const REACHED: Record<string, number> = {
+            needs_preparation: 1, ready_to_execute: 1, in_progress: 1,
+            completed: 2, ready_for_delivery: 2,
+            delivered: 3, ready_for_install: 3,
+            installed: 4,
           };
-          const done = q.workStatus === "delivered" || q.workStatus === "installed";
-          const label = q.workStatus ? (WS[q.workStatus] || "قيد المتابعة") : "قيد المتابعة";
+          const reached = q.workStatus ? (REACHED[q.workStatus] ?? 1) : 1;
+          const allDone = reached >= STAGES.length;
           return (
-            <div className={`rounded-2xl shadow-sm p-6 ${done ? "bg-emerald-50" : "bg-white"}`}>
-              <p className="text-xs font-bold text-gray-400 mb-2">حالة الطلب</p>
-              <p className={`text-lg font-black ${done ? "text-emerald-700" : "text-gray-900"}`}>{label}</p>
-              {q.deliveryDate && (
-                <p className="text-sm text-gray-500 mt-1">
-                  موعد التوصيل: <span className="font-mono-en font-bold">{new Date(q.deliveryDate).toLocaleDateString("en-GB")}</span>
-                  {q.deliveryTime ? <span className="font-mono-en"> — {q.deliveryTime}</span> : null}
-                </p>
-              )}
+            <div className="bg-white rounded-2xl shadow-sm p-6">
+              <p className="text-xs font-bold text-gray-400 mb-4">تتبّع طلبك</p>
+              <div className="space-y-0">
+                {STAGES.map((label, i) => {
+                  const done = reached > i;
+                  const current = reached === i;
+                  const last = i === STAGES.length - 1;
+                  return (
+                    <div key={i} className="flex gap-3">
+                      <div className="flex flex-col items-center">
+                        <div className={`w-8 h-8 rounded-full flex items-center justify-center text-sm font-bold shrink-0 ${
+                          done ? "bg-emerald-600 text-white"
+                          : current ? "bg-white border-2 border-emerald-600 text-emerald-600"
+                          : "bg-gray-100 border border-gray-200 text-gray-400"}`}>
+                          {done ? "✓" : i + 1}
+                        </div>
+                        {!last && <div className={`w-0.5 flex-1 min-h-[26px] ${done ? "bg-emerald-600" : "bg-gray-200"}`} />}
+                      </div>
+                      <div className={`pb-4 ${last ? "" : ""}`}>
+                        <p className={`text-sm font-bold ${done ? "text-emerald-700" : current ? "text-gray-900" : "text-gray-400"}`}>{label}</p>
+                        {current && <p className="text-xs text-emerald-600 font-semibold mt-0.5">الحالية</p>}
+                        {i === 2 && q.deliveryDate && (
+                          <p className="text-xs text-gray-500 mt-0.5">
+                            الموعد: <span className="font-mono-en font-bold">{new Date(q.deliveryDate).toLocaleDateString("en-GB")}</span>
+                            {q.deliveryTime ? <span className="font-mono-en"> — {q.deliveryTime}</span> : null}
+                          </p>
+                        )}
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+              {allDone && <p className="text-sm font-black text-emerald-700 mt-2 text-center">تم تسليم طلبك بالكامل ✅ شكراً لثقتك</p>}
             </div>
           );
         })()}
