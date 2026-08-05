@@ -243,7 +243,10 @@ export default function ImportPage() {
     // "تقديري" for manual confirmation).
     estimateDatesRef.current = true; setEstimateDates(true);
     setIncludeUndated(false);
-    setEditableDraft(false);
+    // Import as editable drafts and keep the sheet total as a reference, so staff
+    // can add the customer's item lines (with prices) into each quotation later
+    // and check the built-up total against it.
+    setEditableDraft(true);
     setYearsInput("2026");
     const brsSheet = sheets.find((s) => /\b26\b|26\s*$/.test(s)) || sheets.find((s) => s.includes("26"));
     if (file) {
@@ -443,7 +446,7 @@ export default function ImportPage() {
         <div className="flex items-center justify-between gap-3 flex-wrap mb-4 p-3 rounded-lg bg-teal-50 dark:bg-teal-900/20 border border-teal-200 dark:border-teal-800">
           <div className="text-[13px] text-teal-800 dark:text-teal-200 font-semibold flex items-center gap-2">
             <Zap className="w-4 h-4 shrink-0" />
-            ملف دفتر BRS؟ اضغط للضبط التلقائي — سنة 2026 · ترقيم تلقائي للطلبات بلا رقم · تاريخ تقديري للطلبات بلا تاريخ تسليم · تجاهل صفوف العناوين/البنر/المجاميع
+            ملف دفتر BRS؟ اضغط للضبط التلقائي — سنة 2026 · قابلة للتعديل (لإضافة الأصناف لاحقاً) · ترقيم تلقائي للطلبات بلا رقم · تاريخ تقديري للطلبات بلا تاريخ تسليم · تجاهل صفوف العناوين/البنر/المجاميع
           </div>
           <button onClick={applyBrsPreset}
             className="inline-flex items-center gap-2 px-4 h-10 rounded-lg bg-teal-600 text-white text-sm font-bold hover:bg-teal-700 shrink-0">
