@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useRef, useEffect } from "react";
+import { useState, useRef, useEffect, type Dispatch, type SetStateAction } from "react";
 import { useRouter } from "next/navigation";
 import { cn } from "@/lib/utils";
 import { Phone, MessageCircle, FileText, X, User } from "lucide-react";
@@ -34,6 +34,89 @@ const ymd = (d: Date) => `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.ge
 const sameDay = (a: Date, b: Date) => a.getFullYear() === b.getFullYear() && a.getMonth() === b.getMonth() && a.getDate() === b.getDate();
 const sameMonth = (a: Date, b: Date) => a.getFullYear() === b.getFullYear() && a.getMonth() === b.getMonth();
 
+// Shared state + callbacks threaded to the (module-scope, stable) sub-components
+// so they never get re-created during render — a fresh component identity each
+// render would remount the whole grid and stutter the swipe.
+interface CalCtx {
+  canEdit: boolean;
+  today: Date;
+  dragId: string | null;
+  overKey: string | null;
+  setDragId: Dispatch<SetStateAction<string | null>>;
+  setOverKey: Dispatch<SetStateAction<string | null>>;
+  setOpenDay: Dispatch<SetStateAction<Date | null>>;
+  onReschedule: (id: string, date: string) => void;
+  itemsOn: (day: Date) => CalItem[];
+}
+
+function Chip({ it, ctx }: { it: CalItem; ctx: CalCtx }) {
+  const s = STATUS[it.status];
+  return (
+    <div
+      draggable={ctx.canEdit}
+      onDragStart={() => ctx.setDragId(it.id)}
+      onDragEnd={() => { ctx.setDragId(null); ctx.setOverKey(null); }}
+      title={`${it.name} — ${it.wilayat}${it.time ? " · " + it.time : ""} · ${it.driver}`}
+      className={cn(
+        "rounded-md border border-gray-200 dark:border-gray-700 border-s-[3px] px-1.5 py-1 transition-all hover:shadow-sm",
+        ctx.canEdit ? "cursor-grab active:cursor-grabbing" : "cursor-pointer",
+        s.bar, s.bg, ctx.dragId === it.id && "opacity-40",
+      )}
+    >
+      <div className="text-[11.5px] font-bold text-gray-800 dark:text-gray-100 flex items-center gap-1 min-w-0">
+        {it.status === "delivered" && <span className="text-emerald-600 shrink-0">✔</span>}
+        <span className="truncate">{it.name}</span>
+      </div>
+      <div className="text-[10px] text-gray-500 truncate">{it.wilayat}{it.time ? <span className="font-mono-en"> · {it.time}</span> : null}</div>
+    </div>
+  );
+}
+
+function DayCell({ day, ctx }: { day: Date; ctx: CalCtx }) {
+  const dayItems = ctx.itemsOn(day);
+  const isToday = sameDay(day, ctx.today);
+  const busy = dayItems.length >= 3;
+  const key = ymd(day);
+  return (
+    <div
+      onClick={() => { if (dayItems.length) ctx.setOpenDay(day); }}
+      onDragOver={(e) => { if (ctx.canEdit && ctx.dragId) { e.preventDefault(); ctx.setOverKey(key); } }}
+      onDragLeave={() => ctx.setOverKey((k) => (k === key ? null : k))}
+      onDrop={(e) => { e.preventDefault(); if (ctx.canEdit && ctx.dragId) ctx.onReschedule(ctx.dragId, key); ctx.setDragId(null); ctx.setOverKey(null); }}
+      className={cn(
+        "rounded-xl border p-1.5 flex flex-col gap-1 min-h-[112px]",
+        dayItems.length && "cursor-pointer hover:border-gray-400 dark:hover:border-gray-500",
+        isToday ? "border-gray-900 dark:border-white bg-gray-50/50 dark:bg-gray-800/40" : "border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800",
+        ctx.overKey === key && "ring-2 ring-teal-400 border-teal-400",
+      )}
+    >
+      <div className="flex items-center justify-between px-0.5">
+        {busy
+          ? <span className="text-[9px] font-bold text-red-600 bg-red-100 dark:bg-red-900/30 dark:text-red-300 px-1.5 py-0.5 rounded-full">{dayItems.length}</span>
+          : <span />}
+        <span className={cn("text-[14px] font-black font-mono-en leading-none", isToday ? "bg-gray-900 dark:bg-white text-white dark:text-gray-900 w-6 h-6 rounded-md flex items-center justify-center" : "text-gray-700 dark:text-gray-200")}>{day.getDate()}</span>
+      </div>
+      <div className="flex flex-col gap-1">
+        {dayItems.map((it) => <Chip key={it.id} it={it} ctx={ctx} />)}
+      </div>
+    </div>
+  );
+}
+
+// One month's grid of day cells (Saturday-first). Rendered inside each panel.
+function MonthGrid({ anchor, ctx }: { anchor: Date; ctx: CalCtx }) {
+  const y = anchor.getFullYear(), m = anchor.getMonth();
+  const lastDay = new Date(y, m + 1, 0).getDate();
+  const days = Array.from({ length: lastDay }, (_, i) => new Date(y, m, i + 1));
+  const leading = (new Date(y, m, 1).getDay() + 1) % 7;
+  return (
+    <div className="grid grid-cols-7 gap-2 content-start">
+      {Array.from({ length: leading }, (_, i) => <div key={`b${i}`} />)}
+      {days.map((day) => <DayCell key={ymd(day)} day={day} ctx={ctx} />)}
+    </div>
+  );
+}
+
 export function DeliveryCalendar({
   monthAnchor, items, onToday, onPrevMonth, onNextMonth, onReschedule, canEdit,
 }: {
@@ -60,23 +143,32 @@ export function DeliveryCalendar({
   }, [openDay]);
 
   // ── Finger-following carousel ──────────────────────────────────────────────
-  // Three month panels (prev / current / next) sit side by side in a track that
-  // is translated -1 panel to centre the current month. The finger drags the
-  // track in real time; on release it snaps to a neighbour and commits the month
-  // change, then silently re-centres on the new current month.
+  // Three month panels (next / current / prev, LTR) sit in a track translated
+  // one panel to centre the current month. The drag is applied imperatively to
+  // the DOM node — never via React state — so moving the finger triggers no
+  // re-render (a per-frame re-render would rebuild the grid and stutter). React
+  // re-renders only once, on the committed month change, which remounts the
+  // keyed track back to the centred base transform.
+  const BASE = "translateX(-33.3333%)";
   const trackRef = useRef<HTMLDivElement>(null);
   const widthRef = useRef(0);
   const gesture = useRef<{ x: number; y: number; axis: "?" | "x" | "y" } | null>(null);
   const pending = useRef<"next" | "prev" | null>(null);
-  const [offset, setOffset] = useState(0); // px the finger has dragged the track
-  const [anim, setAnim] = useState(false); // whether the snap transition is on
+
+  const setTransform = (px: number, animate: boolean) => {
+    const el = trackRef.current;
+    if (!el) return;
+    el.style.transition = animate ? "transform 300ms ease-out" : "none";
+    el.style.transform = px === 0 ? BASE : `translateX(calc(-33.3333% + ${px}px))`;
+  };
 
   const onTouchStart = (e: React.TouchEvent) => {
     if (openDay || dragId) return;
+    pending.current = null;
     widthRef.current = trackRef.current?.parentElement?.clientWidth ?? 0;
     const t = e.touches[0];
     gesture.current = { x: t.clientX, y: t.clientY, axis: "?" };
-    setAnim(false);
+    setTransform(0, false);
   };
   const onTouchMove = (e: React.TouchEvent) => {
     const g = gesture.current;
@@ -88,27 +180,27 @@ export function DeliveryCalendar({
       g.axis = Math.abs(dx) > Math.abs(dy) ? "x" : "y";
     }
     if (g.axis === "y") return; // vertical → let the page scroll
-    setOffset(dx);
+    setTransform(dx, false);
   };
-  const onTouchEnd = () => {
+  const onTouchEnd = (e: React.TouchEvent) => {
     const g = gesture.current; gesture.current = null;
-    if (!g || g.axis !== "x") { if (offset) { setAnim(true); setOffset(0); } return; }
+    if (!g) return;
+    if (g.axis !== "x") { setTransform(0, false); return; }
+    const dx = e.changedTouches[0].clientX - g.x;
     const w = widthRef.current || 1;
-    const threshold = Math.min(w * 0.22, 90);
-    setAnim(true);
-    if (offset <= -threshold) { pending.current = "prev"; setOffset(-w); }
-    else if (offset >= threshold) { pending.current = "next"; setOffset(w); }
-    else { pending.current = null; setOffset(0); }
+    const threshold = Math.min(w * 0.22, 80);
+    if (dx <= -threshold) { pending.current = "prev"; setTransform(-w, true); }
+    else if (dx >= threshold) { pending.current = "next"; setTransform(w, true); }
+    else { pending.current = null; setTransform(0, true); }
   };
   const onTrackTransitionEnd = (e: React.TransitionEvent) => {
     if (e.target !== trackRef.current || e.propertyName !== "transform") return;
     const dir = pending.current;
-    if (!dir) return;
     pending.current = null;
-    if (dir === "next") onNextMonth(); else onPrevMonth();
-    // Re-centre instantly on the new current month (panels have re-indexed).
-    setAnim(false);
-    setOffset(0);
+    // Commit the month change: the keyed track remounts and re-centres, and the
+    // panel we slid to becomes the new middle panel, so the swap is seamless.
+    if (dir === "next") onNextMonth();
+    else if (dir === "prev") onPrevMonth();
   };
 
   const cur = new Date(monthAnchor.getFullYear(), monthAnchor.getMonth(), 1);
@@ -120,73 +212,7 @@ export function DeliveryCalendar({
   const itemsOn = (day: Date) =>
     items.filter((it) => sameDay(new Date(it.date), day)).sort((a, b) => (a.time || "~").localeCompare(b.time || "~"));
 
-  const Chip = ({ it }: { it: CalItem }) => {
-    const s = STATUS[it.status];
-    return (
-      <div
-        draggable={canEdit}
-        onDragStart={() => setDragId(it.id)}
-        onDragEnd={() => { setDragId(null); setOverKey(null); }}
-        title={`${it.name} — ${it.wilayat}${it.time ? " · " + it.time : ""} · ${it.driver}`}
-        className={cn(
-          "rounded-md border border-gray-200 dark:border-gray-700 border-s-[3px] px-1.5 py-1 transition-all hover:shadow-sm",
-          canEdit ? "cursor-grab active:cursor-grabbing" : "cursor-pointer",
-          s.bar, s.bg, dragId === it.id && "opacity-40",
-        )}
-      >
-        <div className="text-[11.5px] font-bold text-gray-800 dark:text-gray-100 flex items-center gap-1 min-w-0">
-          {it.status === "delivered" && <span className="text-emerald-600 shrink-0">✔</span>}
-          <span className="truncate">{it.name}</span>
-        </div>
-        <div className="text-[10px] text-gray-500 truncate">{it.wilayat}{it.time ? <span className="font-mono-en"> · {it.time}</span> : null}</div>
-      </div>
-    );
-  };
-
-  const DayCell = ({ day }: { day: Date }) => {
-    const dayItems = itemsOn(day);
-    const isToday = sameDay(day, today);
-    const busy = dayItems.length >= 3;
-    const key = ymd(day);
-    return (
-      <div
-        onClick={() => { if (dayItems.length) setOpenDay(day); }}
-        onDragOver={(e) => { if (canEdit && dragId) { e.preventDefault(); setOverKey(key); } }}
-        onDragLeave={() => setOverKey((k) => (k === key ? null : k))}
-        onDrop={(e) => { e.preventDefault(); if (canEdit && dragId) onReschedule(dragId, key); setDragId(null); setOverKey(null); }}
-        className={cn(
-          "rounded-xl border p-1.5 flex flex-col gap-1 min-h-[112px]",
-          dayItems.length && "cursor-pointer hover:border-gray-400 dark:hover:border-gray-500",
-          isToday ? "border-gray-900 dark:border-white bg-gray-50/50 dark:bg-gray-800/40" : "border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800",
-          overKey === key && "ring-2 ring-teal-400 border-teal-400",
-        )}
-      >
-        <div className="flex items-center justify-between px-0.5">
-          {busy
-            ? <span className="text-[9px] font-bold text-red-600 bg-red-100 dark:bg-red-900/30 dark:text-red-300 px-1.5 py-0.5 rounded-full">{dayItems.length}</span>
-            : <span />}
-          <span className={cn("text-[14px] font-black font-mono-en leading-none", isToday ? "bg-gray-900 dark:bg-white text-white dark:text-gray-900 w-6 h-6 rounded-md flex items-center justify-center" : "text-gray-700 dark:text-gray-200")}>{day.getDate()}</span>
-        </div>
-        <div className="flex flex-col gap-1">
-          {dayItems.map((it) => <Chip key={it.id} it={it} />)}
-        </div>
-      </div>
-    );
-  };
-
-  // One month's grid of day cells (Saturday-first). Rendered inside each panel.
-  const MonthGrid = ({ anchor }: { anchor: Date }) => {
-    const y = anchor.getFullYear(), m = anchor.getMonth();
-    const lastDay = new Date(y, m + 1, 0).getDate();
-    const days = Array.from({ length: lastDay }, (_, i) => new Date(y, m, i + 1));
-    const leading = (new Date(y, m, 1).getDay() + 1) % 7;
-    return (
-      <div className="grid grid-cols-7 gap-2 content-start">
-        {Array.from({ length: leading }, (_, i) => <div key={`b${i}`} />)}
-        {days.map((day) => <DayCell key={ymd(day)} day={day} />)}
-      </div>
-    );
-  };
+  const ctx: CalCtx = { canEdit, today, dragId, overKey, setDragId, setOverKey, setOpenDay, onReschedule, itemsOn };
 
   return (
     <div>
@@ -216,13 +242,14 @@ export function DeliveryCalendar({
         onTouchStart={onTouchStart} onTouchMove={onTouchMove} onTouchEnd={onTouchEnd}>
         <div
           ref={trackRef}
+          key={`${cur.getFullYear()}-${cur.getMonth()}`}
           onTransitionEnd={onTrackTransitionEnd}
-          className={cn("flex items-start", anim && "transition-transform duration-300 ease-out")}
-          style={{ width: "300%", transform: `translateX(calc(-33.3333% + ${offset}px))`, willChange: "transform" }}
+          className="flex items-start"
+          style={{ width: "300%", transform: BASE, willChange: "transform" }}
         >
-          <div dir="rtl" className="shrink-0" style={{ width: "33.3333%" }}><MonthGrid anchor={nextMonth} /></div>
-          <div dir="rtl" className="shrink-0" style={{ width: "33.3333%" }}><MonthGrid anchor={cur} /></div>
-          <div dir="rtl" className="shrink-0" style={{ width: "33.3333%" }}><MonthGrid anchor={prevMonth} /></div>
+          <div dir="rtl" className="shrink-0" style={{ width: "33.3333%" }}><MonthGrid anchor={nextMonth} ctx={ctx} /></div>
+          <div dir="rtl" className="shrink-0" style={{ width: "33.3333%" }}><MonthGrid anchor={cur} ctx={ctx} /></div>
+          <div dir="rtl" className="shrink-0" style={{ width: "33.3333%" }}><MonthGrid anchor={prevMonth} ctx={ctx} /></div>
         </div>
       </div>
       <p className="text-xs text-gray-400 text-center mt-3">اضغط أي يوم لعرض طلباته · اسحب يمين/يسار لتغيير الشهر{canEdit ? " · اسحب بطاقة لإعادة الجدولة" : ""}</p>
