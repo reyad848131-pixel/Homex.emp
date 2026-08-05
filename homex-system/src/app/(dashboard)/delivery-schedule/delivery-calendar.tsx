@@ -70,7 +70,7 @@ export function DeliveryCalendar({
         onClick={() => router.push(`/quotations/${it.id}`)}
         title={it.name}
         className={cn(
-          "shrink-0 h-[108px] rounded-[10px] border border-gray-200 dark:border-gray-700 border-s-[3px] px-2.5 py-2 flex flex-col justify-between transition-all hover:-translate-y-0.5 hover:shadow-md",
+          "flex-1 min-h-[86px] rounded-[10px] border border-gray-200 dark:border-gray-700 border-s-[3px] px-2.5 py-2 flex flex-col justify-between transition-all hover:-translate-y-0.5 hover:shadow-md",
           canEdit ? "cursor-grab active:cursor-grabbing" : "cursor-pointer",
           s.bar, s.bg, dragId === it.id && "opacity-40",
         )}
@@ -103,7 +103,7 @@ export function DeliveryCalendar({
         onDragLeave={() => setOverKey((k) => (k === key ? null : k))}
         onDrop={(e) => { e.preventDefault(); if (canEdit && dragId) onReschedule(dragId, key); setDragId(null); setOverKey(null); }}
         className={cn(
-          "snap-start shrink-0 w-[208px] rounded-[14px] border bg-white dark:bg-gray-800 shadow-sm flex flex-col overflow-hidden h-[268px] transition-colors",
+          "snap-start shrink-0 w-[172px] rounded-[14px] border bg-white dark:bg-gray-800 shadow-sm flex flex-col overflow-hidden h-[360px] transition-colors",
           isToday ? "border-gray-900 dark:border-white" : "border-gray-200 dark:border-gray-700",
           overKey === key && "ring-2 ring-teal-400 border-teal-400",
         )}
