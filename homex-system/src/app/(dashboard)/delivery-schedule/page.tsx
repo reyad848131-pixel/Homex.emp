@@ -77,17 +77,17 @@ export default function DeliverySchedulePage() {
   }, []);
   useEffect(() => { loadStats(); }, [loadStats]);
 
+  // The list below always shows every order (only the tab + search apply). The
+  // date drill-nav filters the calendar on top, not this list.
   const fetchData = useCallback(() => {
     setRows(null);
     const params = new URLSearchParams({ workStatus: tab === "queue" ? "ready_for_delivery" : "delivered" });
     if (debouncedSearch) params.set("search", debouncedSearch);
-    // Narrow to the date drill-nav selection (delivery date range).
-    if (range) { params.set("deliveryFrom", range.from); params.set("deliveryTo", range.to); }
     fetch(`/api/work-orders?${params}`)
       .then((r) => r.json())
       .then((d) => setRows(d.quotations || []))
       .catch(() => setRows([]));
-  }, [tab, debouncedSearch, range]);
+  }, [tab, debouncedSearch]);
 
   useEffect(() => { fetchData(); }, [fetchData]);
 
@@ -389,20 +389,25 @@ export default function DeliverySchedulePage() {
         <h2 className="text-lg font-bold">{t("deliverySheetTitle")} — <span className="font-mono-en">{new Date().toLocaleDateString(dateLocale)}</span></h2>
       </div>
 
-      {/* Calendar first (when zoomed to a month or less) */}
+      {/* Calendar (top) — reacts to the date drill-nav. Separate from the list. */}
       {showCalendar && range && (
-        <div className="mb-8">
+        <div className="mb-8 rounded-2xl border border-gray-200 dark:border-gray-700 bg-white/40 dark:bg-gray-800/30 p-3 sm:p-4">
+          <div className="flex items-center gap-2 mb-3">
+            <CalendarDays className="w-4 h-4 text-gray-400" />
+            <h2 className="text-sm font-bold text-gray-600 dark:text-gray-300">{t("calendarHeading")}</h2>
+          </div>
           {calRows === null ? <CardsSkeleton count={2} /> : (
             <DeliveryCalendar items={calItems} from={range.from} to={range.to} onReschedule={reschedule} canEdit={canEdit} />
           )}
         </div>
       )}
 
-      {/* Detailed list below — always present; an order stays here until it is
-          marked delivered, which moves it to the "Delivered" tab. */}
-      {showCalendar && range && rows !== null && total > 0 && (
+      {/* Detailed list below — always shows every order, unaffected by the date
+          selection. An order stays here until it is marked delivered. */}
+      {rows !== null && total > 0 && (
         <div className="flex items-center gap-2 mb-3">
-          <h2 className="text-sm font-bold text-gray-500 dark:text-gray-300">{tab === "queue" ? t("tabQueue") : t("tabDelivered")}</h2>
+          <Truck className="w-4 h-4 text-gray-400" />
+          <h2 className="text-sm font-bold text-gray-600 dark:text-gray-300">{tab === "queue" ? t("tabQueue") : t("tabDelivered")}</h2>
           <span className="text-xs text-gray-400 font-mono-en">{total}</span>
           <div className="flex-1 h-px bg-gray-100 dark:bg-gray-700" />
         </div>

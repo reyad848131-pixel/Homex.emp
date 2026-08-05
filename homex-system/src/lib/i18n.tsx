@@ -170,6 +170,7 @@ const translations = {
   moveToDelivery: { ar: "جاهز للتوصيل", en: "Ready for delivery" },
   markDelivered: { ar: "تم التوصيل", en: "Mark delivered" },
   deliveryTimeLabel: { ar: "وقت التوصيل", en: "Delivery time" },
+  calendarHeading: { ar: "تقويم التوصيلات", en: "Delivery calendar" },
   viewList: { ar: "قائمة", en: "List" },
   viewWeek: { ar: "أسبوع", en: "Week" },
   viewMonth: { ar: "شهر", en: "Month" },
