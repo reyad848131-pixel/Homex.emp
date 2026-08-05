@@ -38,9 +38,6 @@ const getDaysRemaining = (d: string) => daysUntil(d) as number;
 // Default driver pre-selected for every delivery (still changeable per order).
 const DEFAULT_DRIVER = "قصي الشكيلي";
 
-const pad2 = (n: number) => String(n).padStart(2, "0");
-const ymdStr = (d: Date) => `${d.getFullYear()}-${pad2(d.getMonth() + 1)}-${pad2(d.getDate())}`;
-
 export default function DeliverySchedulePage() {
   const { t, dateLocale } = useI18n();
   const [tab, setTab] = useState<"queue" | "delivered">("queue");
@@ -95,16 +92,13 @@ export default function DeliverySchedulePage() {
 
   useEffect(() => { fetchData(); }, [fetchData]);
 
-  // Calendar shows the whole anchored month and pulls both queue + delivered so
-  // every status appears. Navigating the drill-nav or month arrows re-fetches.
-  const monthRange = useMemo(() => {
-    const y = monthAnchor.getFullYear(), m = monthAnchor.getMonth();
-    return { from: ymdStr(new Date(y, m, 1)), to: ymdStr(new Date(y, m + 1, 0)) };
-  }, [monthAnchor]);
+  // Load the WHOLE selected year once (both queue + delivered), then switching
+  // months is instant client-side filtering — no per-month DB round-trip.
+  const calYear = monthAnchor.getFullYear();
   const [calRows, setCalRows] = useState<DeliveryQuotation[] | null>(null);
   const loadCalendar = useCallback(() => {
     setCalRows(null);
-    const { from, to } = monthRange;
+    const from = `${calYear}-01-01`, to = `${calYear}-12-31`;
     const qp = (ws: string) => `/api/work-orders?${new URLSearchParams({ workStatus: ws, deliveryFrom: from, deliveryTo: to })}`;
     Promise.all([
       fetch(qp("ready_for_delivery")).then((r) => r.json()).catch(() => ({ quotations: [] })),
@@ -114,7 +108,7 @@ export default function DeliverySchedulePage() {
       const done = (b.quotations || []).map((q: DeliveryQuotation) => ({ ...q, _cal: "delivered" }));
       setCalRows([...ready, ...done]);
     }).catch(() => setCalRows([]));
-  }, [monthRange]);
+  }, [calYear]);
   useEffect(() => { loadCalendar(); }, [loadCalendar]);
 
   const calItems: CalItem[] = useMemo(() => {
@@ -141,12 +135,19 @@ export default function DeliverySchedulePage() {
       .filter((it) => !s || it.name.includes(s) || it.wilayat.includes(s) || it.driver.includes(s));
   }, [calRows, debouncedSearch]);
 
+  // The calendar only needs the anchored month — filtered from the year in memory.
+  const monthItems: CalItem[] = useMemo(() => calItems.filter((it) => {
+    const d = new Date(it.date);
+    return d.getFullYear() === monthAnchor.getFullYear() && d.getMonth() === monthAnchor.getMonth();
+  }), [calItems, monthAnchor]);
+
   const reschedule = (id: string, date: string) => {
+    // Update in memory only — no reload, so switching months stays instant.
     setCalRows((prev) => (prev ? prev.map((q) => (q.id === id ? { ...q, deliveryDate: date, deliveryDateEstimated: false } : q)) : prev));
     fetch("/api/work-orders", {
       method: "PATCH", headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ id, deliveryDate: date }),
-    }).then(() => { loadStats(); loadCalendar(); }).catch(() => {});
+    }).then(() => { loadStats(); }).catch(() => {});
   };
 
   useEffect(() => {
@@ -406,7 +407,7 @@ export default function DeliverySchedulePage() {
         {calRows === null ? <CardsSkeleton count={2} /> : (
           <DeliveryCalendar
             monthAnchor={monthAnchor}
-            items={calItems}
+            items={monthItems}
             onToday={() => setMonthAnchor(new Date())}
             onPrevMonth={() => setMonthAnchor((d) => new Date(d.getFullYear(), d.getMonth() - 1, 1))}
             onNextMonth={() => setMonthAnchor((d) => new Date(d.getFullYear(), d.getMonth() + 1, 1))}
