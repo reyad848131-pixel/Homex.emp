@@ -9,6 +9,7 @@ import { CardsSkeleton } from "@/components/skeleton";
 import { daysUntil, URGENCY_GROUPS, NEUTRAL_TONE, daysRemainingLabel } from "@/lib/schedule-utils";
 import { renderWaTemplate, waLinkFor, DEFAULT_WA_DELIVERY } from "@/lib/wa";
 import { DateDrillNav, type DateRange } from "@/components/date-drill-nav";
+import { DeliveryCalendar, type CalItem } from "./delivery-calendar";
 import {
   CalendarClock, Phone, MessageCircle, Check, FileText, Search,
   MapPin, Clock, Package, Truck, Printer, Wallet, User, CalendarDays,
@@ -89,6 +90,62 @@ export default function DeliverySchedulePage() {
   }, [tab, debouncedSearch, range]);
 
   useEffect(() => { fetchData(); }, [fetchData]);
+
+  // When the drill-nav is narrowed to a month or less, show the day-cell
+  // calendar (mockup-style) instead of the flat list.
+  const showCalendar = useMemo(() => {
+    if (!range) return false;
+    const span = (new Date(range.to).getTime() - new Date(range.from).getTime()) / 86_400_000 + 1;
+    return span <= 31;
+  }, [range]);
+
+  // Calendar pulls both queue + delivered for the range so every status shows.
+  const [calRows, setCalRows] = useState<DeliveryQuotation[] | null>(null);
+  const loadCalendar = useCallback(() => {
+    if (!range) return;
+    setCalRows(null);
+    const qp = (ws: string) => {
+      const p = new URLSearchParams({ workStatus: ws, deliveryFrom: range.from, deliveryTo: range.to });
+      return `/api/work-orders?${p}`;
+    };
+    Promise.all([
+      fetch(qp("ready_for_delivery")).then((r) => r.json()).catch(() => ({ quotations: [] })),
+      fetch(qp("delivered")).then((r) => r.json()).catch(() => ({ quotations: [] })),
+    ]).then(([a, b]) => {
+      const ready = (a.quotations || []).map((q: DeliveryQuotation) => ({ ...q, _cal: "ready" }));
+      const done = (b.quotations || []).map((q: DeliveryQuotation) => ({ ...q, _cal: "delivered" }));
+      setCalRows([...ready, ...done]);
+    }).catch(() => setCalRows([]));
+  }, [range]);
+  useEffect(() => { if (showCalendar) loadCalendar(); }, [showCalendar, loadCalendar]);
+
+  const calItems: CalItem[] = useMemo(() => {
+    const s = debouncedSearch.trim();
+    return (calRows || [])
+      .filter((q) => q.deliveryDate)
+      .map((q) => {
+        const cal = (q as DeliveryQuotation & { _cal?: string })._cal;
+        const late = cal !== "delivered" && (daysUntil(q.deliveryDate) ?? 0) < 0;
+        return {
+          id: q.id,
+          name: q.customer?.name || "—",
+          wilayat: q.customer?.wilayat || "",
+          date: q.deliveryDate,
+          time: q.deliveryTime,
+          driver: q.deliveryDriver || DEFAULT_DRIVER,
+          status: cal === "delivered" ? "delivered" : late ? "late" : "ready",
+        } as CalItem;
+      })
+      .filter((it) => !s || it.name.includes(s) || it.wilayat.includes(s) || it.driver.includes(s));
+  }, [calRows, debouncedSearch]);
+
+  const reschedule = (id: string, date: string) => {
+    setCalRows((prev) => (prev ? prev.map((q) => (q.id === id ? { ...q, deliveryDate: date, deliveryDateEstimated: false } : q)) : prev));
+    fetch("/api/work-orders", {
+      method: "PATCH", headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ id, deliveryDate: date }),
+    }).then(() => { loadStats(); loadCalendar(); }).catch(() => {});
+  };
 
   useEffect(() => {
     fetch("/api/employees")
@@ -281,7 +338,7 @@ export default function DeliverySchedulePage() {
       {/* Tabs + controls (hidden when printing) */}
       <div className="no-print space-y-3 mb-5">
         <div className="flex flex-wrap items-center gap-2">
-          {(["queue", "delivered"] as const).map((k) => (
+          {!showCalendar && (["queue", "delivered"] as const).map((k) => (
             <button key={k} onClick={() => { setTab(k); setTodayOnly(false); }}
               className={cn("px-4 h-10 rounded-lg text-sm font-bold border transition-colors",
                 tab === k ? "bg-gray-900 text-white border-gray-900 dark:bg-white dark:text-gray-900 dark:border-white"
@@ -306,7 +363,7 @@ export default function DeliverySchedulePage() {
             <input type="text" value={search} onChange={(e) => setSearch(e.target.value)}
               className="field pr-10 pl-3" placeholder={t("searchDeliveries")} />
           </div>
-          {tab === "queue" && (
+          {!showCalendar && tab === "queue" && (
             <>
               <div className="flex rounded-lg border border-gray-200 dark:border-gray-700 overflow-hidden h-11">
                 {(["urgency", "area"] as const).map((v) => (
@@ -332,7 +389,13 @@ export default function DeliverySchedulePage() {
         <h2 className="text-lg font-bold">{t("deliverySheetTitle")} — <span className="font-mono-en">{new Date().toLocaleDateString(dateLocale)}</span></h2>
       </div>
 
-      {rows === null ? (
+      {showCalendar && range ? (
+        calRows === null ? (
+          <CardsSkeleton count={3} />
+        ) : (
+          <DeliveryCalendar items={calItems} from={range.from} to={range.to} onReschedule={reschedule} canEdit={canEdit} />
+        )
+      ) : rows === null ? (
         <CardsSkeleton count={3} />
       ) : total === 0 ? (
         <div className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl p-12 text-center">
