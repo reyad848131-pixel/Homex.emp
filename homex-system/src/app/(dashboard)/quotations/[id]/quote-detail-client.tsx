@@ -36,6 +36,7 @@ interface QuotationDetail {
   signedAt: string | null;
   validUntil: string | null;
   deliveryDate: string | null;
+  deliveryTime: string | null;
   createdAt: string;
   customer: { name: string; phone: string; phoneCode: string; governorate: string; wilayat: string; address: string | null };
   employee: { id: string; name: string; civilId: string };
@@ -640,19 +641,27 @@ export default function QuoteDetailClient({
             <Pencil className="w-4 h-4" /> {t("contractSignature")}
           </h2>
           {q.signedAt ? (
-            <div className="flex flex-wrap items-end gap-6">
-              <div>
-                <p className="text-xs text-gray-400 mb-1">{t("signerName")}</p>
-                <p className="font-bold text-gray-800 dark:text-gray-100">{q.signerName}</p>
-                <p className="text-xs text-gray-400 mt-2 font-mono-en">
-                  {new Date(q.signedAt).toLocaleString(locale === "ar" ? "ar-OM" : "en-GB", { dateStyle: "medium", timeStyle: "short" })}
-                </p>
+            <>
+              <div className="flex flex-wrap items-end gap-6">
+                <div>
+                  <p className="text-xs text-gray-400 mb-1">{t("signerName")}</p>
+                  <p className="font-bold text-gray-800 dark:text-gray-100">{q.signerName}</p>
+                  <p className="text-xs text-gray-400 mt-2 font-mono-en">
+                    {new Date(q.signedAt).toLocaleString(locale === "ar" ? "ar-OM" : "en-GB", { dateStyle: "medium", timeStyle: "short" })}
+                  </p>
+                </div>
+                {q.signatureData && (
+                  // eslint-disable-next-line @next/next/no-img-element
+                  <img src={q.signatureData} alt="signature" className="h-20 bg-white border border-gray-200 rounded px-2" />
+                )}
               </div>
-              {q.signatureData && (
-                // eslint-disable-next-line @next/next/no-img-element
-                <img src={q.signatureData} alt="signature" className="h-20 bg-white border border-gray-200 rounded px-2" />
-              )}
-            </div>
+              <DeliveryDateEditor
+                id={id}
+                deliveryDate={q.deliveryDate}
+                deliveryTime={q.deliveryTime}
+                onSaved={(u) => setQ((prev) => prev ? { ...prev, ...u } : prev)}
+              />
+            </>
           ) : (
             <SignCapture id={id} onSigned={(u) => setQ((prev) => prev ? { ...prev, ...u } : prev)} />
           )}
@@ -948,6 +957,91 @@ export default function QuoteDetailClient({
   );
 }
 
+// Set / adjust the delivery date on an accepted order. Saving a date pushes the
+// order into the work board (needs_preparation) so it never gets stuck after
+// signing. Shown under the signature record.
+function DeliveryDateEditor({
+  id,
+  deliveryDate,
+  deliveryTime,
+  onSaved,
+}: {
+  id: string;
+  deliveryDate: string | null;
+  deliveryTime: string | null;
+  onSaved: (u: { deliveryDate: string | null; deliveryTime: string | null; workStatus?: string }) => void;
+}) {
+  const { t, dateLocale } = useI18n();
+  const toast = useToast();
+  const [editing, setEditing] = useState(false);
+  const [date, setDate] = useState(deliveryDate ? new Date(deliveryDate).toISOString().split("T")[0] : "");
+  const [time, setTime] = useState(deliveryTime || "");
+  const [busy, setBusy] = useState(false);
+
+  const save = async () => {
+    if (!date || busy) return;
+    setBusy(true);
+    try {
+      const res = await fetch(`/api/quotations/${id}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ deliveryDate: date, deliveryTime: time || null }),
+      });
+      if (!res.ok) { const d = await res.json().catch(() => ({})); toast.error(d.error || t("errorOccurred")); return; }
+      onSaved({ deliveryDate: new Date(date).toISOString(), deliveryTime: time || null, workStatus: "needs_preparation" });
+      setEditing(false);
+      toast.success(t("deliveryDateSavedToWork"));
+    } catch {
+      toast.error(t("errorOccurred"));
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  return (
+    <div className="mt-4 pt-4 border-t border-gray-100 dark:border-gray-700">
+      {!editing ? (
+        <div className="flex items-center justify-between gap-3 flex-wrap">
+          <div className="flex items-center gap-2 text-sm">
+            <CalendarDays className="w-4 h-4 text-gray-400" />
+            {deliveryDate ? (
+              <span className="font-bold text-gray-800 dark:text-gray-100">
+                {t("deliveryDateLabel")}: <span className="font-mono-en">{new Date(deliveryDate).toLocaleDateString(dateLocale)}</span>
+                {deliveryTime ? <span className="font-mono-en text-gray-500"> — {deliveryTime}</span> : null}
+              </span>
+            ) : (
+              <span className="text-gray-500">{t("noDeliveryDateYet")}</span>
+            )}
+          </div>
+          <button onClick={() => setEditing(true)}
+            className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-gray-900 dark:bg-white text-white dark:text-gray-900 text-xs font-bold">
+            <CalendarDays className="w-3.5 h-3.5" /> {deliveryDate ? t("edit") : t("setDeliveryDate")}
+          </button>
+        </div>
+      ) : (
+        <div>
+          <label className="block text-sm font-semibold text-gray-600 dark:text-gray-300 mb-1">{t("deliveryDateLabel")}</label>
+          <div className="flex gap-2">
+            <input type="date" value={date} onChange={(e) => setDate(e.target.value)} className="field flex-1" />
+            <input type="time" value={time} onChange={(e) => setTime(e.target.value)} className="field w-32" disabled={!date} />
+          </div>
+          <p className="text-xs text-gray-400 mt-1.5">{t("deliverySignHint")}</p>
+          <div className="flex gap-2 mt-3">
+            <button onClick={save} disabled={!date || busy}
+              className="flex items-center gap-2 bg-emerald-600 hover:bg-emerald-700 disabled:opacity-50 text-white font-bold px-4 py-2 rounded-lg text-sm">
+              {busy ? <Clock className="w-4 h-4 animate-spin" /> : <CheckCircle className="w-4 h-4" />} {t("save")}
+            </button>
+            <button onClick={() => { setEditing(false); setDate(deliveryDate ? new Date(deliveryDate).toISOString().split("T")[0] : ""); setTime(deliveryTime || ""); }}
+              className="px-4 py-2 rounded-lg text-sm font-bold border border-gray-300 text-gray-600">
+              {t("cancel")}
+            </button>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
 // In-person signing widget on the detail page: the customer signs on the rep's
 // device. Posts to the internal sign endpoint and reports the stored fields
 // back so the parent updates without a reload.
@@ -956,25 +1050,31 @@ function SignCapture({
   onSigned,
 }: {
   id: string;
-  onSigned: (u: { signatureData: string; signerName: string; signedAt: string; status: string }) => void;
+  onSigned: (u: { signatureData: string; signerName: string; signedAt: string; status: string; deliveryDate?: string | null; deliveryTime?: string | null }) => void;
 }) {
   const { t } = useI18n();
   const toast = useToast();
   const [open, setOpen] = useState(false);
   const [name, setName] = useState("");
   const [sig, setSig] = useState<string | null>(null);
+  const [deliveryDate, setDeliveryDate] = useState("");
+  const [deliveryTime, setDeliveryTime] = useState("");
 
   const submit = () => {
     if (!name.trim()) return toast.error(t("nameRequired"));
     if (!sig) return toast.error(t("signatureRequired"));
     // Optimistic: show the signed record instantly and save in the background.
     // On failure, reload to fall back to the true (unsigned) server state.
-    onSigned({ signatureData: sig, signerName: name.trim(), signedAt: new Date().toISOString(), status: "accepted" });
+    onSigned({
+      signatureData: sig, signerName: name.trim(), signedAt: new Date().toISOString(), status: "accepted",
+      deliveryDate: deliveryDate ? new Date(deliveryDate).toISOString() : null,
+      deliveryTime: deliveryDate ? (deliveryTime || null) : null,
+    });
     setOpen(false);
     fetch(`/api/quotations/${id}/sign`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ signerName: name.trim(), signatureData: sig }),
+      body: JSON.stringify({ signerName: name.trim(), signatureData: sig, deliveryDate: deliveryDate || null, deliveryTime: deliveryTime || null }),
     })
       .then(async (res) => {
         if (res.ok) { toast.success(t("signedSuccess")); return; }
@@ -1004,6 +1104,14 @@ function SignCapture({
         className="field mb-3" />
       <label className="block text-sm font-semibold text-gray-600 dark:text-gray-300 mb-1">{t("signature")}</label>
       <SignaturePad onChange={setSig} clearLabel={t("clear")} />
+      <div className="mt-3 rounded-lg border border-gray-200 dark:border-gray-700 p-3 bg-gray-50 dark:bg-gray-900/30">
+        <label className="block text-sm font-semibold text-gray-600 dark:text-gray-300 mb-1">{t("deliveryDateOptionalSign")}</label>
+        <div className="flex gap-2">
+          <input type="date" value={deliveryDate} onChange={(e) => setDeliveryDate(e.target.value)} className="field flex-1" />
+          <input type="time" value={deliveryTime} onChange={(e) => setDeliveryTime(e.target.value)} className="field w-32" disabled={!deliveryDate} />
+        </div>
+        <p className="text-xs text-gray-400 mt-1.5">{t("deliverySignHint")}</p>
+      </div>
       <div className="flex gap-2 mt-3">
         <button onClick={submit}
           className="flex items-center gap-2 bg-emerald-600 hover:bg-emerald-700 text-white font-bold px-4 py-2.5 rounded-lg text-sm">

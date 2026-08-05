@@ -229,6 +229,16 @@ export async function PATCH(
     if (body.notes !== undefined) allowedFields.notes = body.notes;
     if (body.statusComment !== undefined) allowedFields.statusComment = body.statusComment;
 
+    // Lightweight delivery-date save (no item changes). Lets the rep set/adjust
+    // the delivery date on an accepted order so it flows into Work Orders.
+    // Allowed even on a locked quote — it doesn't touch prices or items.
+    if (body.deliveryDate !== undefined) {
+      allowedFields.deliveryDate = body.deliveryDate ? new Date(body.deliveryDate) : null;
+      allowedFields.deliveryTime = body.deliveryDate ? (body.deliveryTime || null) : null;
+      allowedFields.deliveryDateEstimated = false;
+      if (body.deliveryDate && !quotation.workStatus) allowedFields.workStatus = "needs_preparation";
+    }
+
     if (body.status === "revised") {
       allowedFields.status = "revised";
       if (body.statusComment) allowedFields.statusComment = body.statusComment;

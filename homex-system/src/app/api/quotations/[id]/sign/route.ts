@@ -22,9 +22,19 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
       return NextResponse.json({ error: "التوقيع غير صالح" }, { status: 400 });
     }
 
+    // Optional: capture the delivery date at signing so the order flows straight
+    // into Work Orders. A real, confirmed date (not an import estimate).
+    let deliveryDate: Date | null = null;
+    if (typeof body.deliveryDate === "string" && body.deliveryDate) {
+      const d = new Date(body.deliveryDate);
+      if (isNaN(d.getTime())) return NextResponse.json({ error: "تاريخ التسليم غير صالح" }, { status: 400 });
+      deliveryDate = d;
+    }
+    const deliveryTime = typeof body.deliveryTime === "string" && body.deliveryTime ? body.deliveryTime : null;
+
     const quotation = await prisma.quotation.findFirst({
       where: { id },
-      select: { id: true, quoteNumber: true, employeeId: true, signedAt: true },
+      select: { id: true, quoteNumber: true, employeeId: true, signedAt: true, workStatus: true },
     });
     if (!quotation) return NextResponse.json({ error: "Not found" }, { status: 404 });
     if (user.role === "sales" && quotation.employeeId !== user.id) {
@@ -43,6 +53,14 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
         signatureData,
         signedAt: new Date(),
         signerIp: clientIp(req),
+        // When a delivery date is provided, confirm it and push the order into
+        // the work board (needs_preparation) so nothing gets stuck after signing.
+        ...(deliveryDate ? {
+          deliveryDate,
+          deliveryTime,
+          deliveryDateEstimated: false,
+          ...(quotation.workStatus ? {} : { workStatus: "needs_preparation" }),
+        } : {}),
       },
       include: { customer: true, items: { include: { category: true } } },
     });

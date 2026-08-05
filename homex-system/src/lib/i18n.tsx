@@ -674,6 +674,11 @@ const translations = {
   operationFailed: { ar: "تعذّر تنفيذ العملية", en: "Operation failed" },
   previewBtn: { ar: "معاينة", en: "Preview" },
   deliveryDateLabel: { ar: "موعد التسليم", en: "Delivery Date" },
+  deliverySignHint: { ar: "حدِّد موعد التسليم ليدخل الطلب مباشرة إلى إدارة الأعمال", en: "Set the delivery date so the order goes straight to Work Orders" },
+  setDeliveryDate: { ar: "تحديد موعد التسليم", en: "Set delivery date" },
+  noDeliveryDateYet: { ar: "لم يُحدَّد موعد التسليم بعد", en: "No delivery date set yet" },
+  deliveryDateSavedToWork: { ar: "تم الحفظ — الطلب الآن في إدارة الأعمال", en: "Saved — the order is now in Work Orders" },
+  deliveryDateOptionalSign: { ar: "موعد التسليم (يمكنك تحديده لاحقاً)", en: "Delivery date (you can set it later)" },
 
   // Builder Labels
   kitchenDimensions: { ar: "أبعاد المطبخ", en: "Kitchen Dimensions" },
