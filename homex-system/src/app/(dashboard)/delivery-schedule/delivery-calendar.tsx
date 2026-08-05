@@ -89,7 +89,7 @@ export function DeliveryCalendar({
         onDragLeave={() => setOverKey((k) => (k === key ? null : k))}
         onDrop={(e) => { e.preventDefault(); if (canEdit && dragId) onReschedule(dragId, key); setDragId(null); setOverKey(null); }}
         className={cn(
-          "rounded-[14px] border bg-white dark:bg-gray-800 shadow-sm flex flex-col overflow-hidden min-h-[150px] lg:min-h-[320px] transition-colors",
+          "rounded-[14px] border bg-white dark:bg-gray-800 shadow-sm flex flex-col overflow-hidden h-[300px] lg:h-[360px] transition-colors",
           isToday ? "border-gray-900 dark:border-white" : "border-gray-200 dark:border-gray-700",
           overKey === key && "ring-2 ring-teal-400 border-teal-400",
         )}
