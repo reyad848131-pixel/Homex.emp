@@ -146,12 +146,6 @@ export default function DeliverySchedulePage() {
       .filter((it) => !s || it.name.includes(s) || it.wilayat.includes(s) || it.driver.includes(s));
   }, [calRows, debouncedSearch]);
 
-  // The calendar only needs the anchored month — filtered from the year in memory.
-  const monthItems: CalItem[] = useMemo(() => calItems.filter((it) => {
-    const d = new Date(it.date);
-    return d.getFullYear() === monthAnchor.getFullYear() && d.getMonth() === monthAnchor.getMonth();
-  }), [calItems, monthAnchor]);
-
   const reschedule = (id: string, date: string) => {
     // Update in memory (and cache) only — no reload, so month switching stays instant.
     setCalRows((prev) => {
@@ -431,7 +425,7 @@ export default function DeliverySchedulePage() {
         ) : (
           <DeliveryCalendar
             monthAnchor={monthAnchor}
-            items={monthItems}
+            items={calItems}
             onToday={() => setMonthAnchor(new Date())}
             onPrevMonth={() => setMonthAnchor((d) => new Date(d.getFullYear(), d.getMonth() - 1, 1))}
             onNextMonth={() => setMonthAnchor((d) => new Date(d.getFullYear(), d.getMonth() + 1, 1))}

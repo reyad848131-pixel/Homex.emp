@@ -32,6 +32,7 @@ const STATUS = {
 const pad = (n: number) => String(n).padStart(2, "0");
 const ymd = (d: Date) => `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
 const sameDay = (a: Date, b: Date) => a.getFullYear() === b.getFullYear() && a.getMonth() === b.getMonth() && a.getDate() === b.getDate();
+const sameMonth = (a: Date, b: Date) => a.getFullYear() === b.getFullYear() && a.getMonth() === b.getMonth();
 
 export function DeliveryCalendar({
   monthAnchor, items, onToday, onPrevMonth, onNextMonth, onReschedule, canEdit,
@@ -48,7 +49,6 @@ export function DeliveryCalendar({
   const [dragId, setDragId] = useState<string | null>(null);
   const [overKey, setOverKey] = useState<string | null>(null);
   const [openDay, setOpenDay] = useState<Date | null>(null);
-  const touch = useRef<{ x: number; y: number } | null>(null);
   const today = new Date(); today.setHours(0, 0, 0, 0);
   const waHref = (it: CalItem) => `https://wa.me/${`${it.phoneCode}${it.phone}`.replace(/\D/g, "")}`;
 
@@ -59,36 +59,66 @@ export function DeliveryCalendar({
     return () => window.removeEventListener("keydown", onKey);
   }, [openDay]);
 
-  // Swipe left/right (horizontal) to change month. Ignores mostly-vertical
-  // gestures (page scroll) and short taps.
-  const onTouchStart = (e: React.TouchEvent) => { const t = e.touches[0]; touch.current = { x: t.clientX, y: t.clientY }; };
-  const onTouchEnd = (e: React.TouchEvent) => {
-    if (!touch.current) return;
-    const t = e.changedTouches[0];
-    const dx = t.clientX - touch.current.x, dy = t.clientY - touch.current.y;
-    touch.current = null;
-    if (Math.abs(dx) > 60 && Math.abs(dx) > Math.abs(dy) * 1.4) {
-      if (dx < 0) onNextMonth(); else onPrevMonth();
+  // ── Finger-following carousel ──────────────────────────────────────────────
+  // Three month panels (prev / current / next) sit side by side in a track that
+  // is translated -1 panel to centre the current month. The finger drags the
+  // track in real time; on release it snaps to a neighbour and commits the month
+  // change, then silently re-centres on the new current month.
+  const trackRef = useRef<HTMLDivElement>(null);
+  const widthRef = useRef(0);
+  const gesture = useRef<{ x: number; y: number; axis: "?" | "x" | "y" } | null>(null);
+  const pending = useRef<"next" | "prev" | null>(null);
+  const [offset, setOffset] = useState(0); // px the finger has dragged the track
+  const [anim, setAnim] = useState(false); // whether the snap transition is on
+
+  const onTouchStart = (e: React.TouchEvent) => {
+    if (openDay || dragId) return;
+    widthRef.current = trackRef.current?.parentElement?.clientWidth ?? 0;
+    const t = e.touches[0];
+    gesture.current = { x: t.clientX, y: t.clientY, axis: "?" };
+    setAnim(false);
+  };
+  const onTouchMove = (e: React.TouchEvent) => {
+    const g = gesture.current;
+    if (!g) return;
+    const t = e.touches[0];
+    const dx = t.clientX - g.x, dy = t.clientY - g.y;
+    if (g.axis === "?") {
+      if (Math.abs(dx) < 8 && Math.abs(dy) < 8) return;
+      g.axis = Math.abs(dx) > Math.abs(dy) ? "x" : "y";
     }
+    if (g.axis === "y") return; // vertical → let the page scroll
+    setOffset(dx);
+  };
+  const onTouchEnd = () => {
+    const g = gesture.current; gesture.current = null;
+    if (!g || g.axis !== "x") { if (offset) { setAnim(true); setOffset(0); } return; }
+    const w = widthRef.current || 1;
+    const threshold = Math.min(w * 0.22, 90);
+    setAnim(true);
+    if (offset <= -threshold) { pending.current = "next"; setOffset(-w); }
+    else if (offset >= threshold) { pending.current = "prev"; setOffset(w); }
+    else { pending.current = null; setOffset(0); }
+  };
+  const onTrackTransitionEnd = (e: React.TransitionEvent) => {
+    if (e.target !== trackRef.current || e.propertyName !== "transform") return;
+    const dir = pending.current;
+    if (!dir) return;
+    pending.current = null;
+    if (dir === "next") onNextMonth(); else onPrevMonth();
+    // Re-centre instantly on the new current month (panels have re-indexed).
+    setAnim(false);
+    setOffset(0);
   };
 
-  const y = monthAnchor.getFullYear(), m = monthAnchor.getMonth();
-
-  // Slide direction: compare the shown month to the previous render so the grid
-  // slides in from the side that matches the navigation.
-  const dirRef = useRef<{ t: number; d: "next" | "prev" }>({ t: new Date(y, m, 1).getTime(), d: "next" });
-  const monthT = new Date(y, m, 1).getTime();
-  if (monthT !== dirRef.current.t) dirRef.current = { t: monthT, d: monthT > dirRef.current.t ? "next" : "prev" };
-  const slideClass = dirRef.current.d === "next" ? "hx-slide-next" : "hx-slide-prev";
-
-  const lastDay = new Date(y, m + 1, 0).getDate();
-  const days = Array.from({ length: lastDay }, (_, i) => new Date(y, m, i + 1));
-  const leading = (new Date(y, m, 1).getDay() + 1) % 7; // Saturday-first blanks
+  const cur = new Date(monthAnchor.getFullYear(), monthAnchor.getMonth(), 1);
+  const prevMonth = new Date(cur.getFullYear(), cur.getMonth() - 1, 1);
+  const nextMonth = new Date(cur.getFullYear(), cur.getMonth() + 1, 1);
+  const curCount = items.filter((it) => sameMonth(new Date(it.date), cur)).length;
+  const monthLabel = `${MONTHS[cur.getMonth()]} ${cur.getFullYear()}`;
 
   const itemsOn = (day: Date) =>
     items.filter((it) => sameDay(new Date(it.date), day)).sort((a, b) => (a.time || "~").localeCompare(b.time || "~"));
-
-  const monthLabel = `${MONTHS[m]} ${y}`;
 
   const Chip = ({ it }: { it: CalItem }) => {
     const s = STATUS[it.status];
@@ -144,13 +174,27 @@ export function DeliveryCalendar({
     );
   };
 
+  // One month's grid of day cells (Saturday-first). Rendered inside each panel.
+  const MonthGrid = ({ anchor }: { anchor: Date }) => {
+    const y = anchor.getFullYear(), m = anchor.getMonth();
+    const lastDay = new Date(y, m + 1, 0).getDate();
+    const days = Array.from({ length: lastDay }, (_, i) => new Date(y, m, i + 1));
+    const leading = (new Date(y, m, 1).getDay() + 1) % 7;
+    return (
+      <div className="grid grid-cols-7 gap-2 content-start">
+        {Array.from({ length: leading }, (_, i) => <div key={`b${i}`} />)}
+        {days.map((day) => <DayCell key={ymd(day)} day={day} />)}
+      </div>
+    );
+  };
+
   return (
     <div>
       {/* Toolbar */}
       <div className="flex items-center gap-2 mb-3 flex-wrap">
         <div className="min-w-[130px]">
           <div className="text-[15px] font-black text-gray-900 dark:text-white">{monthLabel}</div>
-          <div className="text-xs text-gray-400 font-semibold"><span className="font-mono-en">{items.length}</span> توصيلة هذا الشهر</div>
+          <div className="text-xs text-gray-400 font-semibold"><span className="font-mono-en">{curCount}</span> توصيلة هذا الشهر</div>
         </div>
         <button onClick={onToday} className="px-4 h-9 rounded-full border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-sm font-bold text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-700">اليوم</button>
         <div className="flex items-center gap-3 flex-wrap ms-auto text-xs font-semibold text-gray-500">
@@ -160,15 +204,25 @@ export function DeliveryCalendar({
         </div>
       </div>
 
-      {/* Full-month grid — all days at once, rows of 7 (Saturday-first).
-          Swipe left/right anywhere here to change the month. */}
-      <div onTouchStart={onTouchStart} onTouchEnd={onTouchEnd} style={{ touchAction: "pan-y" }}>
-        <div className="grid grid-cols-7 gap-2 mb-1.5">
-          {DAY_NAMES.map((n) => <div key={n} className="text-center text-[11px] font-bold text-gray-400">{n}</div>)}
-        </div>
-        <div key={`${y}-${m}`} className={cn("grid grid-cols-7 gap-2", slideClass)}>
-          {Array.from({ length: leading }, (_, i) => <div key={`b${i}`} />)}
-          {days.map((day) => <DayCell key={ymd(day)} day={day} />)}
+      {/* Weekday header (fixed — shared by every month). */}
+      <div className="grid grid-cols-7 gap-2 mb-1.5">
+        {DAY_NAMES.map((n) => <div key={n} className="text-center text-[11px] font-bold text-gray-400">{n}</div>)}
+      </div>
+
+      {/* Carousel: swipe the track left/right; it follows the finger and snaps.
+          Forced LTR so the transform math is direction-independent; each panel's
+          content is restored to RTL. */}
+      <div dir="ltr" className="overflow-hidden" style={{ touchAction: "pan-y" }}
+        onTouchStart={onTouchStart} onTouchMove={onTouchMove} onTouchEnd={onTouchEnd}>
+        <div
+          ref={trackRef}
+          onTransitionEnd={onTrackTransitionEnd}
+          className={cn("flex items-start", anim && "transition-transform duration-300 ease-out")}
+          style={{ width: "300%", transform: `translateX(calc(-33.3333% + ${offset}px))`, willChange: "transform" }}
+        >
+          <div dir="rtl" className="shrink-0" style={{ width: "33.3333%" }}><MonthGrid anchor={prevMonth} /></div>
+          <div dir="rtl" className="shrink-0" style={{ width: "33.3333%" }}><MonthGrid anchor={cur} /></div>
+          <div dir="rtl" className="shrink-0" style={{ width: "33.3333%" }}><MonthGrid anchor={nextMonth} /></div>
         </div>
       </div>
       <p className="text-xs text-gray-400 text-center mt-3">اضغط أي يوم لعرض طلباته · اسحب يمين/يسار لتغيير الشهر{canEdit ? " · اسحب بطاقة لإعادة الجدولة" : ""}</p>
