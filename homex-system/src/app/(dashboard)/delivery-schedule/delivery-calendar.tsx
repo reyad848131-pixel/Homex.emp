@@ -96,8 +96,8 @@ export function DeliveryCalendar({
     const w = widthRef.current || 1;
     const threshold = Math.min(w * 0.22, 90);
     setAnim(true);
-    if (offset <= -threshold) { pending.current = "next"; setOffset(-w); }
-    else if (offset >= threshold) { pending.current = "prev"; setOffset(w); }
+    if (offset <= -threshold) { pending.current = "prev"; setOffset(-w); }
+    else if (offset >= threshold) { pending.current = "next"; setOffset(w); }
     else { pending.current = null; setOffset(0); }
   };
   const onTrackTransitionEnd = (e: React.TransitionEvent) => {
@@ -220,9 +220,9 @@ export function DeliveryCalendar({
           className={cn("flex items-start", anim && "transition-transform duration-300 ease-out")}
           style={{ width: "300%", transform: `translateX(calc(-33.3333% + ${offset}px))`, willChange: "transform" }}
         >
-          <div dir="rtl" className="shrink-0" style={{ width: "33.3333%" }}><MonthGrid anchor={prevMonth} /></div>
-          <div dir="rtl" className="shrink-0" style={{ width: "33.3333%" }}><MonthGrid anchor={cur} /></div>
           <div dir="rtl" className="shrink-0" style={{ width: "33.3333%" }}><MonthGrid anchor={nextMonth} /></div>
+          <div dir="rtl" className="shrink-0" style={{ width: "33.3333%" }}><MonthGrid anchor={cur} /></div>
+          <div dir="rtl" className="shrink-0" style={{ width: "33.3333%" }}><MonthGrid anchor={prevMonth} /></div>
         </div>
       </div>
       <p className="text-xs text-gray-400 text-center mt-3">اضغط أي يوم لعرض طلباته · اسحب يمين/يسار لتغيير الشهر{canEdit ? " · اسحب بطاقة لإعادة الجدولة" : ""}</p>
