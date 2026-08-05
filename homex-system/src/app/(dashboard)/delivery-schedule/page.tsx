@@ -338,7 +338,7 @@ export default function DeliverySchedulePage() {
       {/* Tabs + controls (hidden when printing) */}
       <div className="no-print space-y-3 mb-5">
         <div className="flex flex-wrap items-center gap-2">
-          {!showCalendar && (["queue", "delivered"] as const).map((k) => (
+          {(["queue", "delivered"] as const).map((k) => (
             <button key={k} onClick={() => { setTab(k); setTodayOnly(false); }}
               className={cn("px-4 h-10 rounded-lg text-sm font-bold border transition-colors",
                 tab === k ? "bg-gray-900 text-white border-gray-900 dark:bg-white dark:text-gray-900 dark:border-white"
@@ -363,7 +363,7 @@ export default function DeliverySchedulePage() {
             <input type="text" value={search} onChange={(e) => setSearch(e.target.value)}
               className="field pr-10 pl-3" placeholder={t("searchDeliveries")} />
           </div>
-          {!showCalendar && tab === "queue" && (
+          {tab === "queue" && (
             <>
               <div className="flex rounded-lg border border-gray-200 dark:border-gray-700 overflow-hidden h-11">
                 {(["urgency", "area"] as const).map((v) => (
@@ -389,13 +389,26 @@ export default function DeliverySchedulePage() {
         <h2 className="text-lg font-bold">{t("deliverySheetTitle")} — <span className="font-mono-en">{new Date().toLocaleDateString(dateLocale)}</span></h2>
       </div>
 
-      {showCalendar && range ? (
-        calRows === null ? (
-          <CardsSkeleton count={3} />
-        ) : (
-          <DeliveryCalendar items={calItems} from={range.from} to={range.to} onReschedule={reschedule} canEdit={canEdit} />
-        )
-      ) : rows === null ? (
+      {/* Calendar first (when zoomed to a month or less) */}
+      {showCalendar && range && (
+        <div className="mb-8">
+          {calRows === null ? <CardsSkeleton count={2} /> : (
+            <DeliveryCalendar items={calItems} from={range.from} to={range.to} onReschedule={reschedule} canEdit={canEdit} />
+          )}
+        </div>
+      )}
+
+      {/* Detailed list below — always present; an order stays here until it is
+          marked delivered, which moves it to the "Delivered" tab. */}
+      {showCalendar && range && rows !== null && total > 0 && (
+        <div className="flex items-center gap-2 mb-3">
+          <h2 className="text-sm font-bold text-gray-500 dark:text-gray-300">{tab === "queue" ? t("tabQueue") : t("tabDelivered")}</h2>
+          <span className="text-xs text-gray-400 font-mono-en">{total}</span>
+          <div className="flex-1 h-px bg-gray-100 dark:bg-gray-700" />
+        </div>
+      )}
+
+      {rows === null ? (
         <CardsSkeleton count={3} />
       ) : total === 0 ? (
         <div className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl p-12 text-center">
