@@ -147,6 +147,20 @@ export function Sidebar({ user, permissions }: SidebarProps) {
             </Link>
           );
         })}
+
+        {/* TEMPORARY — worker-productivity design preview (static mockup). Plain
+            anchor (not <Link>) because it's a static /public file, opened in a
+            new tab. Remove once the design is approved and built for real. */}
+        <a
+          href="/workers-preview.html"
+          target="_blank"
+          rel="noopener noreferrer"
+          onClick={() => setMobileOpen(false)}
+          className="flex items-center gap-3 px-3 py-2.5 rounded text-sm font-bold transition-colors border border-dashed border-teal-400/60 text-teal-600 dark:text-teal-300 hover:bg-teal-50 dark:hover:bg-teal-900/20 mt-1"
+        >
+          <span className="w-[18px] h-[18px] grid place-items-center text-[15px] leading-none">🏭</span>
+          معاينة إنتاجية العمّال
+        </a>
       </nav>
 
       <div className="p-4 border-t border-gray-200 dark:border-gray-700 shrink-0">
