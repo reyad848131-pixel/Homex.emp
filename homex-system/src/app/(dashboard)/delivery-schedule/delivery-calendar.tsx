@@ -3,7 +3,7 @@
 import { useState, useRef, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { cn } from "@/lib/utils";
-import { User, ChevronRight, ChevronLeft } from "lucide-react";
+import { User } from "lucide-react";
 
 // A single delivery mapped for the calendar view.
 export interface CalItem {
@@ -30,12 +30,10 @@ const ymd = (d: Date) => `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.ge
 const sameDay = (a: Date, b: Date) => a.getFullYear() === b.getFullYear() && a.getMonth() === b.getMonth() && a.getDate() === b.getDate();
 
 export function DeliveryCalendar({
-  monthAnchor, items, onPrevMonth, onNextMonth, onToday, onReschedule, canEdit,
+  monthAnchor, items, onToday, onReschedule, canEdit,
 }: {
   monthAnchor: Date;
   items: CalItem[];
-  onPrevMonth: () => void;
-  onNextMonth: () => void;
   onToday: () => void;
   onReschedule: (id: string, date: string) => void;
   canEdit: boolean;
@@ -133,16 +131,10 @@ export function DeliveryCalendar({
     <div>
       {/* Toolbar */}
       <div className="flex items-center gap-2 mb-3 flex-wrap">
-        <button onClick={onNextMonth} className="w-9 h-9 rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 text-gray-500 flex items-center justify-center hover:bg-gray-50 dark:hover:bg-gray-700" aria-label="الشهر التالي">
-          <ChevronLeft className="w-4 h-4" />
-        </button>
         <div className="min-w-[130px]">
           <div className="text-[15px] font-black text-gray-900 dark:text-white">{monthLabel}</div>
           <div className="text-xs text-gray-400 font-semibold"><span className="font-mono-en">{items.length}</span> توصيلة هذا الشهر</div>
         </div>
-        <button onClick={onPrevMonth} className="w-9 h-9 rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 text-gray-500 flex items-center justify-center hover:bg-gray-50 dark:hover:bg-gray-700" aria-label="الشهر السابق">
-          <ChevronRight className="w-4 h-4" />
-        </button>
         <button onClick={onToday} className="px-4 h-9 rounded-full border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-sm font-bold text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-700">اليوم</button>
         <div className="flex items-center gap-3 flex-wrap ms-auto text-xs font-semibold text-gray-500">
           <span className="flex items-center gap-1.5"><i className="w-2.5 h-2.5 rounded-sm bg-teal-500 inline-block" /> جاهز</span>
