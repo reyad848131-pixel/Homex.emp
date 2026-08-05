@@ -5,7 +5,7 @@ import { logAction } from "@/lib/audit";
 import { userCan } from "@/lib/permissions";
 
 // A job may enter the photo queue only after the work is actually done.
-const PHOTO_ELIGIBLE_WORK_STATUSES = ["delivered", "installed"];
+const PHOTO_ELIGIBLE_WORK_STATUSES = ["delivered"];
 const VALID_PHOTO_STATUSES = ["ready", "done"];
 
 // Access: managers/admin/ceo, anyone with the photography permission (the

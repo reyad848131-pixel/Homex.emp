@@ -95,7 +95,6 @@ export async function GET(req: NextRequest) {
     const WS: Record<string, string> = {
       needs_preparation: "قيد التحضير", ready_to_execute: "قيد التنفيذ", in_progress: "قيد التنفيذ",
       completed: "اكتمل", ready_for_delivery: "جاهز للتوصيل", delivered: "تم التوصيل",
-      ready_for_install: "جاهز للتركيب", installed: "تم التركيب",
     };
     const header = ["رقم الطلب", "العميل", "الهاتف", "المحافظة", "الولاية", "تاريخ التسليم", "الوقت", "السائق", "الحالة"];
     const rows = orders.map((q) => [

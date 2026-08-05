@@ -43,8 +43,7 @@ export async function PATCH(req: NextRequest) {
 
     const body = await req.json();
     const { id, workStatus, hasOrangeAlert, hasRedAlert, workNotes, woodStatus, fabricStatus,
-      deliveryDriver, apptConfirmed, deliveryDate, deliveryTime, deliveryLocation,
-      installTechnician, installDate, installTime } = body;
+      deliveryDriver, apptConfirmed, deliveryDate, deliveryTime, deliveryLocation } = body;
 
     if (!id) return NextResponse.json({ error: "Missing id" }, { status: 400 });
 
@@ -63,9 +62,6 @@ export async function PATCH(req: NextRequest) {
         data.hasRedAlert = false;
         if (!quotation.deliveredAt) data.deliveredAt = new Date();
       }
-      if (workStatus === "installed" && !quotation.installedAt) {
-        data.installedAt = new Date();
-      }
     }
 
     if (hasOrangeAlert !== undefined) data.hasOrangeAlert = Boolean(hasOrangeAlert);
@@ -80,9 +76,6 @@ export async function PATCH(req: NextRequest) {
       data.deliveryDateEstimated = false;
     }
     if (deliveryTime !== undefined) data.deliveryTime = deliveryTime || null;
-    if (installTechnician !== undefined) data.installTechnician = installTechnician || null;
-    if (installDate !== undefined) data.installDate = installDate ? new Date(installDate) : null;
-    if (installTime !== undefined) data.installTime = installTime || null;
     if (woodStatus !== undefined && validMaterialStatuses.includes(woodStatus)) data.woodStatus = woodStatus;
     if (fabricStatus !== undefined && validMaterialStatuses.includes(fabricStatus)) data.fabricStatus = fabricStatus;
 

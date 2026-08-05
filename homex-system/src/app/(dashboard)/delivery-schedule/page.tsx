@@ -264,7 +264,6 @@ export default function DeliverySchedulePage() {
             // Money KPI only for roles allowed to see amounts.
             ...(canMoney ? [{ label: t("kpiToCollect"), value: fmtCur(Number(stats.toCollect || 0)), tone: "text-amber-600 dark:text-amber-400", small: true }] : []),
             { label: t("kpiOnTime"), value: stats.onTimePct === null ? "—" : `${stats.onTimePct}%`, tone: "text-emerald-600 dark:text-emerald-400" },
-            { label: t("kpiInstallQueue"), value: stats.installQueue ?? 0, tone: "text-indigo-600 dark:text-indigo-400" },
             { label: t("kpiOpenServices"), value: stats.openServices ?? 0, tone: "text-purple-600 dark:text-purple-400" },
           ].map((k, i) => (
             <div key={i} className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl px-3 py-2.5">

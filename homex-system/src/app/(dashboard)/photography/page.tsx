@@ -176,7 +176,7 @@ export default function PhotographyPage() {
                 </div>
                 <span className="text-[11px] font-bold px-2 py-1 rounded-full bg-gray-100 text-gray-600 dark:bg-gray-700 dark:text-gray-300 shrink-0 flex items-center gap-1">
                   <Package className="w-3 h-3" />
-                  {q.workStatus === "installed" ? t("installedLabel") : t("deliveredStatus")}
+                  {t("deliveredStatus")}
                 </span>
               </div>
 

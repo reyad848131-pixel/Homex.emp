@@ -59,8 +59,6 @@ export const WORK_STATUS_MAP: Record<string, { label: string; cardColor: string;
   completed: { label: "جاهز", cardColor: "border-green-300 text-green-600 bg-green-50", badgeColor: "bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-300" },
   ready_for_delivery: { label: "جاهز للتوصيل", cardColor: "border-teal-300 text-teal-600 bg-teal-50", badgeColor: "bg-teal-100 text-teal-700 dark:bg-teal-900/30 dark:text-teal-300" },
   delivered: { label: "تم التوصيل", cardColor: "border-yellow-300 text-yellow-600 bg-yellow-50", badgeColor: "bg-yellow-100 text-yellow-700 dark:bg-yellow-900/30 dark:text-yellow-300" },
-  ready_for_install: { label: "جاهز للتركيب", cardColor: "border-indigo-300 text-indigo-600 bg-indigo-50", badgeColor: "bg-indigo-100 text-indigo-700 dark:bg-indigo-900/30 dark:text-indigo-300" },
-  installed: { label: "تم التركيب", cardColor: "border-purple-300 text-purple-600 bg-purple-50", badgeColor: "bg-purple-100 text-purple-700 dark:bg-purple-900/30 dark:text-purple-300" },
 };
 
 export const VALID_WORK_STATUSES = Object.keys(WORK_STATUS_MAP);

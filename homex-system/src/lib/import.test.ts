@@ -102,7 +102,7 @@ describe("guessWorkStatus — the real status values in the sheet", () => {
     expect(guessWorkStatus("")).toBe("in_progress");
   });
   it("maps installation and ready-for-delivery variants", () => {
-    expect(guessWorkStatus("Installed")).toBe("installed");
+    expect(guessWorkStatus("Installed")).toBe("delivered");
     expect(guessWorkStatus("Ready for Delivery")).toBe("ready_for_delivery");
   });
 });

@@ -24,7 +24,7 @@ export default async function DashboardPage() {
   // straight to their work — no quote stats or money they can't act on.
   if (role === "driver" || role === "photographer") {
     const endOfDay = new Date(startOfDay.getTime() + 24 * 60 * 60 * 1000);
-    const pending = { deliveredAt: null, workStatus: { notIn: ["delivered", "installed"] } };
+    const pending = { deliveredAt: null, workStatus: { notIn: ["delivered"] } };
     const [todayDeliveries, overdueDeliveries, photoQueue] = await Promise.all([
       prisma.quotation.count({ where: { ...pending, deliveryDate: { gte: startOfDay, lt: endOfDay } } }),
       prisma.quotation.count({ where: { ...pending, deliveryDate: { lt: startOfDay } } }),
@@ -98,7 +98,7 @@ export default async function DashboardPage() {
         ...whereClause,
         deliveryDate: { lt: startOfToday },
         deliveredAt: null,
-        workStatus: { notIn: ["delivered", "installed"] },
+        workStatus: { notIn: ["delivered"] },
       },
     }),
     // Orders still carrying an estimated (unconfirmed) delivery date.

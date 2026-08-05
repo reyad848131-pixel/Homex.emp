@@ -216,7 +216,7 @@ export function parseMoney(raw: string): number {
 
 export type SystemWorkStatus =
   | "needs_preparation" | "ready_to_execute" | "in_progress" | "completed"
-  | "ready_for_delivery" | "delivered" | "ready_for_install" | "installed";
+  | "ready_for_delivery" | "delivered";
 
 // Classify a raw "Work Status" cell into a system work status, tolerant of
 // typos, casing and the sheet's quirks (e.g. "Delivey Done" missing an r, or a
@@ -228,10 +228,8 @@ export function guessWorkStatus(raw: string): SystemWorkStatus {
   // Delivered — "delivery done", "delivered", and the typo "delivey done".
   if (has("deliv") && has("done", "delivered", "complete")) return "delivered";
   if (s === "delivered" || s === "delivery done" || s === "delivey done") return "delivered";
-  // Installation.
-  if (has("install") && has("done", "complete", "finished")) return "installed";
-  if (has("ready") && has("install")) return "ready_for_install";
-  if (has("install")) return "installed";
+  // Installation wording maps onto delivered (install stage was removed).
+  if (has("install")) return "delivered";
   // Ready for delivery.
   if (has("ready") && has("deliv")) return "ready_for_delivery";
   if (has("ready for del", "ready to del", "for delivery")) return "ready_for_delivery";

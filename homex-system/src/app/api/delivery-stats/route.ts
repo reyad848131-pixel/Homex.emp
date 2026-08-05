@@ -20,14 +20,13 @@ export async function GET() {
     const weekAhead = new Date(startOfToday.getTime() + 7 * 24 * 60 * 60 * 1000);
     const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
 
-    const [queueTotal, queueThisWeek, queueOverdue, installQueue, openServices, deliveredThisMonth, queueRows, deliveredRows] =
+    const [queueTotal, queueThisWeek, queueOverdue, openServices, deliveredThisMonth, queueRows, deliveredRows] =
       await Promise.all([
         prisma.quotation.count({ where: { workStatus: "ready_for_delivery" } }),
         prisma.quotation.count({ where: { workStatus: "ready_for_delivery", deliveryDate: { gte: startOfToday, lte: weekAhead } } }),
         prisma.quotation.count({ where: { workStatus: "ready_for_delivery", deliveryDate: { lt: startOfToday } } }),
-        prisma.quotation.count({ where: { workStatus: "ready_for_install" } }),
         prisma.serviceRequest.count({ where: { status: { not: "resolved" } } }),
-        prisma.quotation.count({ where: { workStatus: { in: ["delivered", "ready_for_install", "installed"] }, deliveredAt: { gte: startOfMonth } } }),
+        prisma.quotation.count({ where: { workStatus: "delivered", deliveredAt: { gte: startOfMonth } } }),
         prisma.quotation.findMany({ where: { workStatus: "ready_for_delivery" }, select: { total: true, payments: { select: { amount: true } } } }),
         prisma.quotation.findMany({ where: { deliveredAt: { gte: startOfMonth }, deliveryDate: { not: null } }, select: { deliveredAt: true, deliveryDate: true } }),
       ]);
@@ -49,7 +48,7 @@ export async function GET() {
     const onTimePct = deliveredRows.length ? Math.round((onTime / deliveredRows.length) * 100) : null;
 
     return NextResponse.json({
-      queueTotal, queueThisWeek, queueOverdue, installQueue, openServices,
+      queueTotal, queueThisWeek, queueOverdue, openServices,
       deliveredThisMonth, toCollect, onTimePct,
     });
   } catch (e) {

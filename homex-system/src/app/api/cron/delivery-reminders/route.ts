@@ -3,8 +3,8 @@ import { getAuth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { notify, notifyAdmins } from "@/lib/notifications";
 
-// Daily reminder: notify managers (and the assigned driver/technician) about
-// deliveries and installations scheduled for tomorrow. Runs via Vercel Cron
+// Daily reminder: notify managers (and the assigned driver) about
+// deliveries scheduled for tomorrow. Runs via Vercel Cron
 // (see vercel.json); an admin can also trigger it manually.
 export async function GET(req: NextRequest) {
   try {
@@ -24,16 +24,10 @@ export async function GET(req: NextRequest) {
     const start = new Date(now.getFullYear(), now.getMonth(), now.getDate() + 1);
     const end = new Date(now.getFullYear(), now.getMonth(), now.getDate() + 1, 23, 59, 59, 999);
 
-    const [deliveries, installs] = await Promise.all([
-      prisma.quotation.findMany({
-        where: { workStatus: "ready_for_delivery", deliveryDate: { gte: start, lte: end } },
-        select: { quoteNumber: true, deliveryDriver: true, customer: { select: { name: true } } },
-      }),
-      prisma.quotation.findMany({
-        where: { workStatus: "ready_for_install", installDate: { gte: start, lte: end } },
-        select: { quoteNumber: true, installTechnician: true, customer: { select: { name: true } } },
-      }),
-    ]);
+    const deliveries = await prisma.quotation.findMany({
+      where: { workStatus: "ready_for_delivery", deliveryDate: { gte: start, lte: end } },
+      select: { quoteNumber: true, deliveryDriver: true, customer: { select: { name: true } } },
+    });
 
     // Summary to managers/admins.
     if (deliveries.length > 0) {
@@ -44,19 +38,10 @@ export async function GET(req: NextRequest) {
         "/delivery-schedule"
       ).catch(() => {});
     }
-    if (installs.length > 0) {
-      await notifyAdmins(
-        "تركيبات الغد 🔧",
-        `يوجد ${installs.length} طلب مجدول للتركيب غداً.`,
-        "info",
-        "/installation-schedule"
-      ).catch(() => {});
-    }
 
-    // Per-person reminders for the assigned driver / technician (matched by name).
-    const perPerson: Record<string, { deliveries: number; installs: number }> = {};
-    for (const d of deliveries) if (d.deliveryDriver) (perPerson[d.deliveryDriver] ||= { deliveries: 0, installs: 0 }).deliveries++;
-    for (const i of installs) if (i.installTechnician) (perPerson[i.installTechnician] ||= { deliveries: 0, installs: 0 }).installs++;
+    // Per-person reminders for the assigned driver (matched by name).
+    const perPerson: Record<string, { deliveries: number }> = {};
+    for (const d of deliveries) if (d.deliveryDriver) (perPerson[d.deliveryDriver] ||= { deliveries: 0 }).deliveries++;
 
     const names = Object.keys(perPerson);
     if (names.length > 0) {
@@ -66,21 +51,18 @@ export async function GET(req: NextRequest) {
       });
       for (const emp of employees) {
         const c = perPerson[emp.name];
-        const parts: string[] = [];
-        if (c.deliveries) parts.push(`${c.deliveries} توصيلة`);
-        if (c.installs) parts.push(`${c.installs} تركيب`);
-        if (parts.length === 0) continue;
+        if (!c.deliveries) continue;
         await notify(
           emp.id,
           "مهام الغد 📋",
-          `لديك غداً: ${parts.join(" و ")}.`,
+          `لديك غداً: ${c.deliveries} توصيلة.`,
           "info",
-          c.installs ? "/installation-schedule" : "/delivery-schedule"
+          "/delivery-schedule"
         ).catch(() => {});
       }
     }
 
-    return NextResponse.json({ ok: true, deliveries: deliveries.length, installs: installs.length });
+    return NextResponse.json({ ok: true, deliveries: deliveries.length });
   } catch (err) {
     console.error("Cron delivery-reminders error:", err);
     return NextResponse.json({ error: "Delivery reminders failed" }, { status: 500 });

@@ -135,12 +135,11 @@ export default async function PublicQuotePage({ params }: { params: Promise<{ to
           // Simplified customer-facing stages, in order. `reached` = index of the
           // stage currently active (earlier stages are done); a value beyond the
           // last stage means the whole order is complete.
-          const STAGES = ["تأكيد الطلب", "التصنيع", "التوصيل", "التركيب"];
+          const STAGES = ["تأكيد الطلب", "التصنيع", "التوصيل"];
           const REACHED: Record<string, number> = {
             needs_preparation: 1, ready_to_execute: 1, in_progress: 1,
             completed: 2, ready_for_delivery: 2,
-            delivered: 3, ready_for_install: 3,
-            installed: 4,
+            delivered: 3,
           };
           const reached = q.workStatus ? (REACHED[q.workStatus] ?? 1) : 1;
           const allDone = reached >= STAGES.length;
