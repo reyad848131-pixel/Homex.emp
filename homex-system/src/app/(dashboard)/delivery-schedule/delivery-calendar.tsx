@@ -72,15 +72,15 @@ export function DeliveryCalendar({
         onClick={() => router.push(`/quotations/${it.id}`)}
         title={it.name}
         className={cn(
-          "shrink-0 h-[98px] rounded-[10px] border border-gray-200 dark:border-gray-700 border-s-[3px] px-2.5 py-2 flex flex-col justify-between transition-all hover:-translate-y-0.5 hover:shadow-md",
+          "shrink-0 h-[108px] rounded-[10px] border border-gray-200 dark:border-gray-700 border-s-[3px] px-2.5 py-2 flex flex-col justify-between transition-all hover:-translate-y-0.5 hover:shadow-md",
           canEdit ? "cursor-grab active:cursor-grabbing" : "cursor-pointer",
           s.bar, s.bg, dragId === it.id && "opacity-40",
         )}
       >
         <div className="min-w-0">
-          <div className="text-[13px] font-bold text-gray-800 dark:text-gray-100 flex items-center gap-1">
+          <div className="text-[13px] font-bold text-gray-800 dark:text-gray-100 flex items-start gap-1">
             {it.status === "delivered" && <span className="text-emerald-600 shrink-0">✔</span>}
-            <span className="truncate">{it.name}</span>
+            <span className="line-clamp-2 leading-tight">{it.name}</span>
           </div>
           <div className="text-[11.5px] text-gray-500 mt-0.5 flex items-center gap-1.5 min-w-0">
             <span className="truncate">{it.wilayat}</span>
@@ -105,7 +105,7 @@ export function DeliveryCalendar({
         onDragLeave={() => setOverKey((k) => (k === key ? null : k))}
         onDrop={(e) => { e.preventDefault(); if (canEdit && dragId) onReschedule(dragId, key); setDragId(null); setOverKey(null); }}
         className={cn(
-          "snap-start shrink-0 w-[224px] rounded-[14px] border bg-white dark:bg-gray-800 shadow-sm flex flex-col overflow-hidden h-[360px] transition-colors",
+          "snap-start shrink-0 w-[208px] rounded-[14px] border bg-white dark:bg-gray-800 shadow-sm flex flex-col overflow-hidden h-[268px] transition-colors",
           isToday ? "border-gray-900 dark:border-white" : "border-gray-200 dark:border-gray-700",
           overKey === key && "ring-2 ring-teal-400 border-teal-400",
         )}
