@@ -339,9 +339,8 @@ export default function DeliverySchedulePage() {
         </div>
       )}
 
-      {/* Tabs + controls (hidden when printing) — sticky so the date bar stays
-          reachable while scrolling the long list below. */}
-      <div className="no-print space-y-3 mb-5 sticky top-0 z-30 bg-white/85 dark:bg-gray-900/85 backdrop-blur-md py-2 rounded-b-xl">
+      {/* Tabs + controls (hidden when printing) */}
+      <div className="no-print space-y-3 mb-5">
         <div className="flex flex-wrap items-center gap-2">
           {(["queue", "delivered"] as const).map((k) => (
             <button key={k} onClick={() => { setTab(k); setTodayOnly(false); }}
