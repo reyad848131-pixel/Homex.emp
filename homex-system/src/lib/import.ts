@@ -248,6 +248,11 @@ export function isNoiseRow(m: {
   name: string; orderNumber: string; phone: string; place: string; workStatusRaw: string;
 }): boolean {
   const name = (m.name || "").trim().toLowerCase();
+  // Identity-less row: nothing that could identify an order — no name, no phone,
+  // no number. In these sheets that's the pre-dated empty calendar slots (a date
+  // cell filled, everything else blank). Never a real order, so drop it instead
+  // of letting its stray date pull it into a year as a false "error".
+  if (!name && !(m.phone || "").trim() && !(m.orderNumber || "").trim()) return true;
   // Repeated header row: the name cell reads "Name", the order cell reads its own
   // header ("Advance Bill No."), or the status cell reads "Work Status".
   if (name === "name") return true;

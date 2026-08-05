@@ -174,6 +174,14 @@ describe("isNoiseRow — drops the repeated headers / banners / totals in BRS sh
   it("flags monthly TOTAL summary rows", () => {
     expect(isNoiseRow({ ...base, name: "TOTAL", phone: "TOTAL", place: "TOTAL" })).toBe(true);
   });
+  it("flags identity-less rows (empty pre-dated calendar slots)", () => {
+    expect(isNoiseRow({ ...base })).toBe(true); // fully empty
+    expect(isNoiseRow({ ...base, place: "Nizwa" })).toBe(true); // only a place, no order identity
+    // A row with any identity is kept for normal validation, not dropped here.
+    expect(isNoiseRow({ ...base, name: "SMES" })).toBe(false);
+    expect(isNoiseRow({ ...base, orderNumber: "SW-642" })).toBe(false);
+    expect(isNoiseRow({ ...base, phone: "92211625" })).toBe(false);
+  });
   it("flags the status-legend section dividers placed in the name cell", () => {
     expect(isNoiseRow({ ...base, name: "Need to Confirm", phone: "Available" })).toBe(true);
     expect(isNoiseRow({ ...base, name: "Available" })).toBe(true);

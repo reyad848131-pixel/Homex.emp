@@ -645,7 +645,7 @@ export default function ImportPage() {
             <div className="flex items-start gap-2 bg-gray-50 dark:bg-gray-800/40 border border-gray-200 dark:border-gray-700 rounded-xl p-4 mb-5 text-sm">
               <AlertTriangle className="w-4 h-4 text-gray-500 shrink-0 mt-0.5" />
               <p className="text-gray-700 dark:text-gray-300">
-                <span className="font-bold font-mono-en">{preview.noiseRows}</span> صف تنسيقي (عناوين مكرّرة / بنر شهر / مجاميع) تم <b>تجاهله تلقائياً</b> — ليست طلبات حقيقية.
+                <span className="font-bold font-mono-en">{preview.noiseRows}</span> صف غير فعلي (عناوين مكرّرة / بنر / مجاميع / صفوف فارغة أو بلا بيانات) تم <b>تجاهله تلقائياً</b> — ليست طلبات حقيقية.
               </p>
             </div>
           )}
