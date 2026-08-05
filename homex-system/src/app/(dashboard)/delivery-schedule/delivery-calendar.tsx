@@ -1,14 +1,19 @@
 "use client";
 
-import { useState, useRef } from "react";
+import { useState, useRef, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { cn } from "@/lib/utils";
+import { Phone, MessageCircle, FileText, X, User } from "lucide-react";
 
 // A single delivery mapped for the calendar view.
 export interface CalItem {
   id: string;
   name: string;
   wilayat: string;
+  governorate: string;
+  quoteNumber: string;
+  phone: string;
+  phoneCode: string;
   date: string;          // deliveryDate (ISO)
   time: string | null;   // "HH:MM" or null
   driver: string;
@@ -19,9 +24,9 @@ const DAY_NAMES = ["السبت", "الأحد", "الإثنين", "الثلاثا
 const MONTHS = ["يناير", "فبراير", "مارس", "أبريل", "مايو", "يونيو", "يوليو", "أغسطس", "سبتمبر", "أكتوبر", "نوفمبر", "ديسمبر"];
 
 const STATUS = {
-  ready: { bar: "border-s-teal-500", bg: "bg-gray-50 dark:bg-gray-800/60", label: "جاهز" },
-  late: { bar: "border-s-red-500", bg: "bg-red-50 dark:bg-red-900/15", label: "متأخر" },
-  delivered: { bar: "border-s-emerald-500", bg: "bg-emerald-50 dark:bg-emerald-900/15", label: "تم التوصيل" },
+  ready: { bar: "border-s-teal-500", bg: "bg-gray-50 dark:bg-gray-800/60", pill: "bg-teal-100 text-teal-700 dark:bg-teal-900/30 dark:text-teal-300", label: "جاهز" },
+  late: { bar: "border-s-red-500", bg: "bg-red-50 dark:bg-red-900/15", pill: "bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-300", label: "متأخر" },
+  delivered: { bar: "border-s-emerald-500", bg: "bg-emerald-50 dark:bg-emerald-900/15", pill: "bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-300", label: "تم التوصيل" },
 } as const;
 
 const pad = (n: number) => String(n).padStart(2, "0");
@@ -42,8 +47,17 @@ export function DeliveryCalendar({
   const router = useRouter();
   const [dragId, setDragId] = useState<string | null>(null);
   const [overKey, setOverKey] = useState<string | null>(null);
+  const [openDay, setOpenDay] = useState<Date | null>(null);
   const touch = useRef<{ x: number; y: number } | null>(null);
   const today = new Date(); today.setHours(0, 0, 0, 0);
+  const waHref = (it: CalItem) => `https://wa.me/${`${it.phoneCode}${it.phone}`.replace(/\D/g, "")}`;
+
+  useEffect(() => {
+    if (!openDay) return;
+    const onKey = (e: KeyboardEvent) => { if (e.key === "Escape") setOpenDay(null); };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [openDay]);
 
   // Swipe left/right (horizontal) to change month. Ignores mostly-vertical
   // gestures (page scroll) and short taps.
@@ -75,7 +89,6 @@ export function DeliveryCalendar({
         draggable={canEdit}
         onDragStart={() => setDragId(it.id)}
         onDragEnd={() => { setDragId(null); setOverKey(null); }}
-        onClick={() => router.push(`/quotations/${it.id}`)}
         title={`${it.name} — ${it.wilayat}${it.time ? " · " + it.time : ""} · ${it.driver}`}
         className={cn(
           "rounded-md border border-gray-200 dark:border-gray-700 border-s-[3px] px-1.5 py-1 transition-all hover:shadow-sm",
@@ -99,11 +112,13 @@ export function DeliveryCalendar({
     const key = ymd(day);
     return (
       <div
+        onClick={() => { if (dayItems.length) setOpenDay(day); }}
         onDragOver={(e) => { if (canEdit && dragId) { e.preventDefault(); setOverKey(key); } }}
         onDragLeave={() => setOverKey((k) => (k === key ? null : k))}
         onDrop={(e) => { e.preventDefault(); if (canEdit && dragId) onReschedule(dragId, key); setDragId(null); setOverKey(null); }}
         className={cn(
           "rounded-xl border p-1.5 flex flex-col gap-1 min-h-[112px]",
+          dayItems.length && "cursor-pointer hover:border-gray-400 dark:hover:border-gray-500",
           isToday ? "border-gray-900 dark:border-white bg-gray-50/50 dark:bg-gray-800/40" : "border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800",
           overKey === key && "ring-2 ring-teal-400 border-teal-400",
         )}
@@ -148,7 +163,53 @@ export function DeliveryCalendar({
           {days.map((day) => <DayCell key={ymd(day)} day={day} />)}
         </div>
       </div>
-      <p className="text-xs text-gray-400 text-center mt-3">اسحب يمين/يسار لتغيير الشهر{canEdit ? " · اسحب بطاقة بين الأيام لإعادة الجدولة" : ""}</p>
+      <p className="text-xs text-gray-400 text-center mt-3">اضغط أي يوم لعرض طلباته · اسحب يمين/يسار لتغيير الشهر{canEdit ? " · اسحب بطاقة لإعادة الجدولة" : ""}</p>
+
+      {/* Day detail modal */}
+      {openDay && (() => {
+        const list = itemsOn(openDay);
+        return (
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm" onClick={() => setOpenDay(null)}>
+            <div className="bg-white dark:bg-gray-900 rounded-2xl shadow-2xl w-full max-w-md max-h-[82vh] flex flex-col border border-gray-200 dark:border-gray-700" onClick={(e) => e.stopPropagation()}>
+              <div className="flex items-center justify-between p-4 border-b border-gray-100 dark:border-gray-700">
+                <div>
+                  <div className="text-base font-black text-gray-900 dark:text-white">{DAY_NAMES[(openDay.getDay() + 1) % 7]} · <span className="font-mono-en">{openDay.getDate()} {MONTHS[openDay.getMonth()]}</span></div>
+                  <div className="text-xs text-gray-400 font-semibold"><span className="font-mono-en">{list.length}</span> توصيلة</div>
+                </div>
+                <button onClick={() => setOpenDay(null)} className="w-9 h-9 rounded-full border border-gray-200 dark:border-gray-700 text-gray-500 flex items-center justify-center hover:bg-gray-100 dark:hover:bg-gray-800" aria-label="إغلاق"><X className="w-4 h-4" /></button>
+              </div>
+              <div className="p-3 overflow-y-auto flex flex-col gap-2.5">
+                {list.map((it) => {
+                  const s = STATUS[it.status];
+                  const tel = `${it.phoneCode}${it.phone}`;
+                  return (
+                    <div key={it.id} className={cn("rounded-xl border border-gray-200 dark:border-gray-700 border-s-[3px] p-3", s.bar, s.bg)}>
+                      <div className="flex items-start justify-between gap-2">
+                        <div className="min-w-0">
+                          <div className="font-bold text-gray-900 dark:text-white flex items-center gap-1">
+                            {it.status === "delivered" && <span className="text-emerald-600">✔</span>}{it.name}
+                          </div>
+                          <div className="text-xs text-gray-500 mt-0.5">{it.governorate} — {it.wilayat} · <span className="font-mono-en">{it.quoteNumber}</span></div>
+                          <div className="text-xs text-gray-400 mt-1 flex items-center gap-3 flex-wrap">
+                            {it.time && <span className="font-mono-en">{it.time}</span>}
+                            <span className="flex items-center gap-1"><User className="w-3 h-3" />{it.driver}</span>
+                          </div>
+                        </div>
+                        <span className={cn("text-[10px] font-bold px-2 py-0.5 rounded-full shrink-0", s.pill)}>{s.label}</span>
+                      </div>
+                      <div className="flex items-center gap-2 mt-3">
+                        <a href={`tel:${tel}`} className="inline-flex items-center gap-1.5 px-3 h-9 rounded-lg bg-gray-900 dark:bg-gray-100 dark:text-gray-900 text-white text-xs font-bold hover:opacity-90"><Phone className="w-3.5 h-3.5" /> اتصال</a>
+                        <a href={waHref(it)} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-1.5 px-3 h-9 rounded-lg bg-green-600 text-white text-xs font-bold hover:bg-green-700"><MessageCircle className="w-3.5 h-3.5" /> واتساب</a>
+                        <button onClick={() => router.push(`/quotations/${it.id}`)} className="inline-flex items-center gap-1.5 px-3 h-9 rounded-lg border border-gray-200 dark:border-gray-700 text-gray-700 dark:text-gray-200 text-xs font-bold hover:bg-gray-50 dark:hover:bg-gray-800 ms-auto"><FileText className="w-3.5 h-3.5" /> فتح الطلب</button>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          </div>
+        );
+      })()}
     </div>
   );
 }
