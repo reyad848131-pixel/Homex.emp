@@ -73,6 +73,14 @@ export function DeliveryCalendar({
   };
 
   const y = monthAnchor.getFullYear(), m = monthAnchor.getMonth();
+
+  // Slide direction: compare the shown month to the previous render so the grid
+  // slides in from the side that matches the navigation.
+  const dirRef = useRef<{ t: number; d: "next" | "prev" }>({ t: new Date(y, m, 1).getTime(), d: "next" });
+  const monthT = new Date(y, m, 1).getTime();
+  if (monthT !== dirRef.current.t) dirRef.current = { t: monthT, d: monthT > dirRef.current.t ? "next" : "prev" };
+  const slideClass = dirRef.current.d === "next" ? "hx-slide-next" : "hx-slide-prev";
+
   const lastDay = new Date(y, m + 1, 0).getDate();
   const days = Array.from({ length: lastDay }, (_, i) => new Date(y, m, i + 1));
   const leading = (new Date(y, m, 1).getDay() + 1) % 7; // Saturday-first blanks
@@ -158,7 +166,7 @@ export function DeliveryCalendar({
         <div className="grid grid-cols-7 gap-2 mb-1.5">
           {DAY_NAMES.map((n) => <div key={n} className="text-center text-[11px] font-bold text-gray-400">{n}</div>)}
         </div>
-        <div key={`${y}-${m}`} className="grid grid-cols-7 gap-2 hx-fade">
+        <div key={`${y}-${m}`} className={cn("grid grid-cols-7 gap-2", slideClass)}>
           {Array.from({ length: leading }, (_, i) => <div key={`b${i}`} />)}
           {days.map((day) => <DayCell key={ymd(day)} day={day} />)}
         </div>

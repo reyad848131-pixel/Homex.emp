@@ -184,3 +184,10 @@ input:focus, select:focus, textarea:focus {
 }
 .hx-fade { animation: hxFade 0.28s cubic-bezier(0.19, 1, 0.22, 1); }
 @media (prefers-reduced-motion: reduce) { .hx-fade { animation: none; } }
+
+/* Directional slide for calendar month transitions */
+@keyframes hxSlideNext { from { opacity: 0; transform: translateX(30px); } to { opacity: 1; transform: none; } }
+@keyframes hxSlidePrev { from { opacity: 0; transform: translateX(-30px); } to { opacity: 1; transform: none; } }
+.hx-slide-next { animation: hxSlideNext 0.3s cubic-bezier(0.19, 1, 0.22, 1); }
+.hx-slide-prev { animation: hxSlidePrev 0.3s cubic-bezier(0.19, 1, 0.22, 1); }
+@media (prefers-reduced-motion: reduce) { .hx-slide-next, .hx-slide-prev { animation: none; } }
