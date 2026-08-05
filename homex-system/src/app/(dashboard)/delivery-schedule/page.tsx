@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useCallback, useMemo } from "react";
+import { useState, useEffect, useCallback, useMemo, useRef } from "react";
 import Link from "next/link";
 import { cn, roundMoney } from "@/lib/utils";
 import { useI18n } from "@/lib/i18n";
@@ -92,23 +92,34 @@ export default function DeliverySchedulePage() {
 
   useEffect(() => { fetchData(); }, [fetchData]);
 
-  // Load the WHOLE selected year once (both queue + delivered), then switching
-  // months is instant client-side filtering — no per-month DB round-trip.
+  // Load a WHOLE year at once (both queue + delivered) so switching months is
+  // instant client-side filtering. Years are cached, and the neighbouring years
+  // are prefetched in the background so changing year is instant too.
   const calYear = monthAnchor.getFullYear();
   const [calRows, setCalRows] = useState<DeliveryQuotation[] | null>(null);
-  const loadCalendar = useCallback(() => {
-    setCalRows(null);
-    const from = `${calYear}-01-01`, to = `${calYear}-12-31`;
+  const calCache = useRef<Record<number, DeliveryQuotation[]>>({});
+  const fetchYear = useCallback(async (year: number): Promise<DeliveryQuotation[]> => {
+    if (calCache.current[year]) return calCache.current[year];
+    const from = `${year}-01-01`, to = `${year}-12-31`;
     const qp = (ws: string) => `/api/work-orders?${new URLSearchParams({ workStatus: ws, deliveryFrom: from, deliveryTo: to })}`;
-    Promise.all([
+    const [a, b] = await Promise.all([
       fetch(qp("ready_for_delivery")).then((r) => r.json()).catch(() => ({ quotations: [] })),
       fetch(qp("delivered")).then((r) => r.json()).catch(() => ({ quotations: [] })),
-    ]).then(([a, b]) => {
-      const ready = (a.quotations || []).map((q: DeliveryQuotation) => ({ ...q, _cal: "ready" }));
-      const done = (b.quotations || []).map((q: DeliveryQuotation) => ({ ...q, _cal: "delivered" }));
-      setCalRows([...ready, ...done]);
-    }).catch(() => setCalRows([]));
-  }, [calYear]);
+    ]);
+    const rows = [
+      ...(a.quotations || []).map((q: DeliveryQuotation) => ({ ...q, _cal: "ready" })),
+      ...(b.quotations || []).map((q: DeliveryQuotation) => ({ ...q, _cal: "delivered" })),
+    ];
+    calCache.current[year] = rows;
+    return rows;
+  }, []);
+  const loadCalendar = useCallback(() => {
+    const cached = calCache.current[calYear];
+    if (cached) setCalRows(cached);
+    else { setCalRows(null); fetchYear(calYear).then((rows) => setCalRows(rows)).catch(() => setCalRows([])); }
+    // Warm the adjacent years silently for instant year switching.
+    [calYear - 1, calYear + 1].forEach((yr) => { if (!calCache.current[yr]) fetchYear(yr).catch(() => {}); });
+  }, [calYear, fetchYear]);
   useEffect(() => { loadCalendar(); }, [loadCalendar]);
 
   const calItems: CalItem[] = useMemo(() => {
@@ -142,13 +153,21 @@ export default function DeliverySchedulePage() {
   }), [calItems, monthAnchor]);
 
   const reschedule = (id: string, date: string) => {
-    // Update in memory only — no reload, so switching months stays instant.
-    setCalRows((prev) => (prev ? prev.map((q) => (q.id === id ? { ...q, deliveryDate: date, deliveryDateEstimated: false } : q)) : prev));
+    // Update in memory (and cache) only — no reload, so month switching stays instant.
+    setCalRows((prev) => {
+      const next = prev ? prev.map((q) => (q.id === id ? { ...q, deliveryDate: date, deliveryDateEstimated: false } : q)) : prev;
+      if (next) calCache.current[calYear] = next;
+      return next;
+    });
     fetch("/api/work-orders", {
       method: "PATCH", headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ id, deliveryDate: date }),
     }).then(() => { loadStats(); }).catch(() => {});
   };
+
+  // A list action (mark delivered / return to queue) changes a delivery's
+  // status, so the cached calendar is stale — drop it and reload.
+  const refreshCalendar = useCallback(() => { calCache.current = {}; loadCalendar(); }, [loadCalendar]);
 
   useEffect(() => {
     fetch("/api/employees")
@@ -194,7 +213,7 @@ export default function DeliverySchedulePage() {
       });
     } catch {
       fetchData();
-    } finally { setBusyId(null); loadStats(); }
+    } finally { setBusyId(null); loadStats(); refreshCalendar(); }
   };
 
   const revertToQueue = (id: string) => {
@@ -203,7 +222,7 @@ export default function DeliverySchedulePage() {
     fetch("/api/work-orders", {
       method: "PATCH", headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ id, workStatus: "ready_for_delivery" }),
-    }).catch(() => fetchData());
+    }).then(() => refreshCalendar()).catch(() => fetchData());
   };
 
   const openReschedule = (q: DeliveryQuotation) => {
@@ -404,7 +423,12 @@ export default function DeliverySchedulePage() {
           <CalendarDays className="w-4 h-4 text-gray-400" />
           <h2 className="text-sm font-bold text-gray-600 dark:text-gray-300">{t("calendarHeading")}</h2>
         </div>
-        {calRows === null ? <CardsSkeleton count={2} /> : (
+        {calRows === null ? (
+          <div className="flex flex-col items-center justify-center py-16 text-gray-400 gap-3">
+            <div className="w-8 h-8 rounded-full border-2 border-gray-200 dark:border-gray-700 border-t-teal-500 animate-spin" />
+            <p className="text-sm font-semibold">جارٍ تحميل توصيلات <span className="font-mono-en">{calYear}</span>…</p>
+          </div>
+        ) : (
           <DeliveryCalendar
             monthAnchor={monthAnchor}
             items={monthItems}
