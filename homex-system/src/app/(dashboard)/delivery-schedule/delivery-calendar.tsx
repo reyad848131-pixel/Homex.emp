@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useRef } from "react";
 import { useRouter } from "next/navigation";
 import { cn } from "@/lib/utils";
 
@@ -29,18 +29,34 @@ const ymd = (d: Date) => `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.ge
 const sameDay = (a: Date, b: Date) => a.getFullYear() === b.getFullYear() && a.getMonth() === b.getMonth() && a.getDate() === b.getDate();
 
 export function DeliveryCalendar({
-  monthAnchor, items, onToday, onReschedule, canEdit,
+  monthAnchor, items, onToday, onPrevMonth, onNextMonth, onReschedule, canEdit,
 }: {
   monthAnchor: Date;
   items: CalItem[];
   onToday: () => void;
+  onPrevMonth: () => void;
+  onNextMonth: () => void;
   onReschedule: (id: string, date: string) => void;
   canEdit: boolean;
 }) {
   const router = useRouter();
   const [dragId, setDragId] = useState<string | null>(null);
   const [overKey, setOverKey] = useState<string | null>(null);
+  const touch = useRef<{ x: number; y: number } | null>(null);
   const today = new Date(); today.setHours(0, 0, 0, 0);
+
+  // Swipe left/right (horizontal) to change month. Ignores mostly-vertical
+  // gestures (page scroll) and short taps.
+  const onTouchStart = (e: React.TouchEvent) => { const t = e.touches[0]; touch.current = { x: t.clientX, y: t.clientY }; };
+  const onTouchEnd = (e: React.TouchEvent) => {
+    if (!touch.current) return;
+    const t = e.changedTouches[0];
+    const dx = t.clientX - touch.current.x, dy = t.clientY - touch.current.y;
+    touch.current = null;
+    if (Math.abs(dx) > 60 && Math.abs(dx) > Math.abs(dy) * 1.4) {
+      if (dx < 0) onNextMonth(); else onPrevMonth();
+    }
+  };
 
   const y = monthAnchor.getFullYear(), m = monthAnchor.getMonth();
   const lastDay = new Date(y, m + 1, 0).getDate();
@@ -121,19 +137,18 @@ export function DeliveryCalendar({
         </div>
       </div>
 
-      {/* Full-month grid — all days at once, rows of 7 (Saturday-first) */}
-      <div className="overflow-x-auto pb-1">
-        <div className="min-w-[820px]">
-          <div className="grid grid-cols-7 gap-2 mb-1.5">
-            {DAY_NAMES.map((n) => <div key={n} className="text-center text-[11px] font-bold text-gray-400">{n}</div>)}
-          </div>
-          <div className="grid grid-cols-7 gap-2">
-            {Array.from({ length: leading }, (_, i) => <div key={`b${i}`} />)}
-            {days.map((day) => <DayCell key={ymd(day)} day={day} />)}
-          </div>
+      {/* Full-month grid — all days at once, rows of 7 (Saturday-first).
+          Swipe left/right anywhere here to change the month. */}
+      <div onTouchStart={onTouchStart} onTouchEnd={onTouchEnd} style={{ touchAction: "pan-y" }}>
+        <div className="grid grid-cols-7 gap-2 mb-1.5">
+          {DAY_NAMES.map((n) => <div key={n} className="text-center text-[11px] font-bold text-gray-400">{n}</div>)}
+        </div>
+        <div key={`${y}-${m}`} className="grid grid-cols-7 gap-2 hx-fade">
+          {Array.from({ length: leading }, (_, i) => <div key={`b${i}`} />)}
+          {days.map((day) => <DayCell key={ymd(day)} day={day} />)}
         </div>
       </div>
-      {canEdit && <p className="text-xs text-gray-400 text-center mt-3">اسحب أي بطاقة بين الأيام لإعادة الجدولة · اضغط بطاقة لفتح الطلب</p>}
+      <p className="text-xs text-gray-400 text-center mt-3">اسحب يمين/يسار لتغيير الشهر{canEdit ? " · اسحب بطاقة بين الأيام لإعادة الجدولة" : ""}</p>
     </div>
   );
 }

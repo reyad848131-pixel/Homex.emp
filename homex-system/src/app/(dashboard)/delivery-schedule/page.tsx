@@ -404,6 +404,8 @@ export default function DeliverySchedulePage() {
             monthAnchor={monthAnchor}
             items={calItems}
             onToday={() => setMonthAnchor(new Date())}
+            onPrevMonth={() => setMonthAnchor((d) => new Date(d.getFullYear(), d.getMonth() - 1, 1))}
+            onNextMonth={() => setMonthAnchor((d) => new Date(d.getFullYear(), d.getMonth() + 1, 1))}
             onReschedule={reschedule}
             canEdit={canEdit}
           />
