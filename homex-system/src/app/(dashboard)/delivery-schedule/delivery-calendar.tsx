@@ -70,7 +70,7 @@ export function DeliveryCalendar({
         onClick={() => router.push(`/quotations/${it.id}`)}
         title={it.name}
         className={cn(
-          "flex-1 min-h-[86px] rounded-[10px] border border-gray-200 dark:border-gray-700 border-s-[3px] px-2.5 py-2 flex flex-col justify-between transition-all hover:-translate-y-0.5 hover:shadow-md",
+          "flex-1 min-h-[70px] rounded-[10px] border border-gray-200 dark:border-gray-700 border-s-[3px] px-2.5 py-1.5 flex flex-col justify-between transition-all hover:-translate-y-0.5 hover:shadow-md",
           canEdit ? "cursor-grab active:cursor-grabbing" : "cursor-pointer",
           s.bar, s.bg, dragId === it.id && "opacity-40",
         )}
@@ -103,12 +103,12 @@ export function DeliveryCalendar({
         onDragLeave={() => setOverKey((k) => (k === key ? null : k))}
         onDrop={(e) => { e.preventDefault(); if (canEdit && dragId) onReschedule(dragId, key); setDragId(null); setOverKey(null); }}
         className={cn(
-          "snap-start shrink-0 w-[172px] rounded-[14px] border bg-white dark:bg-gray-800 shadow-sm flex flex-col overflow-hidden h-[360px] transition-colors",
+          "snap-start shrink-0 w-[172px] rounded-[14px] border bg-white dark:bg-gray-800 shadow-sm flex flex-col overflow-hidden h-[288px] transition-colors",
           isToday ? "border-gray-900 dark:border-white" : "border-gray-200 dark:border-gray-700",
           overKey === key && "ring-2 ring-teal-400 border-teal-400",
         )}
       >
-        <div className={cn("flex items-center justify-between gap-2 px-3 h-[54px] shrink-0 border-b border-gray-100 dark:border-gray-700", isToday && "bg-gray-900 dark:bg-white border-transparent")}>
+        <div className={cn("flex items-center justify-between gap-2 px-3 h-[46px] shrink-0 border-b border-gray-100 dark:border-gray-700", isToday && "bg-gray-900 dark:bg-white border-transparent")}>
           <div className="min-w-0">
             <div className={cn("text-[13px] font-black leading-none mb-1 truncate", isToday ? "text-white dark:text-gray-900" : "text-gray-800 dark:text-gray-100")}>{DAY_NAMES[(day.getDay() + 1) % 7]}</div>
             <div className={cn("text-[11px] font-semibold font-mono-en whitespace-nowrap", isToday ? "text-white/80 dark:text-gray-900/70" : "text-gray-400")}>{day.getDate()} {MONTHS[day.getMonth()]}</div>
@@ -118,7 +118,7 @@ export function DeliveryCalendar({
             <span className={cn("text-[20px] font-black font-mono-en leading-none", isToday ? "text-white dark:text-gray-900" : "text-gray-800 dark:text-gray-100")}>{day.getDate()}</span>
           </div>
         </div>
-        <div className="p-2.5 flex flex-col gap-2 flex-1 overflow-y-auto">
+        <div className="p-2 flex flex-col gap-1.5 flex-1 overflow-y-auto">
           {dayItems.length === 0
             ? <div className="flex-1 flex items-center justify-center text-gray-200 dark:text-gray-700 text-lg select-none min-h-[36px]">·</div>
             : dayItems.map((it) => <Card key={it.id} it={it} />)}
