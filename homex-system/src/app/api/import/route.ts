@@ -142,12 +142,19 @@ export async function POST(req: NextRequest) {
       if (seen.has(m.orderNumber)) fileDups.add(m.orderNumber);
       seen.add(m.orderNumber);
     }
-    const existingNums = new Set<string>(
+    // Match existing orders by BOTH their current number and their original
+    // number: a batch that was later unified to "HX-YYYY-####" keeps the sheet's
+    // old number (SW-###) in originalNumber, so a re-import must recognise it
+    // there too — otherwise a renumbered order looks new and gets duplicated.
+    const numberFilter = (list: string[]) => ({ OR: [{ quoteNumber: { in: list } }, { originalNumber: { in: list } }] });
+    const collectNums = (rows: Array<{ quoteNumber: string; originalNumber: string | null }>) => {
+      const s = new Set<string>();
+      for (const q of rows) { s.add(q.quoteNumber); if (q.originalNumber) s.add(q.originalNumber); }
+      return s;
+    };
+    const existingNums = collectNums(
       seen.size
-        ? (await prisma.quotation.findMany({
-            where: { quoteNumber: { in: [...seen] } },
-            select: { quoteNumber: true },
-          })).map((q) => q.quoteNumber)
+        ? await prisma.quotation.findMany({ where: numberFilter([...seen]), select: { quoteNumber: true, originalNumber: true } })
         : []
     );
     // Numbers of quotations sitting in the Trash (soft-deleted). The global read
@@ -155,12 +162,9 @@ export async function POST(req: NextRequest) {
     // `deletedAt` filter bypasses it). A deleted order must NOT be re-created —
     // the customer deleted it on purpose — so these are skipped just like
     // existing ones, but reported separately so the reason is clear.
-    const deletedNums = new Set<string>(
+    const deletedNums = collectNums(
       seen.size
-        ? (await prisma.quotation.findMany({
-            where: { quoteNumber: { in: [...seen] }, deletedAt: { not: null } },
-            select: { quoteNumber: true },
-          })).map((q) => q.quoteNumber)
+        ? await prisma.quotation.findMany({ where: { ...numberFilter([...seen]), deletedAt: { not: null } }, select: { quoteNumber: true, originalNumber: true } })
         : []
     );
 
