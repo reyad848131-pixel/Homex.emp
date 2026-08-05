@@ -8,7 +8,7 @@ import { useDebouncedValue } from "@/lib/hooks";
 import { CardsSkeleton } from "@/components/skeleton";
 import { daysUntil, URGENCY_GROUPS, NEUTRAL_TONE, daysRemainingLabel } from "@/lib/schedule-utils";
 import { renderWaTemplate, waLinkFor, DEFAULT_WA_DELIVERY } from "@/lib/wa";
-import { DateDrillNav, type DateRange } from "@/components/date-drill-nav";
+import { DateDrillNav } from "@/components/date-drill-nav";
 import { DeliveryCalendar, type CalItem } from "./delivery-calendar";
 import {
   CalendarClock, Phone, MessageCircle, Check, FileText, Search,
@@ -38,10 +38,16 @@ const getDaysRemaining = (d: string) => daysUntil(d) as number;
 // Default driver pre-selected for every delivery (still changeable per order).
 const DEFAULT_DRIVER = "قصي الشكيلي";
 
+const pad2 = (n: number) => String(n).padStart(2, "0");
+const ymdStr = (d: Date) => `${d.getFullYear()}-${pad2(d.getMonth() + 1)}-${pad2(d.getDate())}`;
+// Saturday on/before the given date (week starts Saturday).
+function saturdayOf(d: Date) { const x = new Date(d); x.setHours(0, 0, 0, 0); x.setDate(x.getDate() - ((x.getDay() + 1) % 7)); return x; }
+
 export default function DeliverySchedulePage() {
   const { t, dateLocale } = useI18n();
   const [tab, setTab] = useState<"queue" | "delivered">("queue");
-  const [range, setRange] = useState<DateRange | null>(null);
+  const [weekStart, setWeekStart] = useState<Date>(() => saturdayOf(new Date()));
+  const [showStats, setShowStats] = useState(false);
   const [rows, setRows] = useState<DeliveryQuotation[] | null>(null);
   const [search, setSearch] = useState("");
   const debouncedSearch = useDebouncedValue(search);
@@ -91,23 +97,14 @@ export default function DeliverySchedulePage() {
 
   useEffect(() => { fetchData(); }, [fetchData]);
 
-  // When the drill-nav is narrowed to a month or less, show the day-cell
-  // calendar (mockup-style) instead of the flat list.
-  const showCalendar = useMemo(() => {
-    if (!range) return false;
-    const span = (new Date(range.to).getTime() - new Date(range.from).getTime()) / 86_400_000 + 1;
-    return span <= 31;
-  }, [range]);
-
-  // Calendar pulls both queue + delivered for the range so every status shows.
+  // Calendar shows the visible week and pulls both queue + delivered so every
+  // status appears. Navigating the drill-nav or the week arrows just re-fetches.
+  const weekTo = useMemo(() => { const d = new Date(weekStart); d.setDate(d.getDate() + 6); return d; }, [weekStart]);
   const [calRows, setCalRows] = useState<DeliveryQuotation[] | null>(null);
   const loadCalendar = useCallback(() => {
-    if (!range) return;
     setCalRows(null);
-    const qp = (ws: string) => {
-      const p = new URLSearchParams({ workStatus: ws, deliveryFrom: range.from, deliveryTo: range.to });
-      return `/api/work-orders?${p}`;
-    };
+    const from = ymdStr(weekStart), to = ymdStr(weekTo);
+    const qp = (ws: string) => `/api/work-orders?${new URLSearchParams({ workStatus: ws, deliveryFrom: from, deliveryTo: to })}`;
     Promise.all([
       fetch(qp("ready_for_delivery")).then((r) => r.json()).catch(() => ({ quotations: [] })),
       fetch(qp("delivered")).then((r) => r.json()).catch(() => ({ quotations: [] })),
@@ -116,8 +113,8 @@ export default function DeliverySchedulePage() {
       const done = (b.quotations || []).map((q: DeliveryQuotation) => ({ ...q, _cal: "delivered" }));
       setCalRows([...ready, ...done]);
     }).catch(() => setCalRows([]));
-  }, [range]);
-  useEffect(() => { if (showCalendar) loadCalendar(); }, [showCalendar, loadCalendar]);
+  }, [weekStart, weekTo]);
+  useEffect(() => { loadCalendar(); }, [loadCalendar]);
 
   const calItems: CalItem[] = useMemo(() => {
     const s = debouncedSearch.trim();
@@ -306,6 +303,12 @@ export default function DeliverySchedulePage() {
               <Wallet className="w-4 h-4" /> <span className="font-mono-en">{fmtCur(totalToCollect)}</span>
             </span>
           )}
+          <button onClick={() => setShowStats((v) => !v)}
+            className={cn("no-print inline-flex items-center gap-2 self-start px-4 h-11 rounded-lg text-sm font-bold border transition-colors",
+              showStats ? "bg-gray-900 text-white border-gray-900 dark:bg-white dark:text-gray-900 dark:border-white"
+                : "border-gray-200 dark:border-gray-700 text-gray-600 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700")}>
+            <BadgeCheck className="w-4 h-4" /> {t("statsToggle")}
+          </button>
           <a href="/api/export?type=deliveries" className="no-print inline-flex items-center gap-2 self-start border border-gray-200 dark:border-gray-700 text-gray-600 dark:text-gray-300 px-4 h-11 rounded-lg text-sm font-bold hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors" title="تنزيل جدول التوصيل Excel/CSV">
             <Download className="w-4 h-4" /> تصدير
           </a>
@@ -316,9 +319,9 @@ export default function DeliverySchedulePage() {
         </div>
       </div>
 
-      {/* KPI strip */}
-      {stats && (
-        <div className="no-print grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-2.5 mb-5">
+      {/* KPI strip — collapsed by default to keep the page light */}
+      {stats && showStats && (
+        <div className="no-print grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-2.5 mb-5 hx-fade">
           {[
             { label: t("kpiThisWeek"), value: stats.queueThisWeek ?? 0, tone: "text-teal-600 dark:text-teal-400" },
             { label: t("kpiOverdue"), value: stats.queueOverdue ?? 0, tone: "text-red-600 dark:text-red-400" },
@@ -335,8 +338,9 @@ export default function DeliverySchedulePage() {
         </div>
       )}
 
-      {/* Tabs + controls (hidden when printing) */}
-      <div className="no-print space-y-3 mb-5">
+      {/* Tabs + controls (hidden when printing) — sticky so the date bar stays
+          reachable while scrolling the long list below. */}
+      <div className="no-print space-y-3 mb-5 sticky top-0 z-30 bg-white/85 dark:bg-gray-900/85 backdrop-blur-md py-2 rounded-b-xl">
         <div className="flex flex-wrap items-center gap-2">
           {(["queue", "delivered"] as const).map((k) => (
             <button key={k} onClick={() => { setTab(k); setTodayOnly(false); }}
@@ -353,9 +357,8 @@ export default function DeliverySchedulePage() {
           </button>
         </div>
 
-        {/* Date drill-nav (year → month → week/day) — always visible; the list
-            below reacts to the selection. */}
-        <DateDrillNav onChange={(r) => setRange(r)} />
+        {/* Date drill-nav (year → month) — jumps the calendar to that month. */}
+        <DateDrillNav stopAtMonth onChange={(r) => setWeekStart(saturdayOf(r ? new Date(r.from + "T00:00:00") : new Date()))} />
 
         <div className="flex flex-wrap items-center gap-2">
           <div className="relative flex-1 min-w-[200px]">
@@ -389,18 +392,25 @@ export default function DeliverySchedulePage() {
         <h2 className="text-lg font-bold">{t("deliverySheetTitle")} — <span className="font-mono-en">{new Date().toLocaleDateString(dateLocale)}</span></h2>
       </div>
 
-      {/* Calendar (top) — reacts to the date drill-nav. Separate from the list. */}
-      {showCalendar && range && (
-        <div className="mb-8 rounded-2xl border border-gray-200 dark:border-gray-700 bg-white/40 dark:bg-gray-800/30 p-3 sm:p-4">
-          <div className="flex items-center gap-2 mb-3">
-            <CalendarDays className="w-4 h-4 text-gray-400" />
-            <h2 className="text-sm font-bold text-gray-600 dark:text-gray-300">{t("calendarHeading")}</h2>
-          </div>
-          {calRows === null ? <CardsSkeleton count={2} /> : (
-            <DeliveryCalendar items={calItems} from={range.from} to={range.to} onReschedule={reschedule} canEdit={canEdit} />
-          )}
+      {/* Calendar (top) — weekly, navigated by the drill-nav or the arrows.
+          Separate from the list. */}
+      <div className="mb-8 rounded-2xl border border-gray-200 dark:border-gray-700 bg-white/40 dark:bg-gray-800/30 p-3 sm:p-4">
+        <div className="flex items-center gap-2 mb-3">
+          <CalendarDays className="w-4 h-4 text-gray-400" />
+          <h2 className="text-sm font-bold text-gray-600 dark:text-gray-300">{t("calendarHeading")}</h2>
         </div>
-      )}
+        {calRows === null ? <CardsSkeleton count={2} /> : (
+          <DeliveryCalendar
+            weekStart={weekStart}
+            items={calItems}
+            onPrev={() => setWeekStart((d) => { const x = new Date(d); x.setDate(x.getDate() - 7); return x; })}
+            onNext={() => setWeekStart((d) => { const x = new Date(d); x.setDate(x.getDate() + 7); return x; })}
+            onToday={() => setWeekStart(saturdayOf(new Date()))}
+            onReschedule={reschedule}
+            canEdit={canEdit}
+          />
+        )}
+      </div>
 
       {/* Detailed list below — always shows every order, unaffected by the date
           selection. An order stays here until it is marked delivered. */}

@@ -171,6 +171,7 @@ const translations = {
   markDelivered: { ar: "تم التوصيل", en: "Mark delivered" },
   deliveryTimeLabel: { ar: "وقت التوصيل", en: "Delivery time" },
   calendarHeading: { ar: "تقويم التوصيلات", en: "Delivery calendar" },
+  statsToggle: { ar: "الإحصائيات", en: "Stats" },
   viewList: { ar: "قائمة", en: "List" },
   viewWeek: { ar: "أسبوع", en: "Week" },
   viewMonth: { ar: "شهر", en: "Month" },

@@ -3,7 +3,7 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { cn } from "@/lib/utils";
-import { User } from "lucide-react";
+import { User, ChevronRight, ChevronLeft } from "lucide-react";
 
 // A single delivery mapped for the calendar view.
 export interface CalItem {
@@ -19,8 +19,6 @@ export interface CalItem {
 const DAY_NAMES = ["السبت", "الأحد", "الإثنين", "الثلاثاء", "الأربعاء", "الخميس", "الجمعة"];
 const MONTHS = ["يناير", "فبراير", "مارس", "أبريل", "مايو", "يونيو", "يوليو", "أغسطس", "سبتمبر", "أكتوبر", "نوفمبر", "ديسمبر"];
 
-// Card styling per status — mirrors the mockup (coloured inline-start border,
-// tinted background for done/late).
 const STATUS = {
   ready: { bar: "border-s-teal-500", bg: "bg-gray-50 dark:bg-gray-800/60", pill: "bg-teal-100 text-teal-700 dark:bg-teal-900/30 dark:text-teal-300", label: "جاهز" },
   late: { bar: "border-s-red-500", bg: "bg-red-50 dark:bg-red-900/15", pill: "bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-300", label: "متأخر" },
@@ -31,20 +29,14 @@ const pad = (n: number) => String(n).padStart(2, "0");
 const ymd = (d: Date) => `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
 const sameDay = (a: Date, b: Date) => a.getFullYear() === b.getFullYear() && a.getMonth() === b.getMonth() && a.getDate() === b.getDate();
 
-function eachDay(from: string, to: string): Date[] {
-  const out: Date[] = [];
-  const s = new Date(from + "T00:00:00");
-  const e = new Date(to + "T00:00:00");
-  for (let d = new Date(s); d <= e; d.setDate(d.getDate() + 1)) out.push(new Date(d));
-  return out;
-}
-
 export function DeliveryCalendar({
-  items, from, to, onReschedule, canEdit,
+  weekStart, items, onPrev, onNext, onToday, onReschedule, canEdit,
 }: {
+  weekStart: Date;
   items: CalItem[];
-  from: string;
-  to: string;
+  onPrev: () => void;
+  onNext: () => void;
+  onToday: () => void;
   onReschedule: (id: string, date: string) => void;
   canEdit: boolean;
 }) {
@@ -53,12 +45,11 @@ export function DeliveryCalendar({
   const [overKey, setOverKey] = useState<string | null>(null);
   const today = new Date(); today.setHours(0, 0, 0, 0);
 
-  const days = eachDay(from, to);
-  const multiWeek = days.length > 8; // whole month → align to Saturday-first rows
-  const leading = multiWeek ? (days[0].getDay() + 1) % 7 : 0;
-
+  const days = Array.from({ length: 7 }, (_, i) => { const d = new Date(weekStart); d.setDate(d.getDate() + i); return d; });
   const itemsOn = (day: Date) =>
     items.filter((it) => sameDay(new Date(it.date), day)).sort((a, b) => (a.time || "~").localeCompare(b.time || "~"));
+
+  const label = `${days[0].getDate()} – ${days[6].getDate()} ${MONTHS[days[6].getMonth()]} ${days[6].getFullYear()}`;
 
   const Card = ({ it }: { it: CalItem }) => {
     const s = STATUS[it.status];
@@ -98,7 +89,7 @@ export function DeliveryCalendar({
         onDragLeave={() => setOverKey((k) => (k === key ? null : k))}
         onDrop={(e) => { e.preventDefault(); if (canEdit && dragId) onReschedule(dragId, key); setDragId(null); setOverKey(null); }}
         className={cn(
-          "rounded-[14px] border bg-white dark:bg-gray-800 shadow-sm flex flex-col overflow-hidden min-h-[220px] lg:min-h-[340px] transition-colors",
+          "rounded-[14px] border bg-white dark:bg-gray-800 shadow-sm flex flex-col overflow-hidden min-h-[150px] lg:min-h-[320px] transition-colors",
           isToday ? "border-gray-900 dark:border-white" : "border-gray-200 dark:border-gray-700",
           overKey === key && "ring-2 ring-teal-400 border-teal-400",
         )}
@@ -113,7 +104,7 @@ export function DeliveryCalendar({
         </div>
         <div className="p-2.5 flex flex-col gap-2 flex-1 overflow-y-auto">
           {dayItems.length === 0
-            ? <div className="flex-1 flex items-center justify-center text-xs text-gray-300 dark:text-gray-600 min-h-[40px]">لا توصيلات</div>
+            ? <div className="flex-1 flex items-center justify-center text-gray-200 dark:text-gray-700 text-lg select-none min-h-[36px]">·</div>
             : dayItems.map((it) => <Card key={it.id} it={it} />)}
         </div>
       </div>
@@ -122,22 +113,27 @@ export function DeliveryCalendar({
 
   return (
     <div>
-      {/* Legend (mockup) */}
-      <div className="flex items-center gap-4 flex-wrap mb-3 text-xs font-semibold text-gray-500">
-        <span className="font-bold text-gray-700 dark:text-gray-200 font-mono-en">{items.length} <span className="font-sans">توصيلة</span></span>
-        <span className="w-px h-4 bg-gray-200 dark:bg-gray-700" />
-        <span className="flex items-center gap-1.5"><i className="w-2.5 h-2.5 rounded-sm bg-teal-500 inline-block" /> جاهز للتوصيل</span>
-        <span className="flex items-center gap-1.5"><i className="w-2.5 h-2.5 rounded-sm bg-emerald-500 inline-block" /> تم التوصيل</span>
-        <span className="flex items-center gap-1.5"><i className="w-2.5 h-2.5 rounded-sm bg-red-500 inline-block" /> متأخر</span>
+      {/* Week toolbar */}
+      <div className="flex items-center gap-2 mb-3 flex-wrap">
+        <button onClick={onNext} className="w-9 h-9 rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 text-gray-500 flex items-center justify-center hover:bg-gray-50 dark:hover:bg-gray-700" aria-label="الأسبوع التالي">
+          <ChevronLeft className="w-4 h-4" />
+        </button>
+        <div className="min-w-[150px]">
+          <div className="text-[15px] font-black text-gray-900 dark:text-white font-mono-en">{label}</div>
+          <div className="text-xs text-gray-400 font-semibold"><span className="font-mono-en">{items.length}</span> توصيلة هذا الأسبوع</div>
+        </div>
+        <button onClick={onPrev} className="w-9 h-9 rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 text-gray-500 flex items-center justify-center hover:bg-gray-50 dark:hover:bg-gray-700" aria-label="الأسبوع السابق">
+          <ChevronRight className="w-4 h-4" />
+        </button>
+        <button onClick={onToday} className="px-4 h-9 rounded-full border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-sm font-bold text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-700">اليوم</button>
+        <div className="flex items-center gap-3 flex-wrap ms-auto text-xs font-semibold text-gray-500">
+          <span className="flex items-center gap-1.5"><i className="w-2.5 h-2.5 rounded-sm bg-teal-500 inline-block" /> جاهز</span>
+          <span className="flex items-center gap-1.5"><i className="w-2.5 h-2.5 rounded-sm bg-emerald-500 inline-block" /> تم التوصيل</span>
+          <span className="flex items-center gap-1.5"><i className="w-2.5 h-2.5 rounded-sm bg-red-500 inline-block" /> متأخر</span>
+        </div>
       </div>
 
-      {multiWeek && (
-        <div className="hidden lg:grid grid-cols-7 gap-2.5 mb-1.5">
-          {DAY_NAMES.map((n) => <div key={n} className="text-center text-[11px] font-bold text-gray-400">{n}</div>)}
-        </div>
-      )}
-      <div className="grid grid-cols-1 lg:grid-cols-7 gap-2.5">
-        {multiWeek && Array.from({ length: leading }, (_, i) => <div key={`b${i}`} className="hidden lg:block" />)}
+      <div key={ymd(weekStart)} className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-7 gap-2.5 hx-fade">
         {days.map((day) => <DayCol key={ymd(day)} day={day} />)}
       </div>
       {canEdit && <p className="text-xs text-gray-400 text-center mt-4">اسحب أي بطاقة من يوم إلى يوم لإعادة الجدولة · اضغط بطاقة لفتح الطلب</p>}

@@ -31,8 +31,12 @@ function monthWeeks(year: number, month0: number): { from: number; to: number }[
  */
 export function DateDrillNav({
   onChange,
+  stopAtMonth = false,
 }: {
   onChange: (range: DateRange | null, label: string) => void;
+  // When true, the navigator stops at month level (no week/day rows) — used
+  // where a calendar below already handles days.
+  stopAtMonth?: boolean;
 }) {
   const { t } = useI18n();
   const months = useTranslatedMonths();
@@ -129,7 +133,7 @@ export function DateDrillNav({
       )}
 
       {/* 4 weeks + days */}
-      {year !== null && month0 !== null && (
+      {!stopAtMonth && year !== null && month0 !== null && (
         <div className="mt-3 pt-3 border-t border-gray-100 dark:border-gray-700 space-y-1.5">
           <button onClick={() => reset("month")} className={cn(chip(week === null && day === null), "px-3 py-1.5 mb-1")}>
             {t("wholeMonth")}
