@@ -42,7 +42,7 @@ export default function DeliverySchedulePage() {
   const { t, dateLocale } = useI18n();
   const toast = useToast();
   const [tab, setTab] = useState<"queue" | "delivered">("queue");
-  const [viewMode, setViewMode] = useState<"list" | "week" | "month">("list");
+  const [viewMode, setViewMode] = useState<"list" | "week" | "month">("week");
   const [calRows, setCalRows] = useState<DeliveryQuotation[] | null>(null);
   const [rows, setRows] = useState<DeliveryQuotation[] | null>(null);
   const [search, setSearch] = useState("");
@@ -105,22 +105,26 @@ export default function DeliverySchedulePage() {
   }, []);
   useEffect(() => { if (viewMode !== "list") loadCalendar(); }, [viewMode, loadCalendar]);
 
-  // Map raw rows into calendar items (compute overdue).
-  const calItems: CalItem[] = useMemo(() => (calRows || [])
-    .filter((q) => q.deliveryDate)
-    .map((q) => {
-      const cal = (q as DeliveryQuotation & { _cal?: string })._cal;
-      const late = cal !== "delivered" && (daysUntil(q.deliveryDate) ?? 0) < 0;
-      return {
-        id: q.id,
-        name: q.customer?.name || "—",
-        wilayat: q.customer?.wilayat || "",
-        date: q.deliveryDate,
-        time: q.deliveryTime,
-        driver: q.deliveryDriver || DEFAULT_DRIVER,
-        status: cal === "delivered" ? "delivered" : late ? "late" : "ready",
-      } as CalItem;
-    }), [calRows]);
+  // Map raw rows into calendar items (compute overdue), filtered by the search box.
+  const calItems: CalItem[] = useMemo(() => {
+    const s = debouncedSearch.trim();
+    return (calRows || [])
+      .filter((q) => q.deliveryDate)
+      .map((q) => {
+        const cal = (q as DeliveryQuotation & { _cal?: string })._cal;
+        const late = cal !== "delivered" && (daysUntil(q.deliveryDate) ?? 0) < 0;
+        return {
+          id: q.id,
+          name: q.customer?.name || "—",
+          wilayat: q.customer?.wilayat || "",
+          date: q.deliveryDate,
+          time: q.deliveryTime,
+          driver: q.deliveryDriver || DEFAULT_DRIVER,
+          status: cal === "delivered" ? "delivered" : late ? "late" : "ready",
+        } as CalItem;
+      })
+      .filter((it) => !s || it.name.includes(s) || it.wilayat.includes(s) || it.driver.includes(s));
+  }, [calRows, debouncedSearch]);
 
   const reschedule = (id: string, date: string) => {
     setCalRows((prev) => (prev ? prev.map((q) => (q.id === id ? { ...q, deliveryDate: date, deliveryDateEstimated: false } : q)) : prev));
@@ -322,7 +326,7 @@ export default function DeliverySchedulePage() {
       {/* Tabs + controls (hidden when printing) */}
       <div className="no-print space-y-3 mb-5">
         <div className="flex flex-wrap items-center gap-2">
-          {(["queue", "delivered"] as const).map((k) => (
+          {viewMode === "list" && (["queue", "delivered"] as const).map((k) => (
             <button key={k} onClick={() => { setTab(k); setTodayOnly(false); }}
               className={cn("px-4 h-10 rounded-lg text-sm font-bold border transition-colors",
                 tab === k ? "bg-gray-900 text-white border-gray-900 dark:bg-white dark:text-gray-900 dark:border-white"
@@ -351,31 +355,33 @@ export default function DeliverySchedulePage() {
           </button>
         </div>
 
-        <div className="flex flex-wrap items-center gap-2">
-          <div className="relative flex-1 min-w-[200px]">
-            <Search className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
-            <input type="text" value={search} onChange={(e) => setSearch(e.target.value)}
-              className="field pr-10 pl-3" placeholder={t("searchDeliveries")} />
+        {viewMode === "list" && (
+          <div className="flex flex-wrap items-center gap-2">
+            <div className="relative flex-1 min-w-[200px]">
+              <Search className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+              <input type="text" value={search} onChange={(e) => setSearch(e.target.value)}
+                className="field pr-10 pl-3" placeholder={t("searchDeliveries")} />
+            </div>
+            {tab === "queue" && (
+              <>
+                <div className="flex rounded-lg border border-gray-200 dark:border-gray-700 overflow-hidden h-11">
+                  {(["urgency", "area"] as const).map((v) => (
+                    <button key={v} onClick={() => setView(v)}
+                      className={cn("px-3 text-xs font-bold transition-colors",
+                        view === v ? "bg-gray-900 text-white dark:bg-white dark:text-gray-900" : "bg-white dark:bg-gray-800 text-gray-500")}>
+                      {v === "urgency" ? t("viewByUrgency") : t("viewByArea")}
+                    </button>
+                  ))}
+                </div>
+                <button onClick={() => setTodayOnly((v) => !v)}
+                  className={cn("inline-flex items-center gap-1.5 px-3 h-11 rounded-lg border text-xs font-bold transition-colors",
+                    todayOnly ? "bg-red-600 text-white border-red-600" : "bg-white dark:bg-gray-800 border-gray-200 dark:border-gray-700 text-gray-600 dark:text-gray-300")}>
+                  <CalendarDays className="w-3.5 h-3.5" /> {t("todayOnly")}
+                </button>
+              </>
+            )}
           </div>
-          {tab === "queue" && (
-            <>
-              <div className="flex rounded-lg border border-gray-200 dark:border-gray-700 overflow-hidden h-11">
-                {(["urgency", "area"] as const).map((v) => (
-                  <button key={v} onClick={() => setView(v)}
-                    className={cn("px-3 text-xs font-bold transition-colors",
-                      view === v ? "bg-gray-900 text-white dark:bg-white dark:text-gray-900" : "bg-white dark:bg-gray-800 text-gray-500")}>
-                    {v === "urgency" ? t("viewByUrgency") : t("viewByArea")}
-                  </button>
-                ))}
-              </div>
-              <button onClick={() => setTodayOnly((v) => !v)}
-                className={cn("inline-flex items-center gap-1.5 px-3 h-11 rounded-lg border text-xs font-bold transition-colors",
-                  todayOnly ? "bg-red-600 text-white border-red-600" : "bg-white dark:bg-gray-800 border-gray-200 dark:border-gray-700 text-gray-600 dark:text-gray-300")}>
-                <CalendarDays className="w-3.5 h-3.5" /> {t("todayOnly")}
-              </button>
-            </>
-          )}
-        </div>
+        )}
       </div>
 
       {/* Print-only title */}
@@ -387,7 +393,15 @@ export default function DeliverySchedulePage() {
         calRows === null ? (
           <CardsSkeleton count={3} />
         ) : (
-          <DeliveryCalendar items={calItems} mode={viewMode} onReschedule={reschedule} canEdit={canEdit} />
+          <>
+            <DeliveryCalendar items={calItems} mode={viewMode} onReschedule={reschedule} canEdit={canEdit} />
+            {/* Search sits below the calendar, as requested. */}
+            <div className="no-print relative max-w-md mx-auto mt-6">
+              <Search className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+              <input type="text" value={search} onChange={(e) => setSearch(e.target.value)}
+                className="field pr-10 pl-3" placeholder={t("searchDeliveries")} />
+            </div>
+          </>
         )
       ) : rows === null ? (
         <CardsSkeleton count={3} />
