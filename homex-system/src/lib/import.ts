@@ -239,9 +239,40 @@ export function guessWorkStatus(raw: string): SystemWorkStatus {
   return "in_progress";
 }
 
+// Detects "noise" rows that repeat through the company's monthly-schedule
+// sheets — the repeated column-header rows, the section banners (company name /
+// "2026' MONTH ##"), and the monthly "TOTAL" summary rows — none of which are
+// real orders. They must be dropped BEFORE import, otherwise (unlike blank or
+// incomplete rows) they carry enough text to slip through as junk quotations.
+export function isNoiseRow(m: {
+  name: string; orderNumber: string; phone: string; place: string; workStatusRaw: string;
+}): boolean {
+  const name = (m.name || "").trim().toLowerCase();
+  // Repeated header row: the name cell reads "Name", the order cell reads its own
+  // header ("Advance Bill No."), or the status cell reads "Work Status".
+  if (name === "name") return true;
+  if (/advance\s*bill\s*no|^bill\s*no\.?$/i.test(m.orderNumber)) return true;
+  if (/^work\s*status$/i.test(m.workStatusRaw)) return true;
+  // Monthly TOTAL summary row (the whole row is filled with "TOTAL").
+  if (name === "total") return true;
+  // Section-divider rows repeated every month: the sheet's status legend
+  // ("Need to Confirm", "Available", "Delivered", …) placed in the name cell to
+  // group orders. They are labels, never customers.
+  const SECTION = new Set(["note", "need to confirm", "need to order", "available", "work started", "finished", "delivered"]);
+  if (SECTION.has(name)) return true;
+  // Section banners: the company name or a "20YY' MONTH" label, wherever it lands.
+  const banner = /sultan\s+al\s+nabhani|woody\s+products/i;
+  const monthBanner = /^\s*20\d{2}\s*['’]/;
+  for (const v of [m.name, m.place, m.phone, m.orderNumber, m.workStatusRaw]) {
+    if (banner.test(v || "") || monthBanner.test(v || "")) return true;
+  }
+  return false;
+}
+
 // A normalized row after mapping — what the API turns into DB records.
 export interface MappedRow {
   rowNumber: number;
+  noise: boolean;        // a repeated header / banner / TOTAL row — dropped before import
   orderNumber: string;
   name: string;
   phone: string;
@@ -276,6 +307,8 @@ export function mapRow(
   const orderNumber = get("orderNumber");
   const total = parseMoney(get("total"));
 
+  const noise = isNoiseRow({ name, orderNumber, phone, place: get("place"), workStatusRaw: get("workStatus") });
+
   if (!name) errors.push("missing_name");
   if (!phone) errors.push("missing_phone");
   if (!orderNumber) errors.push("missing_order_number");
@@ -288,6 +321,7 @@ export function mapRow(
 
   return {
     rowNumber,
+    noise,
     orderNumber,
     name,
     phone,

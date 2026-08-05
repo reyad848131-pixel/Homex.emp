@@ -29,6 +29,8 @@ interface PreviewResult {
   validCount: number;
   errorCount: number;
   alreadyExists: number;
+  alreadyInTrash: number;
+  noiseRows: number;
   noDateRows: number;
   estimatedDateRows: number;
   headerRow: number;
@@ -55,6 +57,7 @@ interface ConflictsResult {
 const ERR_LABEL: Record<string, string> = {
   missing_name: "بدون اسم", missing_phone: "بدون هاتف",
   missing_order_number: "بدون رقم طلب", order_number_exists: "الرقم موجود مسبقاً",
+  order_in_trash: "محذوف (في المهملات)",
   db_error: "خطأ في الحفظ", duplicate_in_file: "مكرر في الملف",
 };
 
@@ -589,6 +592,24 @@ export default function ImportPage() {
               <AlertTriangle className="w-4 h-4 text-blue-600 shrink-0 mt-0.5" />
               <p className="text-blue-800 dark:text-blue-200">
                 <span className="font-bold font-mono-en">{preview.alreadyExists}</span> طلب موجود مسبقاً في النظام — <b>سيُتخطّى تلقائياً</b> ولن يتكرّر. الكوتيشنات الموجودة وتواريخها <b>لن تتأثّر</b>. سيُضاف فقط <span className="font-bold font-mono-en">{preview.validCount}</span> طلب جديد.
+              </p>
+            </div>
+          )}
+
+          {preview.alreadyInTrash > 0 && (
+            <div className="flex items-start gap-2 bg-rose-50 dark:bg-rose-900/20 border border-rose-200 dark:border-rose-800 rounded-xl p-4 mb-5 text-sm">
+              <AlertTriangle className="w-4 h-4 text-rose-600 shrink-0 mt-0.5" />
+              <p className="text-rose-800 dark:text-rose-200">
+                <span className="font-bold font-mono-en">{preview.alreadyInTrash}</span> طلب موجود في <b>سلة المهملات</b> (محذوف سابقاً) — <b>لن يُعاد إضافته</b>. لاستعادته استخدم صفحة المهملات.
+              </p>
+            </div>
+          )}
+
+          {preview.noiseRows > 0 && (
+            <div className="flex items-start gap-2 bg-gray-50 dark:bg-gray-800/40 border border-gray-200 dark:border-gray-700 rounded-xl p-4 mb-5 text-sm">
+              <AlertTriangle className="w-4 h-4 text-gray-500 shrink-0 mt-0.5" />
+              <p className="text-gray-700 dark:text-gray-300">
+                <span className="font-bold font-mono-en">{preview.noiseRows}</span> صف تنسيقي (عناوين مكرّرة / بنر شهر / مجاميع) تم <b>تجاهله تلقائياً</b> — ليست طلبات حقيقية.
               </p>
             </div>
           )}

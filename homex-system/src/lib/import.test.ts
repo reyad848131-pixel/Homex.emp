@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { parseSheetDate, parseMoney, mapRow, estimateMissingDates, DEFAULT_MAPPING, autoMapHeaders, guessWorkStatus, type MappedRow } from "./import";
+import { parseSheetDate, parseMoney, mapRow, estimateMissingDates, DEFAULT_MAPPING, autoMapHeaders, guessWorkStatus, isNoiseRow, type MappedRow } from "./import";
 
 const iso = (d: Date | null) => (d ? d.toISOString() : null);
 
@@ -163,10 +163,46 @@ describe("mapRow — real sample rows", () => {
   });
 });
 
+describe("isNoiseRow — drops the repeated headers / banners / totals in BRS sheets", () => {
+  const base = { name: "", orderNumber: "", phone: "", place: "", workStatusRaw: "" };
+  it("flags a repeated column-header row", () => {
+    expect(isNoiseRow({ ...base, name: "Name", phone: "Phone", orderNumber: "Advance Bill No.", workStatusRaw: "Work Status" })).toBe(true);
+    expect(isNoiseRow({ ...base, name: "name" })).toBe(true);
+    expect(isNoiseRow({ ...base, orderNumber: "Advance Bill No." })).toBe(true);
+    expect(isNoiseRow({ ...base, workStatusRaw: "Work Status" })).toBe(true);
+  });
+  it("flags monthly TOTAL summary rows", () => {
+    expect(isNoiseRow({ ...base, name: "TOTAL", phone: "TOTAL", place: "TOTAL" })).toBe(true);
+  });
+  it("flags the status-legend section dividers placed in the name cell", () => {
+    expect(isNoiseRow({ ...base, name: "Need to Confirm", phone: "Available" })).toBe(true);
+    expect(isNoiseRow({ ...base, name: "Available" })).toBe(true);
+    expect(isNoiseRow({ ...base, name: "Delivered" })).toBe(true);
+    expect(isNoiseRow({ ...base, name: "Work Started" })).toBe(true);
+    expect(isNoiseRow({ ...base, name: "NOTE" })).toBe(true);
+  });
+  it("flags company / month section banners wherever they land", () => {
+    expect(isNoiseRow({ ...base, name: "SULTAN AL NABHANI FACTORY FOR WOODY PRODUCTS (BRS)" })).toBe(true);
+    expect(isNoiseRow({ ...base, name: "2026' JANUARY 01" })).toBe(true);
+    expect(isNoiseRow({ ...base, place: "2026' FEBRUARY 02" })).toBe(true);
+  });
+  it("keeps real orders — including bill-less ones and normal names", () => {
+    expect(isNoiseRow({ ...base, name: "Faisal Al Hinai", orderNumber: "SW-572", phone: "99199614", place: "Al Hamra", workStatusRaw: "Delivery Done" })).toBe(false);
+    expect(isNoiseRow({ ...base, name: "Bader Al Nabhani", orderNumber: "", phone: "92211625", place: "Muscut", workStatusRaw: "Need To Order" })).toBe(false);
+    expect(isNoiseRow({ ...base, name: "MAHMOUD  SQU HOSPITAL ORDER", phone: "97227077", place: "MUSCAT" })).toBe(false);
+  });
+  it("mapRow marks noise rows so the importer can drop them", () => {
+    const header = { "Name": "Name", "Phone": "Phone", "Advance Bill No.": "Advance Bill No.", "Work Status": "Work Status" };
+    expect(mapRow(header, 5, DEFAULT_MAPPING).noise).toBe(true);
+    const real = { "Name": "Khalid", "Phone": "99463248", "Advance Bill No.": "SW-316", "Delivery date": "03.02.2026" };
+    expect(mapRow(real, 6, DEFAULT_MAPPING).noise).toBe(false);
+  });
+});
+
 describe("estimateMissingDates — order undated rows by their neighbours", () => {
   // Build a minimal row carrying only what the estimator reads/writes.
   const mk = (deliveryDate: Date | null): MappedRow => ({
-    rowNumber: 0, orderNumber: "", name: "", phone: "", place: "",
+    rowNumber: 0, noise: false, orderNumber: "", name: "", phone: "", place: "",
     total: 0, advance: 0, deliveryDate, deliveryDateEstimated: false,
     bookingDate: null, deliveredOn: null, workStatusRaw: "",
     description: "", remarks: "", year: deliveryDate ? deliveryDate.getUTCFullYear() : null, errors: [],

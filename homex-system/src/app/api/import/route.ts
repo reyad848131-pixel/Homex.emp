@@ -84,7 +84,13 @@ export async function POST(req: NextRequest) {
     // override to "" (—) clears an auto-mapped field.
     const mapping = { ...autoMapHeaders(headers), ...(payload.mapping || {}) } as Record<ImportField, string>;
 
-    const mapped = rows.map((r, i) => mapRow(r, i + 2, mapping)); // +2: header is row 1
+    const rawMapped = rows.map((r, i) => mapRow(r, i + 2, mapping)); // +2: header is row 1
+    // Drop repeated header rows, section banners and monthly TOTAL rows that run
+    // through the company's multi-section sheets — they carry enough text to slip
+    // in as junk quotations otherwise. Dropped before anything else so they don't
+    // skew counts, date estimation, or duplicate detection.
+    const mapped = rawMapped.filter((m) => !m.noise);
+    const noiseRows = rawMapped.length - mapped.length;
     // Estimate missing delivery dates from neighbouring rows (file order) so
     // undated rows sort into the right chronological place. Runs before the
     // year filter so estimated rows gain a year and are included. Defaults on;
@@ -144,6 +150,19 @@ export async function POST(req: NextRequest) {
           })).map((q) => q.quoteNumber)
         : []
     );
+    // Numbers of quotations sitting in the Trash (soft-deleted). The global read
+    // filter hides them from the query above, so fetch them explicitly (the
+    // `deletedAt` filter bypasses it). A deleted order must NOT be re-created —
+    // the customer deleted it on purpose — so these are skipped just like
+    // existing ones, but reported separately so the reason is clear.
+    const deletedNums = new Set<string>(
+      seen.size
+        ? (await prisma.quotation.findMany({
+            where: { quoteNumber: { in: [...seen] }, deletedAt: { not: null } },
+            select: { quoteNumber: true },
+          })).map((q) => q.quoteNumber)
+        : []
+    );
 
     // "Import incomplete" imports every row (placeholders for missing fields);
     // auto-numbering just fills a missing order number. Compute which of the
@@ -158,6 +177,7 @@ export async function POST(req: NextRequest) {
     const evaluate = (m: MappedRow) => {
       const errs = blockingErrors(m);
       if (m.orderNumber && existingNums.has(m.orderNumber)) errs.push("order_number_exists");
+      else if (m.orderNumber && deletedNums.has(m.orderNumber)) errs.push("order_in_trash");
       return errs;
     };
 
@@ -208,6 +228,9 @@ export async function POST(req: NextRequest) {
       // separately from real errors so re-importing to add the missing ones is
       // clearly safe.
       const alreadyExists = inYear.filter((m) => m.orderNumber && existingNums.has(m.orderNumber)).length;
+      // Orders whose number is in the Trash — reported so the admin sees they were
+      // intentionally left out (a deleted order is never re-created).
+      const alreadyInTrash = inYear.filter((m) => m.orderNumber && !existingNums.has(m.orderNumber) && deletedNums.has(m.orderNumber)).length;
       return NextResponse.json({
         headers,
         headerRow,
@@ -219,6 +242,8 @@ export async function POST(req: NextRequest) {
         validCount: valid.length,
         errorCount: inYear.length - valid.length,
         alreadyExists,
+        alreadyInTrash,
+        noiseRows,
         noDateRows,
         estimatedDateRows,
         statusMap,
@@ -245,7 +270,7 @@ export async function POST(req: NextRequest) {
     // hundreds of sequential round-trips that could time out) ----
     const batchId = `imp_${Date.now().toString(36)}`;
     const skipped: Array<{ row: number; order: string; reason: string }> = [];
-    const usedNums = new Set(existingNums);
+    const usedNums = new Set([...existingNums, ...deletedNums]);
 
     // Generate the next free "IMP-####" number for rows that have none.
     let autoSeq = 1;
@@ -261,6 +286,7 @@ export async function POST(req: NextRequest) {
       const errs = blockingErrors(m);
       if (errs.length) { skipped.push({ row: m.rowNumber, order: m.orderNumber || "-", reason: errs[0] }); continue; }
       if (m.orderNumber && existingNums.has(m.orderNumber)) { skipped.push({ row: m.rowNumber, order: m.orderNumber, reason: "order_number_exists" }); continue; }
+      if (m.orderNumber && deletedNums.has(m.orderNumber)) { skipped.push({ row: m.rowNumber, order: m.orderNumber, reason: "order_in_trash" }); continue; }
       let quoteNumber = m.orderNumber || nextAutoNumber();
       if (m.orderNumber && usedNums.has(quoteNumber)) {
         let i = 2;
