@@ -245,6 +245,11 @@ export default function DeliverySchedulePage() {
               <Wallet className="w-4 h-4" /> <span className="font-mono-en">{fmtCur(totalToCollect)}</span>
             </span>
           )}
+          {/* TEMP: opens the calendar-view mockup for review. Remove when the
+              real calendar view is built into this page. */}
+          <a href="/delivery-calendar-preview.html" target="_blank" rel="noopener" className="no-print inline-flex items-center gap-2 self-start border border-indigo-300 dark:border-indigo-700 text-indigo-700 dark:text-indigo-300 bg-indigo-50 dark:bg-indigo-900/20 px-4 h-11 rounded-lg text-sm font-bold hover:bg-indigo-100 dark:hover:bg-indigo-900/40 transition-colors" title="معاينة عرض التقويم الجديد">
+            <CalendarClock className="w-4 h-4" /> معاينة التقويم 👁️
+          </a>
           <a href="/api/export?type=deliveries" className="no-print inline-flex items-center gap-2 self-start border border-gray-200 dark:border-gray-700 text-gray-600 dark:text-gray-300 px-4 h-11 rounded-lg text-sm font-bold hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors" title="تنزيل جدول التوصيل Excel/CSV">
             <Download className="w-4 h-4" /> تصدير
           </a>
