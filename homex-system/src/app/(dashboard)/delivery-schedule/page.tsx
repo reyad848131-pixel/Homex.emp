@@ -40,13 +40,11 @@ const DEFAULT_DRIVER = "قصي الشكيلي";
 
 const pad2 = (n: number) => String(n).padStart(2, "0");
 const ymdStr = (d: Date) => `${d.getFullYear()}-${pad2(d.getMonth() + 1)}-${pad2(d.getDate())}`;
-// Saturday on/before the given date (week starts Saturday).
-function saturdayOf(d: Date) { const x = new Date(d); x.setHours(0, 0, 0, 0); x.setDate(x.getDate() - ((x.getDay() + 1) % 7)); return x; }
 
 export default function DeliverySchedulePage() {
   const { t, dateLocale } = useI18n();
   const [tab, setTab] = useState<"queue" | "delivered">("queue");
-  const [weekStart, setWeekStart] = useState<Date>(() => saturdayOf(new Date()));
+  const [monthAnchor, setMonthAnchor] = useState<Date>(() => { const d = new Date(); d.setHours(0, 0, 0, 0); return d; });
   const [showStats, setShowStats] = useState(false);
   const [rows, setRows] = useState<DeliveryQuotation[] | null>(null);
   const [search, setSearch] = useState("");
@@ -97,13 +95,16 @@ export default function DeliverySchedulePage() {
 
   useEffect(() => { fetchData(); }, [fetchData]);
 
-  // Calendar shows the visible week and pulls both queue + delivered so every
-  // status appears. Navigating the drill-nav or the week arrows just re-fetches.
-  const weekTo = useMemo(() => { const d = new Date(weekStart); d.setDate(d.getDate() + 6); return d; }, [weekStart]);
+  // Calendar shows the whole anchored month and pulls both queue + delivered so
+  // every status appears. Navigating the drill-nav or month arrows re-fetches.
+  const monthRange = useMemo(() => {
+    const y = monthAnchor.getFullYear(), m = monthAnchor.getMonth();
+    return { from: ymdStr(new Date(y, m, 1)), to: ymdStr(new Date(y, m + 1, 0)) };
+  }, [monthAnchor]);
   const [calRows, setCalRows] = useState<DeliveryQuotation[] | null>(null);
   const loadCalendar = useCallback(() => {
     setCalRows(null);
-    const from = ymdStr(weekStart), to = ymdStr(weekTo);
+    const { from, to } = monthRange;
     const qp = (ws: string) => `/api/work-orders?${new URLSearchParams({ workStatus: ws, deliveryFrom: from, deliveryTo: to })}`;
     Promise.all([
       fetch(qp("ready_for_delivery")).then((r) => r.json()).catch(() => ({ quotations: [] })),
@@ -113,7 +114,7 @@ export default function DeliverySchedulePage() {
       const done = (b.quotations || []).map((q: DeliveryQuotation) => ({ ...q, _cal: "delivered" }));
       setCalRows([...ready, ...done]);
     }).catch(() => setCalRows([]));
-  }, [weekStart, weekTo]);
+  }, [monthRange]);
   useEffect(() => { loadCalendar(); }, [loadCalendar]);
 
   const calItems: CalItem[] = useMemo(() => {
@@ -358,7 +359,7 @@ export default function DeliverySchedulePage() {
         </div>
 
         {/* Date drill-nav (year → month) — jumps the calendar to that month. */}
-        <DateDrillNav stopAtMonth onChange={(r) => setWeekStart(saturdayOf(r ? new Date(r.from + "T00:00:00") : new Date()))} />
+        <DateDrillNav stopAtMonth onChange={(r) => setMonthAnchor(r ? new Date(r.from + "T00:00:00") : new Date())} />
 
         <div className="flex flex-wrap items-center gap-2">
           <div className="relative flex-1 min-w-[200px]">
@@ -401,11 +402,11 @@ export default function DeliverySchedulePage() {
         </div>
         {calRows === null ? <CardsSkeleton count={2} /> : (
           <DeliveryCalendar
-            weekStart={weekStart}
+            monthAnchor={monthAnchor}
             items={calItems}
-            onPrev={() => setWeekStart((d) => { const x = new Date(d); x.setDate(x.getDate() - 7); return x; })}
-            onNext={() => setWeekStart((d) => { const x = new Date(d); x.setDate(x.getDate() + 7); return x; })}
-            onToday={() => setWeekStart(saturdayOf(new Date()))}
+            onPrevMonth={() => setMonthAnchor((d) => new Date(d.getFullYear(), d.getMonth() - 1, 1))}
+            onNextMonth={() => setMonthAnchor((d) => new Date(d.getFullYear(), d.getMonth() + 1, 1))}
+            onToday={() => setMonthAnchor(new Date())}
             onReschedule={reschedule}
             canEdit={canEdit}
           />

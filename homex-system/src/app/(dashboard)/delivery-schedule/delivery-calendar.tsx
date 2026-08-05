@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useRef, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { cn } from "@/lib/utils";
 import { User, ChevronRight, ChevronLeft } from "lucide-react";
@@ -30,12 +30,12 @@ const ymd = (d: Date) => `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.ge
 const sameDay = (a: Date, b: Date) => a.getFullYear() === b.getFullYear() && a.getMonth() === b.getMonth() && a.getDate() === b.getDate();
 
 export function DeliveryCalendar({
-  weekStart, items, onPrev, onNext, onToday, onReschedule, canEdit,
+  monthAnchor, items, onPrevMonth, onNextMonth, onToday, onReschedule, canEdit,
 }: {
-  weekStart: Date;
+  monthAnchor: Date;
   items: CalItem[];
-  onPrev: () => void;
-  onNext: () => void;
+  onPrevMonth: () => void;
+  onNextMonth: () => void;
   onToday: () => void;
   onReschedule: (id: string, date: string) => void;
   canEdit: boolean;
@@ -43,13 +43,24 @@ export function DeliveryCalendar({
   const router = useRouter();
   const [dragId, setDragId] = useState<string | null>(null);
   const [overKey, setOverKey] = useState<string | null>(null);
+  const scrollRef = useRef<HTMLDivElement>(null);
   const today = new Date(); today.setHours(0, 0, 0, 0);
 
-  const days = Array.from({ length: 7 }, (_, i) => { const d = new Date(weekStart); d.setDate(d.getDate() + i); return d; });
+  const y = monthAnchor.getFullYear(), m = monthAnchor.getMonth();
+  const lastDay = new Date(y, m + 1, 0).getDate();
+  const days = Array.from({ length: lastDay }, (_, i) => new Date(y, m, i + 1));
+
   const itemsOn = (day: Date) =>
     items.filter((it) => sameDay(new Date(it.date), day)).sort((a, b) => (a.time || "~").localeCompare(b.time || "~"));
 
-  const label = `${days[0].getDate()} – ${days[6].getDate()} ${MONTHS[days[6].getMonth()]} ${days[6].getFullYear()}`;
+  // Bring "today" (or the first day) into view whenever the month changes.
+  useEffect(() => {
+    const box = scrollRef.current; if (!box) return;
+    const el = box.querySelector<HTMLElement>('[data-today="1"]') || (box.firstElementChild as HTMLElement | null);
+    el?.scrollIntoView({ inline: "center", block: "nearest", behavior: "smooth" });
+  }, [monthAnchor]);
+
+  const monthLabel = `${MONTHS[m]} ${y}`;
 
   const Card = ({ it }: { it: CalItem }) => {
     const s = STATUS[it.status];
@@ -89,11 +100,12 @@ export function DeliveryCalendar({
     const key = ymd(day);
     return (
       <div
+        data-today={isToday ? "1" : undefined}
         onDragOver={(e) => { if (canEdit && dragId) { e.preventDefault(); setOverKey(key); } }}
         onDragLeave={() => setOverKey((k) => (k === key ? null : k))}
         onDrop={(e) => { e.preventDefault(); if (canEdit && dragId) onReschedule(dragId, key); setDragId(null); setOverKey(null); }}
         className={cn(
-          "rounded-[14px] border bg-white dark:bg-gray-800 shadow-sm flex flex-col overflow-hidden h-[300px] lg:h-[360px] transition-colors",
+          "snap-start shrink-0 w-[224px] rounded-[14px] border bg-white dark:bg-gray-800 shadow-sm flex flex-col overflow-hidden h-[360px] transition-colors",
           isToday ? "border-gray-900 dark:border-white" : "border-gray-200 dark:border-gray-700",
           overKey === key && "ring-2 ring-teal-400 border-teal-400",
         )}
@@ -119,16 +131,16 @@ export function DeliveryCalendar({
 
   return (
     <div>
-      {/* Week toolbar */}
+      {/* Toolbar */}
       <div className="flex items-center gap-2 mb-3 flex-wrap">
-        <button onClick={onNext} className="w-9 h-9 rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 text-gray-500 flex items-center justify-center hover:bg-gray-50 dark:hover:bg-gray-700" aria-label="الأسبوع التالي">
+        <button onClick={onNextMonth} className="w-9 h-9 rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 text-gray-500 flex items-center justify-center hover:bg-gray-50 dark:hover:bg-gray-700" aria-label="الشهر التالي">
           <ChevronLeft className="w-4 h-4" />
         </button>
-        <div className="min-w-[150px]">
-          <div className="text-[15px] font-black text-gray-900 dark:text-white font-mono-en">{label}</div>
-          <div className="text-xs text-gray-400 font-semibold"><span className="font-mono-en">{items.length}</span> توصيلة هذا الأسبوع</div>
+        <div className="min-w-[130px]">
+          <div className="text-[15px] font-black text-gray-900 dark:text-white">{monthLabel}</div>
+          <div className="text-xs text-gray-400 font-semibold"><span className="font-mono-en">{items.length}</span> توصيلة هذا الشهر</div>
         </div>
-        <button onClick={onPrev} className="w-9 h-9 rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 text-gray-500 flex items-center justify-center hover:bg-gray-50 dark:hover:bg-gray-700" aria-label="الأسبوع السابق">
+        <button onClick={onPrevMonth} className="w-9 h-9 rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 text-gray-500 flex items-center justify-center hover:bg-gray-50 dark:hover:bg-gray-700" aria-label="الشهر السابق">
           <ChevronRight className="w-4 h-4" />
         </button>
         <button onClick={onToday} className="px-4 h-9 rounded-full border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-sm font-bold text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-700">اليوم</button>
@@ -139,10 +151,11 @@ export function DeliveryCalendar({
         </div>
       </div>
 
-      <div key={ymd(weekStart)} className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-7 gap-2.5 hx-fade">
+      {/* Horizontal swipe strip — scroll left/right through every day of the month */}
+      <div ref={scrollRef} className="flex gap-2.5 overflow-x-auto pb-2 snap-x [-webkit-overflow-scrolling:touch] [scrollbar-width:thin]">
         {days.map((day) => <DayCol key={ymd(day)} day={day} />)}
       </div>
-      {canEdit && <p className="text-xs text-gray-400 text-center mt-4">اسحب أي بطاقة من يوم إلى يوم لإعادة الجدولة · اضغط بطاقة لفتح الطلب</p>}
+      <p className="text-xs text-gray-400 text-center mt-2">اسحب يمين/يسار للتنقّل بين الأيام{canEdit ? " · اسحب أي بطاقة بين الأيام لإعادة الجدولة" : ""}</p>
     </div>
   );
 }
