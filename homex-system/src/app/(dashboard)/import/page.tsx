@@ -237,7 +237,11 @@ export default function ImportPage() {
   const applyBrsPreset = () => {
     autoNumberRef.current = true; setAutoNumber(true);
     importIncompleteRef.current = false; setImportIncomplete(false);
-    estimateDatesRef.current = false; setEstimateDates(false);
+    // Keep date-estimation ON: many 2026 orders are booked ahead with an empty
+    // delivery date, so without it they fall back to their 2025 booking year and
+    // drop out of the 2026 filter. Estimation slots them into 2026 (flagged
+    // "تقديري" for manual confirmation).
+    estimateDatesRef.current = true; setEstimateDates(true);
     setIncludeUndated(false);
     setEditableDraft(false);
     setYearsInput("2026");
@@ -439,7 +443,7 @@ export default function ImportPage() {
         <div className="flex items-center justify-between gap-3 flex-wrap mb-4 p-3 rounded-lg bg-teal-50 dark:bg-teal-900/20 border border-teal-200 dark:border-teal-800">
           <div className="text-[13px] text-teal-800 dark:text-teal-200 font-semibold flex items-center gap-2">
             <Zap className="w-4 h-4 shrink-0" />
-            ملف دفتر BRS؟ اضغط للضبط التلقائي — سنة 2026 · ترقيم تلقائي للطلبات بلا رقم · تجاهل صفوف العناوين/البنر/المجاميع
+            ملف دفتر BRS؟ اضغط للضبط التلقائي — سنة 2026 · ترقيم تلقائي للطلبات بلا رقم · تاريخ تقديري للطلبات بلا تاريخ تسليم · تجاهل صفوف العناوين/البنر/المجاميع
           </div>
           <button onClick={applyBrsPreset}
             className="inline-flex items-center gap-2 px-4 h-10 rounded-lg bg-teal-600 text-white text-sm font-bold hover:bg-teal-700 shrink-0">
