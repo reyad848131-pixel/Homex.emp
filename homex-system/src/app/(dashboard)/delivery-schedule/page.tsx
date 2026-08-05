@@ -8,10 +8,12 @@ import { useDebouncedValue } from "@/lib/hooks";
 import { CardsSkeleton } from "@/components/skeleton";
 import { daysUntil, URGENCY_GROUPS, NEUTRAL_TONE, daysRemainingLabel } from "@/lib/schedule-utils";
 import { renderWaTemplate, waLinkFor, DEFAULT_WA_DELIVERY } from "@/lib/wa";
+import { useToast } from "@/components/toast";
+import { DeliveryCalendar, type CalItem } from "./delivery-calendar";
 import {
   CalendarClock, Phone, MessageCircle, Check, FileText, Search,
   MapPin, Clock, Package, Truck, Printer, Wallet, User, CalendarDays,
-  BadgeCheck, RotateCcw, Download,
+  BadgeCheck, RotateCcw, Download, LayoutList, CalendarRange,
 } from "lucide-react";
 
 interface DeliveryQuotation {
@@ -38,7 +40,10 @@ const DEFAULT_DRIVER = "قصي الشكيلي";
 
 export default function DeliverySchedulePage() {
   const { t, dateLocale } = useI18n();
+  const toast = useToast();
   const [tab, setTab] = useState<"queue" | "delivered">("queue");
+  const [viewMode, setViewMode] = useState<"list" | "week" | "month">("list");
+  const [calRows, setCalRows] = useState<DeliveryQuotation[] | null>(null);
   const [rows, setRows] = useState<DeliveryQuotation[] | null>(null);
   const [search, setSearch] = useState("");
   const debouncedSearch = useDebouncedValue(search);
@@ -85,6 +90,46 @@ export default function DeliverySchedulePage() {
   }, [tab, debouncedSearch]);
 
   useEffect(() => { fetchData(); }, [fetchData]);
+
+  // Calendar view pulls both queue + delivered so every status shows together.
+  const loadCalendar = useCallback(() => {
+    setCalRows(null);
+    Promise.all([
+      fetch("/api/work-orders?workStatus=ready_for_delivery").then((r) => r.json()).catch(() => ({ quotations: [] })),
+      fetch("/api/work-orders?workStatus=delivered").then((r) => r.json()).catch(() => ({ quotations: [] })),
+    ]).then(([a, b]) => {
+      const ready = (a.quotations || []).map((q: DeliveryQuotation) => ({ ...q, _cal: "ready" }));
+      const done = (b.quotations || []).map((q: DeliveryQuotation) => ({ ...q, _cal: "delivered" }));
+      setCalRows([...ready, ...done]);
+    }).catch(() => setCalRows([]));
+  }, []);
+  useEffect(() => { if (viewMode !== "list") loadCalendar(); }, [viewMode, loadCalendar]);
+
+  // Map raw rows into calendar items (compute overdue).
+  const calItems: CalItem[] = useMemo(() => (calRows || [])
+    .filter((q) => q.deliveryDate)
+    .map((q) => {
+      const cal = (q as DeliveryQuotation & { _cal?: string })._cal;
+      const late = cal !== "delivered" && (daysUntil(q.deliveryDate) ?? 0) < 0;
+      return {
+        id: q.id,
+        name: q.customer?.name || "—",
+        wilayat: q.customer?.wilayat || "",
+        date: q.deliveryDate,
+        time: q.deliveryTime,
+        driver: q.deliveryDriver || DEFAULT_DRIVER,
+        status: cal === "delivered" ? "delivered" : late ? "late" : "ready",
+      } as CalItem;
+    }), [calRows]);
+
+  const reschedule = (id: string, date: string) => {
+    setCalRows((prev) => (prev ? prev.map((q) => (q.id === id ? { ...q, deliveryDate: date, deliveryDateEstimated: false } : q)) : prev));
+    fetch("/api/work-orders", {
+      method: "PATCH", headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ id, deliveryDate: date }),
+    }).then(() => { loadStats(); }).catch(() => {});
+    toast.success(t("rescheduledTo"));
+  };
 
   useEffect(() => {
     fetch("/api/employees")
@@ -245,11 +290,6 @@ export default function DeliverySchedulePage() {
               <Wallet className="w-4 h-4" /> <span className="font-mono-en">{fmtCur(totalToCollect)}</span>
             </span>
           )}
-          {/* TEMP: opens the calendar-view mockup for review. Remove when the
-              real calendar view is built into this page. */}
-          <a href="/delivery-calendar-preview.html" target="_blank" rel="noopener" className="no-print inline-flex items-center gap-2 self-start border border-indigo-300 dark:border-indigo-700 text-indigo-700 dark:text-indigo-300 bg-indigo-50 dark:bg-indigo-900/20 px-4 h-11 rounded-lg text-sm font-bold hover:bg-indigo-100 dark:hover:bg-indigo-900/40 transition-colors" title="معاينة عرض التقويم الجديد">
-            <CalendarClock className="w-4 h-4" /> معاينة التقويم 👁️
-          </a>
           <a href="/api/export?type=deliveries" className="no-print inline-flex items-center gap-2 self-start border border-gray-200 dark:border-gray-700 text-gray-600 dark:text-gray-300 px-4 h-11 rounded-lg text-sm font-bold hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors" title="تنزيل جدول التوصيل Excel/CSV">
             <Download className="w-4 h-4" /> تصدير
           </a>
@@ -291,6 +331,20 @@ export default function DeliverySchedulePage() {
             </button>
           ))}
           <div className="flex-1" />
+          {/* List ↔ Calendar view switch */}
+          <div className="flex rounded-lg border border-gray-200 dark:border-gray-700 overflow-hidden h-10">
+            {([
+              { k: "list", icon: LayoutList, label: t("viewList") },
+              { k: "week", icon: CalendarRange, label: t("viewWeek") },
+              { k: "month", icon: CalendarDays, label: t("viewMonth") },
+            ] as const).map((v) => (
+              <button key={v.k} onClick={() => setViewMode(v.k)}
+                className={cn("inline-flex items-center gap-1.5 px-3 text-xs font-bold transition-colors",
+                  viewMode === v.k ? "bg-gray-900 text-white dark:bg-white dark:text-gray-900" : "bg-white dark:bg-gray-800 text-gray-500 hover:text-gray-700 dark:hover:text-gray-300")}>
+                <v.icon className="w-3.5 h-3.5" /> <span className="hidden sm:inline">{v.label}</span>
+              </button>
+            ))}
+          </div>
           <button onClick={() => window.print()}
             className="inline-flex items-center gap-1.5 px-3 h-10 rounded-lg border border-gray-200 dark:border-gray-700 text-sm font-bold text-gray-600 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors">
             <Printer className="w-4 h-4" /> {t("printSheet")}
@@ -329,7 +383,13 @@ export default function DeliverySchedulePage() {
         <h2 className="text-lg font-bold">{t("deliverySheetTitle")} — <span className="font-mono-en">{new Date().toLocaleDateString(dateLocale)}</span></h2>
       </div>
 
-      {rows === null ? (
+      {viewMode !== "list" ? (
+        calRows === null ? (
+          <CardsSkeleton count={3} />
+        ) : (
+          <DeliveryCalendar items={calItems} mode={viewMode} onReschedule={reschedule} canEdit={canEdit} />
+        )
+      ) : rows === null ? (
         <CardsSkeleton count={3} />
       ) : total === 0 ? (
         <div className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl p-12 text-center">
