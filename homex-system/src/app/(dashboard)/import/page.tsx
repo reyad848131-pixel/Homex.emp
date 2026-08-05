@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect, useCallback, useRef } from "react";
-import { Upload, FileSpreadsheet, Check, AlertTriangle, RotateCcw, Loader2, ArrowRight, Lock } from "lucide-react";
+import { Upload, FileSpreadsheet, Check, AlertTriangle, RotateCcw, Loader2, ArrowRight, Lock, Zap } from "lucide-react";
 import { WORK_STATUS_MAP } from "@/lib/types";
 import { useToast } from "@/components/toast";
 
@@ -230,6 +230,27 @@ export default function ImportPage() {
 
   const reprocess = () => { if (file) runPreview(file, mapping, parseYears(yearsInput), statusMap, defaultWorkStatus, headerRow, includeUndated, undatedStatus, sheetName); };
 
+  // One-click preset for the company's BRS delivery-schedule workbook: target the
+  // 2026 tab, auto-number the few bill-less orders, and keep every "loosen"
+  // toggle off so only real, dated orders come in cleanly (the repeated
+  // header/banner/legend rows are dropped automatically by the server).
+  const applyBrsPreset = () => {
+    autoNumberRef.current = true; setAutoNumber(true);
+    importIncompleteRef.current = false; setImportIncomplete(false);
+    estimateDatesRef.current = false; setEstimateDates(false);
+    setIncludeUndated(false);
+    setEditableDraft(false);
+    setYearsInput("2026");
+    const brsSheet = sheets.find((s) => /\b26\b|26\s*$/.test(s)) || sheets.find((s) => s.includes("26"));
+    if (file) {
+      setMapping({});
+      runPreview(file, {}, [2026], {}, defaultWorkStatus, undefined, false, undatedStatus, brsSheet || undefined);
+      toast.success("تم ضبط إعدادات دفتر BRS لسنة 2026 — راجع المعاينة ثم اعتمد");
+    } else {
+      toast.success("تم الضبط — اختر ملف الإكسل الآن");
+    }
+  };
+
   // Switching tabs re-detects the header row + mapping for that sheet.
   const changeSheet = (name: string) => {
     setSheetName(name); setMapping({});
@@ -414,6 +435,17 @@ export default function ImportPage() {
 
       {/* Upload */}
       <div className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl p-5 mb-5">
+        {/* One-click preset for the BRS delivery-schedule workbook. */}
+        <div className="flex items-center justify-between gap-3 flex-wrap mb-4 p-3 rounded-lg bg-teal-50 dark:bg-teal-900/20 border border-teal-200 dark:border-teal-800">
+          <div className="text-[13px] text-teal-800 dark:text-teal-200 font-semibold flex items-center gap-2">
+            <Zap className="w-4 h-4 shrink-0" />
+            ملف دفتر BRS؟ اضغط للضبط التلقائي — سنة 2026 · ترقيم تلقائي للطلبات بلا رقم · تجاهل صفوف العناوين/البنر/المجاميع
+          </div>
+          <button onClick={applyBrsPreset}
+            className="inline-flex items-center gap-2 px-4 h-10 rounded-lg bg-teal-600 text-white text-sm font-bold hover:bg-teal-700 shrink-0">
+            <Zap className="w-4 h-4" /> ضبط تلقائي (BRS 2026)
+          </button>
+        </div>
         <div className="flex items-center gap-3 flex-wrap">
           <button onClick={() => fileRef.current?.click()}
             className="inline-flex items-center gap-2 px-4 h-11 rounded-lg bg-gray-900 dark:bg-white dark:text-gray-900 text-white text-sm font-bold">
