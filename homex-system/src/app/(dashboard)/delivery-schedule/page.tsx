@@ -420,7 +420,7 @@ export default function DeliverySchedulePage() {
         {calRows === null ? (
           <div className="flex flex-col items-center justify-center py-16 text-gray-400 gap-3">
             <div className="w-8 h-8 rounded-full border-2 border-gray-200 dark:border-gray-700 border-t-teal-500 animate-spin" />
-            <p className="text-sm font-semibold">جارٍ تحميل توصيلات <span className="font-mono-en">{calYear}</span>…</p>
+            <p className="text-sm font-semibold">{t("dcLoadingYear")} <span className="font-mono-en">{calYear}</span>…</p>
           </div>
         ) : (
           <DeliveryCalendar

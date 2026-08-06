@@ -34,6 +34,22 @@ export function nextWorkerColor(used: string[]): string {
   return free || WORKER_COLORS[used.length % WORKER_COLORS.length];
 }
 
+// English labels for the built-in stages (the stored value stays Arabic so it's
+// consistent across the DB; only the display switches). Custom stages fall back
+// to whatever the user typed.
+export const STAGE_LABELS_EN: Record<string, string> = {
+  "نجارة": "Carpentry",
+  "قص وتفصيل": "Cutting",
+  "دهان": "Painting",
+  "تنجيد": "Upholstery",
+  "تجميع": "Assembly",
+  "تلميع": "Polishing",
+  "تغليف": "Packaging",
+};
+export function stageLabel(stage: string, locale: string): string {
+  return locale === "en" ? (STAGE_LABELS_EN[stage] || stage) : stage;
+}
+
 // First one or two letters of a name → avatar initials (Arabic-friendly).
 export function initials(name: string): string {
   const n = (name || "").trim();

@@ -656,11 +656,11 @@ export function WorkOrdersClient({ initialData }: { initialData: { quotations: W
                         <HardHat className="w-5 h-5" />
                       </div>
                       <div className="min-w-0 flex-1">
-                        <div className="font-bold text-sm">خط الإنتاج</div>
+                        <div className="font-bold text-sm">{t("prodLine")}</div>
                         <div className="text-xs text-gray-500 dark:text-gray-400">
                           {totalTasks > 0
-                            ? <><span className="font-mono-en font-bold">{doneTasks}/{totalTasks}</span> مرحلة منجزة</>
-                            : "لم تُضف مراحل بعد — اضغط للبدء"}
+                            ? <><span className="font-mono-en font-bold">{doneTasks}/{totalTasks}</span> {t("prodStagesDone")}</>
+                            : t("prodNoStages")}
                         </div>
                       </div>
                       {orderWorkers.length > 0 && (
@@ -837,8 +837,8 @@ export function WorkOrdersClient({ initialData }: { initialData: { quotations: W
           <div className="min-h-full flex items-start justify-center p-0 sm:p-4">
             <div className="bg-gray-50 dark:bg-gray-900 w-full sm:max-w-4xl sm:rounded-2xl shadow-2xl p-4 sm:p-6 sm:my-4" onClick={(e) => e.stopPropagation()}>
               <div className="flex items-center justify-between mb-3">
-                <span className="text-xs font-bold text-gray-400">مساحة العمل — خط الإنتاج</span>
-                <button onClick={() => setProdId(null)} className="w-9 h-9 rounded-full border border-gray-200 dark:border-gray-700 grid place-items-center text-gray-500 hover:bg-gray-100 dark:hover:bg-gray-800" aria-label="إغلاق">
+                <span className="text-xs font-bold text-gray-400">{t("prodWorkspace")}</span>
+                <button onClick={() => setProdId(null)} className="w-9 h-9 rounded-full border border-gray-200 dark:border-gray-700 grid place-items-center text-gray-500 hover:bg-gray-100 dark:hover:bg-gray-800" aria-label={t("cancel")}>
                   <X className="w-4 h-4" />
                 </button>
               </div>

@@ -3,6 +3,7 @@
 import { useState, useRef, useEffect, type Dispatch, type SetStateAction } from "react";
 import { useRouter } from "next/navigation";
 import { cn } from "@/lib/utils";
+import { useI18n } from "@/lib/i18n";
 import { Phone, MessageCircle, FileText, X, User } from "lucide-react";
 
 // A single delivery mapped for the calendar view.
@@ -21,7 +22,9 @@ export interface CalItem {
 }
 
 const DAY_NAMES = ["السبت", "الأحد", "الإثنين", "الثلاثاء", "الأربعاء", "الخميس", "الجمعة"];
+const DAY_NAMES_EN = ["Sat", "Sun", "Mon", "Tue", "Wed", "Thu", "Fri"];
 const MONTHS = ["يناير", "فبراير", "مارس", "أبريل", "مايو", "يونيو", "يوليو", "أغسطس", "سبتمبر", "أكتوبر", "نوفمبر", "ديسمبر"];
+const MONTHS_EN = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"];
 
 const STATUS = {
   ready: { bar: "border-s-teal-500", bg: "bg-gray-50 dark:bg-gray-800/60", pill: "bg-teal-100 text-teal-700 dark:bg-teal-900/30 dark:text-teal-300", label: "جاهز" },
@@ -129,6 +132,10 @@ export function DeliveryCalendar({
   canEdit: boolean;
 }) {
   const router = useRouter();
+  const { t, locale } = useI18n();
+  const dayNames = locale === "en" ? DAY_NAMES_EN : DAY_NAMES;
+  const monthNames = locale === "en" ? MONTHS_EN : MONTHS;
+  const statusLabel = (s: CalItem["status"]) => (s === "ready" ? t("dcReady") : s === "late" ? t("dcLate") : t("deliveredStatus"));
   const [dragId, setDragId] = useState<string | null>(null);
   const [overKey, setOverKey] = useState<string | null>(null);
   const [openDay, setOpenDay] = useState<Date | null>(null);
@@ -207,7 +214,7 @@ export function DeliveryCalendar({
   const prevMonth = new Date(cur.getFullYear(), cur.getMonth() - 1, 1);
   const nextMonth = new Date(cur.getFullYear(), cur.getMonth() + 1, 1);
   const curCount = items.filter((it) => sameMonth(new Date(it.date), cur)).length;
-  const monthLabel = `${MONTHS[cur.getMonth()]} ${cur.getFullYear()}`;
+  const monthLabel = `${monthNames[cur.getMonth()]} ${cur.getFullYear()}`;
 
   const itemsOn = (day: Date) =>
     items.filter((it) => sameDay(new Date(it.date), day)).sort((a, b) => (a.time || "~").localeCompare(b.time || "~"));
@@ -220,19 +227,19 @@ export function DeliveryCalendar({
       <div className="flex items-center gap-2 mb-3 flex-wrap">
         <div className="min-w-[130px]">
           <div className="text-[15px] font-black text-gray-900 dark:text-white">{monthLabel}</div>
-          <div className="text-xs text-gray-400 font-semibold"><span className="font-mono-en">{curCount}</span> توصيلة هذا الشهر</div>
+          <div className="text-xs text-gray-400 font-semibold"><span className="font-mono-en">{curCount}</span> {t("dcThisMonth")}</div>
         </div>
-        <button onClick={onToday} className="px-4 h-9 rounded-full border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-sm font-bold text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-700">اليوم</button>
+        <button onClick={onToday} className="px-4 h-9 rounded-full border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-sm font-bold text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-700">{t("dcToday")}</button>
         <div className="flex items-center gap-3 flex-wrap ms-auto text-xs font-semibold text-gray-500">
-          <span className="flex items-center gap-1.5"><i className="w-2.5 h-2.5 rounded-sm bg-teal-500 inline-block" /> جاهز</span>
-          <span className="flex items-center gap-1.5"><i className="w-2.5 h-2.5 rounded-sm bg-emerald-500 inline-block" /> تم التوصيل</span>
-          <span className="flex items-center gap-1.5"><i className="w-2.5 h-2.5 rounded-sm bg-red-500 inline-block" /> متأخر</span>
+          <span className="flex items-center gap-1.5"><i className="w-2.5 h-2.5 rounded-sm bg-teal-500 inline-block" /> {t("dcReady")}</span>
+          <span className="flex items-center gap-1.5"><i className="w-2.5 h-2.5 rounded-sm bg-emerald-500 inline-block" /> {t("deliveredStatus")}</span>
+          <span className="flex items-center gap-1.5"><i className="w-2.5 h-2.5 rounded-sm bg-red-500 inline-block" /> {t("dcLate")}</span>
         </div>
       </div>
 
       {/* Weekday header (fixed — shared by every month). */}
       <div className="grid grid-cols-7 gap-2 mb-1.5">
-        {DAY_NAMES.map((n) => <div key={n} className="text-center text-[11px] font-bold text-gray-400">{n}</div>)}
+        {dayNames.map((n) => <div key={n} className="text-center text-[11px] font-bold text-gray-400">{n}</div>)}
       </div>
 
       {/* Carousel: swipe the track left/right; it follows the finger and snaps.
@@ -252,7 +259,7 @@ export function DeliveryCalendar({
           <div dir="rtl" className="shrink-0" style={{ width: "33.3333%" }}><MonthGrid anchor={prevMonth} ctx={ctx} /></div>
         </div>
       </div>
-      <p className="text-xs text-gray-400 text-center mt-3">اضغط أي يوم لعرض طلباته · اسحب يمين/يسار لتغيير الشهر{canEdit ? " · اسحب بطاقة لإعادة الجدولة" : ""}</p>
+      <p className="text-xs text-gray-400 text-center mt-3">{t("dcHintTap")}{canEdit ? t("dcHintReschedule") : ""}</p>
 
       {/* Day detail modal */}
       {openDay && (() => {
@@ -262,10 +269,10 @@ export function DeliveryCalendar({
             <div className="bg-white dark:bg-gray-900 rounded-2xl shadow-2xl w-full max-w-md max-h-[82vh] flex flex-col border border-gray-200 dark:border-gray-700" onClick={(e) => e.stopPropagation()}>
               <div className="flex items-center justify-between p-4 border-b border-gray-100 dark:border-gray-700">
                 <div>
-                  <div className="text-base font-black text-gray-900 dark:text-white">{DAY_NAMES[(openDay.getDay() + 1) % 7]} · <span className="font-mono-en">{openDay.getDate()} {MONTHS[openDay.getMonth()]}</span></div>
+                  <div className="text-base font-black text-gray-900 dark:text-white">{dayNames[(openDay.getDay() + 1) % 7]} · <span className="font-mono-en">{openDay.getDate()} {monthNames[openDay.getMonth()]}</span></div>
                   <div className="text-xs text-gray-400 font-semibold"><span className="font-mono-en">{list.length}</span> توصيلة</div>
                 </div>
-                <button onClick={() => setOpenDay(null)} className="w-9 h-9 rounded-full border border-gray-200 dark:border-gray-700 text-gray-500 flex items-center justify-center hover:bg-gray-100 dark:hover:bg-gray-800" aria-label="إغلاق"><X className="w-4 h-4" /></button>
+                <button onClick={() => setOpenDay(null)} className="w-9 h-9 rounded-full border border-gray-200 dark:border-gray-700 text-gray-500 flex items-center justify-center hover:bg-gray-100 dark:hover:bg-gray-800" aria-label={t("dcClose")}><X className="w-4 h-4" /></button>
               </div>
               <div className="p-3 overflow-y-auto flex flex-col gap-2.5">
                 {list.map((it) => {
@@ -284,12 +291,12 @@ export function DeliveryCalendar({
                             <span className="flex items-center gap-1"><User className="w-3 h-3" />{it.driver}</span>
                           </div>
                         </div>
-                        <span className={cn("text-[10px] font-bold px-2 py-0.5 rounded-full shrink-0", s.pill)}>{s.label}</span>
+                        <span className={cn("text-[10px] font-bold px-2 py-0.5 rounded-full shrink-0", s.pill)}>{statusLabel(it.status)}</span>
                       </div>
                       <div className="flex items-center gap-2 mt-3">
-                        <a href={`tel:${tel}`} className="inline-flex items-center gap-1.5 px-3 h-9 rounded-lg bg-gray-900 dark:bg-gray-100 dark:text-gray-900 text-white text-xs font-bold hover:opacity-90"><Phone className="w-3.5 h-3.5" /> اتصال</a>
-                        <a href={waHref(it)} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-1.5 px-3 h-9 rounded-lg bg-green-600 text-white text-xs font-bold hover:bg-green-700"><MessageCircle className="w-3.5 h-3.5" /> واتساب</a>
-                        <button onClick={() => router.push(`/quotations/${it.id}`)} className="inline-flex items-center gap-1.5 px-3 h-9 rounded-lg border border-gray-200 dark:border-gray-700 text-gray-700 dark:text-gray-200 text-xs font-bold hover:bg-gray-50 dark:hover:bg-gray-800 ms-auto"><FileText className="w-3.5 h-3.5" /> فتح الطلب</button>
+                        <a href={`tel:${tel}`} className="inline-flex items-center gap-1.5 px-3 h-9 rounded-lg bg-gray-900 dark:bg-gray-100 dark:text-gray-900 text-white text-xs font-bold hover:opacity-90"><Phone className="w-3.5 h-3.5" /> {t("dcCall")}</a>
+                        <a href={waHref(it)} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-1.5 px-3 h-9 rounded-lg bg-green-600 text-white text-xs font-bold hover:bg-green-700"><MessageCircle className="w-3.5 h-3.5" /> {t("whatsapp")}</a>
+                        <button onClick={() => router.push(`/quotations/${it.id}`)} className="inline-flex items-center gap-1.5 px-3 h-9 rounded-lg border border-gray-200 dark:border-gray-700 text-gray-700 dark:text-gray-200 text-xs font-bold hover:bg-gray-50 dark:hover:bg-gray-800 ms-auto"><FileText className="w-3.5 h-3.5" /> {t("dcOpenOrder")}</button>
                       </div>
                     </div>
                   );

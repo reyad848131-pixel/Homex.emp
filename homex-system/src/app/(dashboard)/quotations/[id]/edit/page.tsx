@@ -244,7 +244,7 @@ export default function EditQuotationPage({ params }: { params: Promise<{ id: st
   // quick fixes like a mistyped name on a freshly imported order, where there
   // are no items yet so the full save is blocked.
   const saveInfoOnly = async () => {
-    if (!canProceed(1)) { toast.error("أكمل بيانات الزبون أولاً"); return; }
+    if (!canProceed(1)) { toast.error(t("completeCustomerFirst")); return; }
     setSaving(true); setSaveError("");
     try {
       const res = await fetch(`/api/quotations/${id}`, {
@@ -255,7 +255,7 @@ export default function EditQuotationPage({ params }: { params: Promise<{ id: st
         body: JSON.stringify({ customerId, customer }),
       });
       if (res.ok) {
-        toast.success("تم حفظ بيانات الزبون");
+        toast.success(t("customerInfoSaved"));
       } else {
         const err = await res.json().catch(() => ({}));
         toast.error(err.error || t("saveEditsFailed"));
@@ -460,13 +460,13 @@ export default function EditQuotationPage({ params }: { params: Promise<{ id: st
           {/* Quick save for customer info only — handy for fixing a name on an
               imported order without needing to add any items. */}
           <div className="mt-6 pt-4 border-t border-gray-100 dark:border-gray-700 flex items-center justify-between gap-3 flex-wrap">
-            <p className="text-xs text-gray-400">عدّلت بيانات الزبون فقط؟ احفظها مباشرة بدون إضافة بنود.</p>
+            <p className="text-xs text-gray-400">{t("saveCustomerHint")}</p>
             <button
               onClick={saveInfoOnly}
               disabled={saving || !canProceed(1)}
               className="inline-flex items-center gap-2 px-4 h-10 rounded-lg bg-gray-900 dark:bg-white dark:text-gray-900 text-white text-sm font-bold disabled:opacity-50"
             >
-              <Save className="w-4 h-4" /> حفظ بيانات الزبون
+              <Save className="w-4 h-4" /> {t("saveCustomerInfo")}
             </button>
           </div>
         </div>
