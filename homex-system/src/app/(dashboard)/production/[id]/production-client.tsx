@@ -6,12 +6,16 @@ import { cn } from "@/lib/utils";
 import { ArrowRight, Check, X, Plus, Package, FileText, HardHat, Layers, Sparkles } from "lucide-react";
 import { DEFAULT_STAGES, initials } from "@/lib/workers";
 
-interface WorkerLite { id: string; name: string; color: string }
-interface Task { id: string; stage: string; workerId: string | null; doneAt: string | null; sortOrder: number; worker: WorkerLite | null }
-interface Item {
-  id: string; description: string; quantity: number; lineTotal: number;
+export interface WorkerLite { id: string; name: string; color: string }
+export interface Task { id: string; stage: string; workerId: string | null; doneAt: string | null; sortOrder: number; worker: WorkerLite | null }
+export interface Item {
+  id: string; description: string; quantity: number;
   category: { nameAr: string; nameEn: string };
   tasks: Task[];
+}
+export interface ProdHeader {
+  id: string; quoteNumber: string; deliveryDate: string | null;
+  customer: { name: string; governorate: string; wilayat: string };
 }
 interface Order {
   id: string; quoteNumber: string; total: number; deliveryDate: string | null; workStatus: string | null;
@@ -60,7 +64,7 @@ function timeAgo(iso: string): string {
   return `قبل ${Math.floor(h / 24)} يوم`;
 }
 
-interface Handlers {
+export interface Handlers {
   assign: (itemId: string, taskId: string, workerId: string | null) => void;
   toggle: (itemId: string, taskId: string, done: boolean) => void;
   remove: (itemId: string, taskId: string) => void;
@@ -163,89 +167,41 @@ function ItemSection({ item, workers, h, locale }: { item: Item; workers: Worker
   );
 }
 
-export function ProductionClient({ order, workers }: { order: Order; workers: WorkerLite[] }) {
-  const [items, setItems] = useState<Item[]>(order.items);
+// Controlled body: renders the whole production workspace from props. Used by
+// the full page AND by the instant overlay on the work board (which feeds it
+// data it already has — no DB round-trip, so it opens immediately).
+export function ProductionBody({ order, items, workers, h, applyToAll, showHeader = true }: {
+  order: ProdHeader; items: Item[]; workers: WorkerLite[]; h: Handlers; applyToAll: (stage: string) => void; showHeader?: boolean;
+}) {
   const locale = "ar";
-
   const totalTasks = items.reduce((s, it) => s + it.tasks.length, 0);
   const doneTasks = items.reduce((s, it) => s + it.tasks.filter((t) => t.doneAt).length, 0);
-
-  const setItemTasks = (itemId: string, fn: (tasks: Task[]) => Task[]) =>
-    setItems((prev) => prev.map((it) => (it.id === itemId ? { ...it, tasks: fn(it.tasks) } : it)));
-
-  const h: Handlers = {
-    add: (itemId, stage) => {
-      fetch("/api/item-tasks", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ quoteItemId: itemId, stage }) })
-        .then((r) => (r.ok ? r.json() : null))
-        .then((task) => { if (task) setItemTasks(itemId, (ts) => [...ts, task]); })
-        .catch(() => {});
-    },
-    assign: (itemId, taskId, workerId) => {
-      const w = workers.find((x) => x.id === workerId) || null;
-      setItemTasks(itemId, (ts) => ts.map((t) => (t.id === taskId ? { ...t, workerId, worker: w } : t)));
-      fetch("/api/item-tasks", { method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ id: taskId, workerId }) }).catch(() => {});
-    },
-    toggle: (itemId, taskId, done) => {
-      setItemTasks(itemId, (ts) => ts.map((t) => (t.id === taskId ? { ...t, doneAt: done ? new Date().toISOString() : null } : t)));
-      fetch("/api/item-tasks", { method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ id: taskId, done }) }).catch(() => {});
-    },
-    remove: (itemId, taskId) => {
-      setItemTasks(itemId, (ts) => ts.filter((t) => t.id !== taskId));
-      fetch(`/api/item-tasks?id=${taskId}`, { method: "DELETE" }).catch(() => {});
-    },
-  };
-
-  // Apply one stage to every item at once.
-  const applyToAll = (stage: string) => {
-    if (!stage) return;
-    const ids = items.map((it) => it.id);
-    fetch("/api/item-tasks", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ quoteItemIds: ids, stage }) })
-      .then((r) => (r.ok ? r.json() : null))
-      .then((tasks: Array<Task & { quoteItemId: string }> | null) => {
-        if (!Array.isArray(tasks)) return;
-        // Map each created task back to its item by quoteItemId.
-        const byItem = new Map<string, Task[]>();
-        for (const t of tasks) {
-          const arr = byItem.get(t.quoteItemId) || [];
-          arr.push(t); byItem.set(t.quoteItemId, arr);
-        }
-        setItems((prev) => prev.map((it) => byItem.has(it.id) ? { ...it, tasks: [...it.tasks, ...byItem.get(it.id)!] } : it));
-      })
-      .catch(() => {});
-  };
-
-  const applyTemplate = async () => {
-    for (const stage of QUICK_TEMPLATE) applyToAll(stage);
-  };
-
+  const applyTemplate = () => { for (const stage of QUICK_TEMPLATE) applyToAll(stage); };
   const days = order.deliveryDate ? Math.ceil((new Date(new Date(order.deliveryDate).toDateString()).getTime() - new Date(new Date().toDateString()).getTime()) / 86400000) : null;
 
   return (
     <div>
-      <Link href="/work-orders" className="inline-flex items-center gap-1.5 text-sm font-bold text-gray-500 hover:text-gray-900 dark:hover:text-white mb-4">
-        <ArrowRight className="w-4 h-4" /> رجوع لإدارة الأعمال
-      </Link>
-
-      {/* Order header */}
-      <div className="rounded-2xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 p-4 sm:p-5 mb-4 flex items-center gap-4 flex-wrap">
-        <ProgressRing done={doneTasks} total={totalTasks} />
-        <div className="min-w-0 flex-1">
-          <div className="flex items-center gap-2 flex-wrap">
-            <HardHat className="w-5 h-5 text-teal-600" />
-            <h1 className="text-xl font-black">خط الإنتاج</h1>
-            <Link href={`/quotations/${order.id}`} className="font-mono-en font-bold text-sm text-teal-600 hover:underline flex items-center gap-1">
-              <FileText className="w-3.5 h-3.5" /> {order.quoteNumber}
-            </Link>
-          </div>
-          <div className="text-sm text-gray-600 dark:text-gray-300 font-semibold mt-1">{order.customer.name}</div>
-          <div className="text-xs text-gray-400 mt-0.5 flex items-center gap-2 flex-wrap">
-            <span>{order.customer.governorate} — {order.customer.wilayat}</span>
-            {order.deliveryDate && <><span>·</span><span>التسليم <span className="font-mono-en">{new Date(order.deliveryDate).toLocaleDateString("ar-OM", { day: "numeric", month: "short" })}</span></span></>}
-            {days != null && days >= 0 && <span className={cn("font-bold", days <= 7 ? "text-red-500" : days <= 30 ? "text-orange-500" : "text-gray-400")}>· باقٍ <span className="font-mono-en">{days}</span> يوم</span>}
-            {days != null && days < 0 && <span className="font-bold text-red-500">· متأخّر <span className="font-mono-en">{Math.abs(days)}</span> يوم</span>}
+      {showHeader && (
+        <div className="rounded-2xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 p-4 sm:p-5 mb-4 flex items-center gap-4 flex-wrap">
+          <ProgressRing done={doneTasks} total={totalTasks} />
+          <div className="min-w-0 flex-1">
+            <div className="flex items-center gap-2 flex-wrap">
+              <HardHat className="w-5 h-5 text-teal-600" />
+              <h1 className="text-xl font-black">خط الإنتاج</h1>
+              <Link href={`/quotations/${order.id}`} className="font-mono-en font-bold text-sm text-teal-600 hover:underline flex items-center gap-1">
+                <FileText className="w-3.5 h-3.5" /> {order.quoteNumber}
+              </Link>
+            </div>
+            <div className="text-sm text-gray-600 dark:text-gray-300 font-semibold mt-1">{order.customer.name}</div>
+            <div className="text-xs text-gray-400 mt-0.5 flex items-center gap-2 flex-wrap">
+              <span>{order.customer.governorate} — {order.customer.wilayat}</span>
+              {order.deliveryDate && <><span>·</span><span>التسليم <span className="font-mono-en">{new Date(order.deliveryDate).toLocaleDateString("ar-OM", { day: "numeric", month: "short" })}</span></span></>}
+              {days != null && days >= 0 && <span className={cn("font-bold", days <= 7 ? "text-red-500" : days <= 30 ? "text-orange-500" : "text-gray-400")}>· باقٍ <span className="font-mono-en">{days}</span> يوم</span>}
+              {days != null && days < 0 && <span className="font-bold text-red-500">· متأخّر <span className="font-mono-en">{Math.abs(days)}</span> يوم</span>}
+            </div>
           </div>
         </div>
-      </div>
+      )}
 
       {/* Toolbar: apply a stage / a quick template to ALL items at once */}
       {items.length > 1 && (
@@ -281,6 +237,65 @@ export function ProductionClient({ order, workers }: { order: Order; workers: Wo
           {items.map((item) => <ItemSection key={item.id} item={item} workers={workers} h={h} locale={locale} />)}
         </div>
       )}
+    </div>
+  );
+}
+
+// Build the optimistic task handlers + applyToAll for a controlled items state.
+export function buildProductionHandlers(
+  items: Item[],
+  setItems: (fn: (prev: Item[]) => Item[]) => void,
+  workers: WorkerLite[],
+): { h: Handlers; applyToAll: (stage: string) => void } {
+  const setItemTasks = (itemId: string, fn: (tasks: Task[]) => Task[]) =>
+    setItems((prev) => prev.map((it) => (it.id === itemId ? { ...it, tasks: fn(it.tasks) } : it)));
+
+  const h: Handlers = {
+    add: (itemId, stage) => {
+      fetch("/api/item-tasks", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ quoteItemId: itemId, stage }) })
+        .then((r) => (r.ok ? r.json() : null))
+        .then((task) => { if (task) setItemTasks(itemId, (ts) => [...ts, task]); })
+        .catch(() => {});
+    },
+    assign: (itemId, taskId, workerId) => {
+      const w = workers.find((x) => x.id === workerId) || null;
+      setItemTasks(itemId, (ts) => ts.map((t) => (t.id === taskId ? { ...t, workerId, worker: w } : t)));
+      fetch("/api/item-tasks", { method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ id: taskId, workerId }) }).catch(() => {});
+    },
+    toggle: (itemId, taskId, done) => {
+      setItemTasks(itemId, (ts) => ts.map((t) => (t.id === taskId ? { ...t, doneAt: done ? new Date().toISOString() : null } : t)));
+      fetch("/api/item-tasks", { method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ id: taskId, done }) }).catch(() => {});
+    },
+    remove: (itemId, taskId) => {
+      setItemTasks(itemId, (ts) => ts.filter((t) => t.id !== taskId));
+      fetch(`/api/item-tasks?id=${taskId}`, { method: "DELETE" }).catch(() => {});
+    },
+  };
+
+  const applyToAll = (stage: string) => {
+    if (!stage) return;
+    const ids = items.map((it) => it.id);
+    fetch("/api/item-tasks", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ quoteItemIds: ids, stage }) })
+      .then((r) => (r.ok ? r.json() : null))
+      .then((tasks: Array<Task & { quoteItemId: string }> | null) => {
+        if (!Array.isArray(tasks)) return;
+        for (const t of tasks) setItemTasks(t.quoteItemId, (ts) => [...ts, t]);
+      })
+      .catch(() => {});
+  };
+
+  return { h, applyToAll };
+}
+
+export function ProductionClient({ order, workers }: { order: Order; workers: WorkerLite[] }) {
+  const [items, setItems] = useState<Item[]>(order.items);
+  const { h, applyToAll } = buildProductionHandlers(items, setItems, workers);
+  return (
+    <div>
+      <Link href="/work-orders" className="inline-flex items-center gap-1.5 text-sm font-bold text-gray-500 hover:text-gray-900 dark:hover:text-white mb-4">
+        <ArrowRight className="w-4 h-4" /> رجوع لإدارة الأعمال
+      </Link>
+      <ProductionBody order={order} items={items} workers={workers} h={h} applyToAll={applyToAll} />
     </div>
   );
 }
