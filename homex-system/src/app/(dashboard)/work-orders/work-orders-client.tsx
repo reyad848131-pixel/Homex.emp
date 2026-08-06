@@ -25,9 +25,9 @@ import {
   Filter,
   Package,
   Camera,
-  Plus,
+  HardHat,
 } from "lucide-react";
-import { DEFAULT_STAGES, initials } from "@/lib/workers";
+import { initials } from "@/lib/workers";
 
 interface WorkerLite { id: string; name: string; color: string }
 interface ItemTask {
@@ -137,14 +137,6 @@ function getNextMaterialStatus(current: string): string {
   return "not_ordered";
 }
 
-// ── Production-pipeline UI (per item: stages + worker + done) ────────────────
-interface TaskHandlers {
-  add: (itemId: string, stage: string) => void;
-  assign: (itemId: string, taskId: string, workerId: string | null) => void;
-  toggle: (itemId: string, taskId: string, done: boolean) => void;
-  remove: (itemId: string, taskId: string) => void;
-}
-
 // A small circular done/total indicator for an order's whole pipeline.
 function ProgressRing({ done, total, size = 40 }: { done: number; total: number; size?: number }) {
   const r = (size - 5) / 2;
@@ -178,91 +170,6 @@ function Avatar({ color, name, size = 22 }: { color: string; name: string; size?
   );
 }
 
-function StageChip({ task, index, workers, itemId, h }: {
-  task: ItemTask; index: number; workers: WorkerLite[]; itemId: string; h: TaskHandlers;
-}) {
-  const done = !!task.doneAt;
-  const w = task.worker;
-  return (
-    <div className={cn(
-      "rounded-lg border p-2 flex flex-col gap-1.5 w-[150px] shrink-0 transition-colors",
-      done ? "bg-emerald-50 dark:bg-emerald-900/15 border-emerald-200 dark:border-emerald-800"
-        : w ? "bg-white dark:bg-gray-800 border-gray-200 dark:border-gray-600"
-        : "bg-gray-50 dark:bg-gray-800/50 border-dashed border-gray-300 dark:border-gray-600"
-    )}>
-      <div className="flex items-center justify-between gap-1">
-        <span className="text-[11.5px] font-bold flex items-center gap-1.5 min-w-0">
-          <span className="font-mono-en text-[9px] text-gray-400">{index + 1}</span>
-          <span className="truncate">{task.stage}</span>
-        </span>
-        <button onClick={() => h.remove(itemId, task.id)} className="text-gray-300 hover:text-red-500 shrink-0" title="حذف المرحلة">
-          <X className="w-3 h-3" />
-        </button>
-      </div>
-
-      <div className="flex items-center gap-1.5">
-        <Avatar color={w ? w.color : "#cbd5e1"} name={w ? w.name : "؟"} size={20} />
-        <select
-          value={task.workerId || ""}
-          onChange={(e) => h.assign(itemId, task.id, e.target.value || null)}
-          className="text-[11px] font-semibold bg-transparent flex-1 min-w-0 outline-none cursor-pointer text-gray-700 dark:text-gray-200"
-        >
-          <option value="">بدون عامل</option>
-          {workers.map((wk) => <option key={wk.id} value={wk.id}>{wk.name}</option>)}
-        </select>
-      </div>
-
-      <button
-        onClick={() => h.toggle(itemId, task.id, !done)}
-        className={cn(
-          "text-[10.5px] font-bold rounded-md px-2 py-1 flex items-center justify-center gap-1 transition-colors",
-          done ? "bg-emerald-600 text-white hover:bg-emerald-700"
-            : "bg-gray-100 dark:bg-gray-700 text-gray-500 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600"
-        )}
-      >
-        {done ? <><Check className="w-3 h-3" /> منجز</> : "علّم كمنجز"}
-      </button>
-    </div>
-  );
-}
-
-function ItemPipeline({ item, workers, h }: { item: WorkItem; workers: WorkerLite[]; h: TaskHandlers }) {
-  const doneCount = item.tasks.filter((t) => t.doneAt).length;
-  const onAdd = (v: string) => {
-    if (!v) return;
-    const stage = v === "__custom__" ? (window.prompt("اسم المرحلة:") || "").trim() : v;
-    if (stage) h.add(item.id, stage);
-  };
-  return (
-    <div className="rounded-lg border border-gray-100 dark:border-gray-700 p-2.5 bg-gray-50/40 dark:bg-gray-800/30">
-      <div className="flex items-center gap-2 mb-2">
-        <span className="text-xs font-bold text-gray-700 dark:text-gray-200 truncate">{item.description}</span>
-        <span className="text-gray-400 text-xs font-mono-en shrink-0">×{item.quantity}</span>
-        {item.tasks.length > 0 && (
-          <span className="ms-auto text-[10px] font-bold text-gray-400 font-mono-en shrink-0">{doneCount}/{item.tasks.length} مراحل</span>
-        )}
-      </div>
-      <div className="flex flex-wrap gap-2 items-stretch">
-        {item.tasks.map((task, i) => (
-          <StageChip key={task.id} task={task} index={i} workers={workers} itemId={item.id} h={h} />
-        ))}
-        <label className="relative overflow-hidden w-[150px] shrink-0 rounded-lg border border-dashed border-gray-300 dark:border-gray-600 flex items-center justify-center gap-1.5 text-[11px] font-bold text-gray-400 hover:text-teal-600 hover:border-teal-400 cursor-pointer transition-colors min-h-[76px]">
-          <Plus className="w-3.5 h-3.5" />
-          <span>إضافة مرحلة</span>
-          <select
-            className="absolute inset-0 opacity-0 w-full h-full cursor-pointer"
-            value=""
-            onChange={(e) => { onAdd(e.target.value); e.target.value = ""; }}
-          >
-            <option value="">إضافة مرحلة…</option>
-            {DEFAULT_STAGES.map((s) => <option key={s} value={s}>{s}</option>)}
-            <option value="__custom__">مخصّص…</option>
-          </select>
-        </label>
-      </div>
-    </div>
-  );
-}
 
 export function WorkOrdersClient({ initialData }: { initialData: { quotations: WorkQuotation[]; counts: Record<string, number> } }) {
   const [data, setData] = useState<{ quotations: WorkQuotation[]; counts: Record<string, number> } | null>(initialData);
@@ -281,7 +188,6 @@ export function WorkOrdersClient({ initialData }: { initialData: { quotations: W
   const [waTemplates, setWaTemplates] = useState<{ completed: string; ready: string; delivered: string }>({ completed: "", ready: "", delivered: "" });
   const [waCompany, setWaCompany] = useState({ name: "", phone: "" });
   const [waPrompt, setWaPrompt] = useState<{ q: WorkQuotation; status: "completed" | "ready_for_delivery" | "delivered" } | null>(null);
-  const [workers, setWorkers] = useState<WorkerLite[]>([]);
   const debouncedSearch = useDebouncedValue(search);
   // The default view is already server-rendered; skip the first client refetch.
   const firstRun = useRef(true);
@@ -317,11 +223,6 @@ export function WorkOrdersClient({ initialData }: { initialData: { quotations: W
     setLoading(true);
     fetchData();
   }, [fetchData]);
-
-  // Load the factory workers once (for the per-item stage assignment).
-  useEffect(() => {
-    fetch("/api/workers").then((r) => (r.ok ? r.json() : [])).then((w) => setWorkers(Array.isArray(w) ? w : [])).catch(() => {});
-  }, []);
 
   // Load the editable WhatsApp templates + company signature once.
   useEffect(() => {
@@ -446,52 +347,6 @@ export function WorkOrdersClient({ initialData }: { initialData: { quotations: W
     }
     updateLocal(id, patch);
     patchApi({ id, [field]: value });
-  };
-
-  // ── Production-stage task handlers (optimistic; the API persists) ──────────
-  // Rewrite one item's task list inside the nested data tree.
-  const setItemTasks = (itemId: string, fn: (tasks: ItemTask[]) => ItemTask[]) => {
-    setData((prev) => {
-      if (!prev) return prev;
-      return {
-        ...prev,
-        quotations: prev.quotations.map((q) => ({
-          ...q,
-          items: q.items.map((it) => (it.id === itemId ? { ...it, tasks: fn(it.tasks) } : it)),
-        })),
-      };
-    });
-  };
-
-  const taskHandlers: TaskHandlers = {
-    add: (itemId, stage) => {
-      fetch("/api/item-tasks", {
-        method: "POST", headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ quoteItemId: itemId, stage }),
-      })
-        .then((r) => (r.ok ? r.json() : null))
-        .then((task) => { if (task) setItemTasks(itemId, (ts) => [...ts, task]); })
-        .catch(() => {});
-    },
-    assign: (itemId, taskId, workerId) => {
-      const w = workers.find((x) => x.id === workerId) || null;
-      setItemTasks(itemId, (ts) => ts.map((t) => (t.id === taskId ? { ...t, workerId, worker: w } : t)));
-      fetch("/api/item-tasks", {
-        method: "PATCH", headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ id: taskId, workerId }),
-      }).catch(() => fetchData());
-    },
-    toggle: (itemId, taskId, done) => {
-      setItemTasks(itemId, (ts) => ts.map((t) => (t.id === taskId ? { ...t, doneAt: done ? new Date().toISOString() : null } : t)));
-      fetch("/api/item-tasks", {
-        method: "PATCH", headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ id: taskId, done }),
-      }).catch(() => fetchData());
-    },
-    remove: (itemId, taskId) => {
-      setItemTasks(itemId, (ts) => ts.filter((t) => t.id !== taskId));
-      fetch(`/api/item-tasks?id=${taskId}`, { method: "DELETE" }).catch(() => fetchData());
-    },
   };
 
   const fmtDate = (d: string) => new Date(d).toLocaleDateString(dateLocale, { year: "numeric", month: "short", day: "numeric" });
@@ -640,6 +495,11 @@ export function WorkOrdersClient({ initialData }: { initialData: { quotations: W
             const itemSummary = q.items.slice(0, 3).map((it) => locale === "en" ? it.category.nameEn : it.category.nameAr).join(locale === "ar" ? "، " : ", ");
             const totalTasks = q.items.reduce((s, it) => s + it.tasks.length, 0);
             const doneTasks = q.items.reduce((s, it) => s + it.tasks.filter((t) => t.doneAt).length, 0);
+            const orderWorkers: WorkerLite[] = [];
+            const seenW = new Set<string>();
+            for (const it of q.items) for (const tk of it.tasks) {
+              if (tk.worker && !seenW.has(tk.worker.id)) { seenW.add(tk.worker.id); orderWorkers.push(tk.worker); }
+            }
 
             return (
               <div
@@ -769,26 +629,32 @@ export function WorkOrdersClient({ initialData }: { initialData: { quotations: W
                       </div>
                     </div>
 
-                    <div>
-                      <div className="flex items-center justify-between mb-2">
-                        <p className="text-xs text-gray-400 font-bold flex items-center gap-1">
-                          <Package className="w-3.5 h-3.5" /> {t("items")} — خط الإنتاج
-                        </p>
-                        {totalTasks > 0 && (
-                          <span className="text-[11px] font-bold text-gray-500 dark:text-gray-400 font-mono-en">{doneTasks}/{totalTasks} مرحلة منجزة</span>
-                        )}
+                    {/* Production line — opens the spacious full-page workspace. */}
+                    <Link
+                      href={`/production/${q.id}`}
+                      className="group flex items-center gap-3 p-3 rounded-xl border border-gray-200 dark:border-gray-700 hover:border-teal-400 dark:hover:border-teal-600 hover:bg-teal-50/40 dark:hover:bg-teal-900/10 transition-colors"
+                    >
+                      <div className="w-10 h-10 rounded-lg bg-teal-50 dark:bg-teal-900/20 grid place-items-center text-teal-600 shrink-0">
+                        <HardHat className="w-5 h-5" />
                       </div>
-                      {workers.length === 0 && (
-                        <p className="text-[11px] text-amber-600 dark:text-amber-400 mb-2">
-                          لا يوجد عمّال بعد — أضِف عمّالك من صفحة «العمّال» لتعيينهم على المراحل.
-                        </p>
+                      <div className="min-w-0 flex-1">
+                        <div className="font-bold text-sm">خط الإنتاج</div>
+                        <div className="text-xs text-gray-500 dark:text-gray-400">
+                          {totalTasks > 0
+                            ? <><span className="font-mono-en font-bold">{doneTasks}/{totalTasks}</span> مرحلة منجزة</>
+                            : "لم تُضف مراحل بعد — اضغط للبدء"}
+                        </div>
+                      </div>
+                      {orderWorkers.length > 0 && (
+                        <div className="flex items-center gap-1 shrink-0">
+                          {orderWorkers.slice(0, 4).map((w) => (
+                            <Avatar key={w.id} color={w.color} name={w.name} size={24} />
+                          ))}
+                          {orderWorkers.length > 4 && <span className="text-[10px] font-bold text-gray-400 font-mono-en">+{orderWorkers.length - 4}</span>}
+                        </div>
                       )}
-                      <div className="space-y-2">
-                        {q.items.map((item) => (
-                          <ItemPipeline key={item.id} item={item} workers={workers} h={taskHandlers} />
-                        ))}
-                      </div>
-                    </div>
+                      <ChevronLeft className="w-5 h-5 text-gray-400 group-hover:text-teal-600 shrink-0" />
+                    </Link>
 
                     {q.workStatus === "completed" && (
                       <button

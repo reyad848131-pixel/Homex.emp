@@ -13,31 +13,43 @@ async function guard() {
   return { user };
 }
 
-// POST: add a production stage to an item. { quoteItemId, stage, workerId? }
+// POST: add a production stage to one item ({ quoteItemId, stage, workerId? })
+// or the same stage to many at once ({ quoteItemIds: string[], stage }) — the
+// "apply to all items" action. Returns the created task, or an array of them.
 export async function POST(req: NextRequest) {
   try {
     const g = await guard();
     if (g.error) return g.error;
     const body = await req.json();
-    const quoteItemId = String(body.quoteItemId || "");
     const stage = String(body.stage || "").trim();
-    if (!quoteItemId || !stage) return NextResponse.json({ error: "بيانات ناقصة" }, { status: 400 });
+    const ids: string[] = Array.isArray(body.quoteItemIds)
+      ? body.quoteItemIds.map(String).filter(Boolean)
+      : body.quoteItemId ? [String(body.quoteItemId)] : [];
+    if (!stage || ids.length === 0) return NextResponse.json({ error: "بيانات ناقصة" }, { status: 400 });
 
-    const last = await prisma.itemTask.findFirst({
-      where: { quoteItemId },
-      orderBy: { sortOrder: "desc" },
-      select: { sortOrder: true },
+    // Next free sortOrder per item, so a bulk-added stage lands at each end.
+    const lasts = await prisma.itemTask.groupBy({
+      by: ["quoteItemId"],
+      where: { quoteItemId: { in: ids } },
+      _max: { sortOrder: true },
     });
-    const task = await prisma.itemTask.create({
-      data: {
-        quoteItemId,
-        stage,
-        workerId: body.workerId || null,
-        sortOrder: (last?.sortOrder ?? -1) + 1,
-      },
-      include: { worker: true },
-    });
-    return NextResponse.json(task, { status: 201 });
+    const nextOrder = new Map(lasts.map((l) => [l.quoteItemId, (l._max.sortOrder ?? -1) + 1]));
+
+    const created = [];
+    for (const quoteItemId of ids) {
+      const task = await prisma.itemTask.create({
+        data: {
+          quoteItemId,
+          stage,
+          workerId: body.workerId || null,
+          sortOrder: nextOrder.get(quoteItemId) ?? 0,
+        },
+        include: { worker: true },
+      });
+      created.push(task);
+    }
+    const single = !Array.isArray(body.quoteItemIds);
+    return NextResponse.json(single ? created[0] : created, { status: 201 });
   } catch (e) {
     console.error("API error [/api/item-tasks POST]:", e);
     return NextResponse.json({ error: "Server error" }, { status: 500 });
