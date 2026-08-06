@@ -5,6 +5,7 @@ import Link from "next/link";
 import { cn } from "@/lib/utils";
 import { ArrowRight, Check, X, Plus, Package, FileText, HardHat, Layers, Sparkles } from "lucide-react";
 import { DEFAULT_STAGES, initials, stageLabel } from "@/lib/workers";
+import { displayName } from "@/lib/translit";
 import { useI18n } from "@/lib/i18n";
 
 export interface WorkerLite { id: string; name: string; color: string }
@@ -200,7 +201,7 @@ export function ProductionBody({ order, items, workers, h, applyToAll, showHeade
                 <FileText className="w-3.5 h-3.5" /> {order.quoteNumber}
               </Link>
             </div>
-            <div className="text-sm text-gray-600 dark:text-gray-300 font-semibold mt-1">{order.customer.name}</div>
+            <div className="text-sm text-gray-600 dark:text-gray-300 font-semibold mt-1">{displayName(order.customer.name, locale)}</div>
             <div className="text-xs text-gray-400 mt-0.5 flex items-center gap-2 flex-wrap">
               <span>{order.customer.governorate} — {order.customer.wilayat}</span>
               {order.deliveryDate && <><span>·</span><span>{t("prodDelivery")} <span className="font-mono-en">{new Date(order.deliveryDate).toLocaleDateString(en ? "en-US" : "ar-OM", { day: "numeric", month: "short" })}</span></span></>}

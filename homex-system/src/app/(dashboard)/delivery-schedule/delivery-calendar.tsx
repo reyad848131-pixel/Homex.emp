@@ -4,6 +4,7 @@ import { useState, useRef, useEffect, type Dispatch, type SetStateAction } from 
 import { useRouter } from "next/navigation";
 import { cn } from "@/lib/utils";
 import { useI18n } from "@/lib/i18n";
+import { displayName } from "@/lib/translit";
 import { Phone, MessageCircle, FileText, X, User } from "lucide-react";
 
 // A single delivery mapped for the calendar view.
@@ -42,6 +43,7 @@ const sameMonth = (a: Date, b: Date) => a.getFullYear() === b.getFullYear() && a
 // render would remount the whole grid and stutter the swipe.
 interface CalCtx {
   canEdit: boolean;
+  locale: string;
   today: Date;
   dragId: string | null;
   overKey: string | null;
@@ -59,7 +61,7 @@ function Chip({ it, ctx }: { it: CalItem; ctx: CalCtx }) {
       draggable={ctx.canEdit}
       onDragStart={() => ctx.setDragId(it.id)}
       onDragEnd={() => { ctx.setDragId(null); ctx.setOverKey(null); }}
-      title={`${it.name} — ${it.wilayat}${it.time ? " · " + it.time : ""} · ${it.driver}`}
+      title={`${displayName(it.name, ctx.locale)} — ${it.wilayat}${it.time ? " · " + it.time : ""} · ${it.driver}`}
       className={cn(
         "rounded-md border border-gray-200 dark:border-gray-700 border-s-[3px] px-1.5 py-1 transition-all hover:shadow-sm",
         ctx.canEdit ? "cursor-grab active:cursor-grabbing" : "cursor-pointer",
@@ -68,7 +70,7 @@ function Chip({ it, ctx }: { it: CalItem; ctx: CalCtx }) {
     >
       <div className="text-[11.5px] font-bold text-gray-800 dark:text-gray-100 flex items-center gap-1 min-w-0">
         {it.status === "delivered" && <span className="text-emerald-600 shrink-0">✔</span>}
-        <span className="truncate">{it.name}</span>
+        <span className="truncate">{displayName(it.name, ctx.locale)}</span>
       </div>
       <div className="text-[10px] text-gray-500 truncate">{it.wilayat}{it.time ? <span className="font-mono-en"> · {it.time}</span> : null}</div>
     </div>
@@ -219,7 +221,7 @@ export function DeliveryCalendar({
   const itemsOn = (day: Date) =>
     items.filter((it) => sameDay(new Date(it.date), day)).sort((a, b) => (a.time || "~").localeCompare(b.time || "~"));
 
-  const ctx: CalCtx = { canEdit, today, dragId, overKey, setDragId, setOverKey, setOpenDay, onReschedule, itemsOn };
+  const ctx: CalCtx = { canEdit, locale, today, dragId, overKey, setDragId, setOverKey, setOpenDay, onReschedule, itemsOn };
 
   return (
     <div>
@@ -283,7 +285,7 @@ export function DeliveryCalendar({
                       <div className="flex items-start justify-between gap-2">
                         <div className="min-w-0">
                           <div className="font-bold text-gray-900 dark:text-white flex items-center gap-1">
-                            {it.status === "delivered" && <span className="text-emerald-600">✔</span>}{it.name}
+                            {it.status === "delivered" && <span className="text-emerald-600">✔</span>}{displayName(it.name, locale)}
                           </div>
                           <div className="text-xs text-gray-500 mt-0.5">{it.governorate} — {it.wilayat} · <span className="font-mono-en">{it.quoteNumber}</span></div>
                           <div className="text-xs text-gray-400 mt-1 flex items-center gap-3 flex-wrap">

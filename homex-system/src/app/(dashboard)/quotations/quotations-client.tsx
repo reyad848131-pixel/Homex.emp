@@ -3,6 +3,7 @@
 import { useState, useEffect, useRef } from "react";
 import Link from "next/link";
 import { STATUS_MAP } from "@/lib/types";
+import { displayName } from "@/lib/translit";
 import { Search, FilePlus, FileText, Trash2, X, Loader2, Download } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useDebouncedValue } from "@/lib/hooks";
@@ -49,7 +50,7 @@ export function QuotationsClient({ initialData }: { initialData: { quotations: Q
   const [sort, setSort] = useState<"recent" | "delivery" | "number">("recent");
   const limit = 20;
   const debouncedSearch = useDebouncedValue(search);
-  const { t, dateLocale } = useI18n();
+  const { t, locale, dateLocale } = useI18n();
   const toast = useToast();
   // The first page is already server-rendered; skip the initial client refetch.
   const firstRun = useRef(true);
@@ -307,7 +308,7 @@ export function QuotationsClient({ initialData }: { initialData: { quotations: Q
                         </Link>
                       </td>
                       <td className="p-3">
-                        <p className="font-semibold">{q.customer.name}</p>
+                        <p className="font-semibold">{displayName(q.customer.name, locale)}</p>
                         <p className="text-xs text-gray-400 font-mono-en">{q.customer.phone}</p>
                       </td>
                       <td className="p-3 text-gray-500">{q.customer.governorate}</td>

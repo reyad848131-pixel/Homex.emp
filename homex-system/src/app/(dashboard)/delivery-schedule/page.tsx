@@ -3,6 +3,7 @@
 import { useState, useEffect, useCallback, useMemo, useRef } from "react";
 import Link from "next/link";
 import { cn, roundMoney } from "@/lib/utils";
+import { displayName } from "@/lib/translit";
 import { useI18n } from "@/lib/i18n";
 import { useDebouncedValue } from "@/lib/hooks";
 import { CardsSkeleton } from "@/components/skeleton";
@@ -39,7 +40,7 @@ const getDaysRemaining = (d: string) => daysUntil(d) as number;
 const DEFAULT_DRIVER = "قصي الشكيلي";
 
 export default function DeliverySchedulePage() {
-  const { t, dateLocale } = useI18n();
+  const { t, locale, dateLocale } = useI18n();
   const [tab, setTab] = useState<"queue" | "delivered">("queue");
   const [monthAnchor, setMonthAnchor] = useState<Date>(() => { const d = new Date(); d.setHours(0, 0, 0, 0); return d; });
   const [showStats, setShowStats] = useState(false);
@@ -476,7 +477,7 @@ export default function DeliverySchedulePage() {
                       <div className="flex flex-wrap items-start justify-between gap-3">
                         <div className="min-w-0">
                           <div className="flex items-center gap-2 flex-wrap">
-                            <h3 className="text-base font-bold text-gray-900 dark:text-white">{q.customer.name}</h3>
+                            <h3 className="text-base font-bold text-gray-900 dark:text-white">{displayName(q.customer.name, locale)}</h3>
                             {!isDelivered && (
                               <span className={cn("text-[11px] font-bold px-2 py-0.5 rounded-full border", s.tone)}>{daysLabel(days)}</span>
                             )}

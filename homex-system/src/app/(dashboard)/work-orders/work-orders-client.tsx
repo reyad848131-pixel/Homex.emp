@@ -28,6 +28,7 @@ import {
   HardHat,
 } from "lucide-react";
 import { initials } from "@/lib/workers";
+import { displayName } from "@/lib/translit";
 import { ProductionBody, buildProductionHandlers } from "../production/[id]/production-client";
 
 interface WorkerLite { id: string; name: string; color: string }
@@ -539,7 +540,7 @@ export function WorkOrdersClient({ initialData }: { initialData: { quotations: W
                       >
                         {q.quoteNumber}
                       </Link>
-                      <span className="text-sm font-semibold text-gray-700 dark:text-gray-300">{q.customer.name}</span>
+                      <span className="text-sm font-semibold text-gray-700 dark:text-gray-300">{displayName(q.customer.name, locale)}</span>
                       {ws && wsKey && (
                         <span className={cn("text-[10px] font-bold px-2 py-0.5 rounded", ws.badgeColor)}>
                           {t(wsKey)}
@@ -587,7 +588,7 @@ export function WorkOrdersClient({ initialData }: { initialData: { quotations: W
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                       <div>
                         <p className="text-xs text-gray-400 font-bold mb-1">{t("customer")}</p>
-                        <p className="text-sm font-semibold">{q.customer.name}</p>
+                        <p className="text-sm font-semibold">{displayName(q.customer.name, locale)}</p>
                         <p className="text-xs text-gray-500 font-mono-en">{q.customer.phoneCode} {q.customer.phone}</p>
                         <p className="text-xs text-gray-500">{q.customer.governorate} – {q.customer.wilayat}</p>
                       </div>
@@ -856,7 +857,7 @@ export function WorkOrdersClient({ initialData }: { initialData: { quotations: W
               <Truck className="w-4 h-4" /> {waPrompt.status === "completed" ? "اكتمل الطلب" : waPrompt.status === "delivered" ? "تم التوصيل" : "جاهز للتوصيل"}
             </h3>
             <p className="text-sm text-gray-500 mb-4">
-              تبي ترسل رسالة واتساب إلى <b>{waPrompt.q.customer.name}</b> تُعلمه؟
+              تبي ترسل رسالة واتساب إلى <b>{displayName(waPrompt.q.customer.name, locale)}</b> تُعلمه؟
               <span className="block text-xs text-gray-400 font-mono-en mt-1">{waPrompt.q.customer.phoneCode} {waPrompt.q.customer.phone} · {waPrompt.q.quoteNumber}</span>
             </p>
             <div className="flex gap-2">
