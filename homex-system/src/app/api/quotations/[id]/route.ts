@@ -244,6 +244,28 @@ export async function PATCH(
       if (body.statusComment) allowedFields.statusComment = body.statusComment;
     }
 
+    // Customer-info-only save (e.g. fixing a mistyped name on an imported
+    // order) — updates the linked customer without requiring any item changes.
+    // Doesn't touch prices, so it's allowed even on a financially locked quote.
+    if (body.customer && body.customerId && !body.items) {
+      const c = body.customer;
+      if (!c.name || !String(c.name).trim()) {
+        return NextResponse.json({ error: "اسم الزبون مطلوب" }, { status: 400 });
+      }
+      await prisma.customer.update({
+        where: { id: body.customerId },
+        data: {
+          name: String(c.name).trim(),
+          ...(c.phone !== undefined ? { phone: c.phone } : {}),
+          ...(c.phoneCode !== undefined ? { phoneCode: c.phoneCode || "+968" } : {}),
+          ...(c.governorate !== undefined ? { governorate: c.governorate } : {}),
+          ...(c.wilayat !== undefined ? { wilayat: c.wilayat } : {}),
+          ...(c.address !== undefined ? { address: c.address } : {}),
+        },
+      });
+      await logAction(user.id, "update", "customer", body.customerId, "customer_info_edit");
+    }
+
     const updated = await prisma.quotation.update({
       where: { id },
       data: allowedFields,
