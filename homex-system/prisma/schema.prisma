@@ -257,9 +257,46 @@ model QuoteItem {
 
   quotation Quotation @relation(fields: [quotationId], references: [id], onDelete: Cascade)
   category  Category  @relation(fields: [categoryId], references: [id])
+  tasks     ItemTask[]
 
   @@index([quotationId])
   @@map("quote_items")
+}
+
+// A factory worker (carpenter, painter, upholsterer …). Separate from Employee
+// (login users) — workers don't sign in; they're just a managed list with a
+// colour identity used across the work board and productivity reports.
+model Worker {
+  id        String   @id @default(cuid())
+  name      String
+  color     String   @default("#2dd4bf")
+  isActive  Boolean  @default(true) @map("is_active")
+  sortOrder Int      @default(0) @map("sort_order")
+  createdAt DateTime @default(now()) @map("created_at")
+
+  tasks ItemTask[]
+
+  @@map("workers")
+}
+
+// One production stage of a single quote item (e.g. the "دهان" stage of a bed),
+// assigned to a worker and marked done when finished. An item can have several
+// stages in sequence; the set of them forms that item's production pipeline.
+model ItemTask {
+  id          String    @id @default(cuid())
+  quoteItemId String    @map("quote_item_id")
+  stage       String    // stage name, e.g. "نجارة" / "دهان" / "تنجيد"
+  workerId    String?   @map("worker_id")
+  doneAt      DateTime? @map("done_at")
+  sortOrder   Int       @default(0) @map("sort_order")
+  createdAt   DateTime  @default(now()) @map("created_at")
+
+  quoteItem QuoteItem @relation(fields: [quoteItemId], references: [id], onDelete: Cascade)
+  worker    Worker?   @relation(fields: [workerId], references: [id], onDelete: SetNull)
+
+  @@index([quoteItemId])
+  @@index([workerId])
+  @@map("item_tasks")
 }
 
 model AuditLog {

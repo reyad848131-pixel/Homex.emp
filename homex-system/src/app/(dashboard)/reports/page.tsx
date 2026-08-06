@@ -5,6 +5,7 @@ import { BarChart3, TrendingUp, Users, MapPin, FileText, Calendar, Printer, Truc
 import { cn } from "@/lib/utils";
 import { STATUS_MAP } from "@/lib/types";
 import { useI18n } from "@/lib/i18n";
+import { WorkerProductivity } from "./worker-productivity";
 
 function BarChartSVG({ data, height = 200, noDataText }: { data: Array<{ label: string; value: number }>; height?: number; noDataText: string }) {
   if (data.length === 0) return <p className="text-sm text-gray-400 text-center py-8">{noDataText}</p>;
@@ -204,6 +205,9 @@ export default function ReportsPage() {
           ))}
         </div>
       )}
+
+      {/* Worker productivity — factory-floor output per worker. */}
+      <WorkerProductivity />
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
         <div className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded p-5">

@@ -54,7 +54,21 @@ export async function getWorkOrders(p: WorkOrdersParams) {
         // Only the fields the board/schedule actually render — dropping the
         // per-item money fields (unitPrice/extras/lineTotal/details) noticeably
         // shrinks the payload on this list, especially on mobile.
-        items: { select: { description: true, quantity: true, category: { select: { nameAr: true, nameEn: true } } }, orderBy: { sortOrder: "asc" } },
+        items: {
+          select: {
+            id: true, description: true, quantity: true,
+            category: { select: { nameAr: true, nameEn: true } },
+            // Production pipeline: each item's stages with their assigned worker.
+            tasks: {
+              orderBy: { sortOrder: "asc" },
+              select: {
+                id: true, stage: true, workerId: true, doneAt: true, sortOrder: true,
+                worker: { select: { id: true, name: true, color: true } },
+              },
+            },
+          },
+          orderBy: { sortOrder: "asc" },
+        },
         payments: { select: { amount: true } },
       },
       orderBy: UPCOMING_FIRST_ORDER,

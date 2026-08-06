@@ -26,6 +26,7 @@ import {
   AlertTriangle,
   Trash2,
   FileSpreadsheet,
+  HardHat,
 } from "lucide-react";
 import { useState, useEffect } from "react";
 import { DarkModeToggle } from "@/components/dark-mode-toggle";
@@ -65,6 +66,7 @@ const allItems: Array<{ href: string; labelKey: TranslationKey; icon: any; perm?
   { href: "/photography", labelKey: "photography", icon: Camera, perm: ["photography"] },
   { href: "/reports", labelKey: "reports", icon: BarChart3, perm: ["reports"] },
   { href: "/employees", labelKey: "employees", icon: UsersRound, perm: ["employees"] },
+  { href: "/workers", labelKey: "workers", icon: HardHat, perm: ["employees"] },
   { href: "/categories", labelKey: "categories", icon: Layers, perm: ["categories"] },
   { href: "/audit-logs", labelKey: "auditLogs", icon: ScrollText, perm: ["audit"] },
   { href: "/error-logs", labelKey: "errorLogs", icon: AlertTriangle, perm: ["audit"] },
@@ -148,19 +150,6 @@ export function Sidebar({ user, permissions }: SidebarProps) {
           );
         })}
 
-        {/* TEMPORARY — worker-productivity design preview (static mockup). Plain
-            anchor (not <Link>) because it's a static /public file, opened in a
-            new tab. Remove once the design is approved and built for real. */}
-        <a
-          href="/workers-preview.html"
-          target="_blank"
-          rel="noopener noreferrer"
-          onClick={() => setMobileOpen(false)}
-          className="flex items-center gap-3 px-3 py-2.5 rounded text-sm font-bold transition-colors border border-dashed border-teal-400/60 text-teal-600 dark:text-teal-300 hover:bg-teal-50 dark:hover:bg-teal-900/20 mt-1"
-        >
-          <span className="w-[18px] h-[18px] grid place-items-center text-[15px] leading-none">🏭</span>
-          معاينة إنتاجية العمّال
-        </a>
       </nav>
 
       <div className="p-4 border-t border-gray-200 dark:border-gray-700 shrink-0">

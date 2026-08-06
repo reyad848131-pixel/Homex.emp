@@ -13,6 +13,8 @@ const translations = {
   workOrders: { ar: "إدارة الأعمال", en: "Work Orders" },
   reports: { ar: "التقارير", en: "Reports" },
   employees: { ar: "الموظفين", en: "Employees" },
+  workers: { ar: "العمّال", en: "Workers" },
+  workerProductivity: { ar: "إنتاجية العمّال", en: "Worker Productivity" },
   categories: { ar: "الفئات", en: "Categories" },
   auditLogs: { ar: "سجل النشاطات", en: "Activity Log" },
   errorLogs: { ar: "سجل الأخطاء", en: "Error Logs" },
