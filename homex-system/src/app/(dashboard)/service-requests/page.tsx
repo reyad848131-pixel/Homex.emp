@@ -35,6 +35,11 @@ const STATUS_TONE: Record<string, string> = {
   resolved: "bg-emerald-100 text-emerald-700 border-emerald-200 dark:bg-emerald-900/30 dark:text-emerald-300 dark:border-emerald-800",
 };
 const STATUS_KEY: Record<string, TranslationKey> = { open: "svcOpen", scheduled: "svcScheduled", resolved: "svcResolved" };
+const TYPE_META: Record<string, { key: TranslationKey; tone: string }> = {
+  maintenance: { key: "typeMaintenance", tone: "bg-sky-100 text-sky-700 border-sky-200 dark:bg-sky-900/30 dark:text-sky-300" },
+  return: { key: "typeReturn", tone: "bg-rose-100 text-rose-700 border-rose-200 dark:bg-rose-900/30 dark:text-rose-300" },
+  completion: { key: "typeCompletion", tone: "bg-emerald-100 text-emerald-700 border-emerald-200 dark:bg-emerald-900/30 dark:text-emerald-300" },
+};
 
 export default function ServiceRequestsPage() {
   const { t, locale, dateLocale } = useI18n();
@@ -151,6 +156,7 @@ export default function ServiceRequestsPage() {
               <select value={form.type} onChange={(e) => setForm({ ...form, type: e.target.value })} className="field">
                 <option value="maintenance">{t("typeMaintenance")}</option>
                 <option value="return">{t("typeReturn")}</option>
+                <option value="completion">{t("typeCompletion")}</option>
               </select>
             </div>
           </div>
@@ -215,8 +221,8 @@ export default function ServiceRequestsPage() {
                   <div className="min-w-0">
                     <div className="flex items-center gap-2 flex-wrap">
                       <h3 className="text-base font-bold text-gray-900 dark:text-white">{cust ? displayName(cust.name, locale) : "—"}</h3>
-                      <span className={cn("text-[11px] font-bold px-2 py-0.5 rounded-full border", r.type === "return" ? "bg-rose-100 text-rose-700 border-rose-200 dark:bg-rose-900/30 dark:text-rose-300" : "bg-sky-100 text-sky-700 border-sky-200 dark:bg-sky-900/30 dark:text-sky-300")}>
-                        {r.type === "return" ? t("typeReturn") : t("typeMaintenance")}
+                      <span className={cn("text-[11px] font-bold px-2 py-0.5 rounded-full border", (TYPE_META[r.type] ?? TYPE_META.maintenance).tone)}>
+                        {t((TYPE_META[r.type] ?? TYPE_META.maintenance).key)}
                       </span>
                       <span className={cn("text-[11px] font-bold px-2 py-0.5 rounded-full border", STATUS_TONE[r.status])}>{t(STATUS_KEY[r.status])}</span>
                     </div>

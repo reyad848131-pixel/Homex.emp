@@ -559,6 +559,7 @@ const translations = {
   newServiceRequest: { ar: "طلب صيانة / مرتجع", en: "New service / return" },
   typeReturn: { ar: "مرتجع", en: "Return" },
   typeMaintenance: { ar: "صيانة", en: "Maintenance" },
+  typeCompletion: { ar: "تكملة أعمال", en: "Work completion" },
   serviceReason: { ar: "السبب / الوصف", en: "Reason / description" },
   addService: { ar: "إضافة الطلب", en: "Add request" },
   svcCustomerNotFound: { ar: "لم يتم العثور على عميل بهذا الاسم أو رقم الهاتف — تأكّد من البيانات، أو استخدم «زبون جديد».", en: "No customer found with this name or phone — check the details, or use “New customer”." },

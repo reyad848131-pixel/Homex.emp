@@ -6,7 +6,12 @@ import { notifyAdmins } from "@/lib/notifications";
 import { canEditFieldOps } from "@/lib/permissions";
 import { normalizePhone } from "@/lib/text";
 
-const TYPES = ["return", "maintenance"];
+const TYPES = ["return", "maintenance", "completion"];
+const TYPE_TITLE: Record<string, string> = {
+  return: "طلب مرتجع جديد 🔄",
+  maintenance: "طلب صيانة جديد 🔧",
+  completion: "طلب تكملة أعمال جديد 🧰",
+};
 
 // Service & returns: available to admin/manager and to the work-orders
 // permission (e.g. the driver role).
@@ -112,7 +117,7 @@ export async function POST(req: NextRequest) {
     const ref = created.quotation ? `العرض ${created.quotation.quoteNumber}` : "عميل جديد";
     await logAction(auth.user.id, "create", "service_request", created.id, `${type} for ${created.quotation?.quoteNumber ?? cust?.name ?? "?"}`);
     await notifyAdmins(
-      type === "return" ? "طلب مرتجع جديد 🔄" : "طلب صيانة جديد 🔧",
+      TYPE_TITLE[type] ?? TYPE_TITLE.maintenance,
       `العميل ${cust?.name ?? "?"} — ${ref}`,
       "warning",
       "/service-requests"
