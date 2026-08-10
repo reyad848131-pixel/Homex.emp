@@ -40,7 +40,7 @@ export default function ServiceRequestsPage() {
   const [filter, setFilter] = useState<string>("open");
   const [techs, setTechs] = useState<string[]>([]);
   const [showForm, setShowForm] = useState(false);
-  const [form, setForm] = useState({ quoteNumber: "", type: "maintenance", reason: "" });
+  const [form, setForm] = useState({ customerName: "", phone: "", type: "maintenance", reason: "" });
   const [saving, setSaving] = useState(false);
   const [schedId, setSchedId] = useState<string | null>(null);
   const [schedDate, setSchedDate] = useState("");
@@ -67,7 +67,7 @@ export default function ServiceRequestsPage() {
   }, []);
 
   const submit = async () => {
-    if (!form.quoteNumber.trim()) return;
+    if (!form.customerName.trim() || !form.phone.trim()) return;
     setSaving(true);
     try {
       const res = await fetch("/api/service-requests", {
@@ -75,11 +75,12 @@ export default function ServiceRequestsPage() {
       });
       if (res.ok) {
         toast.success(t("savedSuccess"));
-        setShowForm(false); setForm({ quoteNumber: "", type: "maintenance", reason: "" });
+        setShowForm(false); setForm({ customerName: "", phone: "", type: "maintenance", reason: "" });
         setFilter("open"); fetchData();
       } else {
+        // 404 → the name/phone didn't match any customer with a quote.
         const err = await res.json().catch(() => ({}));
-        toast.error(err.error || t("saveFailed"));
+        toast.error(res.status === 404 ? t("svcCustomerNotFound") : (err.error || t("saveFailed")));
       }
     } catch { toast.error(t("serverConnectionError")); }
     finally { setSaving(false); }
@@ -118,8 +119,12 @@ export default function ServiceRequestsPage() {
         <div className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl p-4 mb-5">
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
             <div>
-              <label className="block text-sm font-semibold text-gray-600 mb-1.5">{t("quoteNumberLabel")}</label>
-              <input value={form.quoteNumber} onChange={(e) => setForm({ ...form, quoteNumber: e.target.value })} className="field font-mono-en" placeholder="HX-..." />
+              <label className="block text-sm font-semibold text-gray-600 mb-1.5">{t("customerNameReq")}</label>
+              <input value={form.customerName} onChange={(e) => setForm({ ...form, customerName: e.target.value })} className="field" placeholder={t("customerNamePlaceholder")} />
+            </div>
+            <div>
+              <label className="block text-sm font-semibold text-gray-600 mb-1.5">{t("phoneReq")}</label>
+              <input value={form.phone} onChange={(e) => setForm({ ...form, phone: e.target.value })} className="field font-mono-en" dir="ltr" placeholder="9XXXXXXX" />
             </div>
             <div>
               <label className="block text-sm font-semibold text-gray-600 mb-1.5">{t("newServiceRequest")}</label>
@@ -128,15 +133,15 @@ export default function ServiceRequestsPage() {
                 <option value="return">{t("typeReturn")}</option>
               </select>
             </div>
-            <div className="flex items-end">
-              <button onClick={submit} disabled={saving || !form.quoteNumber.trim()} className="w-full inline-flex items-center justify-center gap-2 bg-gray-900 dark:bg-white dark:text-gray-900 text-white h-11 rounded-lg text-sm font-bold disabled:opacity-40">
-                <Check className="w-4 h-4" /> {t("addService")}
-              </button>
-            </div>
           </div>
           <div className="mt-3">
             <label className="block text-sm font-semibold text-gray-600 mb-1.5">{t("serviceReason")}</label>
             <textarea value={form.reason} onChange={(e) => setForm({ ...form, reason: e.target.value })} className="field-textarea" rows={2} />
+          </div>
+          <div className="mt-3 flex justify-end">
+            <button onClick={submit} disabled={saving || !form.customerName.trim() || !form.phone.trim()} className="inline-flex items-center justify-center gap-2 bg-gray-900 dark:bg-white dark:text-gray-900 text-white px-5 h-11 rounded-lg text-sm font-bold disabled:opacity-40">
+              <Check className="w-4 h-4" /> {t("addService")}
+            </button>
           </div>
         </div>
       )}

@@ -561,6 +561,7 @@ const translations = {
   typeMaintenance: { ar: "صيانة", en: "Maintenance" },
   serviceReason: { ar: "السبب / الوصف", en: "Reason / description" },
   addService: { ar: "إضافة الطلب", en: "Add request" },
+  svcCustomerNotFound: { ar: "لم يتم العثور على عميل بهذا الاسم أو رقم الهاتف — تأكّد من البيانات.", en: "No customer found with this name or phone — check the details." },
   svcOpen: { ar: "مفتوح", en: "Open" },
   svcScheduled: { ar: "مجدول", en: "Scheduled" },
   svcResolved: { ar: "مُغلق", en: "Resolved" },
