@@ -13,6 +13,7 @@ export const PERMISSIONS = [
   "invoices",        // issue invoices
   "edit_locked",     // edit a locked (signed / invoiced / paid) quotation
   "work_orders",     // the work board (إدارة الأعمال) — drive jobs through the pipeline
+  "workers",         // manage the workers list (العمّال) used in production tracking
   "deliveries",      // delivery / installation schedules & service (field ops)
   "deliveries_view", // read-only delivery schedule (e.g. the photographer)
   "photography",     // photography queue: shoot delivered/installed jobs
@@ -35,7 +36,7 @@ export type Permission = (typeof PERMISSIONS)[number];
 // actions (approve/edit_locked) stay reserved for the built-in roles.
 export const ASSIGNABLE_PERMISSIONS: Permission[] = [
   "quotes", "quotes_create", "view_all_quotes", "customers", "customers_view",
-  "payments", "invoices", "work_orders", "deliveries", "deliveries_view",
+  "payments", "invoices", "work_orders", "workers", "deliveries", "deliveries_view",
   "photography", "financials", "reports",
 ];
 
@@ -50,6 +51,7 @@ export const PERMISSION_LABELS: Record<Permission, string> = {
   invoices: "إصدار الفواتير",
   edit_locked: "تعديل العروض المقفلة",
   work_orders: "لوحة إدارة الأعمال (تحريك مراحل العمل)",
+  workers: "إدارة قائمة العمّال (إضافة/تعديل)",
   deliveries: "جداول التسليم والتركيب والصيانة",
   deliveries_view: "عرض جدول التسليم (قراءة فقط)",
   photography: "التصوير (تصوير الأعمال المنجزة)",
@@ -83,7 +85,7 @@ export const SYSTEM_ROLES: RoleDef[] = [
     key: "manager",
     label: "مشرف",
     system: true,
-    permissions: ["quotes", "quotes_create", "view_all_quotes", "approve", "payments", "invoices", "edit_locked", "work_orders", "deliveries", "photography", "financials", "reports", "customers", "trash"],
+    permissions: ["quotes", "quotes_create", "view_all_quotes", "approve", "payments", "invoices", "edit_locked", "work_orders", "workers", "deliveries", "photography", "financials", "reports", "customers", "trash"],
   },
   { key: "sales", label: "مبيعات", system: true, permissions: ["quotes", "quotes_create", "customers", "payments", "financials"] },
   // Accountant: full financial visibility + creates/edits quotations, records
@@ -96,6 +98,9 @@ export const SYSTEM_ROLES: RoleDef[] = [
   // Photographer: the photography queue, plus read-only delivery schedule and
   // read-only customers. No money anywhere.
   { key: "photographer", label: "مصوّر", system: true, permissions: ["photography", "deliveries_view", "customers_view"] },
+  // Production supervisor / factory floor: the work board (drive job stages &
+  // production tracking) and the workers list. No money, no admin areas.
+  { key: "production", label: "مشرف إنتاج", system: true, permissions: ["work_orders", "workers"] },
 ];
 
 // Custom roles are stored as JSON in the settings table (no schema change).

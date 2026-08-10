@@ -1,9 +1,10 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getAuth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
+import { userCan } from "@/lib/permissions";
 
-function isManager(user: { role?: string } | null | undefined) {
-  return user?.role === "admin" || user?.role === "ceo";
+function canManageWorkers(user: { role?: string } | null | undefined) {
+  return userCan(String(user?.role || ""), "workers");
 }
 
 // PATCH: update a worker's name / colour / active state (managers only).
@@ -11,7 +12,7 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
   try {
     const session = await getAuth();
     if (!session) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-    if (!isManager(session.user)) return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+    if (!(await canManageWorkers(session.user))) return NextResponse.json({ error: "Forbidden" }, { status: 403 });
 
     const { id } = await params;
     const body = await req.json();
@@ -35,7 +36,7 @@ export async function DELETE(_req: NextRequest, { params }: { params: Promise<{ 
   try {
     const session = await getAuth();
     if (!session) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-    if (!isManager(session.user)) return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+    if (!(await canManageWorkers(session.user))) return NextResponse.json({ error: "Forbidden" }, { status: 403 });
 
     const { id } = await params;
     const taskCount = await prisma.itemTask.count({ where: { workerId: id } });

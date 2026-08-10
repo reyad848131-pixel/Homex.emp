@@ -66,7 +66,7 @@ const allItems: Array<{ href: string; labelKey: TranslationKey; icon: any; perm?
   { href: "/photography", labelKey: "photography", icon: Camera, perm: ["photography"] },
   { href: "/reports", labelKey: "reports", icon: BarChart3, perm: ["reports"] },
   { href: "/employees", labelKey: "employees", icon: UsersRound, perm: ["employees"] },
-  { href: "/workers", labelKey: "workers", icon: HardHat, perm: ["employees"] },
+  { href: "/workers", labelKey: "workers", icon: HardHat, perm: ["workers"] },
   { href: "/categories", labelKey: "categories", icon: Layers, perm: ["categories"] },
   { href: "/audit-logs", labelKey: "auditLogs", icon: ScrollText, perm: ["audit"] },
   { href: "/error-logs", labelKey: "errorLogs", icon: AlertTriangle, perm: ["audit"] },

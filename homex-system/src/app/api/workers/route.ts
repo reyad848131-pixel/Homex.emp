@@ -2,9 +2,12 @@ import { NextRequest, NextResponse } from "next/server";
 import { getAuth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { nextWorkerColor } from "@/lib/workers";
+import { userCan } from "@/lib/permissions";
 
-function isManager(user: { role?: string } | null | undefined) {
-  return user?.role === "admin" || user?.role === "ceo";
+// Managing the workers list requires the "workers" permission (admin/ceo/manager
+// have it, plus the "production" role and any custom role granted it).
+function canManageWorkers(user: { role?: string } | null | undefined) {
+  return userCan(String(user?.role || ""), "workers");
 }
 
 // GET: list workers. All logged-in users can read (the board needs the list to
@@ -30,7 +33,7 @@ export async function POST(req: NextRequest) {
   try {
     const session = await getAuth();
     if (!session) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-    if (!isManager(session.user)) return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+    if (!(await canManageWorkers(session.user))) return NextResponse.json({ error: "Forbidden" }, { status: 403 });
 
     const body = await req.json();
     const name = (body.name || "").trim();
