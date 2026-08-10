@@ -146,7 +146,7 @@ function ProgressRing({ done, total, size = 40 }: { done: number; total: number;
   const off = c * (1 - (total ? done / total : 0));
   const complete = total > 0 && done === total;
   return (
-    <div className="relative shrink-0" style={{ width: size, height: size }} title={`${done}/${total} مراحل منجزة`}>
+    <div className="relative shrink-0" style={{ width: size, height: size }} title={`${done}/${total}`}>
       <svg width={size} height={size} style={{ transform: "rotate(-90deg)" }}>
         <circle cx={size / 2} cy={size / 2} r={r} fill="none" strokeWidth="4"
           className="text-gray-200 dark:text-gray-700" stroke="currentColor" />
@@ -854,17 +854,17 @@ export function WorkOrdersClient({ initialData }: { initialData: { quotations: W
         <div className="fixed inset-0 bg-black/40 z-50 flex items-center justify-center p-4" onClick={() => setWaPrompt(null)}>
           <div className="bg-white dark:bg-gray-800 rounded-xl p-5 w-full max-w-sm" onClick={(e) => e.stopPropagation()}>
             <h3 className="font-bold mb-1 flex items-center gap-2">
-              <Truck className="w-4 h-4" /> {waPrompt.status === "completed" ? "اكتمل الطلب" : waPrompt.status === "delivered" ? "تم التوصيل" : "جاهز للتوصيل"}
+              <Truck className="w-4 h-4" /> {waPrompt.status === "completed" ? t("woWaCompleted") : waPrompt.status === "delivered" ? t("deliveredStatus") : t("readyForDelivery")}
             </h3>
             <p className="text-sm text-gray-500 mb-4">
-              تبي ترسل رسالة واتساب إلى <b>{displayName(waPrompt.q.customer.name, locale)}</b> تُعلمه؟
+              {t("woWaAskPre")} <b>{displayName(waPrompt.q.customer.name, locale)}</b> {t("woWaAskPost")}
               <span className="block text-xs text-gray-400 font-mono-en mt-1">{waPrompt.q.customer.phoneCode} {waPrompt.q.customer.phone} · {waPrompt.q.quoteNumber}</span>
             </p>
             <div className="flex gap-2">
               <button onClick={sendWaNotice}
-                className="flex-1 h-10 rounded-lg bg-emerald-600 text-white text-sm font-bold hover:bg-emerald-700">إرسال عبر واتساب</button>
+                className="flex-1 h-10 rounded-lg bg-emerald-600 text-white text-sm font-bold hover:bg-emerald-700">{t("woWaSend")}</button>
               <button onClick={() => setWaPrompt(null)}
-                className="px-4 h-10 rounded-lg border border-gray-200 dark:border-gray-700 text-sm font-bold text-gray-600 dark:text-gray-300">تخطّي</button>
+                className="px-4 h-10 rounded-lg border border-gray-200 dark:border-gray-700 text-sm font-bold text-gray-600 dark:text-gray-300">{t("woWaSkip")}</button>
             </div>
           </div>
         </div>

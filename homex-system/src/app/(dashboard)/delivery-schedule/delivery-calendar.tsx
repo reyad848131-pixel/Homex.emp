@@ -272,7 +272,7 @@ export function DeliveryCalendar({
               <div className="flex items-center justify-between p-4 border-b border-gray-100 dark:border-gray-700">
                 <div>
                   <div className="text-base font-black text-gray-900 dark:text-white">{dayNames[(openDay.getDay() + 1) % 7]} · <span className="font-mono-en">{openDay.getDate()} {monthNames[openDay.getMonth()]}</span></div>
-                  <div className="text-xs text-gray-400 font-semibold"><span className="font-mono-en">{list.length}</span> توصيلة</div>
+                  <div className="text-xs text-gray-400 font-semibold"><span className="font-mono-en">{list.length}</span> {t("dcDeliveries")}</div>
                 </div>
                 <button onClick={() => setOpenDay(null)} className="w-9 h-9 rounded-full border border-gray-200 dark:border-gray-700 text-gray-500 flex items-center justify-center hover:bg-gray-100 dark:hover:bg-gray-800" aria-label={t("dcClose")}><X className="w-4 h-4" /></button>
               </div>

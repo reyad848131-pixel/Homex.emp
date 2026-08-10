@@ -1,5 +1,8 @@
+"use client";
+
 import Link from "next/link";
 import { CalendarClock, AlertTriangle, Camera, ArrowUpRight, Truck } from "lucide-react";
+import { useI18n } from "@/lib/i18n";
 
 // Focused dashboard for field roles (driver / photographer): straight to their
 // work, no quote statistics or financial figures they can't act on.
@@ -17,13 +20,14 @@ export function FieldDashboard({
   photoQueue: number;
 }) {
   const isPhotographer = role === "photographer";
+  const { t, locale } = useI18n();
 
   return (
     <div className="max-w-3xl">
       <div className="mb-6">
-        <h1 className="text-2xl font-bold">مرحباً {userName} 👋</h1>
+        <h1 className="text-2xl font-bold">{t("welcome")}{locale === "ar" ? " " : " "}{userName} 👋</h1>
         <p className="text-sm text-gray-500 mt-1">
-          {isPhotographer ? "أعمالك الجاهزة للتصوير في مكان واحد." : "توصيلاتك ليومك في مكان واحد."}
+          {isPhotographer ? t("fdPhotoSub") : t("fdDeliverSub")}
         </p>
       </div>
 
@@ -36,8 +40,8 @@ export function FieldDashboard({
           {isPhotographer ? <Camera className="w-6 h-6" /> : <Truck className="w-6 h-6" />}
         </div>
         <div className="flex-1 min-w-0">
-          <p className="text-lg font-bold">{isPhotographer ? "قائمة التصوير" : "جدول التوصيل"}</p>
-          <p className="text-sm opacity-80">{isPhotographer ? "الأعمال الجاهزة للتصوير" : "مواعيد التوصيل والمواقع"}</p>
+          <p className="text-lg font-bold">{isPhotographer ? t("fdPhotoList") : t("deliverySchedule")}</p>
+          <p className="text-sm opacity-80">{isPhotographer ? t("fdPhotoReady") : t("fdDeliveryTimes")}</p>
         </div>
         <ArrowUpRight className="w-6 h-6 shrink-0" />
       </Link>
@@ -49,7 +53,7 @@ export function FieldDashboard({
             <Camera className="w-5 h-5 text-teal-600 dark:text-teal-300 shrink-0" />
             <div>
               <p className="text-2xl font-black font-mono-en text-teal-700 dark:text-teal-300">{photoQueue}</p>
-              <p className="text-xs font-bold text-teal-700 dark:text-teal-300">عمل بانتظار التصوير</p>
+              <p className="text-xs font-bold text-teal-700 dark:text-teal-300">{t("fdWaitingPhoto")}</p>
             </div>
           </Link>
         ) : (
@@ -58,14 +62,14 @@ export function FieldDashboard({
               <CalendarClock className="w-5 h-5 text-teal-600 dark:text-teal-300 shrink-0" />
               <div>
                 <p className="text-2xl font-black font-mono-en text-teal-700 dark:text-teal-300">{todayDeliveries}</p>
-                <p className="text-xs font-bold text-teal-700 dark:text-teal-300">توصيلة اليوم</p>
+                <p className="text-xs font-bold text-teal-700 dark:text-teal-300">{t("fdTodayDelivery")}</p>
               </div>
             </Link>
             <Link href="/delivery-schedule" className="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-xl p-4 flex items-center gap-3 hover:bg-red-100 dark:hover:bg-red-900/30 transition-colors">
               <AlertTriangle className="w-5 h-5 text-red-600 dark:text-red-300 shrink-0" />
               <div>
                 <p className="text-2xl font-black font-mono-en text-red-700 dark:text-red-300">{overdueDeliveries}</p>
-                <p className="text-xs font-bold text-red-700 dark:text-red-300">متأخّرة عن موعدها</p>
+                <p className="text-xs font-bold text-red-700 dark:text-red-300">{t("fdOverdue")}</p>
               </div>
             </Link>
           </>

@@ -209,7 +209,7 @@ export function DashboardClient({ data }: { data: DashboardData }) {
       {data.canSeeFinancials && data.topReceivables.length > 0 && (
         <div className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded p-5 mb-6">
           <h2 className="text-sm font-bold text-gray-400 uppercase tracking-wider mb-3 flex items-center gap-2">
-            <TrendingUp className="w-4 h-4 text-red-500" /> أكبر الذمم (متبقٍّ على العملاء)
+            <TrendingUp className="w-4 h-4 text-red-500" /> {t("dashTopReceivables")}
           </h2>
           <div className="divide-y divide-gray-100 dark:divide-gray-700">
             {data.topReceivables.map((r) => (
@@ -220,7 +220,7 @@ export function DashboardClient({ data }: { data: DashboardData }) {
                 </div>
                 <div className="text-left shrink-0">
                   <p className="text-sm font-black font-mono-en text-red-600">{formatCurrency(r.remaining, t("omr"))}</p>
-                  <p className="text-[11px] text-gray-400 font-mono-en">من {formatCurrency(r.total, t("omr"))}</p>
+                  <p className="text-[11px] text-gray-400 font-mono-en">{t("dashOutOf")} {formatCurrency(r.total, t("omr"))}</p>
                 </div>
               </Link>
             ))}

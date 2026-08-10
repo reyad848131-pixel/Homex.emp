@@ -106,6 +106,27 @@ const translations = {
   dcOpenOrder: { ar: "فتح الطلب", en: "Open order" },
   dcClose: { ar: "إغلاق", en: "Close" },
   dcLoadingYear: { ar: "جارٍ تحميل توصيلات", en: "Loading deliveries for" },
+
+  // ── Field dashboard (driver / photographer home) ──
+  fdPhotoSub: { ar: "أعمالك الجاهزة للتصوير في مكان واحد.", en: "Your work ready for photography, all in one place." },
+  fdDeliverSub: { ar: "توصيلاتك ليومك في مكان واحد.", en: "Your deliveries for today, all in one place." },
+  fdPhotoList: { ar: "قائمة التصوير", en: "Photography list" },
+  fdPhotoReady: { ar: "الأعمال الجاهزة للتصوير", en: "Work ready for photography" },
+  fdDeliveryTimes: { ar: "مواعيد التوصيل والمواقع", en: "Delivery times & locations" },
+  fdWaitingPhoto: { ar: "عمل بانتظار التصوير", en: "Work awaiting photography" },
+  fdTodayDelivery: { ar: "توصيلة اليوم", en: "Today's deliveries" },
+  fdOverdue: { ar: "متأخّرة عن موعدها", en: "Overdue" },
+
+  // ── Dashboard ──
+  dashTopReceivables: { ar: "أكبر الذمم (متبقٍّ على العملاء)", en: "Top receivables (owed by customers)" },
+  dashOutOf: { ar: "من", en: "of" },
+
+  // ── Work board WhatsApp prompt ──
+  woWaCompleted: { ar: "اكتمل الطلب", en: "Order completed" },
+  woWaAskPre: { ar: "تبي ترسل رسالة واتساب إلى", en: "Send a WhatsApp message to" },
+  woWaAskPost: { ar: "تُعلمه؟", en: "to notify them?" },
+  woWaSend: { ar: "إرسال عبر واتساب", en: "Send via WhatsApp" },
+  woWaSkip: { ar: "تخطّي", en: "Skip" },
   categories: { ar: "الفئات", en: "Categories" },
   auditLogs: { ar: "سجل النشاطات", en: "Activity Log" },
   errorLogs: { ar: "سجل الأخطاء", en: "Error Logs" },
