@@ -3,6 +3,7 @@
 import { useState, useEffect, useCallback } from "react";
 import Link from "next/link";
 import { cn } from "@/lib/utils";
+import { normalizePhone } from "@/lib/text";
 import { useI18n, type TranslationKey } from "@/lib/i18n";
 import { displayName } from "@/lib/translit";
 import { useToast } from "@/components/toast";
@@ -124,7 +125,7 @@ export default function ServiceRequestsPage() {
             </div>
             <div>
               <label className="block text-sm font-semibold text-gray-600 mb-1.5">{t("phoneReq")}</label>
-              <input value={form.phone} onChange={(e) => setForm({ ...form, phone: e.target.value })} className="field font-mono-en" dir="ltr" placeholder="9XXXXXXX" />
+              <input value={form.phone} onChange={(e) => setForm({ ...form, phone: normalizePhone(e.target.value).slice(0, 8) })} inputMode="numeric" maxLength={8} className="field font-mono-en" dir="ltr" placeholder="9XXXXXXX" />
             </div>
             <div>
               <label className="block text-sm font-semibold text-gray-600 mb-1.5">{t("newServiceRequest")}</label>
