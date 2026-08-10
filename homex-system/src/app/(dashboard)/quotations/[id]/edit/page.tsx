@@ -305,15 +305,15 @@ export default function EditQuotationPage({ params }: { params: Promise<{ id: st
             matched ? "bg-emerald-50 dark:bg-emerald-900/20 border-emerald-200 dark:border-emerald-800"
               : "bg-blue-50 dark:bg-blue-900/20 border-blue-200 dark:border-blue-800")}>
             <p className={cn("text-sm font-bold mb-2", matched ? "text-emerald-800 dark:text-emerald-200" : "text-blue-800 dark:text-blue-200")}>
-              💡 الإجمالي المستورد للمراجعة — أضف الأصناف حتى يتطابق مع سعرك النهائي
+              {t("edtImportedHint")}
             </p>
             <div className="flex flex-wrap items-center gap-x-6 gap-y-1 text-sm font-mono-en">
-              <span className="text-gray-600 dark:text-gray-300">المستورد: <b>{fmtCur(importedTotal)}</b></span>
-              <span className="text-gray-600 dark:text-gray-300">الحالي: <b>{fmtCur(total)}</b></span>
+              <span className="text-gray-600 dark:text-gray-300">{t("edtImported")}: <b>{fmtCur(importedTotal)}</b></span>
+              <span className="text-gray-600 dark:text-gray-300">{t("edtCurrent")}: <b>{fmtCur(total)}</b></span>
               {matched ? (
-                <span className="font-bold text-emerald-700 dark:text-emerald-300">✓ مطابق</span>
+                <span className="font-bold text-emerald-700 dark:text-emerald-300">{t("edtMatch")}</span>
               ) : (
-                <span className="font-bold text-blue-700 dark:text-blue-300">الفرق: {fmtCur(Math.abs(diff))} {diff > 0 ? "(زائد)" : "(ناقص)"}</span>
+                <span className="font-bold text-blue-700 dark:text-blue-300">{t("edtDiff")}: {fmtCur(Math.abs(diff))} {diff > 0 ? t("edtOver") : t("edtUnder")}</span>
               )}
             </div>
           </div>
@@ -334,7 +334,7 @@ export default function EditQuotationPage({ params }: { params: Promise<{ id: st
       {locked && !isManager && (
         <div className="max-w-3xl mx-auto mb-5 rounded-lg bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 p-4">
           <p className="flex items-center gap-2 text-sm font-bold text-red-700 dark:text-red-300">
-            <ShieldAlert className="w-4 h-4" /> هذا العرض معتمد أو مفوتر أو له دفعات — لا يمكن تعديل بنوده. تواصل مع المدير لأي تعديل.
+            <ShieldAlert className="w-4 h-4" /> {t("edtLocked")}
           </p>
         </div>
       )}
@@ -388,7 +388,7 @@ export default function EditQuotationPage({ params }: { params: Promise<{ id: st
               </div>
               {deliveryDateEstimated && (
                 <p className="mt-1.5 text-xs font-semibold text-indigo-600 dark:text-indigo-400">
-                  📅 تاريخ تقديري من الاستيراد (مأخوذ من الصفوف المجاورة للترتيب فقط) — أدخل التاريخ الصحيح واحفظ لتأكيده.
+                  {t("edtEstHint")}
                 </p>
               )}
             </div>

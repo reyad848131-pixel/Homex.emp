@@ -108,7 +108,7 @@ export default function ReportsPage() {
   // Curtain-below-minimum audit (on-demand).
   const [audit, setAudit] = useState<{ count: number; scanned: number; violations: Array<{ id: string; quoteNumber: string; customerName: string; wilayat: string; count: number; min: number }> } | null>(null);
   const [auditLoading, setAuditLoading] = useState(false);
-  const { t } = useI18n();
+  const { t, locale } = useI18n();
 
   const runCurtainAudit = () => {
     setAuditLoading(true);
@@ -191,9 +191,9 @@ export default function ReportsPage() {
       {data.operations && data.operations.deliveredCount > 0 && (
         <div className="grid grid-cols-3 gap-4 mb-6">
           {[
-            { label: "طلبات مُسلَّمة", value: String(data.operations.deliveredCount), icon: Truck, color: "text-teal-600" },
-            { label: "التسليم في الوقت", value: data.operations.onTimeRate != null ? `${data.operations.onTimeRate}%` : "—", icon: Clock, color: "text-emerald-600" },
-            { label: "متوسط مدة التنفيذ", value: data.operations.avgDaysToDeliver != null ? `${data.operations.avgDaysToDeliver} يوم` : "—", icon: Calendar, color: "text-indigo-600" },
+            { label: t("rpDelivered"), value: String(data.operations.deliveredCount), icon: Truck, color: "text-teal-600" },
+            { label: t("rpOnTime"), value: data.operations.onTimeRate != null ? `${data.operations.onTimeRate}%` : "—", icon: Clock, color: "text-emerald-600" },
+            { label: t("rpAvgLead"), value: data.operations.avgDaysToDeliver != null ? `${data.operations.avgDaysToDeliver} ${t("rpDaysUnit")}` : "—", icon: Calendar, color: "text-indigo-600" },
           ].map((card) => (
             <div key={card.label} className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded p-4">
               <div className="flex items-center gap-2 mb-2">
@@ -343,25 +343,25 @@ export default function ReportsPage() {
       <div className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded p-5 mt-6">
         <div className="flex items-center justify-between gap-3 flex-wrap">
           <div>
-            <h2 className="text-sm font-bold text-gray-400 uppercase tracking-wider">فحص الستائر تحت الحد الأدنى</h2>
-            <p className="text-xs text-gray-400 mt-1">طلبات تحمل ستائر أقل من الحد الأدنى لولاية العميل (قديمة/مستوردة) لتصحيحها.</p>
+            <h2 className="text-sm font-bold text-gray-400 uppercase tracking-wider">{t("rpCurtainTitle")}</h2>
+            <p className="text-xs text-gray-400 mt-1">{t("rpCurtainSub")}</p>
           </div>
           <button onClick={runCurtainAudit} disabled={auditLoading}
             className="shrink-0 inline-flex items-center gap-2 px-4 h-10 rounded-lg border border-amber-300 dark:border-amber-700 text-amber-700 dark:text-amber-300 text-sm font-bold hover:bg-amber-50 dark:hover:bg-amber-900/20 disabled:opacity-50">
-            {auditLoading ? "جارٍ الفحص..." : "افحص الآن"}
+            {auditLoading ? t("rpChecking") : t("rpCheckNow")}
           </button>
         </div>
         {audit && (
           <div className="mt-4">
             {audit.count === 0 ? (
-              <p className="text-sm font-semibold text-emerald-600">✓ لا توجد طلبات تحت الحد الأدنى (فُحص <span className="font-mono-en">{audit.scanned}</span> طلب ستائر).</p>
+              <p className="text-sm font-semibold text-emerald-600">✓ {t("rpNoViolations")} ({locale === "en" ? <><span className="font-mono-en">{audit.scanned}</span> {t("rpCurtainOrdersUnit")} {t("rpChecked")}</> : <>{t("rpChecked")} <span className="font-mono-en">{audit.scanned}</span> {t("rpCurtainOrdersUnit")}</>}).</p>
             ) : (
               <>
-                <p className="text-sm font-semibold text-amber-700 dark:text-amber-400 mb-3"><span className="font-mono-en">{audit.count}</span> طلب تحت الحد الأدنى:</p>
+                <p className="text-sm font-semibold text-amber-700 dark:text-amber-400 mb-3"><span className="font-mono-en">{audit.count}</span> {t("rpViolationsFound")}:</p>
                 <div className="overflow-x-auto rounded-lg border border-gray-100 dark:border-gray-700">
                   <table className="w-full text-sm">
                     <thead className="bg-gray-50 dark:bg-gray-700/40 text-gray-500 text-xs">
-                      <tr><th className="p-2 text-right">رقم الطلب</th><th className="p-2 text-right">العميل</th><th className="p-2 text-right">الولاية</th><th className="p-2 text-right">العدد</th><th className="p-2 text-right">الحد</th><th className="p-2"></th></tr>
+                      <tr><th className="p-2 text-right">{t("rpColOrder")}</th><th className="p-2 text-right">{t("rpColCustomer")}</th><th className="p-2 text-right">{t("rpColWilayat")}</th><th className="p-2 text-right">{t("rpColCount")}</th><th className="p-2 text-right">{t("rpColMin")}</th><th className="p-2"></th></tr>
                     </thead>
                     <tbody>
                       {audit.violations.map((v) => (
@@ -371,7 +371,7 @@ export default function ReportsPage() {
                           <td className="p-2 text-gray-500">{v.wilayat}</td>
                           <td className="p-2 font-mono-en text-red-600 font-bold">{v.count}</td>
                           <td className="p-2 font-mono-en text-gray-500">{v.min}</td>
-                          <td className="p-2"><a href={`/quotations/${v.id}/edit`} target="_blank" rel="noreferrer" className="text-indigo-600 dark:text-indigo-400 font-semibold hover:underline">فتح للتصحيح</a></td>
+                          <td className="p-2"><a href={`/quotations/${v.id}/edit`} target="_blank" rel="noreferrer" className="text-indigo-600 dark:text-indigo-400 font-semibold hover:underline">{t("rpOpenFix")}</a></td>
                         </tr>
                       ))}
                     </tbody>

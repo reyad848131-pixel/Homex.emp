@@ -245,38 +245,38 @@ export default function SettingsPage() {
 
         {/* WhatsApp message templates */}
         <div className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded p-6">
-          <h2 className="text-base font-bold mb-1 flex items-center gap-2"><MessageCircle className="w-4 h-4 text-gray-400" /> قوالب رسائل واتساب</h2>
+          <h2 className="text-base font-bold mb-1 flex items-center gap-2"><MessageCircle className="w-4 h-4 text-gray-400" /> {t("stWaTitle")}</h2>
           <p className="text-xs text-gray-400 mb-4">
-            عدّل نصّ الرسائل الجاهزة. المتغيّرات المتاحة تُستبدَل تلقائياً:{" "}
+            {t("stWaHint")}{" "}
             <code className="font-mono-en" dir="ltr">{"{customer} {number} {total} {advance} {advancePct} {link} {date} {time} {location} {company} {companyPhone}"}</code>
           </p>
           <div className="space-y-4">
             <div>
-              <label className="block text-sm font-semibold text-gray-600 mb-1.5">رسالة عرض السعر</label>
+              <label className="block text-sm font-semibold text-gray-600 mb-1.5">{t("stWaQuote")}</label>
               <textarea rows={7} value={settings.wa_template_quote ?? ""} onChange={(e) => update("wa_template_quote", e.target.value)}
                 className="field font-mono-en text-sm" dir="rtl" placeholder={DEFAULT_WA_QUOTE} />
             </div>
             <div>
-              <label className="block text-sm font-semibold text-gray-600 mb-1.5">رسالة تأكيد موعد التوصيل</label>
+              <label className="block text-sm font-semibold text-gray-600 mb-1.5">{t("stWaDeliveryDate")}</label>
               <textarea rows={6} value={settings.wa_template_delivery ?? ""} onChange={(e) => update("wa_template_delivery", e.target.value)}
                 className="field font-mono-en text-sm" dir="rtl" placeholder={DEFAULT_WA_DELIVERY} />
             </div>
             <div>
-              <label className="block text-sm font-semibold text-gray-600 mb-1.5">رسالة «اكتمل الطلب»</label>
+              <label className="block text-sm font-semibold text-gray-600 mb-1.5">{t("stWaCompleted")}</label>
               <textarea rows={6} value={settings.wa_template_completed ?? ""} onChange={(e) => update("wa_template_completed", e.target.value)}
                 className="field font-mono-en text-sm" dir="rtl" placeholder={DEFAULT_WA_COMPLETED} />
             </div>
             <div>
-              <label className="block text-sm font-semibold text-gray-600 mb-1.5">رسالة «جاهز للتوصيل»</label>
+              <label className="block text-sm font-semibold text-gray-600 mb-1.5">{t("stWaReady")}</label>
               <textarea rows={6} value={settings.wa_template_ready ?? ""} onChange={(e) => update("wa_template_ready", e.target.value)}
                 className="field font-mono-en text-sm" dir="rtl" placeholder={DEFAULT_WA_READY} />
             </div>
             <div>
-              <label className="block text-sm font-semibold text-gray-600 mb-1.5">رسالة «تم التوصيل» (شكر بعد الاستلام)</label>
+              <label className="block text-sm font-semibold text-gray-600 mb-1.5">{t("stWaDelivered")}</label>
               <textarea rows={6} value={settings.wa_template_delivered ?? ""} onChange={(e) => update("wa_template_delivered", e.target.value)}
                 className="field font-mono-en text-sm" dir="rtl" placeholder={DEFAULT_WA_DELIVERED} />
             </div>
-            <p className="text-[11px] text-gray-400">اترك الحقل فارغاً لاستخدام النص الافتراضي المعروض كتلميح.</p>
+            <p className="text-[11px] text-gray-400">{t("stWaDefaultHint")}</p>
           </div>
         </div>
 

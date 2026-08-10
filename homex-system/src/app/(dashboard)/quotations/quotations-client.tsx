@@ -90,7 +90,7 @@ export function QuotationsClient({ initialData }: { initialData: { quotations: Q
   const bulkDelete = async () => {
     const ids = [...selected];
     if (ids.length === 0) return;
-    if (!confirm(`سيتم نقل ${ids.length} عرض إلى المحذوفات.\nهل أنت متأكد؟ (يمكن استرجاعها لاحقاً من صفحة المحذوفات)`)) return;
+    if (!confirm(t("qcDeleteConfirm"))) return;
     setDeleting(true);
     try {
       const res = await fetch("/api/quotations/bulk-delete", {
@@ -98,13 +98,13 @@ export function QuotationsClient({ initialData }: { initialData: { quotations: Q
         body: JSON.stringify({ ids }),
       });
       const data = await res.json();
-      if (!res.ok) { toast.error(data.error || "فشل الحذف"); return; }
-      toast.success(`تم نقل ${data.deleted} عرض إلى المحذوفات`);
+      if (!res.ok) { toast.error(data.error || t("qcDeleteFail")); return; }
+      toast.success(t("qcDeletedToast"));
       setQuotations((prev) => prev.filter((q) => !selected.has(q.id)));
       setTotal((tot) => Math.max(0, tot - data.deleted));
       exitSelectMode();
     } catch {
-      toast.error("تعذّر الحذف");
+      toast.error(t("qcDeleteError"));
     } finally {
       setDeleting(false);
     }
@@ -174,20 +174,20 @@ export function QuotationsClient({ initialData }: { initialData: { quotations: Q
           {canExport && !selectMode && (
             <a href="/api/export?type=quotations"
               className="flex items-center gap-2 border border-gray-200 dark:border-gray-700 text-gray-600 dark:text-gray-300 px-4 py-2.5 rounded text-sm font-bold hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors"
-              title="تنزيل كل العروض كملف Excel/CSV">
-              <Download className="w-4 h-4" /> تصدير
+              title={t("qcDownloadTitle")}>
+              <Download className="w-4 h-4" /> {t("exportWord")}
             </a>
           )}
           {canDelete && (
             selectMode ? (
               <button onClick={exitSelectMode}
                 className="flex items-center gap-2 border border-gray-200 dark:border-gray-700 text-gray-600 dark:text-gray-300 px-4 py-2.5 rounded text-sm font-bold hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors">
-                <X className="w-4 h-4" /> إلغاء التحديد
+                <X className="w-4 h-4" /> {t("qcClearSelection")}
               </button>
             ) : (
               <button onClick={() => setSelectMode(true)}
                 className="flex items-center gap-2 border border-gray-200 dark:border-gray-700 text-gray-600 dark:text-gray-300 px-4 py-2.5 rounded text-sm font-bold hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors">
-                <Trash2 className="w-4 h-4" /> تحديد للحذف
+                <Trash2 className="w-4 h-4" /> {t("qcSelectToDelete")}
               </button>
             )
           )}
@@ -227,34 +227,31 @@ export function QuotationsClient({ initialData }: { initialData: { quotations: Q
 
       {/* Sort toggle: newest created (default) vs nearest delivery first. */}
       <div className="flex items-center gap-2 mb-4 text-sm">
-        <span className="text-gray-400 font-semibold">الترتيب:</span>
+        <span className="text-gray-400 font-semibold">{t("qcSort")}</span>
         <div className="inline-flex rounded-lg border border-gray-200 dark:border-gray-700 overflow-hidden">
           <button type="button" onClick={() => { setSort("recent"); setPage(1); }}
-            className={cn("px-3 py-1.5 font-semibold transition-colors", sort === "recent" ? "bg-gray-900 text-white dark:bg-gray-100 dark:text-gray-900" : "text-gray-500 hover:bg-gray-50 dark:hover:bg-gray-700/50")}>
-            الأحدث
+            className={cn("px-3 py-1.5 font-semibold transition-colors", sort === "recent" ? "bg-gray-900 text-white dark:bg-gray-100 dark:text-gray-900" : "text-gray-500 hover:bg-gray-50 dark:hover:bg-gray-700/50")}>{t("qcNewest")}
           </button>
           <button type="button" onClick={() => { setSort("delivery"); setPage(1); }}
-            className={cn("px-3 py-1.5 font-semibold transition-colors border-r border-gray-200 dark:border-gray-700", sort === "delivery" ? "bg-teal-600 text-white" : "text-gray-500 hover:bg-gray-50 dark:hover:bg-gray-700/50")}>
-            الأقرب تسليماً
+            className={cn("px-3 py-1.5 font-semibold transition-colors border-r border-gray-200 dark:border-gray-700", sort === "delivery" ? "bg-teal-600 text-white" : "text-gray-500 hover:bg-gray-50 dark:hover:bg-gray-700/50")}>{t("qcNearestDelivery")}
           </button>
           <button type="button" onClick={() => { setSort("number"); setPage(1); }}
-            className={cn("px-3 py-1.5 font-semibold transition-colors border-r border-gray-200 dark:border-gray-700", sort === "number" ? "bg-indigo-600 text-white" : "text-gray-500 hover:bg-gray-50 dark:hover:bg-gray-700/50")}>
-            حسب الرقم
+            className={cn("px-3 py-1.5 font-semibold transition-colors border-r border-gray-200 dark:border-gray-700", sort === "number" ? "bg-indigo-600 text-white" : "text-gray-500 hover:bg-gray-50 dark:hover:bg-gray-700/50")}>{t("qcByNumber")}
           </button>
         </div>
       </div>
 
       {canDelete && selectMode && selected.size > 0 && (
         <div className="flex items-center justify-between gap-3 mb-3 p-3 rounded-lg bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800">
-          <span className="text-sm font-bold text-red-700 dark:text-red-300">تم تحديد <span className="font-mono-en">{selected.size}</span> عرض</span>
+          <span className="text-sm font-bold text-red-700 dark:text-red-300">{t("qcSelected")} <span className="font-mono-en">{selected.size}</span></span>
           <div className="flex items-center gap-2">
             <button onClick={() => setSelected(new Set())}
               className="inline-flex items-center gap-1.5 px-3 h-9 rounded-lg border border-gray-200 dark:border-gray-700 text-xs font-bold text-gray-600 dark:text-gray-300 hover:bg-white dark:hover:bg-gray-700">
-              <X className="w-3.5 h-3.5" /> إلغاء التحديد
+              <X className="w-3.5 h-3.5" /> {t("qcClearSelection")}
             </button>
             <button onClick={bulkDelete} disabled={deleting}
               className="inline-flex items-center gap-1.5 px-4 h-9 rounded-lg bg-red-600 hover:bg-red-700 text-white text-xs font-bold disabled:opacity-50">
-              {deleting ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Trash2 className="w-3.5 h-3.5" />} حذف المحدد
+              {deleting ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Trash2 className="w-3.5 h-3.5" />} {t("qcDeleteSelected")}
             </button>
           </div>
         </div>
@@ -278,7 +275,7 @@ export function QuotationsClient({ initialData }: { initialData: { quotations: Q
                   {canDelete && selectMode && (
                     <th className="p-3 pr-5 w-8">
                       <input type="checkbox" checked={allOnPageSelected} onChange={toggleAllOnPage}
-                        className="w-4 h-4 accent-red-600 align-middle" title="تحديد كل الصفحة" />
+                        className="w-4 h-4 accent-red-600 align-middle" title={t("qcSelectAll")} />
                     </th>
                   )}
                   <th className="text-right p-3 px-5 text-xs text-gray-400 font-semibold">{t("quoteNumber")}</th>
