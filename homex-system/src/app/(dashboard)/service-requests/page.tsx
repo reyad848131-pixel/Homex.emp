@@ -4,6 +4,7 @@ import { useState, useEffect, useCallback } from "react";
 import Link from "next/link";
 import { cn } from "@/lib/utils";
 import { useI18n, type TranslationKey } from "@/lib/i18n";
+import { displayName } from "@/lib/translit";
 import { useToast } from "@/components/toast";
 import { CardsSkeleton } from "@/components/skeleton";
 import {
@@ -33,7 +34,7 @@ const STATUS_TONE: Record<string, string> = {
 const STATUS_KEY: Record<string, TranslationKey> = { open: "svcOpen", scheduled: "svcScheduled", resolved: "svcResolved" };
 
 export default function ServiceRequestsPage() {
-  const { t, dateLocale } = useI18n();
+  const { t, locale, dateLocale } = useI18n();
   const toast = useToast();
   const [rows, setRows] = useState<ServiceRequest[] | null>(null);
   const [filter, setFilter] = useState<string>("open");
@@ -167,7 +168,7 @@ export default function ServiceRequestsPage() {
                 <div className="flex flex-wrap items-start justify-between gap-3">
                   <div className="min-w-0">
                     <div className="flex items-center gap-2 flex-wrap">
-                      <h3 className="text-base font-bold text-gray-900 dark:text-white">{r.quotation.customer.name}</h3>
+                      <h3 className="text-base font-bold text-gray-900 dark:text-white">{displayName(r.quotation.customer.name, locale)}</h3>
                       <span className={cn("text-[11px] font-bold px-2 py-0.5 rounded-full border", r.type === "return" ? "bg-rose-100 text-rose-700 border-rose-200 dark:bg-rose-900/30 dark:text-rose-300" : "bg-sky-100 text-sky-700 border-sky-200 dark:bg-sky-900/30 dark:text-sky-300")}>
                         {r.type === "return" ? t("typeReturn") : t("typeMaintenance")}
                       </span>

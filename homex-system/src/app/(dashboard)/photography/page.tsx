@@ -4,6 +4,7 @@ import { useState, useEffect, useCallback, useMemo } from "react";
 import Link from "next/link";
 import { cn } from "@/lib/utils";
 import { useI18n } from "@/lib/i18n";
+import { displayName } from "@/lib/translit";
 import { useDebouncedValue } from "@/lib/hooks";
 import { useToast } from "@/components/toast";
 import { CardsSkeleton } from "@/components/skeleton";
@@ -30,7 +31,7 @@ interface PhotoQuotation {
 }
 
 export default function PhotographyPage() {
-  const { t, dateLocale } = useI18n();
+  const { t, locale, dateLocale } = useI18n();
   const toast = useToast();
   const [tab, setTab] = useState<"queue" | "done">("queue");
   const [rows, setRows] = useState<PhotoQuotation[] | null>(null);
@@ -169,7 +170,7 @@ export default function PhotographyPage() {
               {/* Top: quote + customer */}
               <div className="flex items-start justify-between gap-2">
                 <div className="min-w-0">
-                  <p className="font-bold text-gray-900 dark:text-white truncate">{q.customer.name}</p>
+                  <p className="font-bold text-gray-900 dark:text-white truncate">{displayName(q.customer.name, locale)}</p>
                   <Link href={`/quotations/${q.id}`} className="text-xs text-gray-400 font-mono-en hover:underline flex items-center gap-1">
                     <FileText className="w-3 h-3" /> {q.quoteNumber}
                   </Link>

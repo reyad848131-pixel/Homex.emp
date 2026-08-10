@@ -7,6 +7,7 @@ import { ArrowRight, Phone, MapPin, Calendar, FileText, User, Trash2, Loader2 } 
 import { EditCustomerButton } from "@/components/edit-customer-button";
 import { useToast } from "@/components/toast";
 import { useI18n, type TranslationKey } from "@/lib/i18n";
+import { displayName } from "@/lib/translit";
 import { STATUS_MAP } from "@/lib/types";
 
 const STATUS_KEYS: Record<string, TranslationKey> = {
@@ -47,7 +48,7 @@ interface CustomerData {
 }
 
 export function CustomerDetailClient({ data }: { data: CustomerData }) {
-  const { t, dateLocale } = useI18n();
+  const { t, locale, dateLocale } = useI18n();
   const router = useRouter();
   const toast = useToast();
   const [deleting, setDeleting] = useState(false);
@@ -80,7 +81,7 @@ export function CustomerDetailClient({ data }: { data: CustomerData }) {
           <ArrowRight className="w-5 h-5" />
         </Link>
         <div className="flex-1">
-          <h1 className="text-2xl font-bold">{data.name}</h1>
+          <h1 className="text-2xl font-bold">{displayName(data.name, locale)}</h1>
           <p className="text-sm text-gray-500 mt-0.5">{t("customerDetails")}</p>
         </div>
         {data.canManage !== false && (

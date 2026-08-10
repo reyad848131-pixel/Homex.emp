@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { Search, FileText, User, Loader2, X } from "lucide-react";
 import { useDebouncedValue } from "@/lib/hooks";
 import { useI18n } from "@/lib/i18n";
+import { displayName } from "@/lib/translit";
 
 interface Results {
   quotations: Array<{ id: string; quoteNumber: string; status: string; total: number; customer: { name: string } }>;
@@ -13,7 +14,7 @@ interface Results {
 
 export function GlobalSearch() {
   const router = useRouter();
-  const { t } = useI18n();
+  const { t, locale } = useI18n();
   const [q, setQ] = useState("");
   const [open, setOpen] = useState(false);
   const [loading, setLoading] = useState(false);
@@ -83,7 +84,7 @@ export function GlobalSearch() {
                   <FileText className="w-4 h-4 text-gray-400 shrink-0" />
                   <span className="flex-1 min-w-0">
                     <span className="block text-sm font-bold text-gray-900 dark:text-white font-mono-en">{item.quoteNumber}</span>
-                    <span className="block text-xs text-gray-400 truncate">{item.customer?.name}</span>
+                    <span className="block text-xs text-gray-400 truncate">{item.customer?.name ? displayName(item.customer.name, locale) : ""}</span>
                   </span>
                   <span className="text-xs font-mono-en font-bold text-gray-500 shrink-0">{item.total.toFixed(3)}</span>
                 </button>
@@ -98,7 +99,7 @@ export function GlobalSearch() {
                   className="w-full flex items-center gap-3 px-4 py-2.5 hover:bg-gray-50 dark:hover:bg-gray-700 text-right">
                   <User className="w-4 h-4 text-gray-400 shrink-0" />
                   <span className="flex-1 min-w-0">
-                    <span className="block text-sm font-bold text-gray-900 dark:text-white truncate">{c.name}</span>
+                    <span className="block text-sm font-bold text-gray-900 dark:text-white truncate">{displayName(c.name, locale)}</span>
                     <span className="block text-xs text-gray-400 font-mono-en">{c.phone} · {c.governorate}</span>
                   </span>
                 </button>

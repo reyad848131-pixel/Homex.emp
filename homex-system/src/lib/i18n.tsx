@@ -190,6 +190,8 @@ const translations = {
   empResetPw: { ar: "تصفير كلمة السر", en: "Reset password" },
   custDownloadTitle: { ar: "تنزيل العملاء كملف Excel/CSV", en: "Download customers as Excel/CSV" },
   exportWord: { ar: "تصدير", en: "Export" },
+  dsExportTitle: { ar: "تنزيل جدول التوصيل Excel/CSV", en: "Download the delivery schedule as Excel/CSV" },
+  dsEstimatedTitle: { ar: "تاريخ تقديري من الاستيراد — يُرجى تأكيده يدوياً", en: "Estimated date from import — please confirm it manually" },
 
   // ── Quotations list ──
   qcDeleteConfirm: { ar: "نقل العروض المحددة إلى المحذوفات؟ (يمكن استرجاعها لاحقاً من صفحة المحذوفات)", en: "Move the selected quotes to Trash? (you can restore them later from the Trash page)" },

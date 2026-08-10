@@ -329,8 +329,8 @@ export default function DeliverySchedulePage() {
                 : "border-gray-200 dark:border-gray-700 text-gray-600 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700")}>
             <BadgeCheck className="w-4 h-4" /> {t("statsToggle")}
           </button>
-          <a href="/api/export?type=deliveries" className="no-print inline-flex items-center gap-2 self-start border border-gray-200 dark:border-gray-700 text-gray-600 dark:text-gray-300 px-4 h-11 rounded-lg text-sm font-bold hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors" title="تنزيل جدول التوصيل Excel/CSV">
-            <Download className="w-4 h-4" /> تصدير
+          <a href="/api/export?type=deliveries" className="no-print inline-flex items-center gap-2 self-start border border-gray-200 dark:border-gray-700 text-gray-600 dark:text-gray-300 px-4 h-11 rounded-lg text-sm font-bold hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors" title={t("dsExportTitle")}>
+            <Download className="w-4 h-4" /> {t("exportWord")}
           </a>
           <span className="inline-flex items-center gap-2 self-start bg-teal-600 text-white px-4 h-11 rounded-lg text-sm font-bold">
             <Truck className="w-4 h-4" />
@@ -498,7 +498,7 @@ export default function DeliverySchedulePage() {
                             <CalendarClock className="w-4 h-4 text-teal-600" />
                             <span className="font-mono-en">{fmtDate(q.deliveryDate)}</span>
                             {q.deliveryDateEstimated && (
-                              <span className="rounded px-1 py-0.5 text-[10px] font-bold bg-indigo-100 text-indigo-700 dark:bg-indigo-900/40 dark:text-indigo-300" title="تاريخ تقديري من الاستيراد — يُرجى تأكيده يدوياً">تقديري</span>
+                              <span className="rounded px-1 py-0.5 text-[10px] font-bold bg-indigo-100 text-indigo-700 dark:bg-indigo-900/40 dark:text-indigo-300" title={t("dsEstimatedTitle")}>{t("edEstimated")}</span>
                             )}
                           </p>
                           {q.deliveryTime && (

@@ -5,6 +5,7 @@ import { BarChart3, TrendingUp, Users, MapPin, FileText, Calendar, Printer, Truc
 import { cn } from "@/lib/utils";
 import { STATUS_MAP } from "@/lib/types";
 import { useI18n } from "@/lib/i18n";
+import { displayName } from "@/lib/translit";
 import { WorkerProductivity } from "./worker-productivity";
 
 function BarChartSVG({ data, height = 200, noDataText }: { data: Array<{ label: string; value: number }>; height?: number; noDataText: string }) {
@@ -367,7 +368,7 @@ export default function ReportsPage() {
                       {audit.violations.map((v) => (
                         <tr key={v.id} className="border-t border-gray-100 dark:border-gray-700">
                           <td className="p-2 font-mono-en font-bold">{v.quoteNumber}</td>
-                          <td className="p-2">{v.customerName}</td>
+                          <td className="p-2">{displayName(v.customerName, locale)}</td>
                           <td className="p-2 text-gray-500">{v.wilayat}</td>
                           <td className="p-2 font-mono-en text-red-600 font-bold">{v.count}</td>
                           <td className="p-2 font-mono-en text-gray-500">{v.min}</td>

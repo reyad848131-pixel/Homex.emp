@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { useI18n, type TranslationKey } from "@/lib/i18n";
+import { displayName } from "@/lib/translit";
 import { formatCurrency } from "@/lib/utils";
 import { FileText, FilePlus, Users, TrendingUp, Clock, ArrowUpRight, AlertTriangle, Camera, CalendarClock, Inbox } from "lucide-react";
 
@@ -215,7 +216,7 @@ export function DashboardClient({ data }: { data: DashboardData }) {
             {data.topReceivables.map((r) => (
               <Link key={r.id} href={`/quotations/${r.id}`} className="flex items-center justify-between gap-3 py-2.5 hover:bg-gray-50 dark:hover:bg-gray-700/40 rounded px-1 transition-colors">
                 <div className="min-w-0">
-                  <p className="text-sm font-bold truncate">{r.customerName}</p>
+                  <p className="text-sm font-bold truncate">{displayName(r.customerName, locale)}</p>
                   <p className="text-xs text-gray-400 font-mono-en">{r.quoteNumber}</p>
                 </div>
                 <div className="text-left shrink-0">
@@ -241,7 +242,7 @@ export function DashboardClient({ data }: { data: DashboardData }) {
                   <Link href={`/quotations/${q.id}`} className="font-mono-en font-bold text-gray-900 dark:text-white hover:underline text-sm">
                     {q.quoteNumber}
                   </Link>
-                  <span className="text-sm text-gray-600">{q.customerName}</span>
+                  <span className="text-sm text-gray-600">{displayName(q.customerName, locale)}</span>
                 </div>
                 <span className={`text-xs font-bold px-2 py-1 rounded ${q.daysLeft <= 0 ? "bg-red-100 text-red-700" : "bg-amber-100 text-amber-700"}`}>
                   {q.daysLeft <= 0 ? t("expired") : `${q.daysLeft} ${t("daysRemaining")}`}
@@ -292,7 +293,7 @@ export function DashboardClient({ data }: { data: DashboardData }) {
                         {q.quoteNumber}
                       </Link>
                     </td>
-                    <td className="p-3 font-semibold text-gray-700 dark:text-gray-300">{q.customerName}</td>
+                    <td className="p-3 font-semibold text-gray-700 dark:text-gray-300">{displayName(q.customerName, locale)}</td>
                     {data.isAdmin && <td className="p-3 text-gray-500 text-xs">{q.employeeName}</td>}
                     <td className="p-3">
                       <span className={`inline-block px-2.5 py-1 rounded-full text-xs font-bold ${q.statusColor}`}>

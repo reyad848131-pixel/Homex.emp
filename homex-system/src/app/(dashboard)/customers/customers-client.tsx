@@ -4,6 +4,7 @@ import { useState } from "react";
 import Link from "next/link";
 import { Users, Phone, MapPin, Search, Download } from "lucide-react";
 import { useI18n } from "@/lib/i18n";
+import { displayName } from "@/lib/translit";
 import { EmptyState } from "@/components/empty-state";
 
 interface Customer {
@@ -19,7 +20,7 @@ interface Customer {
 
 export function CustomersClient({ customers }: { customers: Customer[] }) {
   const [search, setSearch] = useState("");
-  const { t } = useI18n();
+  const { t, locale } = useI18n();
 
   const filtered = customers.filter((c) => {
     if (!search) return true;
@@ -76,7 +77,7 @@ export function CustomersClient({ customers }: { customers: Customer[] }) {
               className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded p-5 hover:border-gray-300 transition-colors block">
               <div className="flex items-start justify-between mb-3">
                 <div>
-                  <h3 className="font-bold text-gray-900">{c.name}</h3>
+                  <h3 className="font-bold text-gray-900">{displayName(c.name, locale)}</h3>
                   <p className="text-xs text-gray-400 mt-0.5">{t("createdBy")} {c.creatorName}</p>
                 </div>
                 <span className="bg-gray-100 text-gray-600 text-xs font-bold px-2 py-1 rounded-full">
