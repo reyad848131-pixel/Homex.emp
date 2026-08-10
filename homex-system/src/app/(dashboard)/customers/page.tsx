@@ -25,7 +25,7 @@ export default async function CustomersPage() {
 
   return <CustomersClient customers={customers.map((c) => ({
     id: c.id, name: c.name, phone: c.phone, phoneCode: c.phoneCode,
-    governorate: c.governorate, wilayat: c.wilayat,
+    governorate: c.governorate, wilayat: c.wilayat, source: c.source,
     creatorName: c.creator.name, quotationCount: c._count.quotations,
   }))} />;
 }

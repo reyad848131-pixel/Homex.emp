@@ -14,6 +14,7 @@ interface Customer {
   phoneCode: string;
   governorate: string;
   wilayat: string;
+  source: string | null;
   creatorName: string;
   quotationCount: number;
 }
@@ -77,7 +78,12 @@ export function CustomersClient({ customers }: { customers: Customer[] }) {
               className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded p-5 hover:border-gray-300 transition-colors block">
               <div className="flex items-start justify-between mb-3">
                 <div>
-                  <h3 className="font-bold text-gray-900">{displayName(c.name, locale)}</h3>
+                  <div className="flex items-center gap-1.5 flex-wrap">
+                    <h3 className="font-bold text-gray-900">{displayName(c.name, locale)}</h3>
+                    {c.source === "service" && (
+                      <span className="text-[10px] font-bold px-1.5 py-0.5 rounded bg-violet-100 text-violet-700 dark:bg-violet-900/30 dark:text-violet-300">{t("custSourceService")}</span>
+                    )}
+                  </div>
                   <p className="text-xs text-gray-400 mt-0.5">{t("createdBy")} {c.creatorName}</p>
                 </div>
                 <span className="bg-gray-100 text-gray-600 text-xs font-bold px-2 py-1 rounded-full">

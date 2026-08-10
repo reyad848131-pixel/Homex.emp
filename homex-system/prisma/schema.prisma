@@ -44,11 +44,15 @@ model Customer {
   deletedAt   DateTime? @map("deleted_at")
   deletedBy   String?   @map("deleted_by")
   importBatch String?  @map("import_batch")
+  // Where this customer came from: null/"sales" (a quotation) or "service"
+  // (created straight from a service / return request, no quote yet).
+  source      String?  @map("source")
   createdAt   DateTime @default(now()) @map("created_at")
   updatedAt   DateTime @updatedAt @map("updated_at")
 
-  creator    Employee    @relation(fields: [createdBy], references: [id])
-  quotations Quotation[]
+  creator         Employee         @relation(fields: [createdBy], references: [id])
+  quotations      Quotation[]
+  serviceRequests ServiceRequest[]
 
   @@index([createdBy])
   @@index([phone])
@@ -191,8 +195,11 @@ model Quotation {
 // After-sales return / maintenance visits raised against a delivered order.
 model ServiceRequest {
   id            String    @id @default(cuid())
-  quotationId   String    @map("quotation_id")
-  type          String    @default("maintenance") // "return" | "maintenance"
+  // Either linked to an existing quotation, or to a customer created straight
+  // from the request (a brand-new customer with no quote yet). Both optional.
+  quotationId   String?   @map("quotation_id")
+  customerId    String?   @map("customer_id")
+  type          String    @default("maintenance") // "return" | "maintenance" (more later)
   reason        String?
   status        String    @default("open")        // open | scheduled | resolved
   scheduledDate DateTime? @map("scheduled_date")
@@ -202,10 +209,12 @@ model ServiceRequest {
   createdAt     DateTime  @default(now()) @map("created_at")
   resolvedAt    DateTime? @map("resolved_at")
 
-  quotation Quotation @relation(fields: [quotationId], references: [id])
+  quotation Quotation? @relation(fields: [quotationId], references: [id])
+  customer  Customer?  @relation(fields: [customerId], references: [id])
 
   @@index([status])
   @@index([quotationId])
+  @@index([customerId])
   @@map("service_requests")
 }
 

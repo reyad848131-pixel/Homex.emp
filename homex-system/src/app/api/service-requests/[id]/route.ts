@@ -31,6 +31,7 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
       data,
       include: {
         quotation: { select: { id: true, quoteNumber: true, customer: { select: { name: true, phone: true, phoneCode: true, governorate: true, wilayat: true } } } },
+        customer: { select: { name: true, phone: true, phoneCode: true, governorate: true, wilayat: true } },
       },
     });
 

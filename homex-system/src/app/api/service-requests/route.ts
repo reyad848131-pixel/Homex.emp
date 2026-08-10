@@ -37,6 +37,7 @@ export async function GET(req: NextRequest) {
             customer: { select: { name: true, phone: true, phoneCode: true, governorate: true, wilayat: true } },
           },
         },
+        customer: { select: { name: true, phone: true, phoneCode: true, governorate: true, wilayat: true } },
       },
     });
     return NextResponse.json(requests);
@@ -53,48 +54,66 @@ export async function POST(req: NextRequest) {
     const body = await req.json();
     const type = TYPES.includes(body.type) ? body.type : "maintenance";
     const reason = typeof body.reason === "string" ? body.reason.trim() : "";
+    const name = String(body.customerName || "").trim();
+    const digits = normalizePhone(String(body.phone || "")).slice(-8);
 
-    let quotationId = body.quotationId as string | undefined;
-    // Preferred: look the customer up by name + phone and attach the request to
-    // their most recent quotation (staff no longer need to know the quote number).
-    if (!quotationId && (body.phone || body.customerName)) {
-      const digits = normalizePhone(String(body.phone || "")).slice(-8);
-      const name = String(body.customerName || "").trim();
+    let quotationId: string | null = (body.quotationId as string) || null;
+    let customerId: string | null = null;
+
+    if (body.mode === "new") {
+      // Brand-new customer with no quote yet: create (or reuse an existing
+      // customer with the same phone) and attach the request straight to them.
+      const governorate = String(body.governorate || "").trim();
+      const wilayat = String(body.wilayat || "").trim();
+      if (!name || !digits) return NextResponse.json({ error: "الاسم ورقم الهاتف مطلوبان" }, { status: 400 });
+      if (!governorate || !wilayat) return NextResponse.json({ error: "المحافظة والولاية مطلوبتان" }, { status: 400 });
+
+      const existing = await prisma.customer.findFirst({ where: { phone: { contains: digits } }, select: { id: true } });
+      if (existing) {
+        customerId = existing.id;
+      } else {
+        const c = await prisma.customer.create({
+          data: { name, phone: digits, governorate, wilayat, source: "service", createdBy: auth.user.id },
+          select: { id: true },
+        });
+        customerId = c.id;
+      }
+    } else if (!quotationId) {
+      // Existing customer: find their most recent quotation by name + phone.
       const customerWhere: Record<string, unknown> = {};
       if (digits) customerWhere.phone = { contains: digits };
       if (name) customerWhere.name = { contains: name };
-      if (Object.keys(customerWhere).length === 0) {
+      if (Object.keys(customerWhere).length === 0 && !body.quoteNumber) {
         return NextResponse.json({ error: "الاسم أو رقم الهاتف مطلوب" }, { status: 400 });
       }
-      const q = await prisma.quotation.findFirst({
-        where: { customer: customerWhere },
-        orderBy: { createdAt: "desc" },
-        select: { id: true },
-      });
-      if (!q) return NextResponse.json({ error: "لم يتم العثور على عميل بهذا الاسم أو رقم الهاتف" }, { status: 404 });
-      quotationId = q.id;
+      if (Object.keys(customerWhere).length > 0) {
+        const q = await prisma.quotation.findFirst({ where: { customer: customerWhere }, orderBy: { createdAt: "desc" }, select: { id: true } });
+        if (q) quotationId = q.id;
+      }
+      // Backward-compatible: still accept a raw quote number if one is sent.
+      if (!quotationId && body.quoteNumber) {
+        const q = await prisma.quotation.findFirst({ where: { quoteNumber: String(body.quoteNumber).trim() }, select: { id: true } });
+        if (q) quotationId = q.id;
+      }
+      if (!quotationId) return NextResponse.json({ error: "لم يتم العثور على عميل بهذا الاسم أو رقم الهاتف" }, { status: 404 });
     }
-    // Backward-compatible: still accept a raw quote number if one is sent.
-    if (!quotationId && body.quoteNumber) {
-      const q = await prisma.quotation.findFirst({ where: { quoteNumber: String(body.quoteNumber).trim() }, select: { id: true } });
-      if (!q) return NextResponse.json({ error: "رقم العرض غير موجود" }, { status: 404 });
-      quotationId = q.id;
-    }
-    if (!quotationId) return NextResponse.json({ error: "Missing quotation" }, { status: 400 });
+
+    if (!quotationId && !customerId) return NextResponse.json({ error: "Missing customer" }, { status: 400 });
 
     const created = await prisma.serviceRequest.create({
-      data: { quotationId, type, reason: reason || null, createdBy: auth.user.id },
+      data: { quotationId, customerId, type, reason: reason || null, createdBy: auth.user.id },
       include: {
-        quotation: {
-          select: { id: true, quoteNumber: true, customer: { select: { name: true, phone: true, phoneCode: true, governorate: true, wilayat: true } } },
-        },
+        quotation: { select: { id: true, quoteNumber: true, customer: { select: { name: true, phone: true, phoneCode: true, governorate: true, wilayat: true } } } },
+        customer: { select: { name: true, phone: true, phoneCode: true, governorate: true, wilayat: true } },
       },
     });
 
-    await logAction(auth.user.id, "create", "service_request", created.id, `${type} for ${created.quotation.quoteNumber}`);
+    const cust = created.quotation?.customer ?? created.customer;
+    const ref = created.quotation ? `العرض ${created.quotation.quoteNumber}` : "عميل جديد";
+    await logAction(auth.user.id, "create", "service_request", created.id, `${type} for ${created.quotation?.quoteNumber ?? cust?.name ?? "?"}`);
     await notifyAdmins(
       type === "return" ? "طلب مرتجع جديد 🔄" : "طلب صيانة جديد 🔧",
-      `العميل ${created.quotation.customer.name} — العرض ${created.quotation.quoteNumber}`,
+      `العميل ${cust?.name ?? "?"} — ${ref}`,
       "warning",
       "/service-requests"
     ).catch(() => {});
