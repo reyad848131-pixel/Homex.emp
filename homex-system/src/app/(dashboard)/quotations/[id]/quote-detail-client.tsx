@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { STATUS_MAP } from "@/lib/types";
 import { cn } from "@/lib/utils";
 import { useI18n, type TranslationKey } from "@/lib/i18n";
+import { displayName } from "@/lib/translit";
 import { useToast } from "@/components/toast";
 import { normalizeNumeric } from "@/components/quote-builders";
 import { SignaturePad } from "@/components/signature-pad";
@@ -337,22 +338,22 @@ export default function QuoteDetailClient({
         body: JSON.stringify(payload),
       });
       const data = await res.json();
-      if (!res.ok) { toast.error(data.error || "فشل النقل"); return; }
+      if (!res.ok) { toast.error(data.error || t("qdReassignFail")); return; }
       setQ((prev) => prev ? { ...prev, customer: { ...prev.customer, name: data.name } } : prev);
-      toast.success(`تم نقل الطلب إلى ${label}`);
+      toast.success(`${t("qdReassignedTo")} ${label}`);
       setShowReassign(false);
       setReassignSearch(""); setReassignResults([]);
       setNewCust({ name: "", phone: "", governorate: "", wilayat: "" });
       router.refresh();
-    } catch { toast.error("تعذّر النقل"); }
+    } catch { toast.error(t("qdReassignError")); }
     finally { setReassignBusy(false); }
   };
 
   const ACTION_LABELS: Record<string, string> = {
-    create: "إنشاء", update: "تعديل", reassign: "نقل لعميل آخر", renumber: "توحيد الترقيم",
-    import: "استيراد", import_undo: "تراجع استيراد", delete: "حذف", restore: "استرجاع",
-    status: "تغيير الحالة", status_change: "تغيير الحالة", manager_override_edit: "تعديل إداري",
-    payment: "دفعة",
+    create: t("qdActCreate"), update: t("qdActUpdate"), reassign: t("qdActReassign"), renumber: t("qdActRenumber"),
+    import: t("qdActImport"), import_undo: t("qdActImportUndo"), delete: t("qdActDelete"), restore: t("qdActRestore"),
+    status: t("qdActStatus"), status_change: t("qdActStatus"), manager_override_edit: t("qdActManagerEdit"),
+    payment: t("qdActPayment"),
   };
   const toggleActivity = () => {
     const next = !showActivity;
@@ -383,8 +384,8 @@ export default function QuoteDetailClient({
             <h1 className="text-2xl font-bold flex items-center gap-3 flex-wrap">
               <span className="font-mono-en">{q.quoteNumber}</span>
               {q.originalNumber && (
-                <span className="text-xs font-bold font-mono-en px-2 py-0.5 rounded bg-gray-100 dark:bg-gray-700 text-gray-500 dark:text-gray-300" title="الرقم المرجعي القديم">
-                  مرجع: {q.originalNumber}
+                <span className="text-xs font-bold font-mono-en px-2 py-0.5 rounded bg-gray-100 dark:bg-gray-700 text-gray-500 dark:text-gray-300" title={t("qdOldRefTitle")}>
+                  {t("qdRef")}: {q.originalNumber}
                 </span>
               )}
               <span className={`text-xs px-2.5 py-1 rounded-full font-bold ${status.color}`}>{statusLabel}</span>
@@ -487,14 +488,14 @@ export default function QuoteDetailClient({
               {isManager && (
                 <button onClick={() => setShowReassign(true)}
                   className="inline-flex items-center gap-1 text-xs font-bold text-indigo-600 dark:text-indigo-400 hover:underline print:hidden"
-                  title="نقل هذا الطلب إلى عميل آخر أو عميل جديد (دون تعديل العميل الحالي)">
-                  <RotateCcw className="w-3.5 h-3.5" /> نقل لعميل آخر
+                  title={t("qdReassignBtnTitle")}>
+                  <RotateCcw className="w-3.5 h-3.5" /> {t("qdReassignBtn")}
                 </button>
               )}
             </div>
             <div className="space-y-3">
               <div>
-                <p className="text-lg font-bold">{q.customer.name}</p>
+                <p className="text-lg font-bold">{displayName(q.customer.name, locale)}</p>
               </div>
               <div className="flex items-center gap-2 text-sm text-gray-500">
                 <Phone className="w-4 h-4" />
@@ -793,14 +794,14 @@ export default function QuoteDetailClient({
       <div className="mt-6 print:hidden">
         <button onClick={toggleActivity}
           className="inline-flex items-center gap-2 text-sm font-bold text-gray-500 hover:text-gray-900 dark:hover:text-white">
-          <Clock className="w-4 h-4" /> سجل النشاط {showActivity ? "▲" : "▼"}
+          <Clock className="w-4 h-4" /> {t("qdActivityLog")} {showActivity ? "▲" : "▼"}
         </button>
         {showActivity && (
           <div className="mt-3 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded p-4">
             {activity === null ? (
-              <p className="text-sm text-gray-400 flex items-center gap-2"><Clock className="w-4 h-4 animate-spin" /> جارٍ التحميل...</p>
+              <p className="text-sm text-gray-400 flex items-center gap-2"><Clock className="w-4 h-4 animate-spin" /> {t("loadingDots")}</p>
             ) : activity.length === 0 ? (
-              <p className="text-sm text-gray-400">لا يوجد نشاط مُسجَّل لهذا الطلب.</p>
+              <p className="text-sm text-gray-400">{t("qdNoActivity")}</p>
             ) : (
               <ul className="space-y-2.5">
                 {activity.map((a) => (
@@ -825,27 +826,27 @@ export default function QuoteDetailClient({
       {showReassign && (
         <div className="fixed inset-0 bg-black/40 z-50 flex items-center justify-center p-4 print:hidden" onClick={() => setShowReassign(false)}>
           <div className="bg-white dark:bg-gray-800 rounded-xl p-5 w-full max-w-md max-h-[85vh] overflow-y-auto" onClick={(e) => e.stopPropagation()}>
-            <h3 className="font-bold mb-1 flex items-center gap-2"><RotateCcw className="w-4 h-4" /> نقل الطلب لعميل آخر</h3>
-            <p className="text-xs text-gray-400 mb-3">الطلب حالياً باسم <b>{q.customer.name}</b>. النقل يغيّر عميل هذا الطلب فقط — لا يمسّ طلبات العميل الحالي الأخرى.</p>
+            <h3 className="font-bold mb-1 flex items-center gap-2"><RotateCcw className="w-4 h-4" /> {t("qdReassignTitle")}</h3>
+            <p className="text-xs text-gray-400 mb-3">{t("qdReassignDescA")} <b>{displayName(q.customer.name, locale)}</b>{t("qdReassignDescB")}</p>
             <div className="inline-flex rounded-lg border border-gray-200 dark:border-gray-700 overflow-hidden mb-3 text-sm">
               <button onClick={() => setReassignMode("existing")}
-                className={cn("px-3 py-1.5 font-semibold", reassignMode === "existing" ? "bg-gray-900 text-white dark:bg-white dark:text-gray-900" : "text-gray-500")}>عميل موجود</button>
+                className={cn("px-3 py-1.5 font-semibold", reassignMode === "existing" ? "bg-gray-900 text-white dark:bg-white dark:text-gray-900" : "text-gray-500")}>{t("qdExistingCustomer")}</button>
               <button onClick={() => setReassignMode("new")}
-                className={cn("px-3 py-1.5 font-semibold border-r border-gray-200 dark:border-gray-700", reassignMode === "new" ? "bg-gray-900 text-white dark:bg-white dark:text-gray-900" : "text-gray-500")}>عميل جديد</button>
+                className={cn("px-3 py-1.5 font-semibold border-r border-gray-200 dark:border-gray-700", reassignMode === "new" ? "bg-gray-900 text-white dark:bg-white dark:text-gray-900" : "text-gray-500")}>{t("qdNewCustomer")}</button>
             </div>
 
             {reassignMode === "existing" ? (
               <div>
                 <input value={reassignSearch} onChange={(e) => setReassignSearch(e.target.value)} autoFocus
-                  className="field mb-2" placeholder="ابحث بالاسم أو رقم الهاتف (حرفين على الأقل)" />
+                  className="field mb-2" placeholder={t("qdReassignSearchPh")} />
                 <div className="space-y-1.5 max-h-64 overflow-y-auto">
                   {reassignResults.length === 0 && reassignSearch.trim().length >= 2 && (
-                    <p className="text-xs text-gray-400 py-2">لا نتائج — جرّب «عميل جديد».</p>
+                    <p className="text-xs text-gray-400 py-2">{t("qdNoResultsTryNew")}</p>
                   )}
                   {reassignResults.map((c) => (
                     <button key={c.id} disabled={reassignBusy} onClick={() => doReassign({ customerId: c.id }, c.name)}
                       className="w-full text-right p-2.5 rounded-lg border border-gray-100 dark:border-gray-700 hover:bg-indigo-50 dark:hover:bg-indigo-900/20 disabled:opacity-50">
-                      <p className="text-sm font-bold">{c.name}</p>
+                      <p className="text-sm font-bold">{displayName(c.name, locale)}</p>
                       <p className="text-xs text-gray-400 font-mono-en">{c.phone} · {c.governorate}</p>
                     </button>
                   ))}
@@ -854,23 +855,23 @@ export default function QuoteDetailClient({
             ) : (
               <div className="space-y-2">
                 <input value={newCust.name} onChange={(e) => setNewCust({ ...newCust, name: e.target.value })}
-                  className="field" placeholder="اسم العميل *" autoFocus />
+                  className="field" placeholder={t("qdCustNamePh")} autoFocus />
                 <input value={newCust.phone} onChange={(e) => setNewCust({ ...newCust, phone: e.target.value })}
-                  className="field font-mono-en" placeholder="رقم الهاتف (9XXXXXXX)" />
+                  className="field font-mono-en" placeholder={t("qdPhonePh")} />
                 <div className="grid grid-cols-2 gap-2">
                   <input value={newCust.governorate} onChange={(e) => setNewCust({ ...newCust, governorate: e.target.value })}
-                    className="field" placeholder="المحافظة" />
+                    className="field" placeholder={t("qdGovPh")} />
                   <input value={newCust.wilayat} onChange={(e) => setNewCust({ ...newCust, wilayat: e.target.value })}
-                    className="field" placeholder="الولاية" />
+                    className="field" placeholder={t("qdWilayatPh")} />
                 </div>
                 <button disabled={reassignBusy || !newCust.name.trim()}
                   onClick={() => doReassign({ newCustomer: newCust }, newCust.name.trim())}
                   className="w-full h-10 rounded-lg bg-gray-900 dark:bg-white dark:text-gray-900 text-white text-sm font-bold disabled:opacity-50">
-                  إنشاء العميل ونقل الطلب إليه
+                  {t("qdCreateAndReassign")}
                 </button>
               </div>
             )}
-            <button onClick={() => setShowReassign(false)} className="mt-3 text-xs font-semibold text-gray-400 hover:text-gray-600 dark:hover:text-gray-200">إغلاق</button>
+            <button onClick={() => setShowReassign(false)} className="mt-3 text-xs font-semibold text-gray-400 hover:text-gray-600 dark:hover:text-gray-200">{t("qdClose")}</button>
           </div>
         </div>
       )}
@@ -886,7 +887,7 @@ export default function QuoteDetailClient({
         <div className="grid grid-cols-2 gap-8 mb-8 text-sm">
           <div>
             <h3 className="font-bold text-gray-500 text-xs uppercase mb-2">{t("customerInfo")}</h3>
-            <p className="font-bold text-lg">{q.customer.name}</p>
+            <p className="font-bold text-lg">{displayName(q.customer.name, locale)}</p>
             <p className="text-gray-600">{q.customer.phoneCode} {q.customer.phone}</p>
             <p className="text-gray-600">{q.customer.governorate} - {q.customer.wilayat}</p>
           </div>

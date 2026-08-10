@@ -331,9 +331,9 @@ function CabinetBuilder({ config, onUpdate, initial }: { config: any; onUpdate: 
   const [shape, setShape] = useState(initial?.shape ?? "single");
   // سعر الباب الزجاجي حسب الارتفاع (قابل للضبط عبر config.glassDoorPrices).
   const GLASS_OPTIONS = [
-    { key: "3", label: "ارتفاع ٣ م", short: "٣م", price: config.glassDoorPrices?.["3"] ?? 60 },
-    { key: "2.4", label: "ارتفاع ٢.٤ م", short: "٢.٤م", price: config.glassDoorPrices?.["2.4"] ?? 45 },
-    { key: "storage", label: "ستوريج علوي ٦٠ سم", short: "ستوريج", price: config.glassDoorPrices?.storage ?? 28 },
+    { key: "3", label: t("qbGlassH3"), short: "٣م", price: config.glassDoorPrices?.["3"] ?? 60 },
+    { key: "2.4", label: t("qbGlassH24"), short: "٢.٤م", price: config.glassDoorPrices?.["2.4"] ?? 45 },
+    { key: "storage", label: t("qbGlassStorage"), short: "ستوريج", price: config.glassDoorPrices?.storage ?? 28 },
   ];
 
   // عدد الأبواب لكل قياس على حدة، مثل { "3": 6, "2.4": 5, storage: 3 }.
@@ -415,13 +415,13 @@ function CabinetBuilder({ config, onUpdate, initial }: { config: any; onUpdate: 
 
         {glassEnabled && (
           <div className="mt-3 space-y-2.5">
-            <label className="block text-xs font-semibold text-gray-400 uppercase tracking-wide">القياسات — عدد الأبواب لكل ارتفاع</label>
+            <label className="block text-xs font-semibold text-gray-400 uppercase tracking-wide">{t("qbSizesDoorsLabel")}</label>
             {GLASS_OPTIONS.map((o) => {
               const c = glassCounts[o.key] || 0;
               return (
                 <StepperRow key={o.key}
                   label={o.label}
-                  hint={`${o.price} ${t("omr")} / باب`}
+                  hint={`${o.price} ${t("omr")} / ${t("qbDoorUnit")}`}
                   value={c}
                   onChange={(n) => setGlassCount(o.key, n)}
                   min={0}
@@ -432,7 +432,7 @@ function CabinetBuilder({ config, onUpdate, initial }: { config: any; onUpdate: 
 
             {totalGlass > 0 && (
               <div className="flex items-center justify-between rounded-lg bg-gray-900 text-white px-4 py-2.5">
-                <span className="text-sm font-bold">{t("glassDoors")} — {totalGlass} باب</span>
+                <span className="text-sm font-bold">{t("glassDoors")} — {totalGlass} {t("qbDoorUnit")}</span>
                 <span className="font-mono-en font-black">{glassCost.toFixed(3)} {t("omr")}</span>
               </div>
             )}
@@ -451,7 +451,7 @@ function CabinetBuilder({ config, onUpdate, initial }: { config: any; onUpdate: 
         <button type="button" onClick={() => setBack18((v) => !v)}
           className={cn("w-full flex items-center justify-between px-4 py-3 rounded border text-sm font-bold transition-colors",
             back18 ? "bg-gray-900 text-white border-gray-900" : "bg-white border-gray-200 text-gray-600")}>
-          <span>خلفية ١٨ ملي ({backRate} {t("omrPerSqm")})</span>
+          <span>{t("qbBack18")} ({backRate} {t("omrPerSqm")})</span>
           <span>{back18 ? "✓" : ""}</span>
         </button>
         {back18 && (
@@ -1053,7 +1053,7 @@ function TVTableBuilder({ config, onUpdate, initial }: { config: any; onUpdate: 
 
       {type === "floor" ? (
         <div>
-          <label className="block text-sm font-semibold text-gray-600 mb-1.5">{t("lengthM")} (م.ط)</label>
+          <label className="block text-sm font-semibold text-gray-600 mb-1.5">{t("lengthM")} ({t("linearMeterUnit")})</label>
           <NumField value={length} onChange={setLength} min={0.5} className="field font-mono-en text-center" />
         </div>
       ) : (
@@ -1072,8 +1072,8 @@ function TVTableBuilder({ config, onUpdate, initial }: { config: any; onUpdate: 
       <div className="text-center py-2 bg-gray-50 rounded border border-gray-100">
         <p className="text-sm font-bold font-mono-en text-gray-900">
           {type === "floor"
-            ? `${length} م.ط × ${perMeter} = ${(length * perMeter).toFixed(3)}`
-            : `${(Math.round(width * height * 100) / 100).toFixed(2)} م² × ${perSqm} = ${((Math.round(width * height * 100) / 100) * perSqm).toFixed(3)}`} {t("omr")}
+            ? `${length} ${t("linearMeterUnit")} × ${perMeter} = ${(length * perMeter).toFixed(3)}`
+            : `${(Math.round(width * height * 100) / 100).toFixed(2)} ${t("sqmUnit")} × ${perSqm} = ${((Math.round(width * height * 100) / 100) * perSqm).toFixed(3)}`} {t("omr")}
         </p>
       </div>
     </div>
