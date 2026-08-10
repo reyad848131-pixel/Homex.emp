@@ -69,19 +69,19 @@ export default function AuditLogsPage() {
         </div>
         <div className="flex items-center gap-2 flex-wrap">
           <input type="text" value={search} onChange={(e) => setSearch(e.target.value)}
-            placeholder="بحث (موظف / تفاصيل / رقم)" className="field w-auto min-w-[12rem]" />
+            placeholder={t("alSearchPh")} className="field w-auto min-w-[12rem]" />
           <select value={action} onChange={(e) => setAction(e.target.value)} className="field w-auto">
-            <option value="">كل الإجراءات</option>
-            <option value="create">إنشاء</option>
-            <option value="update">تعديل</option>
-            <option value="status_change">تغيير حالة</option>
-            <option value="reassign">نقل لعميل</option>
-            <option value="renumber">توحيد ترقيم</option>
-            <option value="import">استيراد</option>
-            <option value="import_undo">تراجع استيراد</option>
-            <option value="delete">حذف</option>
-            <option value="reset_password">تصفير كلمة سر</option>
-            <option value="reset_passwords">تصفير كل الكلمات</option>
+            <option value="">{t("alAllActions")}</option>
+            <option value="create">{t("alCreate")}</option>
+            <option value="update">{t("alUpdate")}</option>
+            <option value="status_change">{t("alStatusChange")}</option>
+            <option value="reassign">{t("alReassign")}</option>
+            <option value="renumber">{t("alRenumber")}</option>
+            <option value="import">{t("alImport")}</option>
+            <option value="import_undo">{t("alImportUndo")}</option>
+            <option value="delete">{t("alDelete")}</option>
+            <option value="reset_password">{t("alResetPw")}</option>
+            <option value="reset_passwords">{t("alResetAllPw")}</option>
           </select>
           <select value={entity} onChange={(e) => setEntity(e.target.value)}
             className="field w-auto">

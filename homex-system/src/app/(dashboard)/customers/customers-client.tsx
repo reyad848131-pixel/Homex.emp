@@ -41,8 +41,8 @@ export function CustomersClient({ customers }: { customers: Customer[] }) {
         </div>
         <a href="/api/export?type=customers"
           className="flex items-center gap-2 border border-gray-200 dark:border-gray-700 text-gray-600 dark:text-gray-300 px-4 py-2.5 rounded text-sm font-bold hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors"
-          title="تنزيل العملاء كملف Excel/CSV">
-          <Download className="w-4 h-4" /> تصدير
+          title={t("custDownloadTitle")}>
+          <Download className="w-4 h-4" /> {t("exportWord")}
         </a>
       </div>
 

@@ -3,6 +3,7 @@
 import { useState, useEffect } from "react";
 import { Trash2, RotateCcw, FileText, User, Loader2 } from "lucide-react";
 import { useI18n } from "@/lib/i18n";
+import { displayName } from "@/lib/translit";
 import { useToast } from "@/components/toast";
 
 interface DeletedQuote {
@@ -15,7 +16,7 @@ interface DeletedCustomer {
 }
 
 export default function TrashPage() {
-  const { t, dateLocale } = useI18n();
+  const { t, locale, dateLocale } = useI18n();
   const toast = useToast();
   const [quotations, setQuotations] = useState<DeletedQuote[]>([]);
   const [customers, setCustomers] = useState<DeletedCustomer[]>([]);
@@ -101,7 +102,7 @@ export default function TrashPage() {
               <div key={q.id} className="flex items-center justify-between gap-3 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg px-4 py-3">
                 <div className="min-w-0">
                   <p className="font-bold font-mono-en text-gray-800 dark:text-gray-100">{q.quoteNumber}</p>
-                  <p className="text-sm text-gray-500 truncate">{q.customer?.name} · {(q.total || 0).toFixed(3)} ر.ع</p>
+                  <p className="text-sm text-gray-500 truncate">{displayName(q.customer?.name || "", locale)} · {(q.total || 0).toFixed(3)} {t("omr")}</p>
                   <p className="text-xs text-gray-400 mt-0.5">{t("deletedByLabel")}: {q.deletedByName || "—"} · {fmtDate(q.deletedAt)}</p>
                 </div>
                 {rowActions("quotation", q.id)}
@@ -120,7 +121,7 @@ export default function TrashPage() {
             {customers.map((c) => (
               <div key={c.id} className="flex items-center justify-between gap-3 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg px-4 py-3">
                 <div className="min-w-0">
-                  <p className="font-bold text-gray-800 dark:text-gray-100">{c.name}</p>
+                  <p className="font-bold text-gray-800 dark:text-gray-100">{displayName(c.name, locale)}</p>
                   <p className="text-sm text-gray-500 truncate font-mono-en">{c.phone} · {c.governorate} — {c.wilayat}</p>
                   <p className="text-xs text-gray-400 mt-0.5">{t("deletedByLabel")}: {c.deletedByName || "—"} · {fmtDate(c.deletedAt)}</p>
                 </div>

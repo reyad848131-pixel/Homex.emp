@@ -112,7 +112,7 @@ export default function EmployeesPage() {
   };
 
   const resetOne = async (emp: Employee) => {
-    if (!confirm(`تصفير كلمة سر ${emp.name} إلى Homex${emp.civilId}؟ (يفكّ القفل أيضاً)`)) return;
+    if (!confirm(`${t("empResetPw")}: ${emp.name} → Homex${emp.civilId}?`)) return;
     setResettingId(emp.id);
     try {
       const res = await fetch(`/api/employees/${emp.id}/reset-password`, { method: "POST" });
@@ -433,7 +433,7 @@ export default function EmployeesPage() {
                     </button>
                     <button onClick={() => resetOne(emp)} disabled={resettingId === emp.id}
                       className="text-xs font-bold text-amber-600 border-amber-200 px-2 py-1 border rounded hover:bg-amber-50 disabled:opacity-50">
-                      تصفير كلمة السر
+                      {t("empResetPw")}
                     </button>
                     <button onClick={() => toggleActive(emp)}
                       className={cn("text-xs font-bold px-2 py-1 border rounded",
