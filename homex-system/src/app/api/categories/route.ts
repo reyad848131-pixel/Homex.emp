@@ -16,6 +16,11 @@ const EXTRA_CATEGORIES = [
     pricingType: "per_sqm", basePrice: 60, sortOrder: 10,
     config: JSON.stringify({ pricePerSqm: 60 }),
   },
+  {
+    id: "partition", nameAr: "بارتشن", nameEn: "Partition", icon: "Columns2",
+    pricingType: "per_sqm", basePrice: 65, sortOrder: 11,
+    config: JSON.stringify({ pricePerSqm: 65 }),
+  },
 ];
 
 let ensuredExtras = false;

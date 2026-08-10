@@ -790,6 +790,70 @@ function CladdingBuilder({ config, onUpdate, initial }: { config: any; onUpdate:
   );
 }
 
+// Partition (بارتشن): straightforward area pricing — length × width × price/m².
+// Uses the same slider + number-field theme as the cladding builder so it feels
+// familiar and quick.
+function PartitionBuilder({ config, onUpdate, initial }: { config: any; onUpdate: BuilderUpdate; initial?: BuilderInitial }) {
+  const { t } = useI18n();
+  const [length, setLength] = useState(initial?.length ?? 3);
+  const [width, setWidth] = useState(initial?.width ?? 2.4);
+
+  const pricePerSqm = config?.pricePerSqm || config?.basePrice || 65;
+  const area = Math.round(length * width * 100) / 100;
+  const price = Math.round(area * pricePerSqm * 1000) / 1000;
+
+  useEffect(() => {
+    const desc = `بارتشن - ${length}×${width}م = ${area} م²`;
+    onUpdate(desc, price, 0, { length, width });
+  }, [length, width, area, price, onUpdate]);
+
+  return (
+    <div className="space-y-4">
+      <div>
+        <label className="block text-sm font-semibold text-gray-600 mb-2">{t("dimensionsLabel")}</label>
+        <div className="space-y-3">
+          <div>
+            <div className="flex items-center justify-between mb-1">
+              <span className="text-xs text-gray-500">{t("lengthM")}</span>
+              <span className="text-xs font-mono-en font-bold">{length}</span>
+            </div>
+            <div className="flex items-center gap-2">
+              <input type="range" min={0.5} max={10} step={0.1} value={length}
+                onChange={(e) => setLength(parseFloat(e.target.value))}
+                className="flex-1 h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer accent-gray-900" />
+              <NumField value={length} onChange={setLength} min={0.5} max={10}
+                className="w-16 border border-gray-200 rounded px-2 py-1.5 text-sm font-mono-en text-center" />
+            </div>
+          </div>
+          <div>
+            <div className="flex items-center justify-between mb-1">
+              <span className="text-xs text-gray-500">{t("widthM")}</span>
+              <span className="text-xs font-mono-en font-bold">{width}</span>
+            </div>
+            <div className="flex items-center gap-2">
+              <input type="range" min={0.5} max={10} step={0.1} value={width}
+                onChange={(e) => setWidth(parseFloat(e.target.value))}
+                className="flex-1 h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer accent-gray-900" />
+              <NumField value={width} onChange={setWidth} min={0.5} max={10}
+                className="w-16 border border-gray-200 rounded px-2 py-1.5 text-sm font-mono-en text-center" />
+            </div>
+          </div>
+        </div>
+        <div className="mt-2 text-center py-2 bg-gray-50 rounded border border-gray-100">
+          <span className="text-sm text-gray-600">{t("areaLabel")}: </span>
+          <span className="font-bold font-mono-en text-gray-900">{area.toFixed(2)}</span>
+          <span className="text-sm text-gray-600"> {t("sqmUnit")}</span>
+        </div>
+      </div>
+
+      <div className="flex items-center justify-between rounded-lg bg-gray-900 text-white px-4 py-2.5">
+        <span className="text-sm font-bold font-mono-en">{area.toFixed(2)} {t("sqmUnit")} × {pricePerSqm} {t("omrPerSqm")}</span>
+        <span className="font-mono-en font-black">{price.toFixed(3)} {t("omr")}</span>
+      </div>
+    </div>
+  );
+}
+
 function SofaBuilder({ config, onUpdate, initial }: { config: any; onUpdate: BuilderUpdate; initial?: BuilderInitial }) {
   const { t } = useI18n();
   const [type, setType] = useState(initial?.type ?? "standard");
@@ -1188,6 +1252,8 @@ export function CategoryBuilder({
       return <BedBuilder config={config} onUpdate={onUpdate} initial={initial} />;
     case "cladding":
       return <CladdingBuilder config={config} onUpdate={onUpdate} initial={initial} />;
+    case "partition":
+      return <PartitionBuilder config={config} onUpdate={onUpdate} initial={initial} />;
     case "sofa-set":
       return <SofaBuilder config={config} onUpdate={onUpdate} initial={initial} />;
     case "laundry":

@@ -69,6 +69,9 @@ async function main() {
     { id: "laundry", nameAr: "غرفة الغسيل", nameEn: "Laundry", icon: "WashingMachine", pricingType: "per_sqm", basePrice: 60, sortOrder: 11,
       config: JSON.stringify({ pricePerSqm: 60, lighting: 20 })
     },
+    { id: "partition", nameAr: "بارتشن", nameEn: "Partition", icon: "Columns2", pricingType: "per_sqm", basePrice: 65, sortOrder: 11,
+      config: JSON.stringify({ pricePerSqm: 65 })
+    },
     { id: "other", nameAr: "أخرى", nameEn: "Other", icon: "Plus", pricingType: "manual", sortOrder: 12,
       config: JSON.stringify({})
     },
