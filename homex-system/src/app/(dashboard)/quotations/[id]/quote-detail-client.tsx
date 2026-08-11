@@ -145,11 +145,26 @@ export default function QuoteDetailClient({
   const [contractDate, setContractDate] = useState("");
   const [contractTime, setContractTime] = useState("");
   const [contractBusy, setContractBusy] = useState(false);
+  // How many deliveries are already scheduled on the chosen date (availability
+  // hint). null = unknown / not loaded (or the user can't see the board).
+  const [dayCount, setDayCount] = useState<number | null>(null);
 
   const fmtCur = (n: number) => `${n.toFixed(3)} ${t("omr")}`;
 
   // Keep `terms` in sync if the server value changes across navigations.
   useEffect(() => { setTerms(initialTerms); }, [initialTerms]);
+
+  // Load the number of deliveries already scheduled on the chosen date, so the
+  // user can pick a free slot. Silently ignored if they can't see the board.
+  useEffect(() => {
+    if (!showContract || !contractDate) { setDayCount(null); return; }
+    let cancelled = false;
+    fetch(`/api/work-orders?deliveryFrom=${contractDate}&deliveryTo=${contractDate}`)
+      .then((r) => (r.ok ? r.json() : null))
+      .then((d) => { if (!cancelled) setDayCount(d && Array.isArray(d.quotations) ? d.quotations.length : null); })
+      .catch(() => { if (!cancelled) setDayCount(null); });
+    return () => { cancelled = true; };
+  }, [showContract, contractDate, id]);
 
   const convertToContract = async () => {
     if (!contractDate) { toast.error(t("contractDateRequired")); return; }
@@ -865,9 +880,9 @@ export default function QuoteDetailClient({
       {showContract && (
         <div className="fixed inset-0 bg-black/40 z-50 flex items-center justify-center p-4 print:hidden" onClick={() => setShowContract(false)}>
           <div className="bg-white dark:bg-gray-800 rounded-xl p-5 w-full max-w-md" onClick={(e) => e.stopPropagation()}>
-            <h3 className="font-bold mb-1 flex items-center gap-2"><FileText className="w-4 h-4" /> {t("convertContractTitle")}</h3>
-            <p className="text-xs text-gray-500 mb-4">{t("convertContractDesc")}</p>
-            <div className="grid grid-cols-3 gap-2 mb-4">
+            <h3 className="font-bold mb-1 flex items-center gap-2"><CalendarDays className="w-4 h-4" /> {t("convertContractTitle")}</h3>
+            <p className="text-xs text-gray-500 mb-4">{q.deliveryDate ? t("contractDatePreattached") : t("contractDateNew")}</p>
+            <div className="grid grid-cols-3 gap-2 mb-2">
               <div className="col-span-2">
                 <label className="block text-xs font-semibold text-gray-500 mb-1">{t("deliveryDate")}</label>
                 <input type="date" value={contractDate} onChange={(e) => setContractDate(e.target.value)} className="field font-mono-en w-full" />
@@ -877,6 +892,14 @@ export default function QuoteDetailClient({
                 <input type="time" value={contractTime} onChange={(e) => setContractTime(e.target.value)} className="field font-mono-en w-full" />
               </div>
             </div>
+            {contractDate && dayCount !== null && (
+              <p className={cn("text-xs font-semibold mb-4 flex items-center gap-1.5", dayCount === 0 ? "text-emerald-600" : "text-amber-600 dark:text-amber-400")}>
+                {dayCount === 0
+                  ? t("sameDayFree")
+                  : <><CalendarDays className="w-3.5 h-3.5" /> <span className="font-mono-en">{dayCount}</span> {t("sameDayDeliveries")}</>}
+              </p>
+            )}
+            {!(contractDate && dayCount !== null) && <div className="mb-4" />}
             <div className="flex gap-2">
               <button onClick={convertToContract} disabled={contractBusy || !contractDate}
                 className="flex-1 inline-flex items-center justify-center gap-2 h-10 rounded-lg bg-gray-900 dark:bg-white dark:text-gray-900 text-white text-sm font-bold disabled:opacity-50">
