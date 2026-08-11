@@ -17,10 +17,13 @@ export default async function QuotationDetailPage({ params }: { params: Promise<
 
   // Only roles that can view quotations may open one (they show prices/money).
   // Field roles like driver/photographer are blocked at the URL level.
-  const canViewQuotes = user
-    ? user.role === "admin" || user.role === "ceo" || user.role === "manager" ||
-      ((await getRolePermissions(user.role).catch(() => [])) as string[]).includes("quotes")
-    : false;
+  const perms = user ? ((await getRolePermissions(user.role).catch(() => [])) as string[]) : [];
+  const privileged = !!user && (user.role === "admin" || user.role === "ceo" || user.role === "manager");
+  const canViewQuotes = privileged || perms.includes("quotes");
+  // Money actions (issue invoice / record payment) — allowed for managers and
+  // anyone granted the invoices/payments permission (e.g. an accountant), even
+  // after the contract locks.
+  const canManageMoney = privileged || perms.includes("invoices") || perms.includes("payments");
 
   let quotation = user && canViewQuotes
     ? await prisma.quotation.findFirst({
@@ -53,6 +56,7 @@ export default async function QuotationDetailPage({ params }: { params: Promise<
       initialTerms={settings.terms_conditions || ""}
       initialSelfApprove={settings.allow_self_approve !== "false"}
       initialMe={user ? { id: user.id, role: user.role } : null}
+      initialCanManageMoney={canManageMoney}
       initialWaTemplate={settings.wa_template_quote || ""}
       initialCompany={{ name: settings.company_name || "", phone: settings.company_phone || "" }}
     />

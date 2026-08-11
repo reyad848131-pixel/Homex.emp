@@ -92,6 +92,7 @@ export default function QuoteDetailClient({
   initialTerms,
   initialSelfApprove,
   initialMe,
+  initialCanManageMoney = false,
   initialWaTemplate = "",
   initialCompany = { name: "", phone: "" },
 }: {
@@ -100,6 +101,7 @@ export default function QuoteDetailClient({
   initialTerms: string;
   initialSelfApprove: boolean;
   initialMe: { id: string; role: string } | null;
+  initialCanManageMoney?: boolean;
   initialWaTemplate?: string;
   initialCompany?: { name: string; phone: string };
 }) {
@@ -360,7 +362,9 @@ export default function QuoteDetailClient({
   const isManager = me?.role === "admin" || me?.role === "manager" || me?.role === "ceo";
   const isOwner = me?.id === q.employee.id;
   const quoteLocked = !!q.invoice || q.payments.length > 0 || q.status === "accepted" || !!q.signedAt;
-  const canManageMoney = isManager || (!quoteLocked && isOwner);
+  // Managers and permission-holders (e.g. accountant) can manage money even
+  // after the contract locks; before lock the quote owner can too.
+  const canManageMoney = initialCanManageMoney || (!quoteLocked && isOwner);
 
   // --- Reassign to another customer ---------------------------------------
   useEffect(() => {

@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { getAuth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { logAction } from "@/lib/audit";
+import { userCan } from "@/lib/permissions";
 
 export async function POST(req: NextRequest) {
   try {
@@ -18,11 +19,11 @@ export async function POST(req: NextRequest) {
 
     if (!quotation) return NextResponse.json({ error: "Not found" }, { status: 404 });
 
-    const isManager = user.role === "admin" || user.role === "manager" || user.role === "ceo";
-    // Once signed/accepted the contract is locked — only managers may invoice.
+    // Once signed/accepted the contract is locked — issuing an invoice then
+    // requires the "invoices" permission (managers + accountant have it).
     // Before that a sales rep may invoice their own approved quotation.
     if (quotation.status === "accepted" || quotation.signedAt) {
-      if (!isManager) return NextResponse.json({ error: "بعد قفل العقد، فقط المدراء يصدرون الفواتير", code: "locked" }, { status: 403 });
+      if (!(await userCan(user.role, "invoices"))) return NextResponse.json({ error: "إصدار الفواتير يتطلب صلاحية الفواتير", code: "locked" }, { status: 403 });
     } else if (user.role === "sales" && quotation.employeeId !== user.id) {
       return NextResponse.json({ error: "Forbidden" }, { status: 403 });
     }
