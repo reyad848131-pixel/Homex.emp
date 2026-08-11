@@ -5,7 +5,7 @@ import { nextWorkerColor } from "@/lib/workers";
 import { userCan } from "@/lib/permissions";
 
 // Managing the workers list requires the "workers" permission (admin/ceo/manager
-// have it, plus the "production" role and any custom role granted it).
+// and accountant have it, plus any custom role granted it).
 function canManageWorkers(user: { role?: string } | null | undefined) {
   return userCan(String(user?.role || ""), "workers");
 }

@@ -98,9 +98,6 @@ export const SYSTEM_ROLES: RoleDef[] = [
   // Photographer: the photography queue, plus read-only delivery schedule and
   // read-only customers. No money anywhere.
   { key: "photographer", label: "مصوّر", system: true, permissions: ["photography", "deliveries_view", "customers_view"] },
-  // Production supervisor / factory floor: the work board (drive job stages &
-  // production tracking) and the workers list. No money, no admin areas.
-  { key: "production", label: "مشرف إنتاج", system: true, permissions: ["work_orders", "workers"] },
 ];
 
 // Custom roles are stored as JSON in the settings table (no schema change).
