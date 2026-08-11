@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { BarChart3, TrendingUp, Users, MapPin, FileText, Calendar, Printer, Truck, Clock } from "lucide-react";
+import { BarChart3, TrendingUp, Users, MapPin, FileText, Calendar, Printer, Truck, Clock, Wallet, Banknote, Coins, PiggyBank } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { STATUS_MAP } from "@/lib/types";
 import { useI18n } from "@/lib/i18n";
@@ -84,6 +84,13 @@ function DonutChart({ segments, size = 160, totalLabel }: { segments: Array<{ la
 }
 
 interface ReportData {
+  finance?: {
+    totalSales: string;
+    totalPaid: string;
+    outstanding: string;
+    totalCosts: string;
+    netProfit: string;
+  };
   summary: {
     totalQuotations: number;
     totalRevenue: string;
@@ -170,6 +177,33 @@ export default function ReportsPage() {
           </button>
         </div>
       </div>
+
+      {/* Financial summary (P&L): sales / paid / due / costs / profit */}
+      {data.finance && (
+        <div className="mb-6">
+          <h2 className="text-sm font-bold text-gray-400 uppercase tracking-wider mb-3 flex items-center gap-2">
+            <Wallet className="w-4 h-4" /> {t("rpFinanceTitle")}
+          </h2>
+          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4">
+            {[
+              { label: t("rpTotalSales"), value: fmtCur(data.finance.totalSales), tag: t("rpSalesHint"), icon: TrendingUp, color: "text-blue-600" },
+              { label: t("rpTotalPaid"), value: fmtCur(data.finance.totalPaid), tag: t("rpPeriodTag"), icon: Banknote, color: "text-emerald-600" },
+              { label: t("rpOutstanding"), value: fmtCur(data.finance.outstanding), tag: t("rpCurrentTag"), icon: Clock, color: "text-amber-600" },
+              { label: t("rpTotalCosts"), value: fmtCur(data.finance.totalCosts), tag: t("rpPeriodTag"), icon: Coins, color: "text-red-600" },
+              { label: t("rpNetProfit"), value: fmtCur(data.finance.netProfit), tag: t("rpPeriodTag"), icon: PiggyBank, color: Number(data.finance.netProfit) >= 0 ? "text-emerald-600" : "text-red-600" },
+            ].map((c) => (
+              <div key={c.label} className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded p-4">
+                <div className="flex items-center gap-2 mb-2">
+                  <c.icon className={cn("w-4 h-4", c.color)} />
+                  <span className="text-xs text-gray-400 font-bold">{c.label}</span>
+                </div>
+                <p className={cn("text-lg font-black font-mono-en", c.color)}>{c.value}</p>
+                <p className="text-[10px] text-gray-400 mt-0.5">{c.tag}</p>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
 
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
         {[

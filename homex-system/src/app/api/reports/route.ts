@@ -89,7 +89,31 @@ export async function GET(req: NextRequest) {
     ? ((statusCounts.approved / quotations.length) * 100).toFixed(1)
     : "0";
 
+  // ── Financial summary (P&L) ─────────────────────────────────────────────
+  // Sales = confirmed contracts (status "accepted"). Paid = cash actually
+  // received. Costs = expenses. Outstanding is an all-time snapshot of what
+  // customers still owe across every contract (naturally a current balance).
+  const [salesPeriod, paidPeriod, contractsAll, paidAll, costsPeriod] = await Promise.all([
+    prisma.quotation.aggregate({ _sum: { total: true }, where: { status: "accepted", deletedAt: null, createdAt: { gte: startDate } } }),
+    prisma.payment.aggregate({ _sum: { amount: true }, where: { paidAt: { gte: startDate } } }),
+    prisma.quotation.aggregate({ _sum: { total: true }, where: { status: "accepted", deletedAt: null } }),
+    prisma.payment.aggregate({ _sum: { amount: true } }),
+    prisma.expense.aggregate({ _sum: { amount: true }, where: { spentAt: { gte: startDate } } }),
+  ]);
+  const totalSales = roundMoney(salesPeriod._sum.total || 0);
+  const totalPaid = roundMoney(paidPeriod._sum.amount || 0);
+  const outstanding = Math.max(0, roundMoney((contractsAll._sum.total || 0) - (paidAll._sum.amount || 0)));
+  const totalCosts = roundMoney(costsPeriod._sum.amount || 0);
+  const netProfit = roundMoney(totalSales - totalCosts);
+
   return NextResponse.json({
+    finance: {
+      totalSales: totalSales.toFixed(3),
+      totalPaid: totalPaid.toFixed(3),
+      outstanding: outstanding.toFixed(3),
+      totalCosts: totalCosts.toFixed(3),
+      netProfit: netProfit.toFixed(3),
+    },
     summary: {
       totalQuotations: quotations.length,
       totalRevenue: totalRevenue.toFixed(3),

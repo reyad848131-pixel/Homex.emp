@@ -28,8 +28,26 @@ model Employee {
   notifications Notification[]
   payments      Payment[]
   invoices      Invoice[]
+  expenses      Expense[]
 
   @@map("employees")
+}
+
+// Business costs/expenses (materials, salaries, rent, …) — the cost side of the
+// reports P&L. Not tied to a specific order; scoped to the report period by date.
+model Expense {
+  id        String   @id @default(cuid())
+  amount    Float
+  category  String   @default("other") // materials | labor | rent | utilities | transport | other
+  note      String?
+  spentAt   DateTime @default(now()) @map("spent_at")
+  createdBy String   @map("created_by")
+  createdAt DateTime @default(now()) @map("created_at")
+
+  creator Employee @relation(fields: [createdBy], references: [id])
+
+  @@index([spentAt])
+  @@map("expenses")
 }
 
 model Customer {
