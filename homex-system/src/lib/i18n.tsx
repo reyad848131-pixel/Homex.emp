@@ -723,6 +723,8 @@ const translations = {
   contractCreated: { ar: "تم تحويل العرض إلى عقد ونقله لإدارة الأعمال ✅", en: "Quote converted to a contract and moved to the work board ✅" },
   contractDateRequired: { ar: "أدخل تاريخ التسليم أولاً", en: "Enter the delivery date first" },
   contractBadge: { ar: "عقد مثبّت", en: "Locked contract" },
+  sessionExpired: { ar: "انتهت الجلسة — يتم تحويلك لتسجيل الدخول…", en: "Session expired — redirecting to sign in…" },
+  sessionExpiredBanner: { ar: "انتهت جلستك، الرجاء تسجيل الدخول من جديد.", en: "Your session has expired. Please sign in again." },
   statusRevised: { ar: "مُعاد للتعديل", en: "Revised" },
   statusDeclined: { ar: "مرفوض", en: "Declined" },
   statusCancelled: { ar: "ملغي", en: "Cancelled" },

@@ -20,7 +20,13 @@ export default function LoginPage() {
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
+  const [expired, setExpired] = useState(false);
   const { t, locale, setLocale, dir } = useI18n();
+
+  // Show a clear notice when redirected here by an expired session.
+  useEffect(() => {
+    if (new URLSearchParams(window.location.search).get("expired") === "1") setExpired(true);
+  }, []);
 
   // Theme toggle (auto → light → dark), shared with the dashboard via the
   // "theme" localStorage key the root layout reads on first paint.
@@ -106,6 +112,12 @@ export default function LoginPage() {
             <h2 className="text-xl font-bold text-gray-900 dark:text-gray-100">{t("signIn")}</h2>
             <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">{t("enterCredentials")}</p>
           </div>
+
+          {expired && (
+            <div className="mb-4 rounded bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 text-amber-800 dark:text-amber-200 text-sm text-center font-semibold px-3 py-2.5">
+              {t("sessionExpiredBanner")}
+            </div>
+          )}
 
           <form onSubmit={handleSubmit} className="space-y-4">
             <div>

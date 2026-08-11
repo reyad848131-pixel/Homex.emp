@@ -60,7 +60,8 @@ export const authOptions: NextAuthOptions = {
   },
   session: {
     strategy: "jwt",
-    maxAge: 24 * 60 * 60,
+    // 30 days — long-lived so shared shop/tablet sessions don't expire mid-use.
+    maxAge: 30 * 24 * 60 * 60,
   },
 };
 

@@ -5,6 +5,7 @@ import { Sidebar } from "@/components/sidebar";
 import { NotificationBell } from "@/components/notification-bell";
 import { DashboardContent } from "@/components/dashboard-content";
 import { GlobalSearch } from "@/components/global-search";
+import { SessionGuard } from "@/components/session-guard";
 
 export default async function DashboardLayout({
   children,
@@ -18,6 +19,7 @@ export default async function DashboardLayout({
 
   return (
     <div className="flex min-h-screen">
+      <SessionGuard />
       <Sidebar user={session.user as any} permissions={permissions} />
       <DashboardContent>
         {/* ps-12 on mobile reserves room for the fixed hamburger button (which
