@@ -46,7 +46,7 @@ export const STATUS_MAP: Record<string, { label: string; color: string }> = {
   pending: { label: "قيد المراجعة", color: "bg-yellow-100 text-yellow-700" },
   approved: { label: "معتمد", color: "bg-blue-100 text-blue-700" },
   sent: { label: "مرسل للعميل", color: "bg-purple-100 text-purple-700" },
-  accepted: { label: "مقبول", color: "bg-green-100 text-green-700" },
+  accepted: { label: "عقد", color: "bg-green-100 text-green-700" },
   revised: { label: "مُعاد للتعديل", color: "bg-orange-100 text-orange-700" },
   declined: { label: "مرفوض", color: "bg-red-100 text-red-700" },
   cancelled: { label: "ملغي", color: "bg-gray-200 text-gray-500" },

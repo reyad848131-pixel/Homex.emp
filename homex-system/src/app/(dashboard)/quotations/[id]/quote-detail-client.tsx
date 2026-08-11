@@ -140,11 +140,43 @@ export default function QuoteDetailClient({
   const [reassignMode, setReassignMode] = useState<"existing" | "new">("existing");
   const [newCust, setNewCust] = useState({ name: "", phone: "", governorate: "", wilayat: "" });
   const [whatsapping, setWhatsapping] = useState(false);
+  // Convert-to-contract dialog: captures the agreed delivery date/time.
+  const [showContract, setShowContract] = useState(false);
+  const [contractDate, setContractDate] = useState("");
+  const [contractTime, setContractTime] = useState("");
+  const [contractBusy, setContractBusy] = useState(false);
 
   const fmtCur = (n: number) => `${n.toFixed(3)} ${t("omr")}`;
 
   // Keep `terms` in sync if the server value changes across navigations.
   useEffect(() => { setTerms(initialTerms); }, [initialTerms]);
+
+  const convertToContract = async () => {
+    if (!contractDate) { toast.error(t("contractDateRequired")); return; }
+    if (contractBusy) return;
+    setContractBusy(true);
+    try {
+      const res = await fetch(`/api/quotations/${id}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ action: "contract", deliveryDate: contractDate, deliveryTime: contractTime || null }),
+      });
+      if (res.ok) {
+        const data = await res.json();
+        setQ((prev) => prev ? { ...prev, status: "accepted", deliveryDate: data.deliveryDate, deliveryTime: data.deliveryTime } : prev);
+        setShowContract(false);
+        toast.success(t("contractCreated"));
+        router.refresh();
+      } else {
+        const err = await res.json().catch(() => ({}));
+        toast.error(err.error || t("operationFailed"));
+      }
+    } catch {
+      toast.error(t("serverConnectionError"));
+    } finally {
+      setContractBusy(false);
+    }
+  };
 
   const updateStatus = async (status: string, comment?: string) => {
     if (statusBusy) return;
@@ -438,6 +470,13 @@ export default function QuoteDetailClient({
                 className="flex items-center gap-2 px-4 py-2 bg-green-600 text-white rounded text-sm font-bold hover:bg-green-700 disabled:opacity-50">
                 {statusBusy ? <Clock className="w-4 h-4 animate-spin" /> : <CheckCircle className="w-4 h-4" />}
                 {t("approveQuoteBtn")}
+              </button>
+            )}
+            {q.status === "approved" && (
+              <button onClick={() => { setContractDate(q.deliveryDate ? new Date(q.deliveryDate).toISOString().split("T")[0] : ""); setContractTime(q.deliveryTime || ""); setShowContract(true); }}
+                className="flex items-center gap-2 px-4 py-2 bg-gray-900 dark:bg-white dark:text-gray-900 text-white rounded text-sm font-bold hover:opacity-90">
+                <FileText className="w-4 h-4" />
+                {t("convertToContract")}
               </button>
             )}
             {(q.status === "approved" || q.status === "accepted") && !q.invoice && canManageMoney && (
@@ -821,6 +860,33 @@ export default function QuoteDetailClient({
           </div>
         )}
       </div>
+
+      {/* Convert-to-contract modal */}
+      {showContract && (
+        <div className="fixed inset-0 bg-black/40 z-50 flex items-center justify-center p-4 print:hidden" onClick={() => setShowContract(false)}>
+          <div className="bg-white dark:bg-gray-800 rounded-xl p-5 w-full max-w-md" onClick={(e) => e.stopPropagation()}>
+            <h3 className="font-bold mb-1 flex items-center gap-2"><FileText className="w-4 h-4" /> {t("convertContractTitle")}</h3>
+            <p className="text-xs text-gray-500 mb-4">{t("convertContractDesc")}</p>
+            <div className="grid grid-cols-3 gap-2 mb-4">
+              <div className="col-span-2">
+                <label className="block text-xs font-semibold text-gray-500 mb-1">{t("deliveryDate")}</label>
+                <input type="date" value={contractDate} onChange={(e) => setContractDate(e.target.value)} className="field font-mono-en w-full" />
+              </div>
+              <div>
+                <label className="block text-xs font-semibold text-gray-500 mb-1">{t("deliveryTimeLabel")}</label>
+                <input type="time" value={contractTime} onChange={(e) => setContractTime(e.target.value)} className="field font-mono-en w-full" />
+              </div>
+            </div>
+            <div className="flex gap-2">
+              <button onClick={convertToContract} disabled={contractBusy || !contractDate}
+                className="flex-1 inline-flex items-center justify-center gap-2 h-10 rounded-lg bg-gray-900 dark:bg-white dark:text-gray-900 text-white text-sm font-bold disabled:opacity-50">
+                {contractBusy ? <Clock className="w-4 h-4 animate-spin" /> : <CheckCircle className="w-4 h-4" />} {t("convertContractCta")}
+              </button>
+              <button onClick={() => setShowContract(false)} className="px-4 h-10 rounded-lg border border-gray-200 dark:border-gray-700 text-sm font-bold text-gray-600 dark:text-gray-300">{t("qdClose")}</button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Reassign-to-another-customer modal */}
       {showReassign && (

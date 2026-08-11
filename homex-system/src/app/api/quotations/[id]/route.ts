@@ -79,6 +79,37 @@ export async function PATCH(
     const isManager = (user.role === "admin" || user.role === "ceo") || user.role === "manager";
     const locked = isFinanciallyLocked(quotation);
 
+    // Convert an approved quote into a confirmed contract: lock it (status
+    // "accepted") and push it onto the work board with the agreed delivery date.
+    if (body.action === "contract") {
+      if (quotation.status !== "approved") {
+        return NextResponse.json({ error: "يجب اعتماد العرض أولاً قبل تحويله لعقد" }, { status: 400 });
+      }
+      if (!body.deliveryDate) {
+        return NextResponse.json({ error: "تاريخ التسليم مطلوب" }, { status: 400 });
+      }
+      const updated = await prisma.quotation.update({
+        where: { id },
+        data: {
+          status: "accepted",
+          contractedAt: new Date(),
+          deliveryDate: new Date(body.deliveryDate),
+          deliveryTime: body.deliveryTime || null,
+          deliveryDateEstimated: false,
+          ...(quotation.workStatus ? {} : { workStatus: "needs_preparation" }),
+        },
+        include: { customer: true },
+      });
+      await logAction(user.id, "contract", "quotation", id, `converted to contract; delivery ${body.deliveryDate}`);
+      await notifyAdmins(
+        "تحويل إلى عقد 📄",
+        `حوّل ${user.name} العرض ${updated.quoteNumber} إلى عقد — التسليم ${body.deliveryDate}`,
+        "success",
+        `/quotations/${id}`
+      ).catch(() => {});
+      return NextResponse.json(updated);
+    }
+
     // A quotation is financially frozen once it is invoiced, has payments, or
     // the customer accepted it. Sales can never touch a locked quote; a
     // manager/admin may override it (e.g. the customer requested a change) but

@@ -107,6 +107,9 @@ model Quotation {
   signerName    String?   @map("signer_name")
   signedAt      DateTime? @map("signed_at")
   signerIp      String?   @map("signer_ip")
+  // When an approved quote was converted into a confirmed contract (locks the
+  // quote and pushes it onto the work board).
+  contractedAt  DateTime? @map("contracted_at")
   deliveryDate  DateTime? @map("delivery_date")
   // True when deliveryDate was ESTIMATED from neighbouring rows during import
   // (the original sheet had no date). Used only to place the row in the right
