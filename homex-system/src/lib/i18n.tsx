@@ -522,7 +522,7 @@ const translations = {
   note: { ar: "ملاحظة", en: "Note" },
   urgent: { ar: "مستعجل", en: "Urgent" },
   clear: { ar: "مسح", en: "Clear" },
-  needsPreparation: { ar: "يحتاج تجهيز", en: "Needs Preparation" },
+  needsPreparation: { ar: "يحتاج طلب", en: "Needs Ordering" },
   readyToExecute: { ar: "جاهز للتنفيذ", en: "Ready to Execute" },
   inProgress: { ar: "قيد التنفيذ", en: "In Progress" },
   completed: { ar: "مكتمل", en: "Completed" },

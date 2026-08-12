@@ -93,7 +93,7 @@ export async function GET(req: NextRequest) {
       take: 5000,
     });
     const WS: Record<string, string> = {
-      needs_preparation: "قيد التحضير", ready_to_execute: "قيد التنفيذ", in_progress: "قيد التنفيذ",
+      needs_preparation: "يحتاج طلب", ready_to_execute: "قيد التنفيذ", in_progress: "قيد التنفيذ",
       completed: "اكتمل", ready_for_delivery: "جاهز للتوصيل", delivered: "تم التوصيل",
     };
     const header = ["رقم الطلب", "العميل", "الهاتف", "المحافظة", "الولاية", "تاريخ التسليم", "الوقت", "السائق", "الحالة"];
