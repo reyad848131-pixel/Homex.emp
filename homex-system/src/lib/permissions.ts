@@ -14,6 +14,7 @@ export const PERMISSIONS = [
   "edit_locked",     // edit a locked (signed / invoiced / paid) quotation
   "work_orders",     // the work board (إدارة الأعمال) — drive jobs through the pipeline
   "workers",         // manage the workers list (العمّال) used in production tracking
+  "purchasing",      // procurement: suppliers, materials catalog, order materials
   "deliveries",      // delivery / installation schedules & service (field ops)
   "deliveries_view", // read-only delivery schedule (e.g. the photographer)
   "photography",     // photography queue: shoot delivered/installed jobs
@@ -37,7 +38,7 @@ export type Permission = (typeof PERMISSIONS)[number];
 export const ASSIGNABLE_PERMISSIONS: Permission[] = [
   "quotes", "quotes_create", "view_all_quotes", "customers", "customers_view",
   "payments", "invoices", "work_orders", "workers", "deliveries", "deliveries_view",
-  "photography", "financials", "reports",
+  "photography", "financials", "reports", "purchasing",
 ];
 
 // Arabic labels for the role-management UI (kept here so the catalogue and its
@@ -52,6 +53,7 @@ export const PERMISSION_LABELS: Record<Permission, string> = {
   edit_locked: "تعديل العروض المقفلة",
   work_orders: "لوحة إدارة الأعمال (تحريك مراحل العمل)",
   workers: "إدارة قائمة العمّال (إضافة/تعديل)",
+  purchasing: "المشتريات (الموردون وطلب المواد)",
   deliveries: "جداول التسليم والتركيب والصيانة",
   deliveries_view: "عرض جدول التسليم (قراءة فقط)",
   photography: "التصوير (تصوير الأعمال المنجزة)",
@@ -85,13 +87,13 @@ export const SYSTEM_ROLES: RoleDef[] = [
     key: "manager",
     label: "مشرف",
     system: true,
-    permissions: ["quotes", "quotes_create", "view_all_quotes", "approve", "payments", "invoices", "edit_locked", "work_orders", "workers", "deliveries", "photography", "financials", "reports", "customers", "trash"],
+    permissions: ["quotes", "quotes_create", "view_all_quotes", "approve", "payments", "invoices", "edit_locked", "work_orders", "workers", "deliveries", "photography", "financials", "reports", "customers", "trash", "purchasing"],
   },
   { key: "sales", label: "مبيعات", system: true, permissions: ["quotes", "quotes_create", "customers", "payments", "financials"] },
   // Accountant: full financial visibility + creates/edits quotations, records
   // payments, issues invoices, and runs the work board & delivery schedules.
   // No settings / employees / pricing (categories).
-  { key: "accountant", label: "محاسب", system: true, permissions: ["quotes", "quotes_create", "view_all_quotes", "customers", "payments", "invoices", "financials", "reports", "work_orders", "workers", "deliveries"] },
+  { key: "accountant", label: "محاسب", system: true, permissions: ["quotes", "quotes_create", "view_all_quotes", "customers", "payments", "invoices", "financials", "reports", "work_orders", "workers", "deliveries", "purchasing"] },
   // Driver: field ops only — delivery / installation schedules & service. No
   // access to the work board (can't drive job stages) and no money.
   { key: "driver", label: "سائق", system: true, permissions: ["deliveries"] },

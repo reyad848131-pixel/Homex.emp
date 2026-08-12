@@ -29,8 +29,67 @@ model Employee {
   payments      Payment[]
   invoices      Invoice[]
   expenses      Expense[]
+  materialOrders MaterialOrder[]
 
   @@map("employees")
+}
+
+// ── Procurement (materials ordered from suppliers per order) ──
+
+// Suppliers Deepak orders fabrics/woods from, contacted over WhatsApp.
+model Supplier {
+  id        String   @id @default(cuid())
+  name      String
+  phone     String
+  phoneCode String   @default("+968") @map("phone_code")
+  category  String?  // what they mainly supply: fabric | wood | foam | accessory | other
+  note      String?
+  isActive  Boolean  @default(true) @map("is_active")
+  createdAt DateTime @default(now()) @map("created_at")
+
+  materialOrders MaterialOrder[]
+
+  @@map("suppliers")
+}
+
+// Catalog of material types customers request (dropdown source).
+model Material {
+  id         String   @id @default(cuid())
+  category   String   @default("fabric") // fabric | wood | foam | accessory | other
+  name       String   // the type, e.g. "مخمل" / "MDF"
+  code       String?  // colour / code / barcode
+  unit       String   @default("meter")  // meter | sheet | kg | piece
+  supplierId String?  @map("supplier_id")
+  isActive   Boolean  @default(true) @map("is_active")
+  createdAt  DateTime @default(now()) @map("created_at")
+
+  @@map("materials")
+}
+
+// A material line needed for one order, ordered from a supplier.
+model MaterialOrder {
+  id          String    @id @default(cuid())
+  quotationId String    @map("quotation_id")
+  supplierId  String?   @map("supplier_id")
+  materialId  String?   @map("material_id")
+  name        String    // snapshot of the material type
+  code        String?   // snapshot of colour / code
+  quantity    Float     @default(1)
+  unit        String    @default("meter")
+  status      String    @default("needed") // needed | ordered | received
+  note        String?
+  createdBy   String    @map("created_by")
+  orderedAt   DateTime? @map("ordered_at")
+  receivedAt  DateTime? @map("received_at")
+  createdAt   DateTime  @default(now()) @map("created_at")
+
+  quotation Quotation @relation(fields: [quotationId], references: [id], onDelete: Cascade)
+  supplier  Supplier? @relation(fields: [supplierId], references: [id])
+  creator   Employee  @relation(fields: [createdBy], references: [id])
+
+  @@index([quotationId])
+  @@index([status])
+  @@map("material_orders")
 }
 
 // Business costs/expenses (materials, salaries, rent, …) — the cost side of the
@@ -192,6 +251,7 @@ model Quotation {
   payments Payment[]
   invoice  Invoice?
   serviceRequests ServiceRequest[]
+  materialOrders  MaterialOrder[]
 
   @@index([employeeId])
   @@index([customerId])
