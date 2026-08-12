@@ -358,6 +358,7 @@ const translations = {
   qbTotalPriceLabel: { ar: "السعر الإجمالي للحبة", en: "Total price (this item)" },
   qbComputedLabel: { ar: "المحسوب", en: "Calculated" },
   qbTotalOverridden: { ar: "سعر إجمالي مُعدّل", en: "Custom total (this quote)" },
+  qbItemNotePlaceholder: { ar: "وصف إضافي لهذا البند (اختياري)", en: "Extra description for this item (optional)" },
 
   // ── Quote detail (reassign + activity log) ──
   qdReassignFail: { ar: "فشل النقل", en: "Reassignment failed" },
