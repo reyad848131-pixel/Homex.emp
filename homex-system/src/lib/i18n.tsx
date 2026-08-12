@@ -353,6 +353,11 @@ const translations = {
   qbApplyPrice: { ar: "تأكيد", en: "Apply" },
   qbResetPrice: { ar: "استرجاع الافتراضي", en: "Reset to default" },
   qbPriceOverridden: { ar: "سعر مُعدّل لهذا العرض", en: "Custom price (this quote)" },
+  qbModeRate: { ar: "حسب سعر المتر", en: "By unit price" },
+  qbModeTotal: { ar: "السعر الإجمالي", en: "Total price" },
+  qbTotalPriceLabel: { ar: "السعر الإجمالي للحبة", en: "Total price (this item)" },
+  qbComputedLabel: { ar: "المحسوب", en: "Calculated" },
+  qbTotalOverridden: { ar: "سعر إجمالي مُعدّل", en: "Custom total (this quote)" },
 
   // ── Quote detail (reassign + activity log) ──
   qdReassignFail: { ar: "فشل النقل", en: "Reassignment failed" },
