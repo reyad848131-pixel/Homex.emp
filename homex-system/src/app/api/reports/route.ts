@@ -106,6 +106,25 @@ export async function GET(req: NextRequest) {
   const totalCosts = roundMoney(costsPeriod._sum.amount || 0);
   const netProfit = roundMoney(totalSales - totalCosts);
 
+  // Monthly sales-vs-costs trend for the last 12 months (independent of the
+  // period selector) — powers the finance chart.
+  const monthStart = new Date(now.getFullYear(), now.getMonth() - 11, 1);
+  const [contracts12, expenses12] = await Promise.all([
+    prisma.quotation.findMany({ where: { status: "accepted", deletedAt: null, createdAt: { gte: monthStart } }, select: { total: true, createdAt: true } }),
+    prisma.expense.findMany({ where: { spentAt: { gte: monthStart } }, select: { amount: true, spentAt: true } }),
+  ]);
+  const mKey = (d: Date) => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`;
+  const buckets: Record<string, { sales: number; costs: number }> = {};
+  for (let i = 0; i < 12; i++) buckets[mKey(new Date(now.getFullYear(), now.getMonth() - 11 + i, 1))] = { sales: 0, costs: 0 };
+  for (const c of contracts12) { const k = mKey(new Date(c.createdAt)); if (buckets[k]) buckets[k].sales += c.total; }
+  for (const e of expenses12) { const k = mKey(new Date(e.spentAt)); if (buckets[k]) buckets[k].costs += e.amount; }
+  const monthlyFinance = Object.entries(buckets).map(([month, v]) => ({
+    month,
+    sales: roundMoney(v.sales),
+    costs: roundMoney(v.costs),
+    profit: roundMoney(v.sales - v.costs),
+  }));
+
   return NextResponse.json({
     finance: {
       totalSales: totalSales.toFixed(3),
@@ -114,6 +133,7 @@ export async function GET(req: NextRequest) {
       totalCosts: totalCosts.toFixed(3),
       netProfit: netProfit.toFixed(3),
     },
+    monthlyFinance,
     summary: {
       totalQuotations: quotations.length,
       totalRevenue: totalRevenue.toFixed(3),

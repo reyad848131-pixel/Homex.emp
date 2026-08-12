@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { BarChart3, TrendingUp, Users, MapPin, FileText, Calendar, Printer, Truck, Clock, Wallet, Banknote, Coins, PiggyBank } from "lucide-react";
+import { BarChart3, TrendingUp, Users, MapPin, FileText, Calendar, Printer, Truck, Clock, Wallet, Banknote, Coins, PiggyBank, FileSpreadsheet } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { STATUS_MAP } from "@/lib/types";
 import { useI18n } from "@/lib/i18n";
@@ -33,6 +33,31 @@ function BarChartSVG({ data, height = 200, noDataText }: { data: Array<{ label: 
           );
         })}
         <line x1={0} y1={height} x2={chartWidth} y2={height} stroke="#e5e7eb" strokeWidth={1} />
+      </svg>
+    </div>
+  );
+}
+
+// Grouped bars: sales (green) vs costs (red) per month.
+function DualBarChart({ data, height = 190 }: { data: Array<{ label: string; sales: number; costs: number }>; height?: number }) {
+  const max = Math.max(...data.flatMap((d) => [d.sales, d.costs]), 1);
+  const groupW = 46, barW = 17, chartW = data.length * groupW;
+  return (
+    <div className="overflow-x-auto">
+      <svg width={Math.max(chartW, 300)} height={height + 22} className="mx-auto">
+        {data.map((d, i) => {
+          const x = i * groupW + 5;
+          const sh = (d.sales / max) * height;
+          const ch = (d.costs / max) * height;
+          return (
+            <g key={i}>
+              <rect x={x} y={height - sh} width={barW} height={sh} rx={2} fill="#16a34a" />
+              <rect x={x + barW + 2} y={height - ch} width={barW} height={ch} rx={2} fill="#dc2626" opacity={0.85} />
+              <text x={x + barW} y={height + 14} textAnchor="middle" className="fill-gray-400 text-[8px] font-mono-en">{d.label}</text>
+            </g>
+          );
+        })}
+        <line x1={0} y1={height} x2={chartW} y2={height} stroke="#e5e7eb" strokeWidth={1} />
       </svg>
     </div>
   );
@@ -91,6 +116,7 @@ interface ReportData {
     totalCosts: string;
     netProfit: string;
   };
+  monthlyFinance?: Array<{ month: string; sales: number; costs: number; profit: number }>;
   summary: {
     totalQuotations: number;
     totalRevenue: string;
@@ -127,6 +153,29 @@ export default function ReportsPage() {
   };
 
   const fmtCur = (n: number | string) => `${Number(n).toFixed(3)} ${t("omr")}`;
+
+  const exportFinance = () => {
+    if (!data?.finance) return;
+    const f = data.finance;
+    const rows: string[][] = [
+      [t("rpFinanceTitle"), ""],
+      [t("rpTotalSales"), f.totalSales],
+      [t("rpTotalPaid"), f.totalPaid],
+      [t("rpOutstanding"), f.outstanding],
+      [t("rpTotalCosts"), f.totalCosts],
+      [t("rpNetProfit"), f.netProfit],
+      [""],
+      [t("rpColMonth"), t("rpTotalSales"), t("rpTotalCosts"), t("rpNetProfit")],
+      ...(data.monthlyFinance || []).map((m) => [m.month, String(m.sales), String(m.costs), String(m.profit)]),
+    ];
+    const csv = rows.map((r) => r.map((c) => `"${String(c ?? "").replace(/"/g, '""')}"`).join(",")).join("\n");
+    const blob = new Blob(["﻿" + csv], { type: "text/csv;charset=utf-8" });
+    const a = document.createElement("a");
+    a.href = URL.createObjectURL(blob);
+    a.download = `finance-${new Date().toISOString().slice(0, 10)}.csv`;
+    a.click();
+    URL.revokeObjectURL(a.href);
+  };
 
   useEffect(() => {
     setLoading(true);
@@ -181,9 +230,15 @@ export default function ReportsPage() {
       {/* Financial summary (P&L): sales / paid / due / costs / profit */}
       {data.finance && (
         <div className="mb-6">
-          <h2 className="text-sm font-bold text-gray-400 uppercase tracking-wider mb-3 flex items-center gap-2">
-            <Wallet className="w-4 h-4" /> {t("rpFinanceTitle")}
-          </h2>
+          <div className="flex items-center justify-between gap-3 mb-3">
+            <h2 className="text-sm font-bold text-gray-400 uppercase tracking-wider flex items-center gap-2">
+              <Wallet className="w-4 h-4" /> {t("rpFinanceTitle")}
+            </h2>
+            <button onClick={exportFinance}
+              className="no-print inline-flex items-center gap-1.5 px-3 h-8 rounded-lg border border-gray-200 dark:border-gray-700 text-xs font-bold text-gray-600 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700">
+              <FileSpreadsheet className="w-3.5 h-3.5 text-emerald-600" /> {t("rpExportFinance")}
+            </button>
+          </div>
           <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4">
             {[
               { label: t("rpTotalSales"), value: fmtCur(data.finance.totalSales), tag: t("rpSalesHint"), icon: TrendingUp, color: "text-blue-600" },
@@ -202,6 +257,20 @@ export default function ReportsPage() {
               </div>
             ))}
           </div>
+
+          {/* Sales vs costs — last 12 months */}
+          {data.monthlyFinance && data.monthlyFinance.some((m) => m.sales || m.costs) && (
+            <div className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded p-5 mt-4">
+              <div className="flex items-center justify-between gap-3 mb-3 flex-wrap">
+                <h3 className="text-sm font-bold text-gray-400 uppercase tracking-wider">{t("rpMonthlyFinance")}</h3>
+                <div className="flex items-center gap-4 text-xs font-semibold">
+                  <span className="flex items-center gap-1.5"><span className="w-3 h-3 rounded-sm bg-[#16a34a]" /> {t("rpTotalSales")}</span>
+                  <span className="flex items-center gap-1.5"><span className="w-3 h-3 rounded-sm bg-[#dc2626]" /> {t("rpTotalCosts")}</span>
+                </div>
+              </div>
+              <DualBarChart data={data.monthlyFinance.map((m) => ({ label: m.month.slice(5), sales: m.sales, costs: m.costs }))} />
+            </div>
+          )}
         </div>
       )}
 
