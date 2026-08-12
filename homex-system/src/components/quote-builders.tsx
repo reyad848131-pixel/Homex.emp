@@ -178,6 +178,7 @@ function UnitPriceOverride({
   priceOverride,
   onRateChange,
   onPriceChange,
+  rateLabel,
 }: {
   defaultRate: number;
   computedPrice: number;
@@ -185,6 +186,7 @@ function UnitPriceOverride({
   priceOverride: number | null;
   onRateChange: (v: number | null) => void;
   onPriceChange: (v: number | null) => void;
+  rateLabel?: string;
 }) {
   const { t } = useI18n();
   const [open, setOpen] = useState(false);
@@ -238,7 +240,7 @@ function UnitPriceOverride({
             </div>
             {mode === "rate" ? (
               <>
-                <label className="block text-xs font-semibold text-gray-500 mb-1">{t("qbUnitPriceLabel")}</label>
+                <label className="block text-xs font-semibold text-gray-500 mb-1">{rateLabel ?? t("qbUnitPriceLabel")}</label>
                 <input type="number" inputMode="decimal" autoFocus value={rateDraft} onChange={(e) => setRateDraft(e.target.value)}
                   className="field font-mono-en text-center w-full" />
                 <p className="text-[10px] text-gray-400 mt-1">{t("qbDefaultPriceLabel")}: <span className="font-mono-en">{defaultRate}</span></p>
@@ -269,13 +271,15 @@ function UnitPriceOverride({
 // The labelled row that hosts the price-override popover in each measurement
 // builder: shows the effective unit rate, or the flat total when one is set.
 function PriceOverrideRow({
-  defaultRate, rate, computedPrice, rateOverride, priceOverride, onRateChange, onPriceChange,
+  defaultRate, rate, computedPrice, rateOverride, priceOverride, onRateChange, onPriceChange, rateLabel,
 }: {
   defaultRate: number; rate: number; computedPrice: number;
   rateOverride: number | null; priceOverride: number | null;
   onRateChange: (v: number | null) => void; onPriceChange: (v: number | null) => void;
+  rateLabel?: string;
 }) {
   const { t } = useI18n();
+  const rl = rateLabel ?? t("qbUnitPriceLabel");
   return (
     <div className="flex items-center justify-between rounded-lg bg-gray-50 dark:bg-gray-800/50 px-3 py-2">
       <span className="text-xs font-semibold text-gray-500">
@@ -283,7 +287,7 @@ function PriceOverrideRow({
           <>{t("qbTotalOverridden")}: <span className="font-mono-en text-amber-600">{priceOverride.toFixed(3)}</span></>
         ) : (
           <>
-            {t("qbUnitPriceLabel")}: <span className="font-mono-en">{rate}</span>
+            {rl}: <span className="font-mono-en">{rate}</span>
             {rateOverride != null && <span className="ms-1 text-amber-600">· {t("qbPriceOverridden")}</span>}
           </>
         )}
@@ -295,6 +299,7 @@ function PriceOverrideRow({
         priceOverride={priceOverride}
         onRateChange={onRateChange}
         onPriceChange={onPriceChange}
+        rateLabel={rateLabel}
       />
     </div>
   );
@@ -328,24 +333,29 @@ function KitchenBuilder({ config, governorate, wilayat, onUpdate, initial }: { c
   const [island, setIsland] = useState<"none" | "small" | "large">(initial?.island ?? "none");
   const [manualBase, setManualBase] = useState(initial?.manualBase ?? 130);
   const [note, setNote] = useState<string>(initial?.note ?? "");
+  const [rateOverride, setRateOverride] = useState<number | null>(initial?.rateOverride ?? null);
+  const [priceOverride, setPriceOverride] = useState<number | null>(initial?.priceOverride ?? null);
 
   const PORCELAIN_PRICE = config?.porcelainSurcharge || 55;
   const unitMultiplier = unitType === "3unit" ? 3 : unitType === "1unit" ? 1 : 2;
   const autoBase = getKitchenBasePrice(governorate, wilayat);
   const isManual = autoBase === null;
   const basePrice = isManual ? manualBase : autoBase;
-  const pricePerSqm = (basePrice * unitMultiplier) + PORCELAIN_PRICE;
+  const defaultRate = (basePrice * unitMultiplier) + PORCELAIN_PRICE;
+  const pricePerSqm = rateOverride ?? defaultRate;
   const area = Math.round(length * 100) / 100;
 
   const ISLAND_PRICES = { small: config?.island?.small || 390, large: config?.island?.large || 600 };
+  const extras = island !== "none" ? ISLAND_PRICES[island] : 0;
+  const computedBase = area * pricePerSqm;
+  const computedTotal = computedBase + extras;
+  const price = priceOverride != null ? priceOverride - extras : computedBase;
 
   useEffect(() => {
-    const price = area * pricePerSqm;
-    const extras = island !== "none" ? ISLAND_PRICES[island] : 0;
     const unitLabel = unitType === "3unit" ? t("unit3Label") : unitType === "1unit" ? t("unit1Label") : t("unit2Label");
     const desc = withNote(`مطبخ MDF - ${unitLabel} - ${length}م`, note);
-    onUpdate(desc, price, extras, { length, unitType, island, manualBase, note });
-  }, [length, unitType, island, basePrice, note, config, onUpdate]);
+    onUpdate(desc, price, extras, { length, unitType, island, manualBase, rateOverride, priceOverride, note });
+  }, [length, unitType, island, price, extras, rateOverride, priceOverride, note, config, onUpdate]);
 
   return (
     <div className="space-y-4">
@@ -393,10 +403,14 @@ function KitchenBuilder({ config, governorate, wilayat, onUpdate, initial }: { c
 
       <div className="text-center py-2 bg-gray-50 rounded border border-gray-100">
         <p className="text-xs text-gray-500">
-          {wilayat || governorate}: {basePrice} × {unitMultiplier} + {PORCELAIN_PRICE} ({t("porcelain")}) = <span className="font-bold font-mono-en">{pricePerSqm.toFixed(3)}</span> {t("omrPerSqm")}
+          {wilayat || governorate}: {basePrice} × {unitMultiplier} + {PORCELAIN_PRICE} ({t("porcelain")}) = <span className="font-bold font-mono-en">{defaultRate.toFixed(3)}</span> {t("omrPerSqm")}
         </p>
         <p className="text-sm font-bold font-mono-en text-gray-900 mt-1">{t("pricePerMeterLabel")} (OMR) {pricePerSqm.toFixed(3)}</p>
       </div>
+
+      <PriceOverrideRow defaultRate={defaultRate} rate={pricePerSqm} computedPrice={computedTotal}
+        rateOverride={rateOverride} priceOverride={priceOverride}
+        onRateChange={setRateOverride} onPriceChange={setPriceOverride} />
 
       <div>
         <label className="block text-sm font-semibold text-gray-600 mb-2">{t("additionalIsland")}</label>
@@ -432,18 +446,22 @@ function PantryBuilder({ config, governorate, wilayat, onUpdate, initial }: { co
   const [length, setLength] = useState(initial?.length ?? 3);
   const [manualBase, setManualBase] = useState(initial?.manualBase ?? 130);
   const [note, setNote] = useState<string>(initial?.note ?? "");
+  const [rateOverride, setRateOverride] = useState<number | null>(initial?.rateOverride ?? null);
+  const [priceOverride, setPriceOverride] = useState<number | null>(initial?.priceOverride ?? null);
 
   const PORCELAIN_PRICE = config?.porcelainSurcharge || 55;
   const autoBase = getKitchenBasePrice(governorate, wilayat);
   const isManual = autoBase === null;
   const basePrice = isManual ? manualBase : autoBase;
-  const pricePerSqm = basePrice + PORCELAIN_PRICE; // 1 unit
+  const defaultRate = basePrice + PORCELAIN_PRICE; // 1 unit
+  const pricePerSqm = rateOverride ?? defaultRate;
   const area = Math.round(length * 100) / 100;
+  const computedBase = area * pricePerSqm;
+  const price = priceOverride ?? computedBase; // no extras on pantry
 
   useEffect(() => {
-    const price = area * pricePerSqm;
-    onUpdate(withNote(`بانتري - ${length}م`, note), price, 0, { length, manualBase, note });
-  }, [length, basePrice, note, config, onUpdate]);
+    onUpdate(withNote(`بانتري - ${length}م`, note), price, 0, { length, manualBase, rateOverride, priceOverride, note });
+  }, [length, price, rateOverride, priceOverride, note, config, onUpdate]);
 
   return (
     <div className="space-y-4">
@@ -478,9 +496,13 @@ function PantryBuilder({ config, governorate, wilayat, onUpdate, initial }: { co
 
       <div className="text-center py-2 bg-gray-50 rounded border border-gray-100">
         <p className="text-xs text-gray-500">
-          {wilayat || governorate}: {basePrice} + {PORCELAIN_PRICE} ({t("porcelain")}) = <span className="font-bold font-mono-en">{pricePerSqm.toFixed(3)}</span> {t("omrPerSqm")}
+          {wilayat || governorate}: {basePrice} + {PORCELAIN_PRICE} ({t("porcelain")}) = <span className="font-bold font-mono-en">{defaultRate.toFixed(3)}</span> {t("omrPerSqm")}
         </p>
       </div>
+
+      <PriceOverrideRow defaultRate={defaultRate} rate={pricePerSqm} computedPrice={computedBase}
+        rateOverride={rateOverride} priceOverride={priceOverride}
+        onRateChange={setRateOverride} onPriceChange={setPriceOverride} />
 
       <ItemDescriptionField value={note} onChange={setNote} />
     </div>
@@ -530,12 +552,15 @@ function CabinetBuilder({ config, onUpdate, initial }: { config: any; onUpdate: 
     ? GLASS_OPTIONS.reduce((s, o) => s + (glassCounts[o.key] || 0) * o.price, 0)
     : 0;
 
-  const computedPrice = width * height * rate;
-  const price = priceOverride ?? computedPrice;
+  const backCost = back18 ? backSqm * backRate : 0;
+  const extras = glassCost + leds * (config.led || 25) + backCost;
+  const computedBase = width * height * rate;
+  const computedTotal = computedBase + extras;
+  // When a flat total is set it is the FINAL price incl. extras, so the base
+  // absorbs the difference (base + extras = the entered total).
+  const price = priceOverride != null ? priceOverride - extras : computedBase;
 
   useEffect(() => {
-    const backCost = back18 ? backSqm * backRate : 0;
-    const extras = glassCost + leds * (config.led || 25) + backCost;
     const glassParts = GLASS_OPTIONS.filter((o) => (glassCounts[o.key] || 0) > 0).map(
       (o) => `${o.short}×${glassCounts[o.key]}`
     );
@@ -546,7 +571,7 @@ function CabinetBuilder({ config, onUpdate, initial }: { config: any; onUpdate: 
     if (back18) parts.push(`خلفية ١٨ملي ${backSqm}م²`);
     const desc = withNote(parts.join(" · "), note);
     onUpdate(desc, price, extras, { width, height, shape, glassEnabled, glassCounts, leds, back18, backSqm, rateOverride, priceOverride, note });
-  }, [width, height, shape, glassEnabled, glassCounts, glassCost, leds, back18, backSqm, backRate, price, rateOverride, priceOverride, note, config, onUpdate]);
+  }, [width, height, shape, glassEnabled, glassCounts, leds, back18, backSqm, price, extras, rateOverride, priceOverride, note, config, onUpdate]);
 
   return (
     <div className="space-y-4">
@@ -574,7 +599,7 @@ function CabinetBuilder({ config, onUpdate, initial }: { config: any; onUpdate: 
             className="field font-mono-en text-center" />
         </div>
       </div>
-      <PriceOverrideRow defaultRate={defaultRate} rate={rate} computedPrice={computedPrice}
+      <PriceOverrideRow defaultRate={defaultRate} rate={rate} computedPrice={computedTotal}
         rateOverride={rateOverride} priceOverride={priceOverride}
         onRateChange={setRateOverride} onPriceChange={setPriceOverride} />
       <div>
@@ -676,8 +701,9 @@ function CurtainBuilder({ config, wilayat, onUpdate, initial }: { config: any; w
   const motorQty = type === "combo" ? 2 : 1;
   const motorSurcharge = motor === "electric" ? (MOTOR_BASE + MOTOR_PER_METER * width) * motorQty : 0;
 
-  const computedPrice = area * rate;
-  const price = priceOverride ?? computedPrice;
+  const computedBase = area * rate;
+  const computedTotal = computedBase + motorSurcharge;
+  const price = priceOverride != null ? priceOverride - motorSurcharge : computedBase;
 
   useEffect(() => {
     const desc = withNote(`ستائر ${TYPES[type]?.label} (${count} ستارة) - ${width}×${height}م = ${area} م²`, note);
@@ -700,7 +726,7 @@ function CurtainBuilder({ config, wilayat, onUpdate, initial }: { config: any; w
         <p className="text-xs text-gray-400 mt-1">{TYPES[type]?.label}: {TYPES[type]?.price.toFixed(3)} {t("omrPerSqm")}</p>
       </div>
 
-      <PriceOverrideRow defaultRate={defaultRate} rate={rate} computedPrice={computedPrice}
+      <PriceOverrideRow defaultRate={defaultRate} rate={rate} computedPrice={computedTotal}
         rateOverride={rateOverride} priceOverride={priceOverride}
         onRateChange={setRateOverride} onPriceChange={setPriceOverride} />
 
@@ -827,14 +853,20 @@ function BedBuilder({ config, onUpdate, initial }: { config: any; onUpdate: Buil
   const [lighting, setLighting] = useState(initial?.lighting ?? false);
   const [legs, setLegs] = useState<string>(initial?.legs ?? "none");
   const [note, setNote] = useState<string>(initial?.note ?? "");
+  const [rateOverride, setRateOverride] = useState<number | null>(initial?.rateOverride ?? null);
+  const [priceOverride, setPriceOverride] = useState<number | null>(initial?.priceOverride ?? null);
+
+  const defaultRate = BED_PRICES[type]?.[size] || 160;
+  const rate = rateOverride ?? defaultRate;
+  const extras = (lighting ? (config.lighting || 20) : 0) + legsExtra(config, legs);
+  const computedTotal = rate + extras;
+  const price = priceOverride != null ? priceOverride - extras : rate;
 
   useEffect(() => {
-    const price = BED_PRICES[type]?.[size] || 160;
-    const extras = (lighting ? (config.lighting || 20) : 0) + legsExtra(config, legs);
     const typeLabel = type === "wood" ? "خشب" : "قماش";
     const desc = withNote(`سرير ${typeLabel} - ${size} سم${legsDescSuffix(legs)}`, note);
-    onUpdate(desc, price, extras, { type, size, lighting, legs, note });
-  }, [type, size, lighting, legs, note, config, onUpdate]);
+    onUpdate(desc, price, extras, { type, size, lighting, legs, rateOverride, priceOverride, note });
+  }, [type, size, lighting, legs, price, extras, rateOverride, priceOverride, note, config, onUpdate]);
 
   return (
     <div className="space-y-4">
@@ -868,6 +900,9 @@ function BedBuilder({ config, onUpdate, initial }: { config: any; onUpdate: Buil
         {t("lightingLabel")} (+{config.lighting || 20} {t("omr")})
       </label>
       <LegsSelector value={legs} onChange={setLegs} config={config} />
+      <PriceOverrideRow defaultRate={defaultRate} rate={rate} computedPrice={computedTotal}
+        rateOverride={rateOverride} priceOverride={priceOverride}
+        onRateChange={setRateOverride} onPriceChange={setPriceOverride} rateLabel={t("qbBasePriceLabel")} />
       <ItemDescriptionField value={note} onChange={setNote} />
     </div>
   );
@@ -894,8 +929,9 @@ function CladdingBuilder({ config, onUpdate, initial }: { config: any; onUpdate:
   const rate = rateOverride ?? defaultRate;
   const area = Math.round(width * height * 100) / 100;
   const lightSurcharge = lighting ? lightCount * LIGHT_PRICE : 0;
-  const computedPrice = area * rate;
-  const price = priceOverride ?? computedPrice;
+  const computedBase = area * rate;
+  const computedTotal = computedBase + lightSurcharge;
+  const price = priceOverride != null ? priceOverride - lightSurcharge : computedBase;
 
   useEffect(() => {
     const desc = withNote(`كلادينج ${TYPES[type]?.label} - ${width}×${height}م = ${area} م²`, note);
@@ -918,7 +954,7 @@ function CladdingBuilder({ config, onUpdate, initial }: { config: any; onUpdate:
         <p className="text-xs text-gray-400 mt-1">{TYPES[type]?.label}: {TYPES[type]?.price.toFixed(3)} {t("omrPerSqm")}</p>
       </div>
 
-      <PriceOverrideRow defaultRate={defaultRate} rate={rate} computedPrice={computedPrice}
+      <PriceOverrideRow defaultRate={defaultRate} rate={rate} computedPrice={computedTotal}
         rateOverride={rateOverride} priceOverride={priceOverride}
         onRateChange={setRateOverride} onPriceChange={setPriceOverride} />
 
@@ -1071,12 +1107,17 @@ function SofaBuilder({ config, onUpdate, initial }: { config: any; onUpdate: Bui
   const [type, setType] = useState(initial?.type ?? "standard");
   const [price, setPrice] = useState(initial?.price ?? (config.standard?.min || 80));
   const [note, setNote] = useState<string>(initial?.note ?? "");
+  const [rateOverride, setRateOverride] = useState<number | null>(initial?.rateOverride ?? null);
+  const [priceOverride, setPriceOverride] = useState<number | null>(initial?.priceOverride ?? null);
+
+  const rate = rateOverride ?? price;
+  const finalPrice = priceOverride ?? rate;
 
   useEffect(() => {
     const typeLabel = type === "wooden" ? t("woodenType") : t("standardType");
     const desc = withNote(`طقم جلوس ${typeLabel}`, note);
-    onUpdate(desc, price, 0, { type, price, note });
-  }, [type, price, note, onUpdate]);
+    onUpdate(desc, finalPrice, 0, { type, price, rateOverride, priceOverride, note });
+  }, [type, finalPrice, price, rateOverride, priceOverride, note, onUpdate]);
 
   const range = config[type] || { min: 80, max: 95 };
 
@@ -1101,6 +1142,9 @@ function SofaBuilder({ config, onUpdate, initial }: { config: any; onUpdate: Bui
           className="w-full accent-gray-900" />
         <p className="text-center text-lg font-black font-mono-en mt-2">{price} {t("omr")}</p>
       </div>
+      <PriceOverrideRow defaultRate={price} rate={rate} computedPrice={rate}
+        rateOverride={rateOverride} priceOverride={priceOverride}
+        onRateChange={setRateOverride} onPriceChange={setPriceOverride} rateLabel={t("qbBasePriceLabel")} />
       <ItemDescriptionField value={note} onChange={setNote} />
     </div>
   );
@@ -1115,19 +1159,24 @@ function NightstandBuilder({ config, onUpdate, initial }: { config: any; onUpdat
   const [customPrice, setCustomPrice] = useState(initial?.customPrice ?? 30);
   const [legs, setLegs] = useState<string>(initial?.legs ?? "none");
   const [note, setNote] = useState<string>(initial?.note ?? "");
+  const [rateOverride, setRateOverride] = useState<number | null>(initial?.rateOverride ?? null);
+  const [priceOverride, setPriceOverride] = useState<number | null>(initial?.priceOverride ?? null);
+
+  const defaultRate = mode === "fixed" ? (config[type] || (type === "round" ? 50 : 30)) : customPrice;
+  const rate = rateOverride ?? defaultRate;
+  const extras = legsExtra(config, legs);
+  const computedTotal = rate + extras;
+  const finalUnit = priceOverride != null ? priceOverride - extras : rate;
 
   useEffect(() => {
     const typeLabel = type === "round" ? t("roundType") : t("standardType");
     const legsSuffix = legsDescSuffix(legs);
-    const extras = legsExtra(config, legs);
-    const details = { type, mode, customLength, customWidth, customPrice, legs, note };
-    if (mode === "fixed") {
-      const price = config[type] || (type === "round" ? 50 : 30);
-      onUpdate(withNote(`كومودينو ${typeLabel}${legsSuffix}`, note), price, extras, details);
-    } else {
-      onUpdate(withNote(`كومودينو ${typeLabel} - ${customLength}×${customWidth} سم${legsSuffix}`, note), customPrice, extras, details);
-    }
-  }, [type, mode, customLength, customWidth, customPrice, legs, note, config, onUpdate]);
+    const details = { type, mode, customLength, customWidth, customPrice, legs, rateOverride, priceOverride, note };
+    const desc = mode === "fixed"
+      ? withNote(`كومودينو ${typeLabel}${legsSuffix}`, note)
+      : withNote(`كومودينو ${typeLabel} - ${customLength}×${customWidth} سم${legsSuffix}`, note);
+    onUpdate(desc, finalUnit, extras, details);
+  }, [type, mode, customLength, customWidth, customPrice, legs, finalUnit, extras, rateOverride, priceOverride, note, config, onUpdate]);
 
   return (
     <div className="space-y-4">
@@ -1178,6 +1227,9 @@ function NightstandBuilder({ config, onUpdate, initial }: { config: any; onUpdat
         </div>
       )}
       <LegsSelector value={legs} onChange={setLegs} config={config} />
+      <PriceOverrideRow defaultRate={defaultRate} rate={rate} computedPrice={computedTotal}
+        rateOverride={rateOverride} priceOverride={priceOverride}
+        onRateChange={setRateOverride} onPriceChange={setPriceOverride} rateLabel={t("qbBasePriceLabel")} />
       <ItemDescriptionField value={note} onChange={setNote} />
     </div>
   );
@@ -1194,13 +1246,14 @@ function DressingBuilder({ config, onUpdate, initial }: { config: any; onUpdate:
 
   const defaultRate = config.pricePerMeter || 120;
   const rate = rateOverride ?? defaultRate;
-  const computedPrice = length * rate;
-  const price = priceOverride ?? computedPrice;
+  const extras = lighting ? lightCount * (config.lighting || 20) : 0;
+  const computedBase = length * rate;
+  const computedTotal = computedBase + extras;
+  const price = priceOverride != null ? priceOverride - extras : computedBase;
 
   useEffect(() => {
-    const extras = lighting ? lightCount * (config.lighting || 20) : 0;
     onUpdate(withNote(`تسريحة - ${length} م.ط`, note), price, extras, { length, lighting, lightCount, rateOverride, priceOverride, note });
-  }, [length, lighting, lightCount, price, rateOverride, priceOverride, note, config, onUpdate]);
+  }, [length, lighting, lightCount, price, extras, rateOverride, priceOverride, note, config, onUpdate]);
 
   return (
     <div className="space-y-4">
@@ -1214,7 +1267,7 @@ function DressingBuilder({ config, onUpdate, initial }: { config: any; onUpdate:
             className="w-20 border border-gray-200 rounded px-2 py-2 text-sm font-mono-en text-center" />
         </div>
       </div>
-      <PriceOverrideRow defaultRate={defaultRate} rate={rate} computedPrice={computedPrice}
+      <PriceOverrideRow defaultRate={defaultRate} rate={rate} computedPrice={computedTotal}
         rateOverride={rateOverride} priceOverride={priceOverride}
         onRateChange={setRateOverride} onPriceChange={setPriceOverride} />
       <div>
@@ -1258,13 +1311,14 @@ function LaundryBuilder({ config, onUpdate, initial }: { config: any; onUpdate: 
 
   const defaultRate = config.pricePerSqm || 60;
   const rate = rateOverride ?? defaultRate;
-  const computedPrice = area * rate;
-  const price = priceOverride ?? computedPrice;
+  const extras = lighting ? lightCount * (config.lighting || 20) : 0;
+  const computedBase = area * rate;
+  const computedTotal = computedBase + extras;
+  const price = priceOverride != null ? priceOverride - extras : computedBase;
 
   useEffect(() => {
-    const extras = lighting ? lightCount * (config.lighting || 20) : 0;
     onUpdate(withNote(`غرفة غسيل - ${area} م²`, note), price, extras, { area, lighting, lightCount, rateOverride, priceOverride, note });
-  }, [area, lighting, lightCount, price, rateOverride, priceOverride, note, config, onUpdate]);
+  }, [area, lighting, lightCount, price, extras, rateOverride, priceOverride, note, config, onUpdate]);
 
   return (
     <div className="space-y-4">
@@ -1278,7 +1332,7 @@ function LaundryBuilder({ config, onUpdate, initial }: { config: any; onUpdate: 
             className="w-20 border border-gray-200 rounded px-2 py-2 text-sm font-mono-en text-center" />
         </div>
       </div>
-      <PriceOverrideRow defaultRate={defaultRate} rate={rate} computedPrice={computedPrice}
+      <PriceOverrideRow defaultRate={defaultRate} rate={rate} computedPrice={computedTotal}
         rateOverride={rateOverride} priceOverride={priceOverride}
         onRateChange={setRateOverride} onPriceChange={setPriceOverride} />
       <div>
@@ -1414,21 +1468,18 @@ function GenericBuilder({ cat, onUpdate, initial }: { cat: Category; onUpdate: B
     cat.pricingType === "per_sqm" ? width * height * rate
     : cat.pricingType === "per_meter" ? width * rate
     : 0;
+  const genExtras = lighting && genConfig.lighting ? genConfig.lighting : 0;
+  const genTotal = genComputed + genExtras;
 
   useEffect(() => {
-    const config = cat.config || {};
     let calculatedPrice = price;
-    let extras = 0;
-
     if (cat.pricingType === "per_sqm" || cat.pricingType === "per_meter") {
-      calculatedPrice = priceOverride ?? genComputed;
+      // Flat total (when set) is the final price incl. extras; base absorbs it.
+      calculatedPrice = priceOverride != null ? priceOverride - genExtras : genComputed;
     }
-
-    if (lighting && config.lighting) extras = config.lighting;
-
     const finalDesc = desc || `${cat.nameAr} - ${cat.pricingType === "manual" ? t("customItemLabel") : `${width}${cat.pricingType === "per_sqm" ? `×${height}م` : "م"}`}`;
-    onUpdate(finalDesc, calculatedPrice, extras, { desc, price, width, height, lighting, rateOverride, priceOverride });
-  }, [desc, price, width, height, lighting, genComputed, rateOverride, priceOverride, cat, onUpdate]);
+    onUpdate(finalDesc, calculatedPrice, genExtras, { desc, price, width, height, lighting, rateOverride, priceOverride });
+  }, [desc, price, width, height, lighting, genComputed, genExtras, rateOverride, priceOverride, cat, onUpdate]);
 
   return (
     <div className="space-y-4">
@@ -1465,7 +1516,7 @@ function GenericBuilder({ cat, onUpdate, initial }: { cat: Category; onUpdate: B
       )}
 
       {cat.pricingType !== "manual" && (
-        <PriceOverrideRow defaultRate={defaultRate} rate={rate} computedPrice={genComputed}
+        <PriceOverrideRow defaultRate={defaultRate} rate={rate} computedPrice={genTotal}
           rateOverride={rateOverride} priceOverride={priceOverride}
           onRateChange={setRateOverride} onPriceChange={setPriceOverride} />
       )}
@@ -1497,8 +1548,9 @@ function StudyTableBuilder({ config, onUpdate, initial }: { config: any; onUpdat
   const claddingRate = config?.claddingPerSqm || 50;
   const claddingArea = Math.round(claddingWidth * claddingHeight * 100) / 100;
   const claddingCost = claddingEnabled ? claddingArea * claddingRate : 0;
-  const computedPrice = length * rate;
-  const price = priceOverride ?? computedPrice;
+  const computedBase = length * rate;
+  const computedTotal = computedBase + claddingCost;
+  const price = priceOverride != null ? priceOverride - claddingCost : computedBase;
 
   useEffect(() => {
     const parts = [`طاولة مذاكرة - ${length} م.ط`];
@@ -1521,7 +1573,7 @@ function StudyTableBuilder({ config, onUpdate, initial }: { config: any; onUpdat
         </div>
       </div>
 
-      <PriceOverrideRow defaultRate={defaultRate} rate={rate} computedPrice={computedPrice}
+      <PriceOverrideRow defaultRate={defaultRate} rate={rate} computedPrice={computedTotal}
         rateOverride={rateOverride} priceOverride={priceOverride}
         onRateChange={setRateOverride} onPriceChange={setPriceOverride} />
 

@@ -359,6 +359,7 @@ const translations = {
   qbComputedLabel: { ar: "المحسوب", en: "Calculated" },
   qbTotalOverridden: { ar: "سعر إجمالي مُعدّل", en: "Custom total (this quote)" },
   qbItemNotePlaceholder: { ar: "وصف إضافي لهذا البند (اختياري)", en: "Extra description for this item (optional)" },
+  qbBasePriceLabel: { ar: "السعر الأساسي لهذا العرض", en: "Base price (this quote)" },
   stAddCladding: { ar: "إضافة كلادينج", en: "Add cladding" },
   stCladdingHint: { ar: "المتر المربع للكلادينج", en: "Cladding per m²" },
 
