@@ -1380,8 +1380,8 @@ function GenericBuilder({ cat, onUpdate, initial }: { cat: Category; onUpdate: B
     <div className="space-y-4">
       <div>
         <label className="block text-sm font-semibold text-gray-600 mb-1.5">{t("itemDescriptionLabel")}</label>
-        <input type="text" value={desc} onChange={(e) => setDesc(e.target.value)}
-          className="field"
+        <textarea value={desc} onChange={(e) => setDesc(e.target.value)}
+          rows={2} className="field-textarea resize-y"
           placeholder={`${cat.nameAr} - ${t("itemDescriptionLabel")}`} />
       </div>
 
