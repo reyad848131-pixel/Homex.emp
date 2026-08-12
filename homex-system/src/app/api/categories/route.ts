@@ -21,6 +21,11 @@ const EXTRA_CATEGORIES = [
     pricingType: "per_sqm", basePrice: 65, sortOrder: 11,
     config: JSON.stringify({ pricePerSqm: 65 }),
   },
+  {
+    id: "study-table", nameAr: "طاولة مذاكرة", nameEn: "Study Table", icon: "BookOpen",
+    pricingType: "per_meter", basePrice: 120, sortOrder: 12,
+    config: JSON.stringify({ pricePerMeter: 120, claddingPerSqm: 50 }),
+  },
 ];
 
 let ensuredExtras = false;

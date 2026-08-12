@@ -1480,6 +1480,86 @@ function GenericBuilder({ cat, onUpdate, initial }: { cat: Category; onUpdate: B
   );
 }
 
+// Study table (طاولة مذاكرة): priced by linear metre (default 120), with an
+// optional cladding add-on priced by area (default 50/m²) added as extras.
+function StudyTableBuilder({ config, onUpdate, initial }: { config: any; onUpdate: BuilderUpdate; initial?: BuilderInitial }) {
+  const { t } = useI18n();
+  const [length, setLength] = useState(initial?.length ?? 1.2);
+  const [claddingEnabled, setCladdingEnabled] = useState<boolean>(initial?.claddingEnabled ?? false);
+  const [claddingWidth, setCladdingWidth] = useState(initial?.claddingWidth ?? 1);
+  const [claddingHeight, setCladdingHeight] = useState(initial?.claddingHeight ?? 1);
+  const [rateOverride, setRateOverride] = useState<number | null>(initial?.rateOverride ?? null);
+  const [priceOverride, setPriceOverride] = useState<number | null>(initial?.priceOverride ?? null);
+  const [note, setNote] = useState<string>(initial?.note ?? "");
+
+  const defaultRate = config?.pricePerMeter || 120;
+  const rate = rateOverride ?? defaultRate;
+  const claddingRate = config?.claddingPerSqm || 50;
+  const claddingArea = Math.round(claddingWidth * claddingHeight * 100) / 100;
+  const claddingCost = claddingEnabled ? claddingArea * claddingRate : 0;
+  const computedPrice = length * rate;
+  const price = priceOverride ?? computedPrice;
+
+  useEffect(() => {
+    const parts = [`طاولة مذاكرة - ${length} م.ط`];
+    if (claddingEnabled) parts.push(`كلادينج ${claddingWidth}×${claddingHeight}م = ${claddingArea} م²`);
+    onUpdate(withNote(parts.join(" · "), note), price, claddingCost, {
+      length, claddingEnabled, claddingWidth, claddingHeight, rateOverride, priceOverride, note,
+    });
+  }, [length, claddingEnabled, claddingWidth, claddingHeight, claddingArea, claddingCost, price, rateOverride, priceOverride, note, config, onUpdate]);
+
+  return (
+    <div className="space-y-4">
+      <div>
+        <label className="block text-sm font-semibold text-gray-600 mb-1.5">{t("measurementLabel")} ({t("linearMeterUnit")})</label>
+        <div className="flex gap-3 items-center">
+          <input type="range" min={0.5} max={10} step={0.1} value={length}
+            onChange={(e) => setLength(parseFloat(e.target.value))}
+            className="flex-1 accent-gray-900" />
+          <NumField value={length} onChange={setLength} min={0.5} max={10}
+            className="w-20 border border-gray-200 rounded px-2 py-2 text-sm font-mono-en text-center" />
+        </div>
+      </div>
+
+      <PriceOverrideRow defaultRate={defaultRate} rate={rate} computedPrice={computedPrice}
+        rateOverride={rateOverride} priceOverride={priceOverride}
+        onRateChange={setRateOverride} onPriceChange={setPriceOverride} />
+
+      <div>
+        <button type="button" onClick={() => setCladdingEnabled((v) => !v)}
+          className={cn("w-full flex items-center justify-between px-4 py-3 rounded border text-sm font-bold transition-colors",
+            claddingEnabled ? "bg-gray-900 text-white border-gray-900" : "bg-white border-gray-200 text-gray-600")}>
+          <span>{t("stAddCladding")} ({claddingRate} {t("omrPerSqm")})</span>
+          <span>{claddingEnabled ? "✓" : ""}</span>
+        </button>
+
+        {claddingEnabled && (
+          <div className="mt-3 space-y-3">
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <label className="block text-sm font-semibold text-gray-600 mb-1.5">{t("widthM")}</label>
+                <NumField value={claddingWidth} onChange={setCladdingWidth} min={0.1}
+                  className="field font-mono-en text-center" />
+              </div>
+              <div>
+                <label className="block text-sm font-semibold text-gray-600 mb-1.5">{t("heightM")}</label>
+                <NumField value={claddingHeight} onChange={setCladdingHeight} min={0.1}
+                  className="field font-mono-en text-center" />
+              </div>
+            </div>
+            <div className="flex items-center justify-between rounded-lg bg-gray-900 text-white px-4 py-2.5">
+              <span className="text-sm font-bold font-mono-en">{claddingArea.toFixed(2)} {t("sqmUnit")} × {claddingRate}</span>
+              <span className="font-mono-en font-black">{claddingCost.toFixed(3)} {t("omr")}</span>
+            </div>
+          </div>
+        )}
+      </div>
+
+      <ItemDescriptionField value={note} onChange={setNote} />
+    </div>
+  );
+}
+
 // === Unified dispatcher ===
 
 export function CategoryBuilder({
@@ -1526,6 +1606,8 @@ export function CategoryBuilder({
       return <LaundryBuilder config={config} onUpdate={onUpdate} initial={initial} />;
     case "tv-table":
       return <TVTableBuilder config={config} onUpdate={onUpdate} initial={initial} />;
+    case "study-table":
+      return <StudyTableBuilder config={config} onUpdate={onUpdate} initial={initial} />;
     default:
       return <GenericBuilder cat={cat} onUpdate={onUpdate} initial={initial} />;
   }

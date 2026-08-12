@@ -359,6 +359,8 @@ const translations = {
   qbComputedLabel: { ar: "المحسوب", en: "Calculated" },
   qbTotalOverridden: { ar: "سعر إجمالي مُعدّل", en: "Custom total (this quote)" },
   qbItemNotePlaceholder: { ar: "وصف إضافي لهذا البند (اختياري)", en: "Extra description for this item (optional)" },
+  stAddCladding: { ar: "إضافة كلادينج", en: "Add cladding" },
+  stCladdingHint: { ar: "المتر المربع للكلادينج", en: "Cladding per m²" },
 
   // ── Quote detail (reassign + activity log) ──
   qdReassignFail: { ar: "فشل النقل", en: "Reassignment failed" },

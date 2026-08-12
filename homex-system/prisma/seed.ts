@@ -72,7 +72,10 @@ async function main() {
     { id: "partition", nameAr: "بارتشن", nameEn: "Partition", icon: "Columns2", pricingType: "per_sqm", basePrice: 65, sortOrder: 11,
       config: JSON.stringify({ pricePerSqm: 65 })
     },
-    { id: "other", nameAr: "أخرى", nameEn: "Other", icon: "Plus", pricingType: "manual", sortOrder: 12,
+    { id: "study-table", nameAr: "طاولة مذاكرة", nameEn: "Study Table", icon: "BookOpen", pricingType: "per_meter", basePrice: 120, sortOrder: 12,
+      config: JSON.stringify({ pricePerMeter: 120, claddingPerSqm: 50 })
+    },
+    { id: "other", nameAr: "أخرى", nameEn: "Other", icon: "Plus", pricingType: "manual", sortOrder: 13,
       config: JSON.stringify({})
     },
   ];
