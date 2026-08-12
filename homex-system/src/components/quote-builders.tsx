@@ -4,10 +4,9 @@
 // (quotations/new) and edit (quotations/[id]/edit) pages. Extracted here so the
 // pricing logic lives in one place instead of being duplicated across two files.
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useI18n } from "@/lib/i18n";
 import { cn } from "@/lib/utils";
-import { curtainMinCount } from "@/lib/order-rules";
 
 export interface Category {
   id: string;
@@ -326,6 +325,19 @@ function withNote(desc: string, note: string): string {
   return n ? `${desc} — ${n}` : desc;
 }
 
+// A flat "total price" override is tied to the measurements it was entered for.
+// When any pricing input changes (so the passed `signature` changes), drop the
+// flat override so the price recomputes from the dimensions again. The rate
+// override is left alone since it already scales with the dimensions. This runs
+// during render (React's "adjust state on prop change" pattern) and converges.
+function useResetFlatOnChange(signature: number, priceOverride: number | null, clear: () => void) {
+  const prev = useRef(signature);
+  if (prev.current !== signature) {
+    prev.current = signature;
+    if (priceOverride != null) clear();
+  }
+}
+
 function KitchenBuilder({ config, governorate, wilayat, onUpdate, initial }: { config: any; governorate: string; wilayat: string; onUpdate: BuilderUpdate; initial?: BuilderInitial }) {
   const { t } = useI18n();
   const [length, setLength] = useState(initial?.length ?? 4);
@@ -349,6 +361,7 @@ function KitchenBuilder({ config, governorate, wilayat, onUpdate, initial }: { c
   const extras = island !== "none" ? ISLAND_PRICES[island] : 0;
   const computedBase = area * pricePerSqm;
   const computedTotal = computedBase + extras;
+  useResetFlatOnChange(computedTotal, priceOverride, () => setPriceOverride(null));
   const price = priceOverride != null ? priceOverride - extras : computedBase;
 
   useEffect(() => {
@@ -457,6 +470,7 @@ function PantryBuilder({ config, governorate, wilayat, onUpdate, initial }: { co
   const pricePerSqm = rateOverride ?? defaultRate;
   const area = Math.round(length * 100) / 100;
   const computedBase = area * pricePerSqm;
+  useResetFlatOnChange(computedBase, priceOverride, () => setPriceOverride(null));
   const price = priceOverride ?? computedBase; // no extras on pantry
 
   useEffect(() => {
@@ -556,6 +570,7 @@ function CabinetBuilder({ config, onUpdate, initial }: { config: any; onUpdate: 
   const extras = glassCost + leds * (config.led || 25) + backCost;
   const computedBase = width * height * rate;
   const computedTotal = computedBase + extras;
+  useResetFlatOnChange(computedTotal, priceOverride, () => setPriceOverride(null));
   // When a flat total is set it is the FINAL price incl. extras, so the base
   // absorbs the difference (base + extras = the entered total).
   const price = priceOverride != null ? priceOverride - extras : computedBase;
@@ -668,22 +683,16 @@ function CabinetBuilder({ config, onUpdate, initial }: { config: any; onUpdate: 
   );
 }
 
-function CurtainBuilder({ config, wilayat, onUpdate, initial }: { config: any; wilayat: string; onUpdate: BuilderUpdate; initial?: BuilderInitial }) {
+function CurtainBuilder({ config, onUpdate, initial }: { config: any; onUpdate: BuilderUpdate; initial?: BuilderInitial }) {
   const { t } = useI18n();
-  const minCount = curtainMinCount(wilayat);
   const [type, setType] = useState(initial?.type ?? "chiffon");
   const [motor, setMotor] = useState<"manual" | "electric">(initial?.motor ?? "manual");
-  const [count, setCount] = useState<number>(initial?.count ?? minCount);
+  const [count, setCount] = useState<number>(initial?.count ?? 2);
   const [width, setWidth] = useState(initial?.width ?? 2);
   const [height, setHeight] = useState(initial?.height ?? 2);
   const [rateOverride, setRateOverride] = useState<number | null>(initial?.rateOverride ?? null);
   const [priceOverride, setPriceOverride] = useState<number | null>(initial?.priceOverride ?? null);
   const [note, setNote] = useState<string>(initial?.note ?? "");
-
-  // Keep the count at or above the wilayat minimum (e.g. if the wilayat changes).
-  useEffect(() => {
-    setCount((c) => Math.max(c, minCount));
-  }, [minCount]);
 
   const TYPES: Record<string, { label: string; price: number }> = {
     chiffon: { label: t("chiffonOnly"), price: 9 },
@@ -703,6 +712,7 @@ function CurtainBuilder({ config, wilayat, onUpdate, initial }: { config: any; w
 
   const computedBase = area * rate;
   const computedTotal = computedBase + motorSurcharge;
+  useResetFlatOnChange(computedTotal, priceOverride, () => setPriceOverride(null));
   const price = priceOverride != null ? priceOverride - motorSurcharge : computedBase;
 
   useEffect(() => {
@@ -752,10 +762,10 @@ function CurtainBuilder({ config, wilayat, onUpdate, initial }: { config: any; w
       <div>
         <StepperRow
           label={t("curtainCount")}
-          hint={`${t("curtainMinPrefix")}: ${minCount} ${t("curtainsUnit")}`}
+          hint={t("curtainsUnit")}
           value={count}
           onChange={setCount}
-          min={minCount}
+          min={1}
         />
       </div>
 
@@ -860,6 +870,7 @@ function BedBuilder({ config, onUpdate, initial }: { config: any; onUpdate: Buil
   const rate = rateOverride ?? defaultRate;
   const extras = (lighting ? (config.lighting || 20) : 0) + legsExtra(config, legs);
   const computedTotal = rate + extras;
+  useResetFlatOnChange(computedTotal, priceOverride, () => setPriceOverride(null));
   const price = priceOverride != null ? priceOverride - extras : rate;
 
   useEffect(() => {
@@ -931,6 +942,7 @@ function CladdingBuilder({ config, onUpdate, initial }: { config: any; onUpdate:
   const lightSurcharge = lighting ? lightCount * LIGHT_PRICE : 0;
   const computedBase = area * rate;
   const computedTotal = computedBase + lightSurcharge;
+  useResetFlatOnChange(computedTotal, priceOverride, () => setPriceOverride(null));
   const price = priceOverride != null ? priceOverride - lightSurcharge : computedBase;
 
   useEffect(() => {
@@ -1040,6 +1052,7 @@ function PartitionBuilder({ config, onUpdate, initial }: { config: any; onUpdate
   const pricePerSqm = rateOverride ?? defaultRate;
   const area = Math.round(length * width * 100) / 100;
   const computedPrice = Math.round(area * pricePerSqm * 1000) / 1000;
+  useResetFlatOnChange(computedPrice, priceOverride, () => setPriceOverride(null));
   const price = priceOverride ?? computedPrice;
 
   useEffect(() => {
@@ -1111,6 +1124,7 @@ function SofaBuilder({ config, onUpdate, initial }: { config: any; onUpdate: Bui
   const [priceOverride, setPriceOverride] = useState<number | null>(initial?.priceOverride ?? null);
 
   const rate = rateOverride ?? price;
+  useResetFlatOnChange(rate, priceOverride, () => setPriceOverride(null));
   const finalPrice = priceOverride ?? rate;
 
   useEffect(() => {
@@ -1166,6 +1180,7 @@ function NightstandBuilder({ config, onUpdate, initial }: { config: any; onUpdat
   const rate = rateOverride ?? defaultRate;
   const extras = legsExtra(config, legs);
   const computedTotal = rate + extras;
+  useResetFlatOnChange(computedTotal, priceOverride, () => setPriceOverride(null));
   const finalUnit = priceOverride != null ? priceOverride - extras : rate;
 
   useEffect(() => {
@@ -1249,6 +1264,7 @@ function DressingBuilder({ config, onUpdate, initial }: { config: any; onUpdate:
   const extras = lighting ? lightCount * (config.lighting || 20) : 0;
   const computedBase = length * rate;
   const computedTotal = computedBase + extras;
+  useResetFlatOnChange(computedTotal, priceOverride, () => setPriceOverride(null));
   const price = priceOverride != null ? priceOverride - extras : computedBase;
 
   useEffect(() => {
@@ -1314,6 +1330,7 @@ function LaundryBuilder({ config, onUpdate, initial }: { config: any; onUpdate: 
   const extras = lighting ? lightCount * (config.lighting || 20) : 0;
   const computedBase = area * rate;
   const computedTotal = computedBase + extras;
+  useResetFlatOnChange(computedTotal, priceOverride, () => setPriceOverride(null));
   const price = priceOverride != null ? priceOverride - extras : computedBase;
 
   useEffect(() => {
@@ -1385,6 +1402,7 @@ function TVTableBuilder({ config, onUpdate, initial }: { config: any; onUpdate: 
   const rate = rateOverride ?? defaultRate;
   const tvArea = Math.round(width * height * 100) / 100;
   const computedPrice = type === "floor" ? length * rate : tvArea * rate;
+  useResetFlatOnChange(computedPrice, priceOverride, () => setPriceOverride(null));
   const price = priceOverride ?? computedPrice;
 
   useEffect(() => {
@@ -1470,6 +1488,7 @@ function GenericBuilder({ cat, onUpdate, initial }: { cat: Category; onUpdate: B
     : 0;
   const genExtras = lighting && genConfig.lighting ? genConfig.lighting : 0;
   const genTotal = genComputed + genExtras;
+  useResetFlatOnChange(genTotal, priceOverride, () => setPriceOverride(null));
 
   useEffect(() => {
     let calculatedPrice = price;
@@ -1550,6 +1569,7 @@ function StudyTableBuilder({ config, onUpdate, initial }: { config: any; onUpdat
   const claddingCost = claddingEnabled ? claddingArea * claddingRate : 0;
   const computedBase = length * rate;
   const computedTotal = computedBase + claddingCost;
+  useResetFlatOnChange(computedTotal, priceOverride, () => setPriceOverride(null));
   const price = priceOverride != null ? priceOverride - claddingCost : computedBase;
 
   useEffect(() => {
@@ -1643,7 +1663,7 @@ export function CategoryBuilder({
     case "nightstand":
       return <NightstandBuilder config={config} onUpdate={onUpdate} initial={initial} />;
     case "curtains":
-      return <CurtainBuilder config={config} wilayat={wilayat} onUpdate={onUpdate} initial={initial} />;
+      return <CurtainBuilder config={config} onUpdate={onUpdate} initial={initial} />;
     case "dressing-table":
       return <DressingBuilder config={config} onUpdate={onUpdate} initial={initial} />;
     case "bed":
