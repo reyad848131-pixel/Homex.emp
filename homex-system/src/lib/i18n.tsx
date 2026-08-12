@@ -347,6 +347,12 @@ const translations = {
   qbSizesDoorsLabel: { ar: "القياسات — عدد الأبواب لكل ارتفاع", en: "Sizes — doors per height" },
   qbDoorUnit: { ar: "باب", en: "door" },
   qbBack18: { ar: "خلفية ١٨ ملي", en: "18 mm backing" },
+  qbEditPrice: { ar: "عدّل السعر", en: "Edit price" },
+  qbUnitPriceLabel: { ar: "سعر المتر لهذا العرض", en: "Unit price for this quote" },
+  qbDefaultPriceLabel: { ar: "الافتراضي", en: "Default" },
+  qbApplyPrice: { ar: "تأكيد", en: "Apply" },
+  qbResetPrice: { ar: "استرجاع الافتراضي", en: "Reset to default" },
+  qbPriceOverridden: { ar: "سعر مُعدّل لهذا العرض", en: "Custom price (this quote)" },
 
   // ── Quote detail (reassign + activity log) ──
   qdReassignFail: { ar: "فشل النقل", en: "Reassignment failed" },
