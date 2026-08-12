@@ -795,8 +795,8 @@ export default function QuoteDetailClient({
                     </div>
                     <div>
                       <label className="block text-xs font-semibold text-gray-500 mb-1">{t("notes")}</label>
-                      <input type="text" value={payNotes} onChange={(e) => setPayNotes(e.target.value)}
-                        className="field" placeholder={t("optional")} />
+                      <textarea value={payNotes} onChange={(e) => setPayNotes(e.target.value)} rows={2}
+                        className="field-textarea resize-y" placeholder={t("optional")} />
                     </div>
                     <button onClick={handleAddPayment} disabled={paying || !payAmount || Number(payAmount) <= 0}
                       className="w-full flex items-center justify-center gap-2 bg-green-600 text-white px-4 py-2.5 rounded text-sm font-bold hover:bg-green-700 disabled:opacity-50 transition-colors">

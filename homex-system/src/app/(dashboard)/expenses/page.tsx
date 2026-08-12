@@ -120,7 +120,7 @@ export default function ExpensesPage() {
           </div>
         </div>
         <div className="mt-3">
-          <input value={note} onChange={(e) => setNote(e.target.value)} className="field w-full" placeholder={t("expNote")} />
+          <textarea value={note} onChange={(e) => setNote(e.target.value)} rows={2} className="field-textarea w-full resize-y" placeholder={t("expNote")} />
         </div>
       </div>
 

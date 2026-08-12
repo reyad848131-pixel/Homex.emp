@@ -222,10 +222,11 @@ export default function PhotographyPage() {
 
               {/* Photo notes */}
               {noteId === q.id ? (
-                <div className="flex items-center gap-2">
-                  <input value={noteValue} onChange={(e) => setNoteValue(e.target.value)}
-                    placeholder={t("photoNotesPlaceholder")} className="field h-9 text-xs flex-1" autoFocus />
-                  <button onClick={saveNote} className="px-3 h-9 rounded-lg bg-gray-900 text-white text-xs font-bold">{t("saveBtn")}</button>
+                <div className="flex items-start gap-2">
+                  <textarea value={noteValue} onChange={(e) => setNoteValue(e.target.value)}
+                    placeholder={t("photoNotesPlaceholder")} rows={2}
+                    className="field-textarea text-xs flex-1 resize-y min-h-[36px]" autoFocus />
+                  <button onClick={saveNote} className="px-3 h-9 rounded-lg bg-gray-900 text-white text-xs font-bold flex-shrink-0">{t("saveBtn")}</button>
                 </div>
               ) : q.photoNotes ? (
                 <button onClick={() => { setNoteId(q.id); setNoteValue(q.photoNotes || ""); }}

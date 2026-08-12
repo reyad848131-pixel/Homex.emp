@@ -326,8 +326,8 @@ export default function EditQuotationPage({ params }: { params: Promise<{ id: st
             <ShieldAlert className="w-4 h-4" /> {t("managerEditWarning")}
           </p>
           <label className="block text-xs font-semibold text-amber-800 dark:text-amber-200 mb-1">{t("editReasonLabel")}</label>
-          <input type="text" value={editReason} onChange={(e) => setEditReason(e.target.value)}
-            className="field" placeholder={t("editReasonPlaceholder")} />
+          <textarea value={editReason} onChange={(e) => setEditReason(e.target.value)} rows={2}
+            className="field-textarea resize-y" placeholder={t("editReasonPlaceholder")} />
         </div>
       )}
 
