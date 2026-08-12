@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect, useCallback } from "react";
-import { ShoppingBag, Plus, Trash2, Search, Loader2, Send, Power } from "lucide-react";
+import { ShoppingBag, Plus, Trash2, Search, Loader2, Send, Power, Clock3 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useI18n, type TranslationKey } from "@/lib/i18n";
 import { displayName } from "@/lib/translit";
@@ -451,7 +451,15 @@ function MaterialRow({ m, suppliers, reload, short }: { m: Material; suppliers: 
   const [cost, setCost] = useState("");
   const [supplierId, setSupplierId] = useState(m.supplierId || "");
   const [busy, setBusy] = useState(false);
+  const [hist, setHist] = useState<Array<{ id: string; delta: number; reason: string; createdAt: string }> | null | undefined>(undefined);
   const unitLabel = t(UNIT_KEY[m.unit] || "pcUnitPiece");
+
+  const setStock = async (v: string) => { const n = parseFloat(v); if (!Number.isFinite(n) || n === m.stock) return; await fetch(`/api/materials/${m.id}`, { method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ stock: n }) }).catch(() => {}); reload(); };
+  const toggleHist = () => {
+    if (hist !== undefined) { setHist(undefined); return; }
+    setHist(null);
+    fetch(`/api/materials/${m.id}/movements`).then((r) => r.ok ? r.json() : []).then(setHist).catch(() => setHist([]));
+  };
 
   const receive = async () => {
     const q = parseFloat(qty);
@@ -482,11 +490,12 @@ function MaterialRow({ m, suppliers, reload, short }: { m: Material; suppliers: 
           {short && <span className="text-[10px] font-bold px-1.5 py-0.5 rounded-full bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-300">{t("pcShortage")}</span>}
         </div>
         <div className="flex items-center gap-3 text-xs shrink-0">
-          <span>{t("pcStock")}: <b className={cn("font-mono-en", short ? "text-red-600" : "text-emerald-600")}>{m.stock}</b> {unitLabel}</span>
+          <span>{t("pcStock")}: <input defaultValue={m.stock} onBlur={(e) => setStock(e.target.value)} className={cn("w-14 field h-7 text-xs font-mono-en inline-block px-1 text-center", short ? "text-red-600" : "text-emerald-600")} /> {unitLabel}</span>
           <span className="text-gray-400">{t("pcMin")}: <input defaultValue={m.minStock} onBlur={(e) => { if (parseFloat(e.target.value) !== m.minStock) setMin(e.target.value); }} className="w-12 field h-7 text-xs font-mono-en inline-block px-1 text-center" /></span>
           {(m.demand || 0) > 0 && <span className="text-amber-600">{t("pcDemand")}: <b className="font-mono-en">{m.demand}</b></span>}
         </div>
         <div className="flex items-center gap-1.5 shrink-0">
+          <button onClick={toggleHist} className="p-1.5 rounded border border-gray-200 dark:border-gray-700 text-gray-400 hover:text-gray-700" title={t("pcHistory")}><Clock3 className="w-3.5 h-3.5" /></button>
           <button onClick={() => setMode(mode === "order" ? "" : "order")} className="px-2.5 h-8 rounded-lg border border-emerald-300 text-emerald-700 dark:text-emerald-300 text-xs font-bold hover:bg-emerald-50 dark:hover:bg-emerald-900/20">{t("pcOrderBulk")}</button>
           <button onClick={() => setMode(mode === "receive" ? "" : "receive")} className="px-2.5 h-8 rounded-lg bg-gray-900 dark:bg-white dark:text-gray-900 text-white text-xs font-bold">{t("pcReceive")}</button>
           <button onClick={del} className="p-1.5 rounded border border-red-200 text-red-400 hover:text-red-600"><Trash2 className="w-3.5 h-3.5" /></button>
@@ -518,6 +527,26 @@ function MaterialRow({ m, suppliers, reload, short }: { m: Material; suppliers: 
           <button onClick={orderWa} disabled={!supplierId} className="inline-flex items-center gap-1.5 px-3 h-9 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold disabled:opacity-40">
             <Send className="w-3.5 h-3.5" /> {t("pcSendWa")}
           </button>
+        </div>
+      )}
+
+      {hist !== undefined && (
+        <div className="mt-3 pt-3 border-t border-gray-100 dark:border-gray-700">
+          {hist === null ? (
+            <div className="flex items-center gap-2 text-xs text-gray-400"><Loader2 className="w-3.5 h-3.5 animate-spin" /> {t("loadingDots")}</div>
+          ) : hist.length === 0 ? (
+            <p className="text-xs text-gray-400">—</p>
+          ) : (
+            <ul className="space-y-1">
+              {hist.map((h) => (
+                <li key={h.id} className="flex items-center gap-2 text-xs">
+                  <span className={cn("font-mono-en font-bold w-16", h.delta >= 0 ? "text-emerald-600" : "text-red-600")}>{h.delta >= 0 ? "+" : ""}{h.delta}</span>
+                  <span className="text-gray-500">{t(h.reason === "receive" ? "pcReasonReceive" : "pcReasonAdjust")}</span>
+                  <span className="text-gray-400 font-mono-en ms-auto">{new Date(h.createdAt).toLocaleDateString(locale === "en" ? "en-GB" : "ar")}</span>
+                </li>
+              ))}
+            </ul>
+          )}
         </div>
       )}
     </div>

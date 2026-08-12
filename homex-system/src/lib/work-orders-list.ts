@@ -70,6 +70,7 @@ export async function getWorkOrders(p: WorkOrdersParams) {
           orderBy: { sortOrder: "asc" },
         },
         payments: { select: { amount: true } },
+        materialOrders: { select: { status: true } },
       },
       orderBy: UPCOMING_FIRST_ORDER,
       // Safety cap so the list stays bounded as data grows (upcoming/overdue

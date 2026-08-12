@@ -23,6 +23,9 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
       data: { stock: { increment: qty } },
       select: { id: true, name: true, stock: true, minStock: true },
     });
+    await prisma.stockMovement.create({
+      data: { materialId: id, delta: qty, reason: "receive", note: body.supplierName || null, createdBy: user.id },
+    }).catch(() => {});
 
     if (Number.isFinite(cost) && cost > 0) {
       await prisma.expense.create({

@@ -139,9 +139,17 @@ export default async function DashboardPage() {
   // Pending website enquiries awaiting follow-up.
   const newLeadsCount = await prisma.lead.count({ where: { status: "new" } }).catch(() => 0);
 
+  // Store shortages (materials at/under their reorder threshold) — shown to
+  // users who can act on procurement.
+  const canPurchasing = isAdmin || ((await getRolePermissions(role).catch(() => [])) as string[]).includes("purchasing");
+  const storeShortages = canPurchasing
+    ? (await prisma.material.findMany({ where: { isActive: true }, select: { stock: true, minStock: true } })).filter((m) => m.stock <= m.minStock).length
+    : 0;
+
   const data = {
     userName: session?.user?.name || "",
     isAdmin,
+    storeShortages,
     totalQuotes,
     totalCustomers,
     monthlyQuotes,

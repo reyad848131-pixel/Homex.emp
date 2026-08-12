@@ -66,6 +66,7 @@ interface WorkQuotation {
   customer: { name: string; phone: string; phoneCode: string; governorate: string; wilayat: string };
   employee: { name: string };
   items: WorkItem[];
+  materialOrders?: { status: string }[];
 }
 
 const MATERIAL_STATUS_KEYS: Record<string, { labelKey: TranslationKey; color: string }> = {
@@ -512,6 +513,10 @@ export function WorkOrdersClient({ initialData }: { initialData: { quotations: W
             const itemSummary = q.items.slice(0, 3).map((it) => locale === "en" ? it.category.nameEn : it.category.nameAr).join(locale === "ar" ? "، " : ", ");
             const totalTasks = q.items.reduce((s, it) => s + it.tasks.length, 0);
             const doneTasks = q.items.reduce((s, it) => s + it.tasks.filter((t) => t.doneAt).length, 0);
+            const matTotal = q.materialOrders?.length ?? 0;
+            const matReceived = q.materialOrders?.filter((m) => m.status === "received").length ?? 0;
+            const matShort = matTotal > 0 && matReceived < matTotal && q.workStatus !== "delivered";
+            const matAlert = matShort && days <= 7;
             const orderWorkers: WorkerLite[] = [];
             const seenW = new Set<string>();
             for (const it of q.items) for (const tk of it.tasks) {
@@ -551,6 +556,14 @@ export function WorkOrdersClient({ initialData }: { initialData: { quotations: W
                       )}
                       {(q.hasRedAlert || autoUrgent) && q.workStatus !== "delivered" && (
                         <span className="text-[10px] font-bold px-2 py-0.5 rounded bg-red-100 text-red-600 dark:bg-red-900/30 dark:text-red-300">{t("urgent")}</span>
+                      )}
+                      {matShort && (
+                        <span className={cn("text-[10px] font-bold px-2 py-0.5 rounded", matAlert ? "bg-red-100 text-red-600 dark:bg-red-900/30 dark:text-red-300" : "bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-300")}>
+                          {t("woMaterialsShort")} <span className="font-mono-en">{matReceived}/{matTotal}</span>
+                        </span>
+                      )}
+                      {matTotal > 0 && matReceived === matTotal && q.workStatus !== "delivered" && (
+                        <span className="text-[10px] font-bold px-2 py-0.5 rounded bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-300">{t("woMaterialsReady")}</span>
                       )}
                     </div>
                     <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5 truncate">

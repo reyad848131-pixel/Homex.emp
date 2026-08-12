@@ -67,7 +67,25 @@ model Material {
   isActive   Boolean  @default(true) @map("is_active")
   createdAt  DateTime @default(now()) @map("created_at")
 
+  movements  StockMovement[]
+
   @@map("materials")
+}
+
+// Ledger of every stock change (receipt / manual adjustment) for a material.
+model StockMovement {
+  id         String   @id @default(cuid())
+  materialId String   @map("material_id")
+  delta      Float    // + received, - consumed/adjusted down
+  reason     String   @default("adjust") // receive | adjust
+  note       String?
+  createdBy  String   @map("created_by")
+  createdAt  DateTime @default(now()) @map("created_at")
+
+  material Material @relation(fields: [materialId], references: [id], onDelete: Cascade)
+
+  @@index([materialId])
+  @@map("stock_movements")
 }
 
 // A material line needed for one order, ordered from a supplier.

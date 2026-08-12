@@ -24,10 +24,22 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
     if (body.code !== undefined) data.code = body.code?.trim() || null;
     if (MATERIAL_UNITS.includes(body.unit)) data.unit = body.unit;
     if (body.supplierId !== undefined) data.supplierId = body.supplierId || null;
-    if (body.stock !== undefined) { const n = Number(body.stock); if (Number.isFinite(n)) data.stock = n; }
+    // Manual stock adjustment → record the delta in the ledger.
+    let stockDelta = 0;
+    if (body.stock !== undefined) {
+      const n = Number(body.stock);
+      if (Number.isFinite(n)) {
+        data.stock = n;
+        const cur = await prisma.material.findUnique({ where: { id }, select: { stock: true } });
+        stockDelta = n - (cur?.stock ?? 0);
+      }
+    }
     if (body.minStock !== undefined) { const n = Number(body.minStock); if (Number.isFinite(n)) data.minStock = n; }
     if (typeof body.isActive === "boolean") data.isActive = body.isActive;
     const material = await prisma.material.update({ where: { id }, data });
+    if (stockDelta !== 0) {
+      await prisma.stockMovement.create({ data: { materialId: id, delta: stockDelta, reason: "adjust", createdBy: g.user.id } }).catch(() => {});
+    }
     return NextResponse.json(material);
   } catch (e) {
     console.error("API error [/api/materials/[id]]:", e);

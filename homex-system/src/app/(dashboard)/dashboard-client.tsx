@@ -20,6 +20,7 @@ const STATUS_KEYS: Record<string, TranslationKey> = {
 interface DashboardData {
   userName: string;
   isAdmin: boolean;
+  storeShortages?: number;
   totalQuotes: number;
   totalCustomers: number;
   monthlyQuotes: number;
@@ -79,6 +80,12 @@ export function DashboardClient({ data }: { data: DashboardData }) {
 
   return (
     <div>
+      {(data.storeShortages ?? 0) > 0 && (
+        <Link href="/purchasing" className="flex items-center gap-2 mb-4 rounded-lg bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 px-4 py-3 text-sm font-bold text-red-700 dark:text-red-300 hover:bg-red-100 dark:hover:bg-red-900/30">
+          <AlertTriangle className="w-4 h-4 shrink-0" />
+          {t("dashStoreShortages")} <span className="font-mono-en">{data.storeShortages}</span>
+        </Link>
+      )}
       <div className="flex items-center justify-between mb-6">
         <div>
           <h1 className="text-2xl font-bold">{t("welcome")}{locale === "ar" ? "،" : ","} {data.userName}</h1>
