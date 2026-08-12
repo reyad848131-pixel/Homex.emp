@@ -60,6 +60,10 @@ model Material {
   code       String?  // colour / code / barcode
   unit       String   @default("meter")  // meter | sheet | kg | piece
   supplierId String?  @map("supplier_id")
+  // Store inventory: current balance and the reorder threshold (shortage when
+  // stock <= minStock). Stock rises on bulk receipt; lowered manually.
+  stock      Float    @default(0)
+  minStock   Float    @default(0) @map("min_stock")
   isActive   Boolean  @default(true) @map("is_active")
   createdAt  DateTime @default(now()) @map("created_at")
 

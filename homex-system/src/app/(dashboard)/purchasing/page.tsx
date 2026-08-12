@@ -10,7 +10,7 @@ import { waLinkFor } from "@/lib/wa";
 import { useToast } from "@/components/toast";
 
 interface Supplier { id: string; name: string; phone: string; phoneCode: string; category: string | null; note: string | null; isActive: boolean; }
-interface Material { id: string; category: string; name: string; code: string | null; unit: string; supplierId: string | null; isActive: boolean; }
+interface Material { id: string; category: string; name: string; code: string | null; unit: string; supplierId: string | null; isActive: boolean; stock: number; minStock: number; demand?: number; }
 interface MLine { id: string; name: string; code: string | null; quantity: number; unit: string; status: string; supplierId: string | null; supplier: Supplier | null; }
 interface Order { id: string; quoteNumber: string; deliveryDate: string | null; customer: { name: string; phone: string; phoneCode: string; governorate: string; wilayat: string }; materialOrders: MLine[]; }
 
@@ -27,7 +27,7 @@ const UNITS = ["meter", "sheet", "kg", "piece"];
 
 export default function PurchasingPage() {
   const { t } = useI18n();
-  const [tab, setTab] = useState<"orders" | "batch" | "suppliers" | "catalog">("orders");
+  const [tab, setTab] = useState<"store" | "orders" | "batch" | "suppliers">("store");
   const [suppliers, setSuppliers] = useState<Supplier[]>([]);
   const [materials, setMaterials] = useState<Material[]>([]);
 
@@ -43,7 +43,7 @@ export default function PurchasingPage() {
       </div>
 
       <div className="flex gap-1 bg-gray-100 dark:bg-gray-700 rounded-lg p-0.5 mb-5 w-fit flex-wrap">
-        {([["orders", "pcTabOrders"], ["batch", "pcTabBatch"], ["suppliers", "pcTabSuppliers"], ["catalog", "pcTabCatalog"]] as const).map(([k, lk]) => (
+        {([["store", "pcTabStore"], ["orders", "pcTabOrders"], ["batch", "pcTabBatch"], ["suppliers", "pcTabSuppliers"]] as const).map(([k, lk]) => (
           <button key={k} onClick={() => setTab(k)}
             className={cn("px-4 py-1.5 rounded-md text-sm font-bold transition-colors",
               tab === k ? "bg-white dark:bg-gray-900 shadow text-gray-900 dark:text-white" : "text-gray-500")}>
@@ -52,10 +52,10 @@ export default function PurchasingPage() {
         ))}
       </div>
 
+      {tab === "store" && <StoreTab materials={materials} suppliers={suppliers} reload={loadMaterials} />}
       {tab === "orders" && <OrdersTab suppliers={suppliers} materials={materials} />}
       {tab === "batch" && <BatchTab />}
       {tab === "suppliers" && <SuppliersTab suppliers={suppliers} reload={loadSuppliers} />}
-      {tab === "catalog" && <CatalogTab materials={materials} reload={loadMaterials} />}
     </div>
   );
 }
@@ -383,27 +383,34 @@ function SuppliersTab({ suppliers, reload }: { suppliers: Supplier[]; reload: ()
 }
 
 /* ─────────────── Catalog tab ─────────────── */
-function CatalogTab({ materials, reload }: { materials: Material[]; reload: () => void }) {
+/* ─────────────── Store / inventory tab ─────────────── */
+function StoreTab({ materials, suppliers, reload }: { materials: Material[]; suppliers: Supplier[]; reload: () => void }) {
   const { t } = useI18n();
   const toast = useToast();
-  const [form, setForm] = useState({ category: "fabric", name: "", code: "", unit: "meter" });
+  const [form, setForm] = useState({ category: "fabric", name: "", code: "", unit: "meter", stock: "", minStock: "" });
   const [saving, setSaving] = useState(false);
+  const [shortagesOnly, setShortagesOnly] = useState(false);
 
   const add = async () => {
     if (!form.name.trim()) return;
     setSaving(true);
     try {
-      const res = await fetch("/api/materials", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(form) });
-      if (res.ok) { setForm({ ...form, name: "", code: "" }); reload(); }
+      const res = await fetch("/api/materials", { method: "POST", headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ ...form, stock: form.stock ? parseFloat(form.stock) : 0, minStock: form.minStock ? parseFloat(form.minStock) : 0 }) });
+      if (res.ok) { setForm({ ...form, name: "", code: "", stock: "", minStock: "" }); reload(); }
       else { const e = await res.json().catch(() => ({})); toast.error(e.error || t("saveFailed")); }
     } catch { toast.error(t("serverConnectionError")); }
     finally { setSaving(false); }
   };
-  const del = async (id: string) => { await fetch(`/api/materials/${id}`, { method: "DELETE" }).catch(() => {}); reload(); };
+
+  const isShort = (m: Material) => m.stock <= m.minStock || m.stock < (m.demand || 0);
+  const shown = shortagesOnly ? materials.filter(isShort) : materials;
+  const shortCount = materials.filter(isShort).length;
 
   return (
     <div>
-      <div className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl p-4 mb-4 grid grid-cols-2 sm:grid-cols-5 gap-3">
+      {/* Add material */}
+      <div className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl p-4 mb-4 grid grid-cols-2 sm:grid-cols-7 gap-2">
         <select value={form.category} onChange={(e) => setForm({ ...form, category: e.target.value })} className="field">
           {CATS.map((c) => <option key={c} value={c}>{t(CAT_KEY[c])}</option>)}
         </select>
@@ -412,25 +419,105 @@ function CatalogTab({ materials, reload }: { materials: Material[]; reload: () =
         <select value={form.unit} onChange={(e) => setForm({ ...form, unit: e.target.value })} className="field">
           {UNITS.map((u) => <option key={u} value={u}>{t(UNIT_KEY[u])}</option>)}
         </select>
-        <button onClick={add} disabled={saving || !form.name.trim()} className="inline-flex items-center justify-center gap-2 h-11 rounded-lg bg-gray-900 dark:bg-white dark:text-gray-900 text-white text-sm font-bold disabled:opacity-40">
+        <input type="number" inputMode="decimal" value={form.stock} onChange={(e) => setForm({ ...form, stock: e.target.value })} className="field font-mono-en" placeholder={t("pcStock")} />
+        <input type="number" inputMode="decimal" value={form.minStock} onChange={(e) => setForm({ ...form, minStock: e.target.value })} className="field font-mono-en" placeholder={t("pcMin")} />
+        <button onClick={add} disabled={saving || !form.name.trim()} className="inline-flex items-center justify-center gap-1.5 h-11 rounded-lg bg-gray-900 dark:bg-white dark:text-gray-900 text-white text-sm font-bold disabled:opacity-40">
           {saving ? <Loader2 className="w-4 h-4 animate-spin" /> : <Plus className="w-4 h-4" />} {t("pcAddMaterial")}
         </button>
       </div>
-      {materials.length === 0 ? (
+
+      <div className="flex items-center justify-between gap-3 mb-3 flex-wrap">
+        <button onClick={() => setShortagesOnly((v) => !v)}
+          className={cn("px-3 h-9 rounded-lg text-xs font-bold border", shortagesOnly ? "bg-red-600 border-red-600 text-white" : "bg-white dark:bg-gray-800 border-gray-200 dark:border-gray-700 text-gray-600 dark:text-gray-300")}>
+          {t("pcShortagesOnly")} {shortCount > 0 && <span className="font-mono-en">({shortCount})</span>}
+        </button>
+      </div>
+
+      {shown.length === 0 ? (
         <div className="text-center py-12 text-gray-400">{t("pcNoMaterials")}</div>
       ) : (
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-          {materials.map((m) => (
-            <div key={m.id} className="flex items-center justify-between gap-3 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg px-4 py-2.5">
-              <div className="flex items-center gap-2 flex-wrap">
-                <span className="text-[10px] font-bold px-1.5 py-0.5 rounded-full bg-gray-100 dark:bg-gray-700 text-gray-500">{t(CAT_KEY[m.category])}</span>
-                <span className="font-semibold text-sm">{m.name}</span>
-                {m.code && <span className="text-xs text-gray-400">({m.code})</span>}
-                <span className="text-xs text-gray-400">/ {t(UNIT_KEY[m.unit])}</span>
-              </div>
-              <button onClick={() => del(m.id)} className="p-1.5 rounded border border-red-200 text-red-500 hover:bg-red-50"><Trash2 className="w-3.5 h-3.5" /></button>
-            </div>
-          ))}
+        <div className="space-y-2">
+          {shown.map((m) => <MaterialRow key={m.id} m={m} suppliers={suppliers} reload={reload} short={isShort(m)} />)}
+        </div>
+      )}
+    </div>
+  );
+}
+
+function MaterialRow({ m, suppliers, reload, short }: { m: Material; suppliers: Supplier[]; reload: () => void; short: boolean }) {
+  const { t, locale } = useI18n();
+  const [mode, setMode] = useState<"" | "receive" | "order">("");
+  const [qty, setQty] = useState("");
+  const [cost, setCost] = useState("");
+  const [supplierId, setSupplierId] = useState(m.supplierId || "");
+  const [busy, setBusy] = useState(false);
+  const unitLabel = t(UNIT_KEY[m.unit] || "pcUnitPiece");
+
+  const receive = async () => {
+    const q = parseFloat(qty);
+    if (!q || q <= 0) return;
+    setBusy(true);
+    try {
+      await fetch(`/api/materials/${m.id}/receive`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ quantity: q, cost: cost ? parseFloat(cost) : null }) });
+      setMode(""); setQty(""); setCost(""); reload();
+    } finally { setBusy(false); }
+  };
+  const orderWa = () => {
+    const sup = suppliers.find((s) => s.id === supplierId);
+    if (!sup) return;
+    const q = qty ? `${qty} ${unitLabel}` : "";
+    const text = `${t("pcWaBulkGreeting")}\n• ${m.name}${m.code ? ` (${m.code})` : ""}${q ? ` — ${q}` : ""}`;
+    window.open(waLinkFor(sup.phoneCode, sup.phone, text), "_blank");
+  };
+  const setMin = async (v: string) => { await fetch(`/api/materials/${m.id}`, { method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ minStock: parseFloat(v) || 0 }) }).catch(() => {}); reload(); };
+  const del = async () => { await fetch(`/api/materials/${m.id}`, { method: "DELETE" }).catch(() => {}); reload(); };
+
+  return (
+    <div className={cn("bg-white dark:bg-gray-800 border rounded-lg px-4 py-3", short ? "border-red-300 dark:border-red-800" : "border-gray-200 dark:border-gray-700")}>
+      <div className="flex items-center justify-between gap-3 flex-wrap">
+        <div className="flex items-center gap-2 flex-wrap min-w-0">
+          <span className="text-[10px] font-bold px-1.5 py-0.5 rounded-full bg-gray-100 dark:bg-gray-700 text-gray-500">{t(CAT_KEY[m.category])}</span>
+          <span className="font-semibold text-sm">{m.name}</span>
+          {m.code && <span className="text-xs text-gray-400">({m.code})</span>}
+          {short && <span className="text-[10px] font-bold px-1.5 py-0.5 rounded-full bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-300">{t("pcShortage")}</span>}
+        </div>
+        <div className="flex items-center gap-3 text-xs shrink-0">
+          <span>{t("pcStock")}: <b className={cn("font-mono-en", short ? "text-red-600" : "text-emerald-600")}>{m.stock}</b> {unitLabel}</span>
+          <span className="text-gray-400">{t("pcMin")}: <input defaultValue={m.minStock} onBlur={(e) => { if (parseFloat(e.target.value) !== m.minStock) setMin(e.target.value); }} className="w-12 field h-7 text-xs font-mono-en inline-block px-1 text-center" /></span>
+          {(m.demand || 0) > 0 && <span className="text-amber-600">{t("pcDemand")}: <b className="font-mono-en">{m.demand}</b></span>}
+        </div>
+        <div className="flex items-center gap-1.5 shrink-0">
+          <button onClick={() => setMode(mode === "order" ? "" : "order")} className="px-2.5 h-8 rounded-lg border border-emerald-300 text-emerald-700 dark:text-emerald-300 text-xs font-bold hover:bg-emerald-50 dark:hover:bg-emerald-900/20">{t("pcOrderBulk")}</button>
+          <button onClick={() => setMode(mode === "receive" ? "" : "receive")} className="px-2.5 h-8 rounded-lg bg-gray-900 dark:bg-white dark:text-gray-900 text-white text-xs font-bold">{t("pcReceive")}</button>
+          <button onClick={del} className="p-1.5 rounded border border-red-200 text-red-400 hover:text-red-600"><Trash2 className="w-3.5 h-3.5" /></button>
+        </div>
+      </div>
+
+      {mode === "receive" && (
+        <div className="flex items-end gap-2 mt-3 pt-3 border-t border-gray-100 dark:border-gray-700 flex-wrap">
+          <div className="w-24"><label className="block text-[10px] font-bold text-gray-400 mb-0.5">{t("pcReceiveQty")}</label>
+            <input type="number" inputMode="decimal" value={qty} onChange={(e) => setQty(e.target.value)} className="field h-9 text-xs font-mono-en w-full" /></div>
+          <div className="w-24"><label className="block text-[10px] font-bold text-gray-400 mb-0.5">{t("pcCost")}</label>
+            <input type="number" inputMode="decimal" value={cost} onChange={(e) => setCost(e.target.value)} className="field h-9 text-xs font-mono-en w-full" placeholder="—" /></div>
+          <button onClick={receive} disabled={busy || !qty} className="inline-flex items-center gap-1.5 px-3 h-9 rounded-lg bg-gray-900 dark:bg-white dark:text-gray-900 text-white text-xs font-bold disabled:opacity-40">
+            {busy ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Plus className="w-3.5 h-3.5" />} {t("pcReceive")}
+          </button>
+          <span className="text-[10px] text-gray-400">{t("pcCostHint")}</span>
+        </div>
+      )}
+
+      {mode === "order" && (
+        <div className="flex items-end gap-2 mt-3 pt-3 border-t border-gray-100 dark:border-gray-700 flex-wrap">
+          <div className="w-24"><label className="block text-[10px] font-bold text-gray-400 mb-0.5">{t("pcOrderQty")}</label>
+            <input type="number" inputMode="decimal" value={qty} onChange={(e) => setQty(e.target.value)} className="field h-9 text-xs font-mono-en w-full" /></div>
+          <div className="w-36"><label className="block text-[10px] font-bold text-gray-400 mb-0.5">{t("pcSupplier")}</label>
+            <select value={supplierId} onChange={(e) => setSupplierId(e.target.value)} className="field h-9 text-xs w-full">
+              <option value="">{t("pcChooseSupplier")}</option>
+              {suppliers.filter((s) => s.isActive).map((s) => <option key={s.id} value={s.id}>{s.name}</option>)}
+            </select></div>
+          <button onClick={orderWa} disabled={!supplierId} className="inline-flex items-center gap-1.5 px-3 h-9 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold disabled:opacity-40">
+            <Send className="w-3.5 h-3.5" /> {t("pcSendWa")}
+          </button>
         </div>
       )}
     </div>

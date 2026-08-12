@@ -24,6 +24,8 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
     if (body.code !== undefined) data.code = body.code?.trim() || null;
     if (MATERIAL_UNITS.includes(body.unit)) data.unit = body.unit;
     if (body.supplierId !== undefined) data.supplierId = body.supplierId || null;
+    if (body.stock !== undefined) { const n = Number(body.stock); if (Number.isFinite(n)) data.stock = n; }
+    if (body.minStock !== undefined) { const n = Number(body.minStock); if (Number.isFinite(n)) data.minStock = n; }
     if (typeof body.isActive === "boolean") data.isActive = body.isActive;
     const material = await prisma.material.update({ where: { id }, data });
     return NextResponse.json(material);

@@ -18,8 +18,13 @@ export async function GET() {
   const g = await guard();
   if (g.error) return g.error;
   try {
-    const materials = await prisma.material.findMany({ orderBy: [{ isActive: "desc" }, { category: "asc" }, { name: "asc" }] });
-    return NextResponse.json(materials);
+    const [materials, demand] = await Promise.all([
+      prisma.material.findMany({ orderBy: [{ isActive: "desc" }, { category: "asc" }, { name: "asc" }] }),
+      // Open demand across customer orders (still needed / not yet received).
+      prisma.materialOrder.groupBy({ by: ["materialId"], where: { status: { in: ["needed", "ordered"] }, materialId: { not: null } }, _sum: { quantity: true } }),
+    ]);
+    const demandMap = new Map(demand.map((d) => [d.materialId, d._sum.quantity || 0]));
+    return NextResponse.json(materials.map((m) => ({ ...m, demand: demandMap.get(m.id) || 0 })));
   } catch (e) {
     console.error("API error [/api/materials]:", e);
     return NextResponse.json({ error: "Server error" }, { status: 500 });
@@ -40,6 +45,8 @@ export async function POST(req: NextRequest) {
         code: typeof body.code === "string" && body.code.trim() ? body.code.trim() : null,
         unit: MATERIAL_UNITS.includes(body.unit) ? body.unit : "meter",
         supplierId: body.supplierId || null,
+        stock: Number.isFinite(Number(body.stock)) ? Number(body.stock) : 0,
+        minStock: Number.isFinite(Number(body.minStock)) ? Number(body.minStock) : 0,
       },
     });
     return NextResponse.json(material, { status: 201 });
