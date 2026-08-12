@@ -27,7 +27,7 @@ const UNITS = ["meter", "sheet", "kg", "piece"];
 
 export default function PurchasingPage() {
   const { t } = useI18n();
-  const [tab, setTab] = useState<"orders" | "suppliers" | "catalog">("orders");
+  const [tab, setTab] = useState<"orders" | "batch" | "suppliers" | "catalog">("orders");
   const [suppliers, setSuppliers] = useState<Supplier[]>([]);
   const [materials, setMaterials] = useState<Material[]>([]);
 
@@ -42,17 +42,18 @@ export default function PurchasingPage() {
         <p className="text-sm text-gray-500 mt-1">{t("pcSubtitle")}</p>
       </div>
 
-      <div className="flex gap-1 bg-gray-100 dark:bg-gray-700 rounded-lg p-0.5 mb-5 w-fit">
-        {(["orders", "suppliers", "catalog"] as const).map((k) => (
+      <div className="flex gap-1 bg-gray-100 dark:bg-gray-700 rounded-lg p-0.5 mb-5 w-fit flex-wrap">
+        {([["orders", "pcTabOrders"], ["batch", "pcTabBatch"], ["suppliers", "pcTabSuppliers"], ["catalog", "pcTabCatalog"]] as const).map(([k, lk]) => (
           <button key={k} onClick={() => setTab(k)}
             className={cn("px-4 py-1.5 rounded-md text-sm font-bold transition-colors",
               tab === k ? "bg-white dark:bg-gray-900 shadow text-gray-900 dark:text-white" : "text-gray-500")}>
-            {t(k === "orders" ? "pcTabOrders" : k === "suppliers" ? "pcTabSuppliers" : "pcTabCatalog")}
+            {t(lk)}
           </button>
         ))}
       </div>
 
       {tab === "orders" && <OrdersTab suppliers={suppliers} materials={materials} />}
+      {tab === "batch" && <BatchTab />}
       {tab === "suppliers" && <SuppliersTab suppliers={suppliers} reload={loadSuppliers} />}
       {tab === "catalog" && <CatalogTab materials={materials} reload={loadMaterials} />}
     </div>
@@ -116,15 +117,17 @@ function OrderCard({ order, suppliers, materials, onReload, sendWa }:
   { order: Order; suppliers: Supplier[]; materials: Material[]; onReload: () => void; sendWa: (o: Order, s: Supplier, lines: MLine[]) => void }) {
   const { t, locale } = useI18n();
   const toast = useToast();
-  const [draft, setDraft] = useState({ materialId: "", name: "", code: "", unit: "meter", quantity: "1", supplierId: "" });
+  const [draft, setDraft] = useState({ materialId: "", name: "", code: "", category: "other", unit: "meter", quantity: "1", cost: "", supplierId: "" });
   const [busy, setBusy] = useState(false);
   const unitLabel = (u: string) => t(UNIT_KEY[u] || "pcUnitPiece");
 
   const pickMaterial = (mid: string) => {
     const m = materials.find((x) => x.id === mid);
-    if (m) setDraft((d) => ({ ...d, materialId: m.id, name: m.name, code: m.code || "", unit: m.unit, supplierId: m.supplierId || d.supplierId }));
+    if (m) setDraft((d) => ({ ...d, materialId: m.id, name: m.name, code: m.code || "", category: m.category, unit: m.unit, supplierId: m.supplierId || d.supplierId }));
     else setDraft((d) => ({ ...d, materialId: "" }));
   };
+
+  const resetDraft = () => setDraft({ materialId: "", name: "", code: "", category: "other", unit: "meter", quantity: "1", cost: "", supplierId: "" });
 
   const addLine = async () => {
     if (!draft.name.trim()) return;
@@ -132,9 +135,9 @@ function OrderCard({ order, suppliers, materials, onReload, sendWa }:
     try {
       const res = await fetch("/api/material-orders", {
         method: "POST", headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ quotationId: order.id, materialId: draft.materialId || null, name: draft.name, code: draft.code, unit: draft.unit, quantity: parseFloat(draft.quantity) || 1, supplierId: draft.supplierId || null }),
+        body: JSON.stringify({ quotationId: order.id, materialId: draft.materialId || null, name: draft.name, code: draft.code, category: draft.category, unit: draft.unit, quantity: parseFloat(draft.quantity) || 1, cost: draft.cost ? parseFloat(draft.cost) : null, supplierId: draft.supplierId || null }),
       });
-      if (res.ok) { setDraft({ materialId: "", name: "", code: "", unit: "meter", quantity: "1", supplierId: "" }); onReload(); }
+      if (res.ok) { resetDraft(); onReload(); }
       else toast.error(t("saveFailed"));
     } catch { toast.error(t("serverConnectionError")); }
     finally { setBusy(false); }
@@ -218,6 +221,10 @@ function OrderCard({ order, suppliers, materials, onReload, sendWa }:
             {UNITS.map((u) => <option key={u} value={u}>{t(UNIT_KEY[u])}</option>)}
           </select>
         </div>
+        <div className="w-20">
+          <label className="block text-[10px] font-bold text-gray-400 mb-0.5">{t("pcCost")}</label>
+          <input type="number" inputMode="decimal" value={draft.cost} onChange={(e) => setDraft({ ...draft, cost: e.target.value })} className="field h-9 text-xs w-full font-mono-en" placeholder="—" />
+        </div>
         <div className="w-32">
           <label className="block text-[10px] font-bold text-gray-400 mb-0.5">{t("pcSupplier")}</label>
           <select value={draft.supplierId} onChange={(e) => setDraft({ ...draft, supplierId: e.target.value })} className="field h-9 text-xs w-full">
@@ -241,6 +248,84 @@ function OrderCard({ order, suppliers, materials, onReload, sendWa }:
           ))}
         </div>
       )}
+    </div>
+  );
+}
+
+/* ─────────────── Batch-by-supplier tab ─────────────── */
+interface BatchLine { id: string; name: string; code: string | null; quantity: number; unit: string; status: string; supplier: Supplier | null; quotation: { id: string; quoteNumber: string; customer: { name: string } }; }
+
+function BatchTab() {
+  const { t, locale } = useI18n();
+  const [lines, setLines] = useState<BatchLine[] | null>(null);
+  const [busy, setBusy] = useState(false);
+
+  const load = useCallback(() => {
+    setLines(null);
+    fetch("/api/material-orders?view=supplier").then((r) => r.ok ? r.json() : []).then(setLines).catch(() => setLines([]));
+  }, []);
+  useEffect(() => { load(); }, [load]);
+
+  const unitLabel = (u: string) => t(UNIT_KEY[u] || "pcUnitPiece");
+
+  // Group pending lines by supplier.
+  const groups = new Map<string, { sup: Supplier | null; lines: BatchLine[] }>();
+  for (const l of lines || []) {
+    const key = l.supplier?.id || "none";
+    const g = groups.get(key) || { sup: l.supplier, lines: [] };
+    g.lines.push(l); groups.set(key, g);
+  }
+
+  const sendAll = (sup: Supplier, gl: BatchLine[]) => {
+    const items = gl.map((l) => `• ${displayName(l.quotation.customer.name, locale)} — ${l.name}${l.code ? ` (${l.code})` : ""} × ${l.quantity} ${unitLabel(l.unit)}`).join("\n");
+    const text = `${t("pcWaGreeting")}\n${items}`;
+    window.open(waLinkFor(sup.phoneCode, sup.phone, text), "_blank");
+  };
+
+  const markAllOrdered = async (gl: BatchLine[]) => {
+    setBusy(true);
+    try {
+      await Promise.all(gl.filter((l) => l.status !== "ordered").map((l) =>
+        fetch(`/api/material-orders/${l.id}`, { method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ status: "ordered" }) }).catch(() => {})));
+      load();
+    } finally { setBusy(false); }
+  };
+
+  if (lines === null) return <div className="flex justify-center py-16"><Loader2 className="w-6 h-6 animate-spin text-gray-400" /></div>;
+  if (lines.length === 0) return <div className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl p-12 text-center text-gray-400"><ShoppingBag className="w-10 h-10 mx-auto mb-3 opacity-40" /> {t("pcNoBatch")}</div>;
+
+  return (
+    <div className="space-y-4">
+      {Array.from(groups.values()).map((g, gi) => (
+        <div key={g.sup?.id || `none-${gi}`} className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl p-4">
+          <div className="flex items-center justify-between gap-3 flex-wrap mb-3">
+            <h3 className="font-bold">{g.sup ? g.sup.name : t("pcNoSupplierGroup")} <span className="text-xs font-normal text-gray-400">· <span className="font-mono-en">{g.lines.length}</span> {t("pcItemsCount")}</span></h3>
+            {g.sup && (
+              <div className="flex items-center gap-2">
+                <button onClick={() => markAllOrdered(g.lines)} disabled={busy}
+                  className="inline-flex items-center gap-1.5 px-3 h-9 rounded-lg border border-gray-200 dark:border-gray-700 text-gray-600 dark:text-gray-300 text-xs font-bold hover:bg-gray-50 dark:hover:bg-gray-700 disabled:opacity-40">
+                  {t("pcMarkAllOrdered")}
+                </button>
+                <button onClick={() => sendAll(g.sup!, g.lines)}
+                  className="inline-flex items-center gap-1.5 px-3 h-9 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold">
+                  <Send className="w-3.5 h-3.5" /> {t("pcSendAll")}
+                </button>
+              </div>
+            )}
+          </div>
+          <div className="space-y-1">
+            {g.lines.map((l) => (
+              <div key={l.id} className="flex items-center gap-2 flex-wrap text-sm border-b border-gray-50 dark:border-gray-700/50 py-1.5 last:border-0">
+                <span className="text-gray-500 min-w-[120px] truncate">{displayName(l.quotation.customer.name, locale)}</span>
+                <span className="font-semibold">{l.name}</span>
+                {l.code && <span className="text-xs text-gray-400">({l.code})</span>}
+                <span className="font-mono-en text-gray-500">× {l.quantity} {unitLabel(l.unit)}</span>
+                <span className={cn("ms-auto text-[10px] font-bold px-2 py-0.5 rounded-full", STATUS_TONE[l.status])}>{t(STATUS_KEY[l.status])}</span>
+              </div>
+            ))}
+          </div>
+        </div>
+      ))}
     </div>
   );
 }

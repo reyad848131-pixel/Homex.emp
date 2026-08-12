@@ -74,8 +74,10 @@ model MaterialOrder {
   materialId  String?   @map("material_id")
   name        String    // snapshot of the material type
   code        String?   // snapshot of colour / code
+  category    String    @default("other") // fabric | wood | foam | accessory | other
   quantity    Float     @default(1)
   unit        String    @default("meter")
+  cost        Float?    // total cost of this line (feeds expenses on receipt)
   status      String    @default("needed") // needed | ordered | received
   note        String?
   createdBy   String    @map("created_by")

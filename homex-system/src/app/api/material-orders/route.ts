@@ -4,6 +4,8 @@ import { prisma } from "@/lib/prisma";
 import { userCan } from "@/lib/permissions";
 import { normalizeCredential } from "@/lib/text";
 
+const CATS = ["fabric", "wood", "foam", "accessory", "other"];
+
 async function guard() {
   const session = await getAuth();
   if (!session) return { error: NextResponse.json({ error: "Unauthorized" }, { status: 401 }) };
@@ -39,6 +41,15 @@ export async function GET(req: NextRequest) {
       });
       return NextResponse.json(orders);
     }
+    if (req.nextUrl.searchParams.get("view") === "supplier") {
+      // Flat pending lines (not received) across all orders, for batch ordering.
+      const lines = await prisma.materialOrder.findMany({
+        where: { status: { in: ["needed", "ordered"] } },
+        include: { supplier: true, quotation: { select: { id: true, quoteNumber: true, customer: { select: { name: true } } } } },
+        orderBy: { createdAt: "asc" },
+      });
+      return NextResponse.json(lines);
+    }
     // Default: every order that already has material requests (active procurement).
     const orders = await prisma.quotation.findMany({
       where: { materialOrders: { some: {} } },
@@ -62,13 +73,16 @@ export async function POST(req: NextRequest) {
     const name = String(body.name || "").trim();
     if (!quotationId || !name) return NextResponse.json({ error: "بيانات ناقصة" }, { status: 400 });
     const qty = Number(body.quantity);
+    const cost = Number(body.cost);
     const created = await prisma.materialOrder.create({
       data: {
         quotationId,
         name,
         code: typeof body.code === "string" && body.code.trim() ? body.code.trim() : null,
+        category: CATS.includes(body.category) ? body.category : "other",
         quantity: Number.isFinite(qty) && qty > 0 ? qty : 1,
         unit: body.unit || "meter",
+        cost: Number.isFinite(cost) && cost > 0 ? cost : null,
         supplierId: body.supplierId || null,
         materialId: body.materialId || null,
         note: typeof body.note === "string" && body.note.trim() ? body.note.trim() : null,
