@@ -6,7 +6,6 @@ import { logAction } from "@/lib/audit";
 import { getSettings } from "@/lib/settings";
 import { computeQuoteTotals } from "@/lib/quote-calc";
 import { parseBody, createQuotationSchema } from "@/lib/schemas";
-import { findCurtainViolation } from "@/lib/order-rules";
 import { getQuotationsList } from "@/lib/quotations-list";
 import { userCan } from "@/lib/permissions";
 
@@ -54,15 +53,8 @@ export async function POST(req: NextRequest) {
 
     const { customer: customerData, items, notes, advancePct, deliveryDate, deliveryTime } = parsed.data;
 
-    // Enforce the curtain minimum for the customer's wilayat (5 for Bahla/
-    // Nizwa/Al Hamra, 8 otherwise).
-    const violation = findCurtainViolation(items as Array<{ description?: string }>, customerData.wilayat);
-    if (violation) {
-      return NextResponse.json(
-        { error: `الحد الأدنى للستائر في هذه الولاية هو ${violation.min} ستارة (الطلب ${violation.count})`, code: "curtain_min" },
-        { status: 400 }
-      );
-    }
+    // Curtain counts are unrestricted — any number is allowed (no wilayat
+    // minimum enforced).
 
     let customer = await prisma.customer.findFirst({
       where: { phone: customerData.phone, createdBy: user.id },

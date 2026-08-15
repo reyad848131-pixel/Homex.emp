@@ -9,7 +9,6 @@ import { roundMoney } from "@/lib/utils";
 import { getSetting } from "@/lib/settings";
 import { isFinanciallyLocked, newTotalBelowPaid, canSetStatus } from "@/lib/quote-rules";
 import { userCan } from "@/lib/permissions";
-import { findCurtainViolation } from "@/lib/order-rules";
 
 const VALID_STATUSES = ["draft", "pending", "approved", "declined", "revised"];
 
@@ -157,19 +156,8 @@ export async function PATCH(
       const parsed = parseBody(updateQuotationItemsSchema, body);
       if (!parsed.ok) return NextResponse.json({ error: parsed.error, code: "invalid" }, { status: 400 });
 
-      // Enforce the curtain minimum on EDIT too — otherwise an order could be
-      // created valid then edited below the wilayat's minimum. Use the edited
-      // wilayat when the customer is changed, else the order's current wilayat.
-      const wilayat = body.customer?.wilayat
-        ?? (await prisma.quotation.findFirst({ where: { id }, select: { customer: { select: { wilayat: true } } } }))?.customer?.wilayat
-        ?? null;
-      const violation = findCurtainViolation(body.items, wilayat);
-      if (violation) {
-        return NextResponse.json(
-          { error: `الحد الأدنى للستائر في هذه الولاية هو ${violation.min} ستارة (الطلب ${violation.count})`, code: "curtain_min" },
-          { status: 400 }
-        );
-      }
+      // Curtain counts are unrestricted on edit too — any number is allowed
+      // (no wilayat minimum enforced).
 
       const result = await prisma.$transaction(async (tx) => {
         await tx.quoteItem.deleteMany({ where: { quotationId: id } });
