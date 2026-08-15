@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect, useCallback } from "react";
-import { ShoppingBag, Plus, Trash2, Search, Loader2, Send, Power, Clock3 } from "lucide-react";
+import { ShoppingBag, Plus, Trash2, Search, Loader2, Send, Power, Clock3, Minus } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useI18n, type TranslationKey } from "@/lib/i18n";
 import { displayName } from "@/lib/translit";
@@ -10,12 +10,12 @@ import { waLinkFor } from "@/lib/wa";
 import { useToast } from "@/components/toast";
 
 interface Supplier { id: string; name: string; phone: string; phoneCode: string; category: string | null; note: string | null; isActive: boolean; }
-interface Material { id: string; category: string; name: string; code: string | null; unit: string; supplierId: string | null; isActive: boolean; stock: number; minStock: number; demand?: number; }
-interface MLine { id: string; name: string; code: string | null; quantity: number; unit: string; status: string; supplierId: string | null; supplier: Supplier | null; }
+interface Material { id: string; category: string; name: string; code: string | null; unit: string; packSize: string | null; supplierId: string | null; isActive: boolean; stock: number; minStock: number; demand?: number; }
+interface MLine { id: string; name: string; code: string | null; category: string; quantity: number; unit: string; status: string; supplierId: string | null; supplier: Supplier | null; }
 interface Order { id: string; quoteNumber: string; deliveryDate: string | null; customer: { name: string; phone: string; phoneCode: string; governorate: string; wilayat: string }; materialOrders: MLine[]; }
 
 const CAT_KEY: Record<string, TranslationKey> = { fabric: "pcCatFabric", wood: "pcCatWood", foam: "pcCatFoam", accessory: "pcCatAccessory", other: "pcCatOther" };
-const UNIT_KEY: Record<string, TranslationKey> = { meter: "pcUnitMeter", sheet: "pcUnitSheet", kg: "pcUnitKg", piece: "pcUnitPiece" };
+const UNIT_KEY: Record<string, TranslationKey> = { meter: "pcUnitMeter", sheet: "pcUnitSheet", kg: "pcUnitKg", piece: "pcUnitPiece", carton: "pcUnitCarton", box: "pcUnitBox", bag: "pcUnitBag", gallon: "pcUnitGallon", roll: "pcUnitRoll" };
 const STATUS_KEY: Record<string, TranslationKey> = { needed: "pcNeeded", ordered: "pcOrdered", received: "pcReceived" };
 const STATUS_TONE: Record<string, string> = {
   needed: "bg-gray-100 text-gray-600 dark:bg-gray-700 dark:text-gray-300",
@@ -23,7 +23,36 @@ const STATUS_TONE: Record<string, string> = {
   received: "bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-300",
 };
 const CATS = ["fabric", "wood", "foam", "accessory", "other"];
-const UNITS = ["meter", "sheet", "kg", "piece"];
+const UNITS = ["piece", "meter", "sheet", "kg", "carton", "box", "bag", "gallon", "roll"];
+
+// Store status levels, computed from stock vs the reorder threshold (minStock):
+//   out         → nothing left (stock ≤ 0)
+//   danger      → at/under the reorder point → needs an order
+//   approaching → within 50% above the reorder point → getting low
+//   safe        → comfortable
+type StockStat = "out" | "danger" | "approaching" | "safe";
+function stockStatus(m: Material): StockStat {
+  if (m.stock <= 0) return "out";
+  if (m.stock <= m.minStock || m.stock < (m.demand || 0)) return "danger";
+  if (m.minStock > 0 && m.stock <= m.minStock * 1.5) return "approaching";
+  return "safe";
+}
+const STAT_KEY: Record<StockStat, TranslationKey> = { safe: "pcStatSafe", approaching: "pcStatApproaching", danger: "pcStatDanger", out: "pcStatOut" };
+const STAT_TONE: Record<StockStat, string> = {
+  safe: "bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-300",
+  approaching: "bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-300",
+  danger: "bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-300",
+  out: "bg-red-600 text-white dark:bg-red-700",
+};
+const STAT_BORDER: Record<StockStat, string> = {
+  safe: "border-gray-200 dark:border-gray-700",
+  approaching: "border-amber-300 dark:border-amber-800",
+  danger: "border-red-300 dark:border-red-800",
+  out: "border-red-500 dark:border-red-700",
+};
+const STAT_STOCK_TEXT: Record<StockStat, string> = {
+  safe: "text-emerald-600", approaching: "text-amber-600", danger: "text-red-600", out: "text-red-600",
+};
 
 export default function PurchasingPage() {
   const { t } = useI18n();
@@ -75,8 +104,9 @@ function OrdersTab({ suppliers, materials }: { suppliers: Supplier[]; materials:
 
   const unitLabel = (u: string) => t(UNIT_KEY[u] || "pcUnitPiece");
 
+  const catLabel = (c: string) => t(CAT_KEY[c] || "pcCatOther");
   const sendWa = (o: Order, sup: Supplier, lines: MLine[]) => {
-    const items = lines.map((l) => `• ${l.name}${l.code ? ` (${l.code})` : ""} × ${l.quantity} ${unitLabel(l.unit)}`).join("\n");
+    const items = lines.map((l) => `• ${catLabel(l.category)} — ${l.name}${l.code ? ` (${l.code})` : ""} × ${l.quantity} ${unitLabel(l.unit)}`).join("\n");
     const text = `${t("pcWaGreeting")}\n${locale === "en" ? "Customer" : "الزبون"}: ${displayName(o.customer.name, locale)}\n${t("pcOrderNo")}: ${o.quoteNumber}\n${items}`;
     window.open(waLinkFor(sup.phoneCode, sup.phone, text), "_blank");
   };
@@ -253,7 +283,7 @@ function OrderCard({ order, suppliers, materials, onReload, sendWa }:
 }
 
 /* ─────────────── Batch-by-supplier tab ─────────────── */
-interface BatchLine { id: string; name: string; code: string | null; quantity: number; unit: string; status: string; supplier: Supplier | null; quotation: { id: string; quoteNumber: string; customer: { name: string } }; }
+interface BatchLine { id: string; name: string; code: string | null; category: string; quantity: number; unit: string; status: string; supplier: Supplier | null; quotation: { id: string; quoteNumber: string; customer: { name: string } }; }
 
 function BatchTab() {
   const { t, locale } = useI18n();
@@ -276,8 +306,9 @@ function BatchTab() {
     g.lines.push(l); groups.set(key, g);
   }
 
+  const catLabel = (c: string) => t(CAT_KEY[c] || "pcCatOther");
   const sendAll = (sup: Supplier, gl: BatchLine[]) => {
-    const items = gl.map((l) => `• ${displayName(l.quotation.customer.name, locale)} — ${l.name}${l.code ? ` (${l.code})` : ""} × ${l.quantity} ${unitLabel(l.unit)}`).join("\n");
+    const items = gl.map((l) => `• ${displayName(l.quotation.customer.name, locale)} — ${catLabel(l.category)} ${l.name}${l.code ? ` (${l.code})` : ""} × ${l.quantity} ${unitLabel(l.unit)}`).join("\n");
     const text = `${t("pcWaGreeting")}\n${items}`;
     window.open(waLinkFor(sup.phoneCode, sup.phone, text), "_blank");
   };
@@ -387,9 +418,9 @@ function SuppliersTab({ suppliers, reload }: { suppliers: Supplier[]; reload: ()
 function StoreTab({ materials, suppliers, reload }: { materials: Material[]; suppliers: Supplier[]; reload: () => void }) {
   const { t } = useI18n();
   const toast = useToast();
-  const [form, setForm] = useState({ category: "fabric", name: "", code: "", unit: "meter", stock: "", minStock: "" });
+  const [form, setForm] = useState({ category: "fabric", name: "", code: "", unit: "carton", packSize: "", stock: "", minStock: "" });
   const [saving, setSaving] = useState(false);
-  const [shortagesOnly, setShortagesOnly] = useState(false);
+  const [attentionOnly, setAttentionOnly] = useState(false);
 
   const add = async () => {
     if (!form.name.trim()) return;
@@ -397,20 +428,21 @@ function StoreTab({ materials, suppliers, reload }: { materials: Material[]; sup
     try {
       const res = await fetch("/api/materials", { method: "POST", headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ ...form, stock: form.stock ? parseFloat(form.stock) : 0, minStock: form.minStock ? parseFloat(form.minStock) : 0 }) });
-      if (res.ok) { setForm({ ...form, name: "", code: "", stock: "", minStock: "" }); reload(); }
+      if (res.ok) { setForm({ ...form, name: "", code: "", packSize: "", stock: "", minStock: "" }); reload(); }
       else { const e = await res.json().catch(() => ({})); toast.error(e.error || t("saveFailed")); }
     } catch { toast.error(t("serverConnectionError")); }
     finally { setSaving(false); }
   };
 
-  const isShort = (m: Material) => m.stock <= m.minStock || m.stock < (m.demand || 0);
-  const shown = shortagesOnly ? materials.filter(isShort) : materials;
-  const shortCount = materials.filter(isShort).length;
+  // "Needs order" = danger or out of stock.
+  const needsOrder = (m: Material) => { const s = stockStatus(m); return s === "danger" || s === "out"; };
+  const shown = attentionOnly ? materials.filter(needsOrder) : materials;
+  const attentionCount = materials.filter(needsOrder).length;
 
   return (
     <div>
       {/* Add material */}
-      <div className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl p-4 mb-4 grid grid-cols-2 sm:grid-cols-7 gap-2">
+      <div className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl p-4 mb-4 grid grid-cols-2 sm:grid-cols-8 gap-2">
         <select value={form.category} onChange={(e) => setForm({ ...form, category: e.target.value })} className="field">
           {CATS.map((c) => <option key={c} value={c}>{t(CAT_KEY[c])}</option>)}
         </select>
@@ -419,6 +451,7 @@ function StoreTab({ materials, suppliers, reload }: { materials: Material[]; sup
         <select value={form.unit} onChange={(e) => setForm({ ...form, unit: e.target.value })} className="field">
           {UNITS.map((u) => <option key={u} value={u}>{t(UNIT_KEY[u])}</option>)}
         </select>
+        <input value={form.packSize} onChange={(e) => setForm({ ...form, packSize: e.target.value })} className="field" placeholder={t("pcPackSize")} title={t("pcPackSizeHint")} />
         <input type="number" inputMode="decimal" value={form.stock} onChange={(e) => setForm({ ...form, stock: e.target.value })} className="field font-mono-en" placeholder={t("pcStock")} />
         <input type="number" inputMode="decimal" value={form.minStock} onChange={(e) => setForm({ ...form, minStock: e.target.value })} className="field font-mono-en" placeholder={t("pcMin")} />
         <button onClick={add} disabled={saving || !form.name.trim()} className="inline-flex items-center justify-center gap-1.5 h-11 rounded-lg bg-gray-900 dark:bg-white dark:text-gray-900 text-white text-sm font-bold disabled:opacity-40">
@@ -427,9 +460,9 @@ function StoreTab({ materials, suppliers, reload }: { materials: Material[]; sup
       </div>
 
       <div className="flex items-center justify-between gap-3 mb-3 flex-wrap">
-        <button onClick={() => setShortagesOnly((v) => !v)}
-          className={cn("px-3 h-9 rounded-lg text-xs font-bold border", shortagesOnly ? "bg-red-600 border-red-600 text-white" : "bg-white dark:bg-gray-800 border-gray-200 dark:border-gray-700 text-gray-600 dark:text-gray-300")}>
-          {t("pcShortagesOnly")} {shortCount > 0 && <span className="font-mono-en">({shortCount})</span>}
+        <button onClick={() => setAttentionOnly((v) => !v)}
+          className={cn("px-3 h-9 rounded-lg text-xs font-bold border", attentionOnly ? "bg-red-600 border-red-600 text-white" : "bg-white dark:bg-gray-800 border-gray-200 dark:border-gray-700 text-gray-600 dark:text-gray-300")}>
+          {t("pcAttentionOnly")} {attentionCount > 0 && <span className="font-mono-en">({attentionCount})</span>}
         </button>
       </div>
 
@@ -437,22 +470,25 @@ function StoreTab({ materials, suppliers, reload }: { materials: Material[]; sup
         <div className="text-center py-12 text-gray-400">{t("pcNoMaterials")}</div>
       ) : (
         <div className="space-y-2">
-          {shown.map((m) => <MaterialRow key={m.id} m={m} suppliers={suppliers} reload={reload} short={isShort(m)} />)}
+          {shown.map((m) => <MaterialRow key={m.id} m={m} suppliers={suppliers} reload={reload} />)}
         </div>
       )}
     </div>
   );
 }
 
-function MaterialRow({ m, suppliers, reload, short }: { m: Material; suppliers: Supplier[]; reload: () => void; short: boolean }) {
+function MaterialRow({ m, suppliers, reload }: { m: Material; suppliers: Supplier[]; reload: () => void }) {
   const { t, locale } = useI18n();
-  const [mode, setMode] = useState<"" | "receive" | "order">("");
+  const [mode, setMode] = useState<"" | "receive" | "order" | "consume">("");
   const [qty, setQty] = useState("");
   const [cost, setCost] = useState("");
   const [supplierId, setSupplierId] = useState(m.supplierId || "");
   const [busy, setBusy] = useState(false);
   const [hist, setHist] = useState<Array<{ id: string; delta: number; reason: string; createdAt: string }> | null | undefined>(undefined);
   const unitLabel = t(UNIT_KEY[m.unit] || "pcUnitPiece");
+  const stat = stockStatus(m);
+  // A material is "packaged" when its size wording is set (e.g. carton صغير).
+  const packLabel = m.packSize ? `${unitLabel} ${m.packSize}` : unitLabel;
 
   const setStock = async (v: string) => { const n = parseFloat(v); if (!Number.isFinite(n) || n === m.stock) return; await fetch(`/api/materials/${m.id}`, { method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ stock: n }) }).catch(() => {}); reload(); };
   const toggleHist = () => {
@@ -470,37 +506,60 @@ function MaterialRow({ m, suppliers, reload, short }: { m: Material; suppliers: 
       setMode(""); setQty(""); setCost(""); reload();
     } finally { setBusy(false); }
   };
+  const consume = async () => {
+    const q = parseFloat(qty);
+    if (!q || q <= 0) return;
+    setBusy(true);
+    try {
+      await fetch(`/api/materials/${m.id}/consume`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ quantity: q }) });
+      setMode(""); setQty(""); reload();
+    } finally { setBusy(false); }
+  };
   const orderWa = () => {
     const sup = suppliers.find((s) => s.id === supplierId);
     if (!sup) return;
-    const q = qty ? `${qty} ${unitLabel}` : "";
-    const text = `${t("pcWaBulkGreeting")}\n• ${m.name}${m.code ? ` (${m.code})` : ""}${q ? ` — ${q}` : ""}`;
+    const q = qty ? `${qty} ${packLabel}` : "";
+    const cat = t(CAT_KEY[m.category] || "pcCatOther");
+    const text = `${t("pcWaBulkGreeting")}\n• ${cat} — ${m.name}${m.code ? ` (${m.code})` : ""}${m.packSize ? ` — ${unitLabel} ${m.packSize}` : ""}${q ? ` × ${q}` : ""}`;
     window.open(waLinkFor(sup.phoneCode, sup.phone, text), "_blank");
   };
   const setMin = async (v: string) => { await fetch(`/api/materials/${m.id}`, { method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ minStock: parseFloat(v) || 0 }) }).catch(() => {}); reload(); };
   const del = async () => { await fetch(`/api/materials/${m.id}`, { method: "DELETE" }).catch(() => {}); reload(); };
 
   return (
-    <div className={cn("bg-white dark:bg-gray-800 border rounded-lg px-4 py-3", short ? "border-red-300 dark:border-red-800" : "border-gray-200 dark:border-gray-700")}>
+    <div className={cn("bg-white dark:bg-gray-800 border rounded-lg px-4 py-3", STAT_BORDER[stat])}>
       <div className="flex items-center justify-between gap-3 flex-wrap">
         <div className="flex items-center gap-2 flex-wrap min-w-0">
           <span className="text-[10px] font-bold px-1.5 py-0.5 rounded-full bg-gray-100 dark:bg-gray-700 text-gray-500">{t(CAT_KEY[m.category])}</span>
           <span className="font-semibold text-sm">{m.name}</span>
           {m.code && <span className="text-xs text-gray-400">({m.code})</span>}
-          {short && <span className="text-[10px] font-bold px-1.5 py-0.5 rounded-full bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-300">{t("pcShortage")}</span>}
+          {m.packSize && <span className="text-[10px] font-bold px-1.5 py-0.5 rounded-full bg-indigo-50 text-indigo-600 dark:bg-indigo-900/30 dark:text-indigo-300">{unitLabel} {m.packSize}</span>}
+          <span className={cn("text-[10px] font-bold px-1.5 py-0.5 rounded-full", STAT_TONE[stat])}>{t(STAT_KEY[stat])}</span>
         </div>
         <div className="flex items-center gap-3 text-xs shrink-0">
-          <span>{t("pcStock")}: <input defaultValue={m.stock} onBlur={(e) => setStock(e.target.value)} className={cn("w-14 field h-7 text-xs font-mono-en inline-block px-1 text-center", short ? "text-red-600" : "text-emerald-600")} /> {unitLabel}</span>
+          <span>{t("pcStock")}: <input defaultValue={m.stock} onBlur={(e) => setStock(e.target.value)} className={cn("w-14 field h-7 text-xs font-mono-en inline-block px-1 text-center", STAT_STOCK_TEXT[stat])} /> {unitLabel}</span>
           <span className="text-gray-400">{t("pcMin")}: <input defaultValue={m.minStock} onBlur={(e) => { if (parseFloat(e.target.value) !== m.minStock) setMin(e.target.value); }} className="w-12 field h-7 text-xs font-mono-en inline-block px-1 text-center" /></span>
           {(m.demand || 0) > 0 && <span className="text-amber-600">{t("pcDemand")}: <b className="font-mono-en">{m.demand}</b></span>}
         </div>
         <div className="flex items-center gap-1.5 shrink-0">
           <button onClick={toggleHist} className="p-1.5 rounded border border-gray-200 dark:border-gray-700 text-gray-400 hover:text-gray-700" title={t("pcHistory")}><Clock3 className="w-3.5 h-3.5" /></button>
+          <button onClick={() => setMode(mode === "consume" ? "" : "consume")} disabled={m.stock <= 0} className="inline-flex items-center gap-1 px-2.5 h-8 rounded-lg border border-amber-300 text-amber-700 dark:text-amber-300 text-xs font-bold hover:bg-amber-50 dark:hover:bg-amber-900/20 disabled:opacity-40"><Minus className="w-3 h-3" /> {t("pcConsume")}</button>
           <button onClick={() => setMode(mode === "order" ? "" : "order")} className="px-2.5 h-8 rounded-lg border border-emerald-300 text-emerald-700 dark:text-emerald-300 text-xs font-bold hover:bg-emerald-50 dark:hover:bg-emerald-900/20">{t("pcOrderBulk")}</button>
           <button onClick={() => setMode(mode === "receive" ? "" : "receive")} className="px-2.5 h-8 rounded-lg bg-gray-900 dark:bg-white dark:text-gray-900 text-white text-xs font-bold">{t("pcReceive")}</button>
           <button onClick={del} className="p-1.5 rounded border border-red-200 text-red-400 hover:text-red-600"><Trash2 className="w-3.5 h-3.5" /></button>
         </div>
       </div>
+
+      {mode === "consume" && (
+        <div className="flex items-end gap-2 mt-3 pt-3 border-t border-gray-100 dark:border-gray-700 flex-wrap">
+          <div className="w-24"><label className="block text-[10px] font-bold text-gray-400 mb-0.5">{t("pcConsumeQty")}</label>
+            <input type="number" inputMode="decimal" value={qty} onChange={(e) => setQty(e.target.value)} className="field h-9 text-xs font-mono-en w-full" autoFocus /></div>
+          <button onClick={consume} disabled={busy || !qty} className="inline-flex items-center gap-1.5 px-3 h-9 rounded-lg bg-amber-600 hover:bg-amber-700 text-white text-xs font-bold disabled:opacity-40">
+            {busy ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Minus className="w-3.5 h-3.5" />} {t("pcConsume")}
+          </button>
+          <span className="text-[10px] text-gray-400">{t("pcStock")}: <b className="font-mono-en">{m.stock}</b> {packLabel}</span>
+        </div>
+      )}
 
       {mode === "receive" && (
         <div className="flex items-end gap-2 mt-3 pt-3 border-t border-gray-100 dark:border-gray-700 flex-wrap">
@@ -541,7 +600,7 @@ function MaterialRow({ m, suppliers, reload, short }: { m: Material; suppliers: 
               {hist.map((h) => (
                 <li key={h.id} className="flex items-center gap-2 text-xs">
                   <span className={cn("font-mono-en font-bold w-16", h.delta >= 0 ? "text-emerald-600" : "text-red-600")}>{h.delta >= 0 ? "+" : ""}{h.delta}</span>
-                  <span className="text-gray-500">{t(h.reason === "receive" ? "pcReasonReceive" : "pcReasonAdjust")}</span>
+                  <span className="text-gray-500">{t(h.reason === "receive" ? "pcReasonReceive" : h.reason === "consume" ? "pcReasonConsume" : "pcReasonAdjust")}</span>
                   <span className="text-gray-400 font-mono-en ms-auto">{new Date(h.createdAt).toLocaleDateString(locale === "en" ? "en-GB" : "ar")}</span>
                 </li>
               ))}

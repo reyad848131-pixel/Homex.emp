@@ -23,6 +23,7 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
     if (MATERIAL_CATEGORIES.includes(body.category)) data.category = body.category;
     if (body.code !== undefined) data.code = body.code?.trim() || null;
     if (MATERIAL_UNITS.includes(body.unit)) data.unit = body.unit;
+    if (body.packSize !== undefined) data.packSize = body.packSize?.trim() || null;
     if (body.supplierId !== undefined) data.supplierId = body.supplierId || null;
     // Manual stock adjustment → record the delta in the ledger.
     let stockDelta = 0;

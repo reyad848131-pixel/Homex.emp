@@ -4,7 +4,7 @@ import { prisma } from "@/lib/prisma";
 import { userCan } from "@/lib/permissions";
 
 export const MATERIAL_CATEGORIES = ["fabric", "wood", "foam", "accessory", "other"];
-export const MATERIAL_UNITS = ["meter", "sheet", "kg", "piece"];
+export const MATERIAL_UNITS = ["piece", "meter", "sheet", "kg", "carton", "box", "bag", "gallon", "roll"];
 
 async function guard() {
   const session = await getAuth();
@@ -44,6 +44,7 @@ export async function POST(req: NextRequest) {
         category: MATERIAL_CATEGORIES.includes(body.category) ? body.category : "fabric",
         code: typeof body.code === "string" && body.code.trim() ? body.code.trim() : null,
         unit: MATERIAL_UNITS.includes(body.unit) ? body.unit : "meter",
+        packSize: typeof body.packSize === "string" && body.packSize.trim() ? body.packSize.trim() : null,
         supplierId: body.supplierId || null,
         stock: Number.isFinite(Number(body.stock)) ? Number(body.stock) : 0,
         minStock: Number.isFinite(Number(body.minStock)) ? Number(body.minStock) : 0,

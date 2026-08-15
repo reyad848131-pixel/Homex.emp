@@ -58,7 +58,8 @@ model Material {
   category   String   @default("fabric") // fabric | wood | foam | accessory | other
   name       String   // the type, e.g. "مخمل" / "MDF"
   code       String?  // colour / code / barcode
-  unit       String   @default("meter")  // meter | sheet | kg | piece
+  unit       String   @default("meter")  // piece | meter | sheet | kg | carton | box | bag | gallon | roll
+  packSize   String?  @map("pack_size") // packaging size wording, e.g. "صغير" / "وسط" / "كبير" / "5kg"
   supplierId String?  @map("supplier_id")
   // Store inventory: current balance and the reorder threshold (shortage when
   // stock <= minStock). Stock rises on bulk receipt; lowered manually.

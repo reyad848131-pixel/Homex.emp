@@ -277,6 +277,24 @@ const translations = {
   pcUnitSheet: { ar: "لوح", en: "sheet" },
   pcUnitKg: { ar: "كجم", en: "kg" },
   pcUnitPiece: { ar: "قطعة", en: "piece" },
+  pcUnitCarton: { ar: "كرتون", en: "carton" },
+  pcUnitBox: { ar: "علبة", en: "box" },
+  pcUnitBag: { ar: "كيس", en: "bag" },
+  pcUnitGallon: { ar: "جالون", en: "gallon" },
+  pcUnitRoll: { ar: "رول", en: "roll" },
+
+  // ── Store status levels (safe / approaching / danger / out) ──
+  pcPackSize: { ar: "الحجم", en: "Size" },
+  pcPackSizeHint: { ar: "صغير / وسط / كبير", en: "small / medium / large" },
+  pcStatSafe: { ar: "آمن", en: "Safe" },
+  pcStatApproaching: { ar: "قريب النفاذ", en: "Approaching" },
+  pcStatDanger: { ar: "خطر — يحتاج طلب", en: "Danger — needs order" },
+  pcStatOut: { ar: "نفد", en: "Out of stock" },
+  pcNeedsOrder: { ar: "يحتاج طلب", en: "Needs order" },
+  pcConsume: { ar: "صرف", en: "Consume" },
+  pcConsumeQty: { ar: "كمية الصرف", en: "Consume qty" },
+  pcReasonConsume: { ar: "صرف", en: "Consumed" },
+  pcAttentionOnly: { ar: "المحتاجة طلب فقط", en: "Needs order only" },
 
   // ── Reports finance summary + expenses ──
   rpFinanceTitle: { ar: "الملخّص المالي", en: "Financial summary" },
