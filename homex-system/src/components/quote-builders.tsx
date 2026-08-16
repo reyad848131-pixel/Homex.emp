@@ -979,10 +979,10 @@ function CladdingBuilder({ config, onUpdate, initial }: { config: any; onUpdate:
               <span className="text-xs font-mono-en font-bold">{width}</span>
             </div>
             <div className="flex items-center gap-2">
-              <input type="range" min={1} max={10} step={0.1} value={width}
+              <input type="range" min={0.1} max={10} step={0.1} value={width}
                 onChange={(e) => setWidth(parseFloat(e.target.value))}
                 className="flex-1 h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer accent-gray-900" />
-              <NumField value={width} onChange={setWidth} min={1} max={10}
+              <NumField value={width} onChange={setWidth} min={0.1} max={10}
                 className="w-16 border border-gray-200 rounded px-2 py-1.5 text-sm font-mono-en text-center" />
             </div>
           </div>
@@ -992,10 +992,10 @@ function CladdingBuilder({ config, onUpdate, initial }: { config: any; onUpdate:
               <span className="text-xs font-mono-en font-bold">{height}</span>
             </div>
             <div className="flex items-center gap-2">
-              <input type="range" min={1} max={10} step={0.1} value={height}
+              <input type="range" min={0.1} max={10} step={0.1} value={height}
                 onChange={(e) => setHeight(parseFloat(e.target.value))}
                 className="flex-1 h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer accent-gray-900" />
-              <NumField value={height} onChange={setHeight} min={1} max={10}
+              <NumField value={height} onChange={setHeight} min={0.1} max={10}
                 className="w-16 border border-gray-200 rounded px-2 py-1.5 text-sm font-mono-en text-center" />
             </div>
           </div>
