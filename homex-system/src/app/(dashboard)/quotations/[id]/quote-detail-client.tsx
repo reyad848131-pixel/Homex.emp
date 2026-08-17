@@ -506,13 +506,12 @@ export default function QuoteDetailClient({
               <Printer className="w-4 h-4" />
               {t("print")}
             </button>
-            {/* Prepare the real Chromium PDF, then open the share/save sheet
-                (Save to Files / Print / share) — works inside the PWA on iOS. */}
-            <button onClick={handleSendPdf} disabled={sendingPdf}
-              className="flex items-center gap-2 px-4 py-2 border border-gray-200 rounded text-sm font-bold hover:bg-gray-50 disabled:opacity-50">
-              {sendingPdf ? <Clock className="w-4 h-4 animate-spin" /> : <Download className="w-4 h-4" />}
+            {/* Opens the formatted document with an in-page Save/Print toolbar. */}
+            <a href={`/api/quotations/${id}/pdf`} target="_blank" rel="noopener noreferrer"
+              className="flex items-center gap-2 px-4 py-2 border border-gray-200 rounded text-sm font-bold hover:bg-gray-50">
+              <Download className="w-4 h-4" />
               PDF
-            </button>
+            </a>
             <div className="relative flex">
               <button onClick={() => setWaMenu((v) => !v)} disabled={whatsapping || sendingPdf}
                 className="flex items-center gap-2 px-4 py-2 border border-green-200 text-green-600 rounded text-sm font-bold hover:bg-green-50 disabled:opacity-50 whitespace-nowrap">

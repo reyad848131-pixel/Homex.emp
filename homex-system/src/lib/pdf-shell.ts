@@ -3,7 +3,13 @@
 // working Back button and a Save/Download (print-to-PDF) button, and hides
 // itself when printing. Fixes the "can't go back / can't save" problem where
 // these pages opened as bare HTML in a new tab with no controls.
-export function pdfToolbar(backHref: string): string {
+export function pdfToolbar(backHref: string, downloadHref?: string): string {
+  // When a downloadHref is given (a real server-rendered PDF), the Save button
+  // opens that file directly — crisper output and a correct multi-page
+  // watermark — instead of the browser's own print of this HTML.
+  const saveBtn = downloadHref
+    ? `<a class="pdf-save" href="${downloadHref}" target="_blank" rel="noopener">⬇︎ تحميل / حفظ PDF</a>`
+    : `<button class="pdf-save" onclick="window.print()">⬇︎ تحميل / حفظ PDF</button>`;
   return `
 <style>
   .pdf-toolbar {
@@ -28,7 +34,7 @@ export function pdfToolbar(backHref: string): string {
 </style>
 <div class="pdf-toolbar">
   <a class="pdf-back" href="${backHref}">→ رجوع</a>
-  <button class="pdf-save" onclick="window.print()">⬇︎ تحميل / حفظ PDF</button>
+  ${saveBtn}
 </div>
 <div class="pdf-hint">للحفظ في جهازك: اضغط «تحميل / حفظ PDF» ثم اختر «حفظ في الملفات» أو «حفظ كـ PDF».</div>
 `;

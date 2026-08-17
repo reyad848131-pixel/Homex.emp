@@ -299,7 +299,7 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ id: 
 </style>
 </head>
 <body>
-${pdfToolbar(`/quotations/${id}`)}
+${pdfToolbar(`/quotations/${id}`, `/api/quotations/${id}/pdf-file`)}
 <div class="page">
   ${wmEnabled ? `<div class="watermark" style="font-size:${Math.round(wmSize * 0.95)}px">${
     wmImage
