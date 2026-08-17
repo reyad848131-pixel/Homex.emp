@@ -506,12 +506,13 @@ export default function QuoteDetailClient({
               <Printer className="w-4 h-4" />
               {t("print")}
             </button>
-            {/* Real Chromium PDF (watermark baked on every page, correct on mobile). */}
-            <a href={`/api/quotations/${id}/pdf-file`} target="_blank" rel="noopener noreferrer"
-              className="flex items-center gap-2 px-4 py-2 border border-gray-200 rounded text-sm font-bold hover:bg-gray-50">
-              <Download className="w-4 h-4" />
+            {/* Prepare the real Chromium PDF, then open the share/save sheet
+                (Save to Files / Print / share) — works inside the PWA on iOS. */}
+            <button onClick={handleSendPdf} disabled={sendingPdf}
+              className="flex items-center gap-2 px-4 py-2 border border-gray-200 rounded text-sm font-bold hover:bg-gray-50 disabled:opacity-50">
+              {sendingPdf ? <Clock className="w-4 h-4 animate-spin" /> : <Download className="w-4 h-4" />}
               PDF
-            </a>
+            </button>
             <div className="relative flex">
               <button onClick={() => setWaMenu((v) => !v)} disabled={whatsapping || sendingPdf}
                 className="flex items-center gap-2 px-4 py-2 border border-green-200 text-green-600 rounded text-sm font-bold hover:bg-green-50 disabled:opacity-50 whitespace-nowrap">
@@ -1052,8 +1053,8 @@ export default function QuoteDetailClient({
             <p className="font-bold text-lg">{t("pdfReadyTitle")}</p>
             <p className="text-sm text-gray-500 mt-1 mb-5">{t("pdfReadySub")}</p>
             <button onClick={doSharePdf}
-              className="w-full h-12 rounded-xl bg-green-600 hover:bg-green-700 text-white font-bold flex items-center justify-center gap-2">
-              <MessageCircle className="w-5 h-5" /> {t("pdfShareNow")}
+              className="w-full h-12 rounded-xl bg-gray-900 dark:bg-white dark:text-gray-900 hover:bg-gray-800 text-white font-bold flex items-center justify-center gap-2">
+              <Share2 className="w-5 h-5" /> {t("pdfShareNow")}
             </button>
             <button onClick={() => setPdfShare(null)}
               className="w-full h-10 mt-2 text-gray-500 font-bold text-sm">{t("cancel")}</button>
