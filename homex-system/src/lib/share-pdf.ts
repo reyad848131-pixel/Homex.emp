@@ -8,9 +8,15 @@
 
 export async function buildQuotationPdfBlob(quotationId: string): Promise<Blob> {
   const res = await fetch(`/api/quotations/${quotationId}/pdf-file`, { credentials: "include" });
-  if (!res.ok) throw new Error("pdf-fetch-failed");
+  if (!res.ok) {
+    // Surface the server's error detail so it can be reported without digging
+    // through hosting logs.
+    let detail = `HTTP ${res.status}`;
+    try { const j = await res.json(); detail = j.detail || j.error || detail; } catch { /* ignore */ }
+    throw new Error(detail);
+  }
   const blob = await res.blob();
-  if (blob.type && !blob.type.includes("pdf")) throw new Error("pdf-fetch-failed");
+  if (blob.type && !blob.type.includes("pdf")) throw new Error("bad-content-type");
   return blob;
 }
 

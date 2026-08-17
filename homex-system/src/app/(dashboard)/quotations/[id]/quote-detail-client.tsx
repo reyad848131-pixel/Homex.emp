@@ -337,7 +337,8 @@ export default function QuoteDetailClient({
       const how = await sharePdf(blob, fileName);
       if (how === "downloaded") toast.success(t("pdfDownloaded"));
     } catch (e) {
-      if ((e as Error)?.name !== "AbortError") toast.error(t("pdfShareFailed"));
+      const err = e as Error;
+      if (err?.name !== "AbortError") toast.error(`${t("pdfShareFailed")}: ${err?.message || ""}`.slice(0, 200));
     } finally {
       setSendingPdf(false);
     }
