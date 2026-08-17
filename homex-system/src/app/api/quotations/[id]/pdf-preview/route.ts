@@ -156,7 +156,9 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ id: 
     z-index: 0; pointer-events: none; user-select: none;
     font-size: 540px; font-weight: 900; color: #2626260d; line-height: 1;
   }
-  .watermark img { width: 620px; height: 620px; object-fit: contain; opacity: 0.055; }
+  /* Flatten the (coloured) logo to a single clean tone so it reads as a tidy,
+     faint watermark instead of blotchy colour. brightness(0) => solid shape. */
+  .watermark img { width: 560px; height: 560px; object-fit: contain; opacity: 0.05; filter: grayscale(1) brightness(0); }
   .page > *:not(.watermark) { position: relative; z-index: 1; }
 
   /* ===== LETTERHEAD ===== */
