@@ -3,6 +3,7 @@ import { getAuth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import chromium from "@sparticuz/chromium";
 import puppeteer from "puppeteer-core";
+import { GET as renderQuotationHtml } from "../pdf/route";
 
 // Real PDF of a quotation, rendered by headless Chromium from the same HTML the
 // on-screen PDF page uses. Unlike a browser-side rasteriser, Chromium shapes
@@ -10,6 +11,10 @@ import puppeteer from "puppeteer-core";
 // fetches this and hands it to the native share sheet (WhatsApp on iPad).
 export const runtime = "nodejs";
 export const maxDuration = 60;
+export const dynamic = "force-dynamic";
+
+// Keep memory down on the 1 GB function (no WebGL/graphics needed for print).
+chromium.setGraphicsMode = false;
 
 export async function GET(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   let browser: Awaited<ReturnType<typeof puppeteer.launch>> | null = null;
@@ -28,25 +33,23 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ id: 
       return NextResponse.json({ error: "Forbidden" }, { status: 403 });
     }
 
-    // Reuse the exact HTML from the print route (same template, one source of truth).
-    const origin = req.nextUrl.origin;
-    const htmlRes = await fetch(`${origin}/api/quotations/${id}/pdf`, {
-      headers: { cookie: req.headers.get("cookie") || "" },
-    });
+    // Reuse the exact print HTML by calling the sibling route handler directly
+    // (same request context → auth/cookies just work, no internal HTTP call).
+    const htmlRes = await renderQuotationHtml(req, { params: Promise.resolve({ id }) });
     if (!htmlRes.ok) return NextResponse.json({ error: "Render failed" }, { status: 502 });
     const html = await htmlRes.text();
 
     browser = await puppeteer.launch({
       args: chromium.args,
-      defaultViewport: { width: 900, height: 1200, deviceScaleFactor: 2 },
       executablePath: await chromium.executablePath(),
       headless: true,
     });
     const page = await browser.newPage();
     await page.setContent(html, { waitUntil: "load" });
-    // Give webfonts (Cairo) and any images a moment to settle before printing.
+    // Let webfonts (Cairo) and images settle before printing.
     try { await page.evaluateHandle("document.fonts.ready"); } catch { /* ignore */ }
-    try { await page.waitForNetworkIdle({ idleTime: 400, timeout: 8000 }); } catch { /* ignore */ }
+    try { await page.waitForNetworkIdle({ idleTime: 400, timeout: 6000 }); } catch { /* ignore */ }
+
     const pdf = await page.pdf({
       format: "A4",
       printBackground: true,
@@ -65,7 +68,7 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ id: 
     });
   } catch (e) {
     console.error("API error [/api/quotations/[id]/pdf-file]:", e);
-    return NextResponse.json({ error: "Server error" }, { status: 500 });
+    return NextResponse.json({ error: "Server error", detail: (e as Error)?.message || String(e) }, { status: 500 });
   } finally {
     if (browser) await browser.close().catch(() => {});
   }
