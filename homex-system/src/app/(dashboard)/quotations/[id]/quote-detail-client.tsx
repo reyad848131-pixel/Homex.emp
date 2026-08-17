@@ -9,7 +9,7 @@ import { displayName } from "@/lib/translit";
 import { useToast } from "@/components/toast";
 import { normalizeNumeric } from "@/components/quote-builders";
 import { SignaturePad } from "@/components/signature-pad";
-import { renderWaTemplate, waLinkFor, DEFAULT_WA_QUOTE } from "@/lib/wa";
+import { renderWaTemplate, waLinkFor, DEFAULT_WA_QUOTE, DEFAULT_WA_PDF } from "@/lib/wa";
 import {
   ArrowRight, Printer, Trash2, CheckCircle, XCircle, Send,
   Clock, FileText, User, MapPin, Phone, Pencil, Download, Copy, MessageCircle, CalendarDays,
@@ -334,7 +334,17 @@ export default function QuoteDetailClient({
       const { buildQuotationPdfBlob, sharePdf } = await import("@/lib/share-pdf");
       const blob = await buildQuotationPdfBlob(q.id);
       const fileName = `${q.quoteNumber} - ${displayName(q.customer.name, locale)}`;
-      const how = await sharePdf(blob, fileName);
+      // Same caption as the quote message, without the approval link.
+      const caption = renderWaTemplate(DEFAULT_WA_PDF, {
+        customer: q.customer.name,
+        number: q.quoteNumber,
+        total: fmtCur(q.total),
+        advance: fmtCur(q.advanceAmount),
+        advancePct: String(q.advancePct),
+        company: initialCompany.name,
+        companyPhone: initialCompany.phone,
+      });
+      const how = await sharePdf(blob, fileName, caption);
       if (how === "downloaded") toast.success(t("pdfDownloaded"));
     } catch (e) {
       const err = e as Error;

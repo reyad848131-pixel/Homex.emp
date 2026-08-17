@@ -19,6 +19,17 @@ export const DEFAULT_WA_QUOTE =
 {company}
 {companyPhone}`;
 
+// Caption sent alongside the PDF file — same as the quote message but without
+// the online approval link (the PDF itself is the deliverable here).
+export const DEFAULT_WA_PDF =
+`*عرض سعر - {number}*
+العميل: {customer}
+الإجمالي: {total}
+الدفعة المقدمة ({advancePct}%): {advance}
+
+{company}
+{companyPhone}`;
+
 export const DEFAULT_WA_DELIVERY =
 `مرحباً {customer} 👋
 طلبكم جاهز للتوصيل.
