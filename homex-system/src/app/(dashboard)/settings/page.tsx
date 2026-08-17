@@ -337,6 +337,29 @@ export default function SettingsPage() {
                 className="px-3 h-10 rounded-lg border border-red-200 text-red-500 text-sm font-bold hover:bg-red-50">{t("wmRemove")}</button>
             )}
           </div>
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mt-4">
+            <div>
+              <label className="block text-sm font-semibold text-gray-600 mb-1.5">{t("stampSize")}</label>
+              <input type="number" min={30} max={160} step={2} value={settings.stamp_size ?? "92"} onChange={(e) => update("stamp_size", e.target.value)}
+                className="field font-mono-en" dir="ltr" placeholder="92" />
+            </div>
+            <div>
+              <label className="block text-sm font-semibold text-gray-600 mb-1.5">{t("stampPosH")}</label>
+              <select value={settings.stamp_halign || "center"} onChange={(e) => update("stamp_halign", e.target.value)} className="field">
+                <option value="right">{t("posRight")}</option>
+                <option value="center">{t("posCenter")}</option>
+                <option value="left">{t("posLeft")}</option>
+              </select>
+            </div>
+            <div>
+              <label className="block text-sm font-semibold text-gray-600 mb-1.5">{t("stampPosV")}</label>
+              <select value={settings.stamp_valign || "bottom"} onChange={(e) => update("stamp_valign", e.target.value)} className="field">
+                <option value="top">{t("posTop")}</option>
+                <option value="center">{t("posMiddle")}</option>
+                <option value="bottom">{t("posBottom")}</option>
+              </select>
+            </div>
+          </div>
         </div>
 
         {/* WhatsApp message templates */}

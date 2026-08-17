@@ -48,6 +48,11 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ id: 
     const companyInstagram = s.company_instagram || "";
     const companyMaps = s.company_maps || "";
     const companyStamp = s.company_stamp || "";
+    const stampSize = Math.max(30, Math.min(160, parseInt(s.stamp_size || "92", 10) || 92));
+    const hMap: Record<string, string> = { right: "flex-start", center: "center", left: "flex-end" };
+    const vMap: Record<string, string> = { top: "flex-start", center: "center", bottom: "flex-end" };
+    const stampJustify = hMap[s.stamp_halign || "center"] || "center";
+    const stampAlign = vMap[s.stamp_valign || "bottom"] || "flex-end";
     // Accept a bare Instagram handle or a full URL.
     const instaUrl = companyInstagram
       ? (/^https?:\/\//i.test(companyInstagram) ? companyInstagram : `https://instagram.com/${companyInstagram.replace(/^@/, "")}`)
@@ -253,8 +258,8 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ id: 
   .sign-line img { max-height:60px; }
   /* Company stamp: drop the white background (multiply) and recolour the blue
      ink to near-black so it matches the theme. */
-  .stamp-line { height:96px; }
-  .stamp-img { max-height:92px; max-width:80%; object-fit:contain; filter: grayscale(1) brightness(0.32) contrast(1.5); mix-blend-mode: multiply; }
+  .stamp-line { min-height:96px; height:auto; border-bottom:none; }
+  .stamp-img { max-width:90%; object-fit:contain; filter: grayscale(1) brightness(0.32) contrast(1.5); mix-blend-mode: multiply; }
   .sign-meta { font-size:11px; color:var(--muted); display:flex; justify-content:space-between; }
   .stamp { width:96px; height:96px; border:2px dashed var(--line); border-radius:50%; display:flex; align-items:center; justify-content:center; color:#b9bab1; font-size:10px; text-align:center; flex-shrink:0; align-self:center; }
   .qr-box { text-align:center; flex-shrink:0; width:120px; }
@@ -375,7 +380,7 @@ ${pdfToolbar(`/quotations/${id}`)}
       </div>
       <div class="sign-box">
         <div class="t">ختم وتوقيع الشركة</div>
-        <div class="sign-line stamp-line">${companyStamp ? `<img class="stamp-img" src="${companyStamp}" alt="stamp" />` : ``}</div>
+        <div class="sign-line stamp-line" style="justify-content:${stampJustify};align-items:${stampAlign}">${companyStamp ? `<img class="stamp-img" style="max-height:${stampSize}px" src="${companyStamp}" alt="stamp" />` : ``}</div>
         <div class="sign-meta"><span>معتمد من الشركة</span><span></span></div>
       </div>
     </div>
