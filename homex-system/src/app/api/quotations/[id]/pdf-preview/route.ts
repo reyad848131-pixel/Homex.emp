@@ -106,15 +106,16 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ id: 
   @import url('https://fonts.googleapis.com/css2?family=Cairo:wght@300;400;500;600;700;800;900&display=swap');
 
   :root {
-    --ink: #1b1c1a;        /* primary text */
-    --muted: #75756b;      /* secondary text */
-    --green: #26382f;      /* brand — the ONE dark, used everywhere */
-    --green-2: #35503f;    /* slightly lighter green for gradients */
-    --soft: #f2f5f1;       /* faint green tint */
-    --gold: #b08d57;       /* warm accent (furniture warmth) */
+    /* Official Homex palette: warm neutral scale + sage green accent. */
+    --ink: #262625;        /* brand near-black (gray-900) */
+    --muted: #7e7f77;      /* brand gray-500 */
+    --green: #3d3d3d;      /* Iridium — the ONE dark (bars/letterhead) */
+    --green-2: #2a2a28;    /* darker Iridium for depth */
+    --soft: #eef0ea;       /* faint Green White tint */
+    --gold: #8b9a7b;       /* brand sage green — the accent */
     --paper: #ffffff;
-    --panel: #faf9f5;      /* warm off-white */
-    --line: #e7e3d9;       /* warm hairline */
+    --panel: #f6f6f3;      /* brand gray-50 */
+    --line: #d3d4cc;       /* Pastel Grey hairline (gray-200) */
   }
 
   * , *::before, *::after { margin:0; padding:0; box-sizing:border-box; }
@@ -180,7 +181,7 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ id: 
   .fact + .fact { border-inline-start:1px solid var(--line); }
   .fact .k { font-size:10px; letter-spacing:1px; text-transform:uppercase; color:var(--muted); }
   .fact .v { font-size:13px; font-weight:700; color:var(--ink); margin-top:3px; }
-  .fact .v.accent { color: var(--green); }
+  .fact .v.accent { color: #6f7e62; }
 
   /* ===== SECTION TITLE ===== */
   .sec { margin: 30px 44px 0; display:flex; align-items:center; gap:12px; }
@@ -202,7 +203,7 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ id: 
   .c-desc { font-weight:500; }
   .c-qty { text-align:center; width:64px; }
   .c-num { text-align:left; width:120px; font-variant-numeric: tabular-nums; direction:ltr; }
-  .c-strong { font-weight:800; color:var(--green); }
+  .c-strong { font-weight:800; color:#6f7e62; }
   .items thead th.ta-c { text-align:center; }
 
   /* ===== TOTALS ===== */
@@ -216,8 +217,8 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ id: 
   .tt.grand .l { color:#fff; font-weight:800; font-size:14px; }
   .tt.grand .v { color:#fff; font-weight:900; font-size:15px; }
   .tt.adv { background: var(--soft); border-radius:8px; margin-top:6px; }
-  .tt.adv .l { color: var(--green); font-weight:700; }
-  .tt.adv .v { color: var(--green); }
+  .tt.adv .l { color: #6f7e62; font-weight:700; }
+  .tt.adv .v { color: #6f7e62; }
 
   /* note */
   .note { margin: 22px 44px 0; padding: 12px 16px; background: var(--panel); border-inline-start:3px solid var(--gold); border-radius:6px; font-size:11.5px; color:var(--muted); line-height:1.7; }
