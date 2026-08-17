@@ -30,9 +30,11 @@ const nextConfig: NextConfig = {
   serverExternalPackages: ["@sparticuz/chromium", "puppeteer-core"],
   // The Chromium binary is loaded from the package's bin/ folder via a dynamic
   // path the file tracer can't detect, so force-include it in the PDF route's
-  // function — otherwise it fails with "bin directory does not exist".
+  // function — otherwise it fails with "bin directory does not exist". Keys are
+  // picomatch globs: "[id]" would be read as a character class, so match the
+  // dynamic segment with "*" instead.
   outputFileTracingIncludes: {
-    "/api/quotations/[id]/pdf-file": ["./node_modules/@sparticuz/chromium/**"],
+    "/api/quotations/*/pdf-file": ["./node_modules/@sparticuz/chromium/**/*"],
   },
   async headers() {
     return [
