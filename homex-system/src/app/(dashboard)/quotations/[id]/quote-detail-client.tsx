@@ -142,6 +142,9 @@ export default function QuoteDetailClient({
   const [reassignMode, setReassignMode] = useState<"existing" | "new">("existing");
   const [newCust, setNewCust] = useState({ name: "", phone: "", governorate: "", wilayat: "" });
   const [whatsapping, setWhatsapping] = useState(false);
+  // WhatsApp action menu: choose the approval message or send the PDF file.
+  const [waMenu, setWaMenu] = useState(false);
+  const [sendingPdf, setSendingPdf] = useState(false);
   // Convert-to-contract dialog: captures the agreed delivery date/time.
   const [showContract, setShowContract] = useState(false);
   const [contractDate, setContractDate] = useState("");
@@ -319,6 +322,27 @@ export default function QuoteDetailClient({
     window.open(waLinkFor(q.customer.phoneCode || "+968", q.customer.phone, message), "_blank");
   };
 
+  // Build a real PDF file in the browser and hand it to the native share sheet
+  // (attaches an actual PDF in WhatsApp on iPad/mobile). File name = quote
+  // number + customer name. Falls back to a download where file-share isn't
+  // supported (most desktops).
+  const handleSendPdf = async () => {
+    if (!q || sendingPdf) return;
+    setWaMenu(false);
+    setSendingPdf(true);
+    try {
+      const { buildQuotationPdfBlob, sharePdf } = await import("@/lib/share-pdf");
+      const blob = await buildQuotationPdfBlob(q.id);
+      const fileName = `${q.quoteNumber} - ${displayName(q.customer.name, locale)}`;
+      const how = await sharePdf(blob, fileName);
+      if (how === "downloaded") toast.success(t("pdfDownloaded"));
+    } catch (e) {
+      if ((e as Error)?.name !== "AbortError") toast.error(t("pdfShareFailed"));
+    } finally {
+      setSendingPdf(false);
+    }
+  };
+
   const handleAddPayment = async () => {
     if (!q || !payAmount || Number(payAmount) <= 0) return;
     setPaying(true);
@@ -457,11 +481,28 @@ export default function QuoteDetailClient({
               <Download className="w-4 h-4" />
               PDF
             </a>
-            <button onClick={handleWhatsApp} disabled={whatsapping}
-              className="flex items-center gap-2 px-4 py-2 border border-green-200 text-green-600 rounded text-sm font-bold hover:bg-green-50 disabled:opacity-50">
-              {whatsapping ? <Clock className="w-4 h-4 animate-spin" /> : <MessageCircle className="w-4 h-4" />}
-              {t("whatsapp")}
-            </button>
+            <div className="relative">
+              <button onClick={() => setWaMenu((v) => !v)} disabled={whatsapping || sendingPdf}
+                className="flex items-center gap-2 px-4 py-2 border border-green-200 text-green-600 rounded text-sm font-bold hover:bg-green-50 disabled:opacity-50">
+                {whatsapping || sendingPdf ? <Clock className="w-4 h-4 animate-spin" /> : <MessageCircle className="w-4 h-4" />}
+                {t("whatsapp")}
+              </button>
+              {waMenu && (
+                <>
+                  <div className="fixed inset-0 z-30" onClick={() => setWaMenu(false)} />
+                  <div className="absolute z-40 mt-1 end-0 w-56 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg shadow-lg overflow-hidden">
+                    <button onClick={() => { setWaMenu(false); handleWhatsApp(); }}
+                      className="flex w-full items-center gap-2 px-4 py-3 text-sm font-bold text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-700 text-right">
+                      <MessageCircle className="w-4 h-4 text-green-600 shrink-0" /> {t("waApprovalMsg")}
+                    </button>
+                    <button onClick={handleSendPdf}
+                      className="flex w-full items-center gap-2 px-4 py-3 text-sm font-bold text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-700 border-t border-gray-100 dark:border-gray-700 text-right">
+                      <Download className="w-4 h-4 text-green-600 shrink-0" /> {t("waSendPdf")}
+                    </button>
+                  </div>
+                </>
+              )}
+            </div>
             <button onClick={handleShare} disabled={sharing}
               className="flex items-center gap-2 px-4 py-2 border border-blue-200 text-blue-600 rounded text-sm font-bold hover:bg-blue-50 disabled:opacity-50">
               <Share2 className="w-4 h-4" />
