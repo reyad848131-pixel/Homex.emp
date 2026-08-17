@@ -44,8 +44,18 @@ export default async function DashboardPage() {
   const isAdmin = role === "admin" || role === "ceo" || role === "manager";
   const whereClause = isAdmin ? {} : { employeeId: userId };
 
-  // Roles without financial access (driver / photographer) never see money.
-  const canSeeFinancials = isAdmin || ((await getRolePermissions(role).catch(() => [])) as string[]).includes("financials");
+  // Resolve the role's permissions once (was fetched twice, sequentially).
+  // Field roles already returned above, so non-admins here may still have
+  // financial / purchasing grants.
+  const perms = isAdmin ? [] : ((await getRolePermissions(role).catch(() => [])) as string[]);
+  const canSeeFinancials = isAdmin || perms.includes("financials");
+  const canPurchasing = isAdmin || perms.includes("purchasing");
+
+  // A confirmed contract (status "accepted") is committed money just like an
+  // approved quote — both can be invoiced and collected against — so revenue,
+  // collections and receivables must count BOTH. Counting only "approved" made
+  // every signed contract vanish from the dashboard's money figures.
+  const moneyStatuses = ["approved", "accepted"];
 
   // Only admins/CEO configure settings, so only they see the readiness nudge.
   const missingSettings = (role === "admin" || role === "ceo")
@@ -57,7 +67,7 @@ export default async function DashboardPage() {
 
   const sevenDaysFromNow = new Date(now.getTime() + 7 * 24 * 60 * 60 * 1000);
 
-  const [totalQuotes, totalCustomers, quotations, monthlyQuotes, statusGroupBy, expiringQuotations, revenueAgg, collectedAgg, photoQueueCount, overdueDeliveries, estimatedDateCount] = await Promise.all([
+  const [totalQuotes, totalCustomers, quotations, monthlyQuotes, statusGroupBy, expiringQuotations, revenueAgg, collectedAgg, photoQueueCount, overdueDeliveries, estimatedDateCount, topReceivablesRaw, newLeadsCount, shortageRows] = await Promise.all([
     prisma.quotation.count({ where: whereClause }),
     prisma.customer.count({ where: isAdmin ? {} : { createdBy: userId } }),
     prisma.quotation.findMany({
@@ -83,11 +93,11 @@ export default async function DashboardPage() {
       take: 5,
     }),
     prisma.quotation.aggregate({
-      where: { ...whereClause, status: "approved" },
+      where: { ...whereClause, status: { in: moneyStatuses } },
       _sum: { total: true },
     }),
     prisma.payment.aggregate({
-      where: { quotation: { ...whereClause, status: "approved" } },
+      where: { quotation: { ...whereClause, status: { in: moneyStatuses } } },
       _sum: { amount: true },
     }),
     // Jobs waiting to be photographed (global — the queue isn't per-employee).
@@ -103,48 +113,51 @@ export default async function DashboardPage() {
     }),
     // Orders still carrying an estimated (unconfirmed) delivery date.
     isAdmin ? prisma.quotation.count({ where: { deliveryDateEstimated: true } }) : Promise.resolve(0),
+    // Top outstanding receivables (committed orders with a remaining balance),
+    // for roles that can see money — one grouped query, run in parallel.
+    canSeeFinancials
+      ? prisma.$queryRaw(Prisma.sql`
+          SELECT q.id, q.quote_number AS "quoteNumber", q.total::float AS total,
+                 COALESCE(SUM(p.amount), 0)::float AS paid, c.name AS "customerName"
+          FROM quotations q
+          JOIN customers c ON c.id = q.customer_id
+          LEFT JOIN payments p ON p.quotation_id = q.id
+          WHERE q.status IN ('approved', 'accepted') AND q.deleted_at IS NULL
+            ${isAdmin ? Prisma.empty : Prisma.sql`AND q.employee_id = ${userId}`}
+          GROUP BY q.id, c.name
+          HAVING q.total > COALESCE(SUM(p.amount), 0)
+          ORDER BY (q.total - COALESCE(SUM(p.amount), 0)) DESC
+          LIMIT 8
+        `)
+      : Promise.resolve([]),
+    // Pending website enquiries awaiting follow-up.
+    prisma.lead.count({ where: { status: "new" } }).catch(() => 0),
+    // Store shortages counted in the DB (was: fetch every material, filter in
+    // JS just to get a count) — grows with your catalogue otherwise.
+    canPurchasing
+      ? prisma.$queryRaw<Array<{ n: number }>>(Prisma.sql`
+          SELECT COUNT(*)::int AS n FROM materials WHERE is_active = true AND stock <= min_stock
+        `)
+      : Promise.resolve([{ n: 0 }]),
   ]);
 
-  // Top outstanding receivables (approved orders with a remaining balance),
-  // for roles that can see money. Computed in one grouped query.
-  const topReceivables = canSeeFinancials
-    ? ((await prisma.$queryRaw(Prisma.sql`
-        SELECT q.id, q.quote_number AS "quoteNumber", q.total::float AS total,
-               COALESCE(SUM(p.amount), 0)::float AS paid, c.name AS "customerName"
-        FROM quotations q
-        JOIN customers c ON c.id = q.customer_id
-        LEFT JOIN payments p ON p.quotation_id = q.id
-        WHERE q.status = 'approved' AND q.deleted_at IS NULL
-          ${isAdmin ? Prisma.empty : Prisma.sql`AND q.employee_id = ${userId}`}
-        GROUP BY q.id, c.name
-        HAVING q.total > COALESCE(SUM(p.amount), 0)
-        ORDER BY (q.total - COALESCE(SUM(p.amount), 0)) DESC
-        LIMIT 8
-      `)) as Array<{ id: string; quoteNumber: string; total: number; paid: number; customerName: string }>)
-        .map((r) => ({ ...r, remaining: roundMoney(r.total - r.paid) }))
-    : [];
+  const topReceivables = (topReceivablesRaw as Array<{ id: string; quoteNumber: string; total: number; paid: number; customerName: string }>)
+    .map((r) => ({ ...r, remaining: roundMoney(r.total - r.paid) }));
+  const storeShortages = (shortageRows as Array<{ n: number }>)[0]?.n ?? 0;
 
   const statusMap = Object.fromEntries(statusGroupBy.map((s) => [s.status, s._count]));
   const draftCount = statusMap.draft || 0;
   const pendingCount = statusMap.pending || 0;
   const approvedCount = statusMap.approved || 0;
+  const acceptedCount = statusMap.accepted || 0;
   const declinedCount = statusMap.declined || 0;
   const revisedCount = statusMap.revised || 0;
 
   const totalRevenue = revenueAgg._sum.total || 0;
   const collectedAmount = roundMoney(collectedAgg._sum.amount || 0);
   const outstandingAmount = roundMoney(Math.max(totalRevenue - collectedAmount, 0));
-  const conversionRate = totalQuotes > 0 ? ((approvedCount / totalQuotes) * 100).toFixed(0) : "0";
-
-  // Pending website enquiries awaiting follow-up.
-  const newLeadsCount = await prisma.lead.count({ where: { status: "new" } }).catch(() => 0);
-
-  // Store shortages (materials at/under their reorder threshold) — shown to
-  // users who can act on procurement.
-  const canPurchasing = isAdmin || ((await getRolePermissions(role).catch(() => [])) as string[]).includes("purchasing");
-  const storeShortages = canPurchasing
-    ? (await prisma.material.findMany({ where: { isActive: true }, select: { stock: true, minStock: true } })).filter((m) => m.stock <= m.minStock).length
-    : 0;
+  // A won deal is an approved quote or a signed contract — count both.
+  const conversionRate = totalQuotes > 0 ? (((approvedCount + acceptedCount) / totalQuotes) * 100).toFixed(0) : "0";
 
   const data = {
     userName: session?.user?.name || "",

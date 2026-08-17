@@ -4,7 +4,7 @@
   "private": true,
   "scripts": {
     "dev": "next dev",
-    "build": "prisma generate && prisma db push --skip-generate --accept-data-loss && node -e \"require('fs').writeFileSync('public/build-id.json',JSON.stringify({v:Date.now().toString(36)}))\" && next build",
+    "build": "prisma generate && prisma db push --skip-generate && node -e \"require('fs').writeFileSync('public/build-id.json',JSON.stringify({v:Date.now().toString(36)}))\" && next build",
     "postinstall": "prisma generate",
     "start": "next start",
     "lint": "eslint",
