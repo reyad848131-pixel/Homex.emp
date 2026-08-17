@@ -173,7 +173,7 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ id: 
   }
   /* The logo is used as a MASK so it renders as one clean colour (no blotchy
      tones), tintable to any colour and opacity from Settings. */
-  .watermark .wm-shape { display: block; }
+  .watermark img { display: block; }
   .page > *:not(.watermark) { position: relative; z-index: 1; }
 
   /* ===== LETTERHEAD ===== */
@@ -303,7 +303,7 @@ ${pdfToolbar(`/quotations/${id}`)}
 <div class="page">
   ${wmEnabled ? `<div class="watermark" style="font-size:${Math.round(wmSize * 0.95)}px">${
     wmImage
-      ? `<div class="wm-shape" style="width:${wmSize}px;height:${wmSize}px;background:${wmColor};opacity:${wmOpacity};-webkit-mask:url('${wmImage}') center/contain no-repeat;mask:url('${wmImage}') center/contain no-repeat;"></div>`
+      ? `<img src="${wmImage}" style="width:${wmSize}px;height:${wmSize}px;object-fit:contain;opacity:${wmOpacity}" alt="" />`
       : `<span style="color:${wmColor};opacity:${wmOpacity}">${monogram}</span>`
   }</div>` : ""}
 
