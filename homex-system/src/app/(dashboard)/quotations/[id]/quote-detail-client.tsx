@@ -511,8 +511,9 @@ export default function QuoteDetailClient({
               <Download className="w-4 h-4" />
               PDF
             </a>
-            {/* Temporary: preview of the redesigned PDF (for review only). */}
-            <a href={`/api/quotations/${id}/pdf-preview`} target="_blank" rel="noopener noreferrer"
+            {/* Temporary: real (Chromium) PDF of the redesigned document — for
+                review; watermark repeats on every page. */}
+            <a href={`/api/quotations/${id}/pdf-preview-file`} target="_blank" rel="noopener noreferrer"
               className="flex items-center gap-2 px-4 py-2 border border-dashed border-amber-400 text-amber-700 dark:text-amber-300 rounded text-sm font-bold hover:bg-amber-50 dark:hover:bg-amber-900/20">
               <Download className="w-4 h-4" />
               PDF جديد
