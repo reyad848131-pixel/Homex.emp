@@ -511,9 +511,9 @@ export default function QuoteDetailClient({
               <Download className="w-4 h-4" />
               PDF
             </a>
-            <div className="relative">
+            <div className="relative flex">
               <button onClick={() => setWaMenu((v) => !v)} disabled={whatsapping || sendingPdf}
-                className="flex items-center gap-2 px-4 py-2 border border-green-200 text-green-600 rounded text-sm font-bold hover:bg-green-50 disabled:opacity-50">
+                className="flex items-center gap-2 px-4 py-2 border border-green-200 text-green-600 rounded text-sm font-bold hover:bg-green-50 disabled:opacity-50 whitespace-nowrap">
                 {whatsapping || sendingPdf ? <Clock className="w-4 h-4 animate-spin" /> : <MessageCircle className="w-4 h-4" />}
                 {t("whatsapp")}
               </button>
