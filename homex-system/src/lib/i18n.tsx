@@ -1007,6 +1007,8 @@ const translations = {
   companyAddress: { ar: "العنوان", en: "Address" },
   commercialReg: { ar: "السجل التجاري", en: "Commercial Registration" },
   companyWebsite: { ar: "موقع الشركة", en: "Company Website" },
+  companyInstagram: { ar: "حساب إنستقرام", en: "Instagram account" },
+  companyMaps: { ar: "موقع المصنع (خرائط)", en: "Factory location (Maps)" },
   financialSettings: { ar: "الإعدادات المالية", en: "Financial Settings" },
   vatRate: { ar: "نسبة ضريبة القيمة المضافة (%)", en: "VAT Rate (%)" },
   advancePercent: { ar: "نسبة الدفعة المقدمة الافتراضية (%)", en: "Default Advance Payment (%)" },

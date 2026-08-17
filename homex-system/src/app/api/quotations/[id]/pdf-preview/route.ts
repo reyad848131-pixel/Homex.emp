@@ -45,18 +45,26 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ id: 
     const termsConditions = s.terms_conditions || "";
     const companyLogo = s.company_logo || "";
     const companyWebsite = s.company_website || "";
+    const companyInstagram = s.company_instagram || "";
+    const companyMaps = s.company_maps || "";
+    // Accept a bare Instagram handle or a full URL.
+    const instaUrl = companyInstagram
+      ? (/^https?:\/\//i.test(companyInstagram) ? companyInstagram : `https://instagram.com/${companyInstagram.replace(/^@/, "")}`)
+      : "";
 
     const fmtCur = (n: number) => n.toFixed(3);
     const fmtDate = (d: Date | string) => new Date(d).toLocaleDateString("ar-OM", { year: "numeric", month: "long", day: "numeric" });
     const now = new Date();
     const printDate = `${now.getDate().toString().padStart(2, "0")}/${(now.getMonth() + 1).toString().padStart(2, "0")}/${now.getFullYear()}`;
 
-    // QR → public quote link (view / e-sign). Only when a share token exists.
-    let qrDataUrl = "";
-    if (quotation.publicToken) {
-      const link = `${req.nextUrl.origin}/q/${quotation.publicToken}`;
-      try { qrDataUrl = await QRCode.toDataURL(link, { margin: 1, width: 240, color: { dark: "#3d3d3d", light: "#ffffff" } }); } catch { /* ignore */ }
-    }
+    const qrGen = async (data: string) => {
+      try { return await QRCode.toDataURL(data, { margin: 1, width: 220, color: { dark: "#3d3d3d", light: "#ffffff" } }); }
+      catch { return ""; }
+    };
+    // QR → public quote link (view / e-sign), plus Instagram and factory location.
+    const qrDataUrl = quotation.publicToken ? await qrGen(`${req.nextUrl.origin}/q/${quotation.publicToken}`) : "";
+    const qrInsta = instaUrl ? await qrGen(instaUrl) : "";
+    const qrMaps = companyMaps ? await qrGen(companyMaps) : "";
 
     const itemRows = quotation.items.map((item, i) => `
       <tr>
@@ -109,9 +117,11 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ id: 
 <meta charset="UTF-8">
 <title>عرض سعر - ${esc(quotation.quoteNumber)}</title>
 <style>
-  @import url('https://fonts.googleapis.com/css2?family=Cairo:wght@300;400;500;600;700;800;900&display=swap');
+  @import url('https://fonts.googleapis.com/css2?family=El+Messiri:wght@500;600;700&family=Tajawal:wght@300;400;500;700;800&display=swap');
 
   :root {
+    --font-body: 'Tajawal', 'Segoe UI', Tahoma, sans-serif;
+    --font-head: 'El Messiri', 'Tajawal', serif;
     /* Official Homex palette: warm neutral scale + sage green accent. */
     --ink: #262625;        /* brand near-black (gray-900) */
     --muted: #7e7f77;      /* brand gray-500 */
@@ -128,7 +138,7 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ id: 
   * , *::before, *::after { margin:0; padding:0; box-sizing:border-box; }
 
   body {
-    font-family: 'Cairo', 'Segoe UI', Tahoma, sans-serif;
+    font-family: var(--font-body);
     font-size: 13px; color: var(--ink); background: #eceae4; line-height: 1.65;
     -webkit-print-color-adjust: exact; print-color-adjust: exact;
   }
@@ -139,12 +149,13 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ id: 
     box-shadow: 0 10px 40px rgba(0,0,0,.10); position: relative; overflow: hidden;
   }
 
-  /* watermark monogram */
+  /* watermark — brand logo (faint), falls back to the monogram letter */
   .watermark {
-    position: absolute; top: 300px; left: 50%; transform: translateX(-50%);
+    position: absolute; top: 320px; left: 50%; transform: translateX(-50%);
     font-size: 460px; font-weight: 900; color: #26262510; line-height: 1;
     z-index: 0; pointer-events: none; user-select: none;
   }
+  .watermark img { width: 460px; height: 460px; object-fit: contain; opacity: 0.05; }
   .page > *:not(.watermark) { position: relative; z-index: 1; }
 
   /* ===== LETTERHEAD ===== */
@@ -157,7 +168,7 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ id: 
   .lh-badge img { width:100%; height:100%; object-fit:contain; }
   .lh-badge .mono { font-size:38px; font-weight:800; color:#fff; letter-spacing:1px; }
   .lh-main { flex:1; }
-  .lh-main h1 { font-size:31px; font-weight:800; letter-spacing:8px; line-height:1.1; }
+  .lh-main h1 { font-family:var(--font-head); font-size:32px; font-weight:700; letter-spacing:8px; line-height:1.1; }
   .lh-sub { font-size:12px; color:rgba(255,255,255,.85); margin-top:7px; font-weight:500; letter-spacing:.3px; }
   .lh-factory { font-size:10.5px; color:rgba(255,255,255,.6); margin-top:3px; }
   .lh-doc { text-align:left; flex-shrink:0; }
@@ -185,7 +196,7 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ id: 
   .sec { margin:30px 44px 0; display:flex; align-items:center; gap:10px; }
   .sec .bar { width:4px; height:18px; background:var(--sage); border-radius:2px; }
   .sec .ic { display:flex; }
-  .sec h2 { font-size:15px; font-weight:800; color:var(--green); letter-spacing:.3px; }
+  .sec h2 { font-family:var(--font-head); font-size:16px; font-weight:700; color:var(--green); letter-spacing:.3px; }
   .sec .rule { flex:1; height:1px; background:var(--line); }
 
   /* ===== ITEMS ===== */
@@ -235,11 +246,17 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ id: 
   .foot { margin-top:26px; padding:14px 44px; border-top:1px solid var(--line); }
   .foot .row1 { text-align:center; font-size:10.5px; color:var(--muted); }
   .foot .row2 { display:flex; justify-content:space-between; align-items:center; margin-top:8px; font-size:10.5px; color:var(--muted); }
-  .foot .brand { font-weight:800; color:var(--green); letter-spacing:1px; }
+  .foot .brand { font-family:var(--font-head); font-weight:700; color:var(--green); letter-spacing:1px; }
+  /* footer QR strip (Instagram / location) */
+  .foot-qr { display:flex; justify-content:center; gap:34px; margin-top:14px; padding-top:14px; border-top:1px dashed var(--line); }
+  .fq { text-align:center; }
+  .fq img { width:70px; height:70px; border:1px solid var(--line); border-radius:8px; padding:3px; background:#fff; }
+  .fq .cap { font-size:9.5px; color:var(--muted); margin-top:5px; letter-spacing:.3px; }
+  .fq .cap b { color:var(--sage-d); font-weight:700; }
 
   /* ===== TERMS PAGE ===== */
   .terms { padding:40px 44px; }
-  .terms-title { font-size:14px; font-weight:800; color:var(--green); margin:22px 0 8px; padding-bottom:5px; border-bottom:2px solid var(--sage); display:inline-block; }
+  .terms-title { font-family:var(--font-head); font-size:15px; font-weight:700; color:var(--green); margin:22px 0 8px; padding-bottom:5px; border-bottom:2px solid var(--sage); display:inline-block; }
   .terms-title:first-child { margin-top:0; }
   .term-item { font-size:13px; color:#3f3f3a; padding:4px 0; line-height:1.85; position:relative; padding-inline-start:16px; }
   .term-item::before { content:""; position:absolute; inset-inline-start:0; top:12px; width:5px; height:5px; border-radius:50%; background:var(--sage); }
@@ -255,7 +272,7 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ id: 
 <body>
 ${pdfToolbar(`/quotations/${id}`)}
 <div class="page">
-  <div class="watermark">${monogram}</div>
+  <div class="watermark">${companyLogo ? `<img src="${companyLogo}" alt="" />` : monogram}</div>
 
   <!-- LETTERHEAD -->
   <div class="lh">
@@ -342,6 +359,10 @@ ${pdfToolbar(`/quotations/${id}`)}
   <div class="foot">
     <div class="row1">${footerLine}</div>
     <div class="row2"><span class="brand">${esc(companyName)}</span><span class="num">${printDate}</span></div>
+    ${(qrInsta || qrMaps) ? `<div class="foot-qr">
+      ${qrInsta ? `<div class="fq"><img src="${qrInsta}" alt="Instagram" /><div class="cap"><b>إنستقرام</b><br/>${esc(companyInstagram.replace(/^https?:\/\/(www\.)?instagram\.com\//i, "@").replace(/\/$/, ""))}</div></div>` : ""}
+      ${qrMaps ? `<div class="fq"><img src="${qrMaps}" alt="Location" /><div class="cap"><b>موقع المصنع</b><br/>امسح للوصول</div></div>` : ""}
+    </div>` : ""}
   </div>
 
   <!-- TERMS PAGE -->

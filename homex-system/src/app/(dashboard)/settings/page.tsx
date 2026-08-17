@@ -240,6 +240,16 @@ export default function SettingsPage() {
               <input type="url" value={settings.company_website || ""} onChange={(e) => update("company_website", e.target.value)}
                 className="field font-mono-en" dir="ltr" />
             </div>
+            <div>
+              <label className="block text-sm font-semibold text-gray-600 mb-1.5">{t("companyInstagram")}</label>
+              <input type="text" value={settings.company_instagram || ""} onChange={(e) => update("company_instagram", e.target.value)}
+                className="field font-mono-en" dir="ltr" placeholder="https://instagram.com/username" />
+            </div>
+            <div>
+              <label className="block text-sm font-semibold text-gray-600 mb-1.5">{t("companyMaps")}</label>
+              <input type="url" value={settings.company_maps || ""} onChange={(e) => update("company_maps", e.target.value)}
+                className="field font-mono-en" dir="ltr" placeholder="https://maps.app.goo.gl/..." />
+            </div>
           </div>
         </div>
 
