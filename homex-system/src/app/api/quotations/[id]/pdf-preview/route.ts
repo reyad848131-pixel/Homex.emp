@@ -51,6 +51,11 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ id: 
     const instaUrl = companyInstagram
       ? (/^https?:\/\//i.test(companyInstagram) ? companyInstagram : `https://instagram.com/${companyInstagram.replace(/^@/, "")}`)
       : "";
+    // Watermark controls (customisable from Settings).
+    const wmEnabled = (s.wm_enabled ?? "1") !== "0";
+    const wmColor = /^#[0-9a-fA-F]{3,8}$/.test(s.wm_color || "") ? (s.wm_color as string) : "#3d3d3d";
+    const wmOpacity = Math.max(0, Math.min(30, parseFloat(s.wm_opacity || "5") || 5)) / 100;
+    const wmSize = Math.max(200, Math.min(800, parseInt(s.wm_size || "560", 10) || 560));
 
     const fmtCur = (n: number) => n.toFixed(3);
     const fmtDate = (d: Date | string) => new Date(d).toLocaleDateString("ar-OM", { year: "numeric", month: "long", day: "numeric" });
@@ -154,11 +159,11 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ id: 
     position: absolute; top: 0; inset-inline: 0; height: 1040px;
     display: flex; align-items: center; justify-content: center;
     z-index: 0; pointer-events: none; user-select: none;
-    font-size: 540px; font-weight: 900; color: #2626260d; line-height: 1;
+    font-weight: 900; line-height: 1;
   }
-  /* Flatten the (coloured) logo to a single clean tone so it reads as a tidy,
-     faint watermark instead of blotchy colour. brightness(0) => solid shape. */
-  .watermark img { width: 560px; height: 560px; object-fit: contain; opacity: 0.05; filter: grayscale(1) brightness(0); }
+  /* The logo is used as a MASK so it renders as one clean colour (no blotchy
+     tones), tintable to any colour and opacity from Settings. */
+  .watermark .wm-shape { display: block; }
   .page > *:not(.watermark) { position: relative; z-index: 1; }
 
   /* ===== LETTERHEAD ===== */
@@ -275,7 +280,11 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ id: 
 <body>
 ${pdfToolbar(`/quotations/${id}`)}
 <div class="page">
-  <div class="watermark">${companyLogo ? `<img src="${companyLogo}" alt="" />` : monogram}</div>
+  ${wmEnabled ? `<div class="watermark" style="font-size:${Math.round(wmSize * 0.95)}px">${
+    companyLogo
+      ? `<div class="wm-shape" style="width:${wmSize}px;height:${wmSize}px;background:${wmColor};opacity:${wmOpacity};-webkit-mask:url('${companyLogo}') center/contain no-repeat;mask:url('${companyLogo}') center/contain no-repeat;"></div>`
+      : `<span style="color:${wmColor};opacity:${wmOpacity}">${monogram}</span>`
+  }</div>` : ""}
 
   <!-- LETTERHEAD -->
   <div class="lh">

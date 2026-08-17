@@ -253,6 +253,35 @@ export default function SettingsPage() {
           </div>
         </div>
 
+        {/* Watermark customisation (new quotation document) */}
+        <div className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded p-6">
+          <h2 className="text-base font-bold mb-1">{t("wmTitle")}</h2>
+          <p className="text-xs text-gray-400 mb-4">{t("wmHint")}</p>
+          <label className="flex items-center gap-2 mb-4 cursor-pointer">
+            <input type="checkbox" checked={(settings.wm_enabled ?? "1") !== "0"}
+              onChange={(e) => update("wm_enabled", e.target.checked ? "1" : "0")}
+              className="w-4 h-4 accent-gray-900 dark:accent-gray-100" />
+            <span className="text-sm font-semibold text-gray-700 dark:text-gray-200">{t("wmEnable")}</span>
+          </label>
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+            <div>
+              <label className="block text-sm font-semibold text-gray-600 mb-1.5">{t("wmColor")}</label>
+              <input type="color" value={settings.wm_color || "#3d3d3d"} onChange={(e) => update("wm_color", e.target.value)}
+                className="w-full h-11 rounded border border-gray-200 dark:border-gray-700 bg-white cursor-pointer" />
+            </div>
+            <div>
+              <label className="block text-sm font-semibold text-gray-600 mb-1.5">{t("wmOpacity")}</label>
+              <input type="number" min={0} max={30} step={1} value={settings.wm_opacity ?? "5"} onChange={(e) => update("wm_opacity", e.target.value)}
+                className="field font-mono-en" dir="ltr" placeholder="5" />
+            </div>
+            <div>
+              <label className="block text-sm font-semibold text-gray-600 mb-1.5">{t("wmSize")}</label>
+              <input type="number" min={200} max={800} step={20} value={settings.wm_size ?? "560"} onChange={(e) => update("wm_size", e.target.value)}
+                className="field font-mono-en" dir="ltr" placeholder="560" />
+            </div>
+          </div>
+        </div>
+
         {/* WhatsApp message templates */}
         <div className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded p-6">
           <h2 className="text-base font-bold mb-1 flex items-center gap-2"><MessageCircle className="w-4 h-4 text-gray-400" /> {t("stWaTitle")}</h2>
