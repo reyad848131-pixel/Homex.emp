@@ -145,6 +145,10 @@ export default function QuoteDetailClient({
   // WhatsApp action menu: choose the approval message or send the PDF file.
   const [waMenu, setWaMenu] = useState(false);
   const [sendingPdf, setSendingPdf] = useState(false);
+  // Generated PDF held for a fresh user tap — iOS only opens the share sheet
+  // from a direct gesture, and building the PDF takes a moment, so we split it
+  // into "prepare" then "share".
+  const [pdfShare, setPdfShare] = useState<{ blob: Blob; fileName: string; caption: string } | null>(null);
   // Convert-to-contract dialog: captures the agreed delivery date/time.
   const [showContract, setShowContract] = useState(false);
   const [contractDate, setContractDate] = useState("");
@@ -331,7 +335,7 @@ export default function QuoteDetailClient({
     setWaMenu(false);
     setSendingPdf(true);
     try {
-      const { buildQuotationPdfBlob, sharePdf } = await import("@/lib/share-pdf");
+      const { buildQuotationPdfBlob } = await import("@/lib/share-pdf");
       const blob = await buildQuotationPdfBlob(q.id);
       const fileName = `${q.quoteNumber} - ${displayName(q.customer.name, locale)}`;
       // Same caption as the quote message, without the approval link.
@@ -344,13 +348,28 @@ export default function QuoteDetailClient({
         company: initialCompany.name,
         companyPhone: initialCompany.phone,
       });
-      const how = await sharePdf(blob, fileName, caption);
-      if (how === "downloaded") toast.success(t("pdfDownloaded"));
+      // Ready — wait for a fresh tap to actually open the share sheet.
+      setPdfShare({ blob, fileName, caption });
     } catch (e) {
       const err = e as Error;
       if (err?.name !== "AbortError") toast.error(`${t("pdfShareFailed")}: ${err?.message || ""}`.slice(0, 200));
     } finally {
       setSendingPdf(false);
+    }
+  };
+
+  // Second step: open the share sheet from the user's tap (fresh gesture).
+  const doSharePdf = async () => {
+    if (!pdfShare) return;
+    try {
+      const { sharePdf } = await import("@/lib/share-pdf");
+      const how = await sharePdf(pdfShare.blob, pdfShare.fileName, pdfShare.caption);
+      if (how === "downloaded") toast.success(t("pdfDownloaded"));
+      setPdfShare(null);
+    } catch (e) {
+      // Keep the sheet open on a real failure so they can retry; ignore cancels.
+      if ((e as Error)?.name !== "AbortError") toast.error(t("pdfShareFailed"));
+      else setPdfShare(null);
     }
   };
 
@@ -1017,6 +1036,26 @@ export default function QuoteDetailClient({
               </div>
             )}
             <button onClick={() => setShowReassign(false)} className="mt-3 text-xs font-semibold text-gray-400 hover:text-gray-600 dark:hover:text-gray-200">{t("qdClose")}</button>
+          </div>
+        </div>
+      )}
+
+      {/* PDF ready — share on a fresh tap (iOS opens the share sheet only from
+          a direct gesture). */}
+      {pdfShare && (
+        <div className="fixed inset-0 z-[60] flex items-end sm:items-center justify-center p-4 bg-black/50 print:hidden" onClick={() => setPdfShare(null)}>
+          <div className="bg-white dark:bg-gray-800 rounded-2xl p-6 w-full max-w-sm shadow-xl" onClick={(e) => e.stopPropagation()}>
+            <div className="w-12 h-12 rounded-full bg-green-100 dark:bg-green-900/30 flex items-center justify-center mb-3">
+              <Download className="w-6 h-6 text-green-600" />
+            </div>
+            <p className="font-bold text-lg">{t("pdfReadyTitle")}</p>
+            <p className="text-sm text-gray-500 mt-1 mb-5">{t("pdfReadySub")}</p>
+            <button onClick={doSharePdf}
+              className="w-full h-12 rounded-xl bg-green-600 hover:bg-green-700 text-white font-bold flex items-center justify-center gap-2">
+              <MessageCircle className="w-5 h-5" /> {t("pdfShareNow")}
+            </button>
+            <button onClick={() => setPdfShare(null)}
+              className="w-full h-10 mt-2 text-gray-500 font-bold text-sm">{t("cancel")}</button>
           </div>
         </div>
       )}
