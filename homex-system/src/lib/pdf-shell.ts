@@ -8,7 +8,7 @@ export function pdfToolbar(backHref: string, downloadHref?: string): string {
   // opens that file directly — crisper output and a correct multi-page
   // watermark — instead of the browser's own print of this HTML.
   const saveBtn = downloadHref
-    ? `<a class="pdf-save" href="${downloadHref}" target="_blank" rel="noopener">⬇︎ تحميل / حفظ PDF</a>`
+    ? `<a class="pdf-save" href="${downloadHref}" download target="_blank" rel="noopener">⬇︎ تحميل / حفظ PDF</a>`
     : `<button class="pdf-save" onclick="window.print()">⬇︎ تحميل / حفظ PDF</button>`;
   return `
 <style>

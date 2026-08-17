@@ -62,7 +62,7 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ id: 
     return new NextResponse(Buffer.from(pdf), {
       headers: {
         "Content-Type": "application/pdf",
-        "Content-Disposition": `inline; filename*=UTF-8''${encodeURIComponent(name)}.pdf`,
+        "Content-Disposition": `attachment; filename*=UTF-8''${encodeURIComponent(name)}.pdf`,
         "Cache-Control": "no-store",
       },
     });
