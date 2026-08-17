@@ -56,6 +56,7 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ id: 
     const wmColor = /^#[0-9a-fA-F]{3,8}$/.test(s.wm_color || "") ? (s.wm_color as string) : "#3d3d3d";
     const wmOpacity = Math.max(0, Math.min(30, parseFloat(s.wm_opacity || "5") || 5)) / 100;
     const wmSize = Math.max(200, Math.min(800, parseInt(s.wm_size || "560", 10) || 560));
+    const wmImage = s.wm_image || companyLogo; // custom image, else the logo
 
     const fmtCur = (n: number) => n.toFixed(3);
     const fmtDate = (d: Date | string) => new Date(d).toLocaleDateString("ar-OM", { year: "numeric", month: "long", day: "numeric" });
@@ -281,8 +282,8 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ id: 
 ${pdfToolbar(`/quotations/${id}`)}
 <div class="page">
   ${wmEnabled ? `<div class="watermark" style="font-size:${Math.round(wmSize * 0.95)}px">${
-    companyLogo
-      ? `<div class="wm-shape" style="width:${wmSize}px;height:${wmSize}px;background:${wmColor};opacity:${wmOpacity};-webkit-mask:url('${companyLogo}') center/contain no-repeat;mask:url('${companyLogo}') center/contain no-repeat;"></div>`
+    wmImage
+      ? `<div class="wm-shape" style="width:${wmSize}px;height:${wmSize}px;background:${wmColor};opacity:${wmOpacity};-webkit-mask:url('${wmImage}') center/contain no-repeat;mask:url('${wmImage}') center/contain no-repeat;"></div>`
       : `<span style="color:${wmColor};opacity:${wmOpacity}">${monogram}</span>`
   }</div>` : ""}
 

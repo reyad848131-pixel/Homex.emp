@@ -18,6 +18,7 @@ export default function SettingsPage() {
   const [iconVer, setIconVer] = useState(0);
   const [uploadingIcon, setUploadingIcon] = useState(false);
   const [iconFile, setIconFile] = useState<File | null>(null);
+  const wmRef = useRef<HTMLInputElement>(null);
   const iconRef = useRef<HTMLInputElement>(null);
   const { t, dateLocale } = useI18n();
 
@@ -53,6 +54,25 @@ export default function SettingsPage() {
   const handleLogoDelete = async () => {
     const res = await fetch("/api/logo", { method: "DELETE" });
     if (res.ok) setLogo("");
+  };
+
+  // Custom watermark image — downscale client-side and store as a data URI.
+  const handleWmUpload = (file: File) => {
+    const reader = new FileReader();
+    reader.onload = () => {
+      const img = new Image();
+      img.onload = () => {
+        const max = 600;
+        const scale = Math.min(1, max / Math.max(img.width, img.height));
+        const w = Math.round(img.width * scale), h = Math.round(img.height * scale);
+        const canvas = document.createElement("canvas");
+        canvas.width = w; canvas.height = h;
+        canvas.getContext("2d")!.drawImage(img, 0, 0, w, h);
+        update("wm_image", canvas.toDataURL("image/png"));
+      };
+      img.src = reader.result as string;
+    };
+    reader.readAsDataURL(file);
   };
 
   const handleIconUpload = async (file: File) => {
@@ -263,6 +283,22 @@ export default function SettingsPage() {
               className="w-4 h-4 accent-gray-900 dark:accent-gray-100" />
             <span className="text-sm font-semibold text-gray-700 dark:text-gray-200">{t("wmEnable")}</span>
           </label>
+
+          {/* Custom watermark image (falls back to the logo when empty) */}
+          <div className="flex items-center gap-3 mb-4 flex-wrap">
+            {settings.wm_image
+              ? <img src={settings.wm_image} alt="watermark" className="w-14 h-14 object-contain border border-gray-200 dark:border-gray-700 rounded bg-gray-50" />
+              : <div className="w-14 h-14 grid place-items-center border border-dashed border-gray-300 dark:border-gray-600 rounded text-[10px] text-gray-400 text-center">الشعار</div>}
+            <input type="file" ref={wmRef} className="hidden" accept="image/png,image/webp,image/svg+xml,image/jpeg"
+              onChange={(e) => { if (e.target.files?.[0]) handleWmUpload(e.target.files[0]); }} />
+            <button onClick={() => wmRef.current?.click()}
+              className="px-4 h-10 rounded-lg border border-gray-200 dark:border-gray-700 text-sm font-bold hover:bg-gray-50 dark:hover:bg-gray-700">{t("wmUpload")}</button>
+            {settings.wm_image && (
+              <button onClick={() => update("wm_image", "")}
+                className="px-3 h-10 rounded-lg border border-red-200 text-red-500 text-sm font-bold hover:bg-red-50">{t("wmRemove")}</button>
+            )}
+            <span className="text-xs text-gray-400">{t("wmImageHint")}</span>
+          </div>
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
             <div>
               <label className="block text-sm font-semibold text-gray-600 mb-1.5">{t("wmColor")}</label>
