@@ -19,6 +19,7 @@ export default function SettingsPage() {
   const [uploadingIcon, setUploadingIcon] = useState(false);
   const [iconFile, setIconFile] = useState<File | null>(null);
   const wmRef = useRef<HTMLInputElement>(null);
+  const stampRef = useRef<HTMLInputElement>(null);
   const iconRef = useRef<HTMLInputElement>(null);
   const { t, dateLocale } = useI18n();
 
@@ -56,24 +57,25 @@ export default function SettingsPage() {
     if (res.ok) setLogo("");
   };
 
-  // Custom watermark image — downscale client-side and store as a data URI.
-  const handleWmUpload = (file: File) => {
+  // Downscale an image client-side and store it as a data URI under `key`.
+  const uploadImageSetting = (file: File, key: string, max = 600) => {
     const reader = new FileReader();
     reader.onload = () => {
       const img = new Image();
       img.onload = () => {
-        const max = 600;
         const scale = Math.min(1, max / Math.max(img.width, img.height));
         const w = Math.round(img.width * scale), h = Math.round(img.height * scale);
         const canvas = document.createElement("canvas");
         canvas.width = w; canvas.height = h;
         canvas.getContext("2d")!.drawImage(img, 0, 0, w, h);
-        update("wm_image", canvas.toDataURL("image/png"));
+        update(key, canvas.toDataURL("image/png"));
       };
       img.src = reader.result as string;
     };
     reader.readAsDataURL(file);
   };
+  const handleWmUpload = (file: File) => uploadImageSetting(file, "wm_image");
+  const handleStampUpload = (file: File) => uploadImageSetting(file, "company_stamp", 500);
 
   const handleIconUpload = async (file: File) => {
     setUploadingIcon(true);
@@ -315,6 +317,25 @@ export default function SettingsPage() {
               <input type="number" min={200} max={800} step={20} value={settings.wm_size ?? "560"} onChange={(e) => update("wm_size", e.target.value)}
                 className="field font-mono-en" dir="ltr" placeholder="560" />
             </div>
+          </div>
+        </div>
+
+        {/* Company stamp + signature (shown on the new quotation document) */}
+        <div className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded p-6">
+          <h2 className="text-base font-bold mb-1">{t("stampTitle")}</h2>
+          <p className="text-xs text-gray-400 mb-4">{t("stampHint")}</p>
+          <div className="flex items-center gap-3 flex-wrap">
+            {settings.company_stamp
+              ? <img src={settings.company_stamp} alt="stamp" className="h-16 object-contain border border-gray-200 dark:border-gray-700 rounded bg-white px-2" style={{ filter: "grayscale(1) brightness(0.35) contrast(1.4)" }} />
+              : <div className="w-16 h-16 grid place-items-center border border-dashed border-gray-300 dark:border-gray-600 rounded text-[10px] text-gray-400 text-center">لا يوجد</div>}
+            <input type="file" ref={stampRef} className="hidden" accept="image/png,image/webp,image/jpeg"
+              onChange={(e) => { if (e.target.files?.[0]) handleStampUpload(e.target.files[0]); }} />
+            <button onClick={() => stampRef.current?.click()}
+              className="px-4 h-10 rounded-lg border border-gray-200 dark:border-gray-700 text-sm font-bold hover:bg-gray-50 dark:hover:bg-gray-700">{t("stampUpload")}</button>
+            {settings.company_stamp && (
+              <button onClick={() => update("company_stamp", "")}
+                className="px-3 h-10 rounded-lg border border-red-200 text-red-500 text-sm font-bold hover:bg-red-50">{t("wmRemove")}</button>
+            )}
           </div>
         </div>
 

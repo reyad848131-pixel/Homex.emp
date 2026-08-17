@@ -47,6 +47,7 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ id: 
     const companyWebsite = s.company_website || "";
     const companyInstagram = s.company_instagram || "";
     const companyMaps = s.company_maps || "";
+    const companyStamp = s.company_stamp || "";
     // Accept a bare Instagram handle or a full URL.
     const instaUrl = companyInstagram
       ? (/^https?:\/\//i.test(companyInstagram) ? companyInstagram : `https://instagram.com/${companyInstagram.replace(/^@/, "")}`)
@@ -250,6 +251,10 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ id: 
   .sign-box .t { font-size:12px; letter-spacing:1px; text-transform:uppercase; color:var(--sage-d); font-weight:700; }
   .sign-line { height:70px; border-bottom:1.5px dashed var(--line); margin:18px 0 10px; display:flex; align-items:flex-end; justify-content:center; }
   .sign-line img { max-height:60px; }
+  /* Company stamp: drop the white background (multiply) and recolour the blue
+     ink to near-black so it matches the theme. */
+  .stamp-line { height:96px; }
+  .stamp-img { max-height:92px; max-width:80%; object-fit:contain; filter: grayscale(1) brightness(0.32) contrast(1.5); mix-blend-mode: multiply; }
   .sign-meta { font-size:11px; color:var(--muted); display:flex; justify-content:space-between; }
   .stamp { width:96px; height:96px; border:2px dashed var(--line); border-radius:50%; display:flex; align-items:center; justify-content:center; color:#b9bab1; font-size:10px; text-align:center; flex-shrink:0; align-self:center; }
   .qr-box { text-align:center; flex-shrink:0; width:120px; }
@@ -369,9 +374,9 @@ ${pdfToolbar(`/quotations/${id}`)}
         <div class="sign-meta"><span>${signed ? esc(quotation.signerName || "") : "الاسم"}</span><span>${signed ? esc(signedDate) : "التاريخ"}</span></div>
       </div>
       <div class="sign-box">
-        <div class="t">عن الشركة</div>
-        <div class="sign-line"></div>
-        <div class="sign-meta"><span>الختم والتوقيع</span><span></span></div>
+        <div class="t">ختم وتوقيع الشركة</div>
+        <div class="sign-line stamp-line">${companyStamp ? `<img class="stamp-img" src="${companyStamp}" alt="stamp" />` : ``}</div>
+        <div class="sign-meta"><span>معتمد من الشركة</span><span></span></div>
       </div>
     </div>
   </div>
