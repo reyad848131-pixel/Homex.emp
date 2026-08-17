@@ -73,10 +73,10 @@ export function QuoteDecision({
 
   if (status === "accepted") {
     return (
-      <div className="rounded-xl border border-emerald-200 bg-emerald-50 p-5 text-center">
-        <Check className="w-8 h-8 text-emerald-600 mx-auto mb-2" />
-        <p className="font-bold text-emerald-800">تم قبول العرض وتوقيعه — شكراً لك! ✅</p>
-        <p className="text-sm text-emerald-700 mt-1">سيتواصل معك فريقنا لإتمام الطلب.</p>
+      <div className="rounded-xl border border-[#8b9a7b]/40 bg-[#eef0ea] p-5 text-center">
+        <Check className="w-8 h-8 text-[#6f7e62] mx-auto mb-2" />
+        <p className="font-bold text-[#4a5740]">تم قبول العرض وتوقيعه — شكراً لك! ✅</p>
+        <p className="text-sm text-[#6f7e62] mt-1">سيتواصل معك فريقنا لإتمام الطلب.</p>
       </div>
     );
   }
@@ -127,7 +127,7 @@ export function QuoteDecision({
           <button
             onClick={confirmSign}
             disabled={busy !== null}
-            className="flex-1 flex items-center justify-center gap-2 bg-emerald-600 hover:bg-emerald-700 text-white font-bold py-3.5 rounded-xl transition-colors disabled:opacity-50"
+            className="flex-1 flex items-center justify-center gap-2 bg-[#8b9a7b] hover:bg-[#6f7e62] text-white font-bold py-3.5 rounded-xl transition-colors disabled:opacity-50"
           >
             {busy === "accept" ? <Loader2 className="w-5 h-5 animate-spin" /> : <Check className="w-5 h-5" />}
             تأكيد التوقيع والموافقة
@@ -151,7 +151,7 @@ export function QuoteDecision({
         <button
           onClick={() => { setError(""); setSigning(true); }}
           disabled={busy !== null}
-          className="flex-1 flex items-center justify-center gap-2 bg-emerald-600 hover:bg-emerald-700 text-white font-bold py-3.5 rounded-xl transition-colors disabled:opacity-50"
+          className="flex-1 flex items-center justify-center gap-2 bg-[#8b9a7b] hover:bg-[#6f7e62] text-white font-bold py-3.5 rounded-xl transition-colors disabled:opacity-50"
         >
           <PenLine className="w-5 h-5" />
           موافق وأوقّع

@@ -60,74 +60,84 @@ export default async function PublicQuotePage({ params }: { params: Promise<{ to
 
   const s = await getSettings().catch(() => ({} as Record<string, string>));
   const companyName = s.company_name || "homex";
+  const companySubtitle = s.company_subtitle || "مطابخ · خزائن · أثاث مخصص وتصميم داخلي";
   const logo = s.company_logo || "";
   const phone = s.company_phone || "";
   const terms = s.terms_conditions || "";
   const remaining = (q.total || 0) - (q.advanceAmount || 0);
+  const monogram = (companyName.trim()[0] || "H").toUpperCase();
 
   return (
     <div dir="rtl" className="min-h-screen bg-gray-100 py-6 px-4 font-cairo">
       <div className="max-w-2xl mx-auto space-y-4">
-        {/* Company header */}
-        <div className="bg-white rounded-2xl shadow-sm p-6 flex items-center gap-4">
-          {logo ? (
-            <img src={logo} alt="" className="w-14 h-14 object-contain" />
-          ) : (
-            <div className="w-14 h-14 rounded-xl bg-gray-900 text-white flex items-center justify-center text-xl font-black">H</div>
-          )}
-          <div className="flex-1 min-w-0">
-            <h1 className="text-xl font-black text-gray-900">{companyName}</h1>
-            {phone && <p className="text-sm text-gray-400" dir="ltr">{phone}</p>}
+        {/* Company letterhead — mirrors the official quotation document */}
+        <div className="rounded-2xl shadow-sm overflow-hidden bg-gradient-to-br from-[#3d3d3d] to-[#2a2a28] relative">
+          <div className="p-6 flex items-center gap-4">
+            <div className="w-16 h-16 shrink-0 rounded-xl border border-white/30 bg-white/5 flex items-center justify-center overflow-hidden">
+              {logo ? (
+                <img src={logo} alt="" className="w-full h-full object-contain" />
+              ) : (
+                <span className="text-3xl font-extrabold text-white">{monogram}</span>
+              )}
+            </div>
+            <div className="flex-1 min-w-0">
+              <h1 className="font-mono-en font-bold text-white text-2xl tracking-[0.28em] uppercase leading-tight">{companyName}</h1>
+              <p className="text-[11px] text-white/70 mt-1.5 leading-snug">{companySubtitle}</p>
+              {phone && <p className="text-[11px] text-white/50 mt-0.5 font-mono-en" dir="ltr">{phone}</p>}
+            </div>
+            <div className="text-left shrink-0">
+              <p className="text-[10px] tracking-[0.15em] uppercase text-white/50">عرض سعر</p>
+              <p className="font-bold font-mono-en text-white text-lg mt-0.5">{q.quoteNumber}</p>
+            </div>
           </div>
-          <div className="text-left">
-            <p className="text-xs text-gray-400">عرض سعر</p>
-            <p className="font-bold font-mono-en text-gray-900">{q.quoteNumber}</p>
-          </div>
+          <div className="h-[3px] bg-gradient-to-l from-[#8b9a7b] to-transparent" />
         </div>
 
         {/* Customer + items */}
         <div className="bg-white rounded-2xl shadow-sm p-6">
           <div className="flex justify-between text-sm mb-4">
             <div>
-              <p className="text-gray-400">العميل</p>
-              <p className="font-bold text-gray-900">{q.customer.name}</p>
+              <p className="text-[11px] tracking-wide uppercase text-[#6f7e62] font-bold">العميل</p>
+              <p className="font-bold text-gray-900 mt-0.5">{q.customer.name}</p>
             </div>
             <div className="text-left">
-              <p className="text-gray-400">المنطقة</p>
-              <p className="font-semibold text-gray-700">{q.customer.governorate} — {q.customer.wilayat}</p>
+              <p className="text-[11px] tracking-wide uppercase text-[#6f7e62] font-bold">المنطقة</p>
+              <p className="font-semibold text-gray-700 mt-0.5">{q.customer.governorate} — {q.customer.wilayat}</p>
             </div>
           </div>
 
           <div className="overflow-x-auto">
             <table className="w-full text-sm">
               <thead>
-                <tr className="border-b border-gray-100 text-xs text-gray-400">
-                  <th className="text-right py-2">البند</th>
-                  <th className="text-center py-2">الكمية</th>
-                  <th className="text-left py-2">الإجمالي</th>
+                <tr className="bg-gray-800 text-white text-xs">
+                  <th className="text-right py-2.5 px-3 rounded-s-lg font-bold">البند</th>
+                  <th className="text-center py-2.5 px-2 font-bold">الكمية</th>
+                  <th className="text-left py-2.5 px-3 rounded-e-lg font-bold">الإجمالي</th>
                 </tr>
               </thead>
               <tbody>
-                {q.items.map((it) => (
-                  <tr key={it.id} className="border-b border-gray-50">
-                    <td className="py-2.5">
+                {q.items.map((it, i) => (
+                  <tr key={it.id} className={`border-b border-gray-100 ${i % 2 ? "bg-gray-50" : ""}`}>
+                    <td className="py-2.5 px-3">
                       <p className="font-semibold text-gray-800">{it.description}</p>
                       <p className="text-xs text-gray-400">{it.category?.nameAr}</p>
                     </td>
-                    <td className="py-2.5 text-center font-mono-en text-gray-500">{it.quantity}</td>
-                    <td className="py-2.5 text-left font-mono-en font-bold">{money(it.lineTotal)}</td>
+                    <td className="py-2.5 px-2 text-center font-mono-en text-gray-500">{it.quantity}</td>
+                    <td className="py-2.5 px-3 text-left font-mono-en font-bold text-[#6f7e62]">{money(it.lineTotal)}</td>
                   </tr>
                 ))}
               </tbody>
             </table>
           </div>
 
-          <div className="mt-4 pt-4 border-t border-gray-100 space-y-2 text-sm">
+          <div className="mt-5 space-y-2 text-sm">
             <div className="flex justify-between"><span className="text-gray-500">الإجمالي الفرعي</span><span className="font-mono-en font-bold">{money(q.subtotal)}</span></div>
             <div className="flex justify-between"><span className="text-gray-500">الضريبة ({Math.round((q.vatRate || 0) * 100)}%)</span><span className="font-mono-en font-bold">{money(q.vatAmount)}</span></div>
-            <div className="flex justify-between text-base pt-2 border-t border-gray-100"><span className="font-bold">الإجمالي</span><span className="font-mono-en font-black">{money(q.total)}</span></div>
-            <div className="flex justify-between text-gray-500"><span>الدفعة المقدمة ({q.advancePct}%)</span><span className="font-mono-en">{money(q.advanceAmount)}</span></div>
-            <div className="flex justify-between text-gray-500"><span>المتبقّي</span><span className="font-mono-en">{money(remaining)}</span></div>
+            <div className="flex justify-between items-center bg-gray-800 text-white rounded-xl px-4 py-3 mt-3"><span className="font-extrabold">الإجمالي</span><span className="font-mono-en font-black text-base">{money(q.total)}</span></div>
+            {q.advancePct > 0 && (
+              <div className="flex justify-between items-center bg-[#eef0ea] text-[#6f7e62] rounded-lg px-4 py-2.5 mt-2"><span className="font-bold">الدفعة المقدمة ({q.advancePct}%)</span><span className="font-mono-en font-bold">{money(q.advanceAmount)}</span></div>
+            )}
+            <div className="flex justify-between text-gray-500 px-1 pt-1"><span>المتبقّي</span><span className="font-mono-en">{money(remaining)}</span></div>
           </div>
         </div>
 
@@ -145,7 +155,10 @@ export default async function PublicQuotePage({ params }: { params: Promise<{ to
           const allDone = reached >= STAGES.length;
           return (
             <div className="bg-white rounded-2xl shadow-sm p-6">
-              <p className="text-xs font-bold text-gray-400 mb-4">تتبّع طلبك</p>
+              <div className="flex items-center gap-2 mb-4">
+                <span className="w-1 h-4 rounded bg-[#8b9a7b]" />
+                <p className="text-sm font-extrabold text-gray-800">تتبّع طلبك</p>
+              </div>
               <div className="space-y-0">
                 {STAGES.map((label, i) => {
                   const done = reached > i;
@@ -155,16 +168,16 @@ export default async function PublicQuotePage({ params }: { params: Promise<{ to
                     <div key={i} className="flex gap-3">
                       <div className="flex flex-col items-center">
                         <div className={`w-8 h-8 rounded-full flex items-center justify-center text-sm font-bold shrink-0 ${
-                          done ? "bg-emerald-600 text-white"
-                          : current ? "bg-white border-2 border-emerald-600 text-emerald-600"
+                          done ? "bg-[#8b9a7b] text-white"
+                          : current ? "bg-white border-2 border-[#8b9a7b] text-[#6f7e62]"
                           : "bg-gray-100 border border-gray-200 text-gray-400"}`}>
                           {done ? "✓" : i + 1}
                         </div>
-                        {!last && <div className={`w-0.5 flex-1 min-h-[26px] ${done ? "bg-emerald-600" : "bg-gray-200"}`} />}
+                        {!last && <div className={`w-0.5 flex-1 min-h-[26px] ${done ? "bg-[#8b9a7b]" : "bg-gray-200"}`} />}
                       </div>
-                      <div className={`pb-4 ${last ? "" : ""}`}>
-                        <p className={`text-sm font-bold ${done ? "text-emerald-700" : current ? "text-gray-900" : "text-gray-400"}`}>{label}</p>
-                        {current && <p className="text-xs text-emerald-600 font-semibold mt-0.5">الحالية</p>}
+                      <div className="pb-4">
+                        <p className={`text-sm font-bold ${done ? "text-[#6f7e62]" : current ? "text-gray-900" : "text-gray-400"}`}>{label}</p>
+                        {current && <p className="text-xs text-[#8b9a7b] font-semibold mt-0.5">الحالية</p>}
                         {i === 2 && q.deliveryDate && (
                           <p className="text-xs text-gray-500 mt-0.5">
                             الموعد: <span className="font-mono-en font-bold">{new Date(q.deliveryDate).toLocaleDateString("en-GB")}</span>
@@ -176,14 +189,17 @@ export default async function PublicQuotePage({ params }: { params: Promise<{ to
                   );
                 })}
               </div>
-              {allDone && <p className="text-sm font-black text-emerald-700 mt-2 text-center">تم تسليم طلبك بالكامل ✅ شكراً لثقتك</p>}
+              {allDone && <p className="text-sm font-black text-[#6f7e62] mt-2 text-center">تم تسليم طلبك بالكامل ✅ شكراً لثقتك</p>}
             </div>
           );
         })()}
 
         {terms && (
           <div className="bg-white rounded-2xl shadow-sm p-6">
-            <p className="text-xs font-bold text-gray-400 mb-2">الشروط والأحكام</p>
+            <div className="flex items-center gap-2 mb-3">
+              <span className="w-1 h-4 rounded bg-[#8b9a7b]" />
+              <p className="text-sm font-extrabold text-gray-800">الشروط والأحكام</p>
+            </div>
             <p className="text-xs text-gray-500 whitespace-pre-wrap leading-relaxed">{terms}</p>
           </div>
         )}
@@ -193,7 +209,9 @@ export default async function PublicQuotePage({ params }: { params: Promise<{ to
           <QuoteDecision token={token} initialStatus={q.status} customerName={q.customer.name} />
         </div>
 
-        <p className="text-center text-xs text-gray-400 pb-4">{companyName} · نظام عروض الأسعار</p>
+        <p className="text-center text-xs text-gray-400 pb-4">
+          <span className="font-mono-en font-bold tracking-widest text-gray-500 uppercase">{companyName}</span> · نظام عروض الأسعار
+        </p>
       </div>
     </div>
   );
