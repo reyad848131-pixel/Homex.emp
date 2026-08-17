@@ -129,11 +129,12 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ id: 
 <meta charset="UTF-8">
 <title>عرض سعر - ${esc(quotation.quoteNumber)}</title>
 <style>
-  @import url('https://fonts.googleapis.com/css2?family=El+Messiri:wght@500;600;700&family=Tajawal:wght@300;400;500;700;800&display=swap');
+  @import url('https://fonts.googleapis.com/css2?family=El+Messiri:wght@500;600;700&family=Montserrat:wght@600;700;800&family=Tajawal:wght@300;400;500;700;800&display=swap');
 
   :root {
     --font-body: 'Tajawal', 'Segoe UI', Tahoma, sans-serif;
     --font-head: 'El Messiri', 'Tajawal', serif;
+    --font-word: 'Montserrat', 'Segoe UI', sans-serif; /* brand Latin wordmark */
     /* Official Homex palette: warm neutral scale + sage green accent. */
     --ink: #262625;        /* brand near-black (gray-900) */
     --muted: #7e7f77;      /* brand gray-500 */
@@ -184,7 +185,7 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ id: 
   .lh-badge img { width:100%; height:100%; object-fit:contain; }
   .lh-badge .mono { font-size:38px; font-weight:800; color:#fff; letter-spacing:1px; }
   .lh-main { flex:1; }
-  .lh-main h1 { font-family:var(--font-head); font-size:32px; font-weight:700; letter-spacing:8px; line-height:1.1; }
+  .lh-main h1 { font-family:var(--font-word); font-size:30px; font-weight:700; letter-spacing:9px; line-height:1.1; }
   .lh-sub { font-size:12px; color:rgba(255,255,255,.85); margin-top:7px; font-weight:500; letter-spacing:.3px; }
   .lh-factory { font-size:10.5px; color:rgba(255,255,255,.6); margin-top:3px; }
   .lh-doc { text-align:left; flex-shrink:0; }
@@ -272,7 +273,7 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ id: 
   .foot { margin-top:26px; padding:14px 44px; border-top:1px solid var(--line); }
   .foot .row1 { text-align:center; font-size:10.5px; color:var(--muted); }
   .foot .row2 { display:flex; justify-content:space-between; align-items:center; margin-top:8px; font-size:10.5px; color:var(--muted); }
-  .foot .brand { font-family:var(--font-head); font-weight:700; color:var(--green); letter-spacing:1px; }
+  .foot .brand { font-family:var(--font-word); font-weight:700; color:var(--green); letter-spacing:1.5px; }
   /* footer QR strip (Instagram / location) */
   .foot-qr { display:flex; justify-content:center; gap:34px; margin-top:14px; padding-top:14px; border-top:1px dashed var(--line); }
   .fq { text-align:center; }
