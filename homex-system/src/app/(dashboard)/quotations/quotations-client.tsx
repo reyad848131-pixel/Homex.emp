@@ -4,7 +4,7 @@ import { useState, useEffect, useRef } from "react";
 import Link from "next/link";
 import { STATUS_MAP } from "@/lib/types";
 import { displayName } from "@/lib/translit";
-import { Search, FilePlus, FileText, Trash2, X, Loader2, Download } from "lucide-react";
+import { Search, FilePlus, FileText, Trash2, X, Loader2, Download, ArrowDown } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useDebouncedValue } from "@/lib/hooks";
 import { useI18n, type TranslationKey } from "@/lib/i18n";
@@ -284,7 +284,16 @@ export function QuotationsClient({ initialData }: { initialData: { quotations: Q
                   <th className="text-right p-3 text-xs text-gray-400 font-semibold">{t("items")}</th>
                   <th className="text-right p-3 text-xs text-gray-400 font-semibold">{t("status")}</th>
                   <th className="text-right p-3 text-xs text-gray-400 font-semibold">{t("total")}</th>
-                  <th className="text-right p-3 text-xs text-gray-400 font-semibold">{t("date")}</th>
+                  <th className="text-right p-3 text-xs font-semibold">
+                    {/* Click the date column to bring the newest quotations to the top. */}
+                    <button type="button" onClick={() => { setSort("recent"); setPage(1); }}
+                      title={t("qcNewest")}
+                      className={cn("inline-flex items-center gap-1 transition-colors",
+                        sort === "recent" ? "text-gray-900 dark:text-gray-100" : "text-gray-400 hover:text-gray-600 dark:hover:text-gray-200")}>
+                      {t("date")}
+                      <ArrowDown className={cn("w-3.5 h-3.5 transition-opacity", sort === "recent" ? "opacity-100" : "opacity-40")} />
+                    </button>
+                  </th>
                 </tr>
               </thead>
               <tbody>
