@@ -340,8 +340,8 @@ export default function SettingsPage() {
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mt-4">
             <div>
               <label className="block text-sm font-semibold text-gray-600 mb-1.5">{t("stampSize")}</label>
-              <input type="number" min={30} max={160} step={2} value={settings.stamp_size ?? "92"} onChange={(e) => update("stamp_size", e.target.value)}
-                className="field font-mono-en" dir="ltr" placeholder="92" />
+              <input type="number" min={30} max={120} step={2} value={settings.stamp_size ?? "90"} onChange={(e) => update("stamp_size", e.target.value)}
+                className="field font-mono-en" dir="ltr" placeholder="90" />
             </div>
             <div>
               <label className="block text-sm font-semibold text-gray-600 mb-1.5">{t("stampPosH")}</label>

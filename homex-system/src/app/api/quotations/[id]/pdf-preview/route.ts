@@ -48,7 +48,8 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ id: 
     const companyInstagram = s.company_instagram || "";
     const companyMaps = s.company_maps || "";
     const companyStamp = s.company_stamp || "";
-    const stampSize = Math.max(30, Math.min(160, parseInt(s.stamp_size || "92", 10) || 92));
+    // Capped so a big stamp can't blow the signature boxes out of proportion.
+    const stampSize = Math.max(30, Math.min(120, parseInt(s.stamp_size || "90", 10) || 90));
     const hMap: Record<string, string> = { right: "flex-start", center: "center", left: "flex-end" };
     const vMap: Record<string, string> = { top: "flex-start", center: "center", bottom: "flex-end" };
     const stampJustify = hMap[s.stamp_halign || "center"] || "center";
@@ -251,15 +252,16 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ id: 
 
   /* ===== APPROVAL / SIGNATURE ===== */
   .approve { margin:30px 44px 0; }
-  .sign-cols { display:flex; gap:28px; }
-  .sign-box { flex:1; border:1px solid var(--line); border-radius:14px; padding:20px 24px; background:var(--panel); }
+  /* Equal, balanced boxes regardless of stamp size. */
+  .sign-cols { display:flex; gap:28px; align-items:stretch; }
+  .sign-box { flex:1; border:1px solid var(--line); border-radius:14px; padding:18px 22px; background:var(--panel); display:flex; flex-direction:column; min-height:172px; }
   .sign-box .t { font-size:12px; letter-spacing:1px; text-transform:uppercase; color:var(--sage-d); font-weight:700; }
-  .sign-line { height:70px; border-bottom:1.5px dashed var(--line); margin:18px 0 10px; display:flex; align-items:flex-end; justify-content:center; }
-  .sign-line img { max-height:60px; }
-  /* Company stamp: drop the white background (multiply) and recolour the blue
-     ink to near-black so it matches the theme. */
-  .stamp-line { min-height:96px; height:auto; border-bottom:none; }
-  .stamp-img { max-width:90%; object-fit:contain; filter: grayscale(1) brightness(0.32) contrast(1.5); mix-blend-mode: multiply; }
+  .sign-line { flex:1; border-bottom:1.5px dashed var(--line); margin:16px 0 10px; display:flex; align-items:flex-end; justify-content:center; }
+  .sign-line img { max-height:70px; }
+  /* Company stamp: fills its box; white background dropped (multiply) and the
+     blue ink recoloured to near-black to match the theme. */
+  .stamp-line { flex:1; margin:16px 0 10px; display:flex; overflow:hidden; }
+  .stamp-img { max-width:88%; object-fit:contain; filter: grayscale(1) brightness(0.32) contrast(1.5); mix-blend-mode: multiply; }
   .sign-meta { font-size:11px; color:var(--muted); display:flex; justify-content:space-between; }
   .stamp { width:96px; height:96px; border:2px dashed var(--line); border-radius:50%; display:flex; align-items:center; justify-content:center; color:#b9bab1; font-size:10px; text-align:center; flex-shrink:0; align-self:center; }
   .qr-box { text-align:center; flex-shrink:0; width:120px; }
