@@ -129,11 +129,12 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ id: 
 <meta charset="UTF-8">
 <title>عرض سعر - ${esc(quotation.quoteNumber)}</title>
 <style>
-  @import url('https://fonts.googleapis.com/css2?family=El+Messiri:wght@500;600;700&family=Montserrat:wght@600;700;800&family=Tajawal:wght@300;400;500;700;800&display=swap');
+  /* 100% brand fonts: Cairo (Arabic) + Montserrat (Latin), same as the app. */
+  @import url('https://fonts.googleapis.com/css2?family=Cairo:wght@300;400;500;600;700;800;900&family=Montserrat:wght@600;700;800&display=swap');
 
   :root {
-    --font-body: 'Tajawal', 'Segoe UI', Tahoma, sans-serif;
-    --font-head: 'El Messiri', 'Tajawal', serif;
+    --font-body: 'Cairo', 'Segoe UI', Tahoma, sans-serif;
+    --font-head: 'Cairo', 'Segoe UI', sans-serif;
     --font-word: 'Montserrat', 'Segoe UI', sans-serif; /* brand Latin wordmark */
     /* Official Homex palette: warm neutral scale + sage green accent. */
     --ink: #262625;        /* brand near-black (gray-900) */
@@ -213,7 +214,7 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ id: 
   .sec { margin:30px 44px 0; display:flex; align-items:center; gap:10px; }
   .sec .bar { width:4px; height:18px; background:var(--sage); border-radius:2px; }
   .sec .ic { display:flex; }
-  .sec h2 { font-family:var(--font-head); font-size:16px; font-weight:700; color:var(--green); letter-spacing:.3px; }
+  .sec h2 { font-family:var(--font-head); font-size:16px; font-weight:800; color:var(--green); letter-spacing:.3px; }
   .sec .rule { flex:1; height:1px; background:var(--line); }
 
   /* ===== ITEMS ===== */
@@ -283,7 +284,7 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ id: 
 
   /* ===== TERMS (flows under the signatures) ===== */
   .terms { padding:22px 44px 4px; }
-  .terms-title { font-family:var(--font-head); font-size:15px; font-weight:700; color:var(--green); margin:22px 0 8px; padding-bottom:5px; border-bottom:2px solid var(--sage); display:inline-block; }
+  .terms-title { font-family:var(--font-head); font-size:15px; font-weight:800; color:var(--green); margin:22px 0 8px; padding-bottom:5px; border-bottom:2px solid var(--sage); display:inline-block; }
   .terms-title:first-child { margin-top:0; }
   .term-item { font-size:13px; color:#3f3f3a; padding:4px 0; line-height:1.85; position:relative; padding-inline-start:16px; }
   .term-item::before { content:""; position:absolute; inset-inline-start:0; top:12px; width:5px; height:5px; border-radius:50%; background:var(--sage); }
