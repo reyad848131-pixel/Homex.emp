@@ -25,6 +25,9 @@ const csp = [
 const nextConfig: NextConfig = {
   poweredByHeader: false,
   compress: true,
+  // Keep the headless-Chromium packages out of the bundle (large native binary);
+  // they're required at runtime by the server-side PDF route instead.
+  serverExternalPackages: ["@sparticuz/chromium", "puppeteer-core"],
   async headers() {
     return [
       {
