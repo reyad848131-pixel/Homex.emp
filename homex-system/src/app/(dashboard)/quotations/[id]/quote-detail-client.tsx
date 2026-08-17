@@ -506,7 +506,8 @@ export default function QuoteDetailClient({
               <Printer className="w-4 h-4" />
               {t("print")}
             </button>
-            <a href={`/api/quotations/${id}/pdf`} target="_blank" rel="noopener noreferrer"
+            {/* Real Chromium PDF (watermark baked on every page, correct on mobile). */}
+            <a href={`/api/quotations/${id}/pdf-file`} target="_blank" rel="noopener noreferrer"
               className="flex items-center gap-2 px-4 py-2 border border-gray-200 rounded text-sm font-bold hover:bg-gray-50">
               <Download className="w-4 h-4" />
               PDF
