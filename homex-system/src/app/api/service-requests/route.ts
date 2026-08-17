@@ -34,6 +34,9 @@ export async function GET(req: NextRequest) {
     if (status && ["open", "scheduled", "resolved"].includes(status)) where.status = status;
     const requests = await prisma.serviceRequest.findMany({
       where,
+      // Safety cap so the list stays bounded as resolved history grows
+      // (open requests sort first, so active work is always included).
+      take: 500,
       orderBy: [{ status: "asc" }, { createdAt: "desc" }],
       include: {
         quotation: {

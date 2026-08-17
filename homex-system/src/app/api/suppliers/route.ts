@@ -16,7 +16,7 @@ export async function GET() {
   const g = await guard();
   if (g.error) return g.error;
   try {
-    const suppliers = await prisma.supplier.findMany({ orderBy: [{ isActive: "desc" }, { name: "asc" }] });
+    const suppliers = await prisma.supplier.findMany({ orderBy: [{ isActive: "desc" }, { name: "asc" }], take: 1000 });
     return NextResponse.json(suppliers);
   } catch (e) {
     console.error("API error [/api/suppliers]:", e);

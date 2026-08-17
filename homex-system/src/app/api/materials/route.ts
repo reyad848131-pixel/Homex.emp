@@ -19,7 +19,7 @@ export async function GET() {
   if (g.error) return g.error;
   try {
     const [materials, demand] = await Promise.all([
-      prisma.material.findMany({ orderBy: [{ isActive: "desc" }, { category: "asc" }, { name: "asc" }] }),
+      prisma.material.findMany({ orderBy: [{ isActive: "desc" }, { category: "asc" }, { name: "asc" }], take: 2000 }),
       // Open demand across customer orders (still needed / not yet received).
       prisma.materialOrder.groupBy({ by: ["materialId"], where: { status: { in: ["needed", "ordered"] }, materialId: { not: null } }, _sum: { quantity: true } }),
     ]);

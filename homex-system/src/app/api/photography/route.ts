@@ -49,6 +49,8 @@ export async function GET(req: NextRequest) {
 
     const quotations = await prisma.quotation.findMany({
       where,
+      // Safety cap so the queue stays bounded as delivered history grows.
+      take: 800,
       orderBy: [{ photographedAt: "desc" }, { deliveredAt: "desc" }, { updatedAt: "desc" }],
       select: {
         id: true, quoteNumber: true, total: true, workStatus: true,

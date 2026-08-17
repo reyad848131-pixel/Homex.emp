@@ -35,14 +35,14 @@ export function NotificationBell() {
 
   useEffect(() => {
     fetchNotifications();
-    let interval = setInterval(fetchNotifications, 30000);
+    let interval = setInterval(fetchNotifications, 60000);
 
     const handleVisibility = () => {
       if (document.hidden) {
         clearInterval(interval);
       } else {
         fetchNotifications();
-        interval = setInterval(fetchNotifications, 30000);
+        interval = setInterval(fetchNotifications, 60000);
       }
     };
     document.addEventListener("visibilitychange", handleVisibility);
