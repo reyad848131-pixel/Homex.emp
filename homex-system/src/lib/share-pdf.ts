@@ -31,13 +31,31 @@ export function canShareFiles(): boolean {
 }
 
 // Share (or download as fallback) a PDF blob under the given file name.
+// Some platforms accept a file + caption together, some only accept the file,
+// so try the richest payload first and gracefully degrade — ending in a plain
+// download when the browser can't share files at all. A user-cancelled share
+// (AbortError) is propagated so the caller can stay silent.
 export async function sharePdf(blob: Blob, fileName: string, text?: string): Promise<"shared" | "downloaded"> {
   const safe = fileName.replace(/[\\/:*?"<>|]/g, " ").trim() || "quote.pdf";
   const file = new File([blob], safe.endsWith(".pdf") ? safe : `${safe}.pdf`, { type: "application/pdf" });
-  if (navigator.canShare && navigator.canShare({ files: [file] })) {
-    await navigator.share({ files: [file], title: safe, ...(text ? { text } : {}) });
-    return "shared";
+
+  const payloads: ShareData[] = text
+    ? [{ files: [file], text }, { files: [file] }]
+    : [{ files: [file] }];
+
+  if (typeof navigator.canShare === "function" && typeof navigator.share === "function") {
+    for (const p of payloads) {
+      if (!navigator.canShare(p)) continue;
+      try {
+        await navigator.share(p);
+        return "shared";
+      } catch (e) {
+        if ((e as Error)?.name === "AbortError") throw e; // user closed the sheet
+        // otherwise try the next (simpler) payload, then fall back to download
+      }
+    }
   }
+
   const url = URL.createObjectURL(blob);
   const a = document.createElement("a");
   a.href = url;
