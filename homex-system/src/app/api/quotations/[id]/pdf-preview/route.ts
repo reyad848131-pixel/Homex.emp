@@ -278,8 +278,8 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ id: 
   .fq .cap { font-size:9.5px; color:var(--muted); margin-top:5px; letter-spacing:.3px; }
   .fq .cap b { color:var(--sage-d); font-weight:700; }
 
-  /* ===== TERMS PAGE ===== */
-  .terms { padding:40px 44px; }
+  /* ===== TERMS (flows under the signatures) ===== */
+  .terms { padding:22px 44px 4px; }
   .terms-title { font-family:var(--font-head); font-size:15px; font-weight:700; color:var(--green); margin:22px 0 8px; padding-bottom:5px; border-bottom:2px solid var(--sage); display:inline-block; }
   .terms-title:first-child { margin-top:0; }
   .term-item { font-size:13px; color:#3f3f3a; padding:4px 0; line-height:1.85; position:relative; padding-inline-start:16px; }
@@ -289,7 +289,8 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ id: 
   @media print {
     body { background:#fff; }
     .page { margin:0; max-width:100%; box-shadow:none; }
-    .terms { page-break-before: always; }
+    /* Keep the terms with the signatures; break only if the content overflows. */
+    .terms { break-inside: auto; }
   }
 </style>
 </head>
@@ -386,19 +387,18 @@ ${pdfToolbar(`/quotations/${id}`)}
     </div>
   </div>
 
-  <!-- FOOTER -->
+  <!-- TERMS (flows right under the signatures, filling the free space) -->
+  ${(termsConditions || signed) ? `
+  <div class="terms">
+    <div class="sec" style="margin:0 0 6px"><span class="bar"></span><span class="ic">${iconLines}</span><h2>الشروط والمواصفات</h2><span class="rule"></span></div>
+    <div style="margin-top:16px">${termsHtml}</div>
+  </div>` : ""}
+
+  <!-- FOOTER (end of document) -->
   <div class="foot">
     <div class="row1">${footerLine}</div>
     <div class="row2"><span class="brand">${esc(companyName)}</span><span class="num">${printDate}</span></div>
   </div>
-
-  <!-- TERMS PAGE -->
-  ${(termsConditions || signed) ? `
-  <div class="terms">
-    <div class="sec" style="margin:0 0 6px"><span class="bar"></span><span class="ic">${iconLines}</span><h2>الشروط والمواصفات</h2><span class="rule"></span></div>
-    <div style="margin-top:18px">${termsHtml}</div>
-    <div class="terms-foot">${esc(companyName)} · ${esc(companyFactory)} · ${esc(companyAddress)}</div>
-  </div>` : ""}
 
 </div>
 </body>
