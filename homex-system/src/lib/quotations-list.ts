@@ -51,9 +51,9 @@ export async function getQuotationsList(p: QuotationListParams) {
       orderBy:
         p.sort === "delivery" ? UPCOMING_FIRST_ORDER
         : p.sort === "number" ? { quoteNumber: "asc" }
-        // "recent": true entry order first (a quote made today always on top),
-        // falling back to createdAt for the historical import cluster.
-        : [{ enteredAt: "desc" as const }, { createdAt: "desc" as const }],
+        // "recent": strictly newest date on top (17 → 16 → 15 …). New quotes
+        // get createdAt = now(), so today's work always sits at the top.
+        : { createdAt: "desc" },
       skip: (page - 1) * limit,
       take: limit,
     }),

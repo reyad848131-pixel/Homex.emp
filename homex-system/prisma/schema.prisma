@@ -268,11 +268,6 @@ model Quotation {
   // still map to the record after unifying quote numbers.
   originalNumber String?  @map("original_number")
   createdAt     DateTime  @default(now()) @map("created_at")
-  // True moment the row was inserted into THIS system. Unlike createdAt — which
-  // import overwrites with the sheet's booking/delivery date (often a future
-  // date) — enteredAt is never overridden, so "newest first" reliably floats a
-  // quote made today above older/future-dated imports.
-  enteredAt     DateTime  @default(now()) @map("entered_at")
   updatedAt     DateTime  @updatedAt @map("updated_at")
 
   customer Customer    @relation(fields: [customerId], references: [id])
@@ -287,7 +282,6 @@ model Quotation {
   @@index([customerId])
   @@index([status])
   @@index([createdAt])
-  @@index([enteredAt])
   @@index([deliveryDate])
   @@index([workStatus])
   // Composite indexes matching the app's real filter+sort patterns, so these
