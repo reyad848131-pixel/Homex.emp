@@ -67,8 +67,7 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ id: 
       try { return await QRCode.toDataURL(data, { margin: 1, width: 220, color: { dark: "#3d3d3d", light: "#ffffff" } }); }
       catch { return ""; }
     };
-    // QR → public quote link (view / e-sign), plus Instagram and factory location.
-    const qrDataUrl = quotation.publicToken ? await qrGen(`${req.nextUrl.origin}/q/${quotation.publicToken}`) : "";
+    // QR codes: Instagram and factory location (the approval QR was removed).
     const qrInsta = instaUrl ? await qrGen(instaUrl) : "";
     const qrMaps = companyMaps ? await qrGen(companyMaps) : "";
 
@@ -222,9 +221,14 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ id: 
   .c-strong { font-weight:800; color:var(--sage-d); }
   .items thead th.ta-c { text-align:center; }
 
-  /* ===== TOTALS ===== */
-  .totals { display:flex; justify-content:flex-start; margin:18px 44px 0; }
-  .totals-card { width:340px; }
+  /* ===== TOTALS (card on the right, QR codes fill the free space at left) ===== */
+  .totals { display:flex; justify-content:space-between; align-items:flex-end; gap:24px; margin:18px 44px 0; }
+  .totals-card { width:340px; flex-shrink:0; }
+  .totals-qr { display:flex; gap:26px; padding-bottom:4px; }
+  .tq { text-align:center; }
+  .tq img { width:88px; height:88px; border:1px solid var(--line); border-radius:10px; padding:5px; background:#fff; }
+  .tq .cap { font-size:10px; color:var(--muted); margin-top:6px; letter-spacing:.3px; line-height:1.5; }
+  .tq .cap b { color:var(--sage-d); font-weight:700; }
   .tt { display:flex; justify-content:space-between; padding:8px 16px; font-size:13px; }
   .tt .l { color:var(--muted); font-weight:600; }
   .tt .v { font-variant-numeric:tabular-nums; direction:ltr; font-weight:700; }
@@ -239,11 +243,11 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ id: 
   .note { margin:22px 44px 0; padding:12px 16px; background:var(--panel); border-inline-start:3px solid var(--sage); border-radius:6px; font-size:11.5px; color:var(--muted); line-height:1.7; }
 
   /* ===== APPROVAL / SIGNATURE ===== */
-  .approve { margin:26px 44px 0; display:flex; gap:22px; align-items:stretch; }
-  .sign-cols { flex:1; display:flex; gap:22px; }
-  .sign-box { flex:1; border:1px solid var(--line); border-radius:12px; padding:16px 18px; background:var(--panel); }
-  .sign-box .t { font-size:11px; letter-spacing:1px; text-transform:uppercase; color:var(--sage-d); font-weight:700; }
-  .sign-line { height:46px; border-bottom:1.5px dashed var(--line); margin:14px 0 8px; display:flex; align-items:flex-end; justify-content:center; }
+  .approve { margin:30px 44px 0; }
+  .sign-cols { display:flex; gap:28px; }
+  .sign-box { flex:1; border:1px solid var(--line); border-radius:14px; padding:20px 24px; background:var(--panel); }
+  .sign-box .t { font-size:12px; letter-spacing:1px; text-transform:uppercase; color:var(--sage-d); font-weight:700; }
+  .sign-line { height:70px; border-bottom:1.5px dashed var(--line); margin:18px 0 10px; display:flex; align-items:flex-end; justify-content:center; }
   .sign-line img { max-height:60px; }
   .sign-meta { font-size:11px; color:var(--muted); display:flex; justify-content:space-between; }
   .stamp { width:96px; height:96px; border:2px dashed var(--line); border-radius:50%; display:flex; align-items:center; justify-content:center; color:#b9bab1; font-size:10px; text-align:center; flex-shrink:0; align-self:center; }
@@ -338,18 +342,24 @@ ${pdfToolbar(`/quotations/${id}`)}
     <tbody>${itemRows}</tbody>
   </table>
 
-  <!-- TOTALS -->
-  <div class="totals"><div class="totals-card">
-    <div class="tt sub"><span class="l">الإجمالي الفرعي</span><span class="v">${fmtCur(quotation.subtotal)} <span style="color:var(--muted);font-weight:600">ر.ع</span></span></div>
-    <div class="tt"><span class="l">ضريبة القيمة المضافة ${(quotation.vatRate * 100).toFixed(0)}%</span><span class="v">${fmtCur(quotation.vatAmount)}</span></div>
-    <div class="tt grand"><span class="l">المبلغ الإجمالي</span><span class="v">${fmtCur(quotation.total)} ر.ع</span></div>
-    ${quotation.advancePct > 0 ? `<div class="tt adv"><span class="l">الدفعة المقدمة (${quotation.advancePct}%)</span><span class="v">${fmtCur(quotation.advanceAmount)} ر.ع</span></div>` : ""}
-  </div></div>
+  <!-- TOTALS (+ QR codes in the free space to the left) -->
+  <div class="totals">
+    <div class="totals-card">
+      <div class="tt sub"><span class="l">الإجمالي الفرعي</span><span class="v">${fmtCur(quotation.subtotal)} <span style="color:var(--muted);font-weight:600">ر.ع</span></span></div>
+      <div class="tt"><span class="l">ضريبة القيمة المضافة ${(quotation.vatRate * 100).toFixed(0)}%</span><span class="v">${fmtCur(quotation.vatAmount)}</span></div>
+      <div class="tt grand"><span class="l">المبلغ الإجمالي</span><span class="v">${fmtCur(quotation.total)} ر.ع</span></div>
+      ${quotation.advancePct > 0 ? `<div class="tt adv"><span class="l">الدفعة المقدمة (${quotation.advancePct}%)</span><span class="v">${fmtCur(quotation.advanceAmount)} ر.ع</span></div>` : ""}
+    </div>
+    ${(qrInsta || qrMaps) ? `<div class="totals-qr">
+      ${qrInsta ? `<div class="tq"><img src="${qrInsta}" alt="Instagram" /><div class="cap"><b>إنستقرام</b><br/>${esc(companyInstagram.replace(/^https?:\/\/(www\.)?instagram\.com\//i, "@").replace(/\/$/, ""))}</div></div>` : ""}
+      ${qrMaps ? `<div class="tq"><img src="${qrMaps}" alt="Location" /><div class="cap"><b>موقع المصنع</b><br/>امسح للوصول</div></div>` : ""}
+    </div>` : ""}
+  </div>
 
   <!-- NOTE -->
   <div class="note">${quotation.notes ? esc(quotation.notes) : "هذا السعر تقديري ويعتمد على المواصفات المدخلة — يُؤكَّد السعر النهائي بعد المعاينة الفعلية."}</div>
 
-  <!-- APPROVAL + SIGNATURE + STAMP + QR -->
+  <!-- APPROVAL / SIGNATURE (full width, no QR) -->
   <div class="approve">
     <div class="sign-cols">
       <div class="sign-box">
@@ -363,19 +373,12 @@ ${pdfToolbar(`/quotations/${id}`)}
         <div class="sign-meta"><span>الختم والتوقيع</span><span></span></div>
       </div>
     </div>
-    ${qrDataUrl
-      ? `<div class="qr-box"><img src="${qrDataUrl}" alt="QR" /><div class="cap">امسح للاطّلاع على العرض<br/>والموافقة إلكترونياً</div></div>`
-      : `<div class="stamp">ختم<br/>الشركة</div>`}
   </div>
 
   <!-- FOOTER -->
   <div class="foot">
     <div class="row1">${footerLine}</div>
     <div class="row2"><span class="brand">${esc(companyName)}</span><span class="num">${printDate}</span></div>
-    ${(qrInsta || qrMaps) ? `<div class="foot-qr">
-      ${qrInsta ? `<div class="fq"><img src="${qrInsta}" alt="Instagram" /><div class="cap"><b>إنستقرام</b><br/>${esc(companyInstagram.replace(/^https?:\/\/(www\.)?instagram\.com\//i, "@").replace(/\/$/, ""))}</div></div>` : ""}
-      ${qrMaps ? `<div class="fq"><img src="${qrMaps}" alt="Location" /><div class="cap"><b>موقع المصنع</b><br/>امسح للوصول</div></div>` : ""}
-    </div>` : ""}
   </div>
 
   <!-- TERMS PAGE -->
