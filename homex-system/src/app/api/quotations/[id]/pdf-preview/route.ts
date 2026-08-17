@@ -155,8 +155,9 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ id: 
   }
 
   /* watermark — brand logo (faint), perfectly centred; falls back to monogram */
+  /* fixed => repeats centred on EVERY printed page / PDF page */
   .watermark {
-    position: absolute; top: 0; inset-inline: 0; height: 1040px;
+    position: fixed; inset: 0;
     display: flex; align-items: center; justify-content: center;
     z-index: 0; pointer-events: none; user-select: none;
     font-weight: 900; line-height: 1;
