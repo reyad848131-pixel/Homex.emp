@@ -358,18 +358,18 @@ ${pdfToolbar(`/quotations/${id}`, `/api/quotations/${id}/pdf-file`)}
     <tbody>${itemRows}</tbody>
   </table>
 
-  <!-- TOTALS (+ QR codes in the free space to the left) -->
+  <!-- TOTALS: QR codes on the right, totals card on the left -->
   <div class="totals">
+    ${(qrInsta || qrMaps) ? `<div class="totals-qr">
+      ${qrInsta ? `<div class="tq"><img src="${qrInsta}" alt="Instagram" /><div class="cap"><b>إنستقرام</b><br/>${esc(companyInstagram.replace(/^https?:\/\/(www\.)?instagram\.com\//i, "@").replace(/\/$/, ""))}</div></div>` : ""}
+      ${qrMaps ? `<div class="tq"><img src="${qrMaps}" alt="Location" /><div class="cap"><b>موقع المصنع</b><br/>امسح للوصول</div></div>` : ""}
+    </div>` : ""}
     <div class="totals-card">
       <div class="tt sub"><span class="l">الإجمالي الفرعي</span><span class="v">${fmtCur(quotation.subtotal)} <span style="color:var(--muted);font-weight:600">ر.ع</span></span></div>
       <div class="tt"><span class="l">ضريبة القيمة المضافة ${(quotation.vatRate * 100).toFixed(0)}%</span><span class="v">${fmtCur(quotation.vatAmount)}</span></div>
       <div class="tt grand"><span class="l">المبلغ الإجمالي</span><span class="v">${fmtCur(quotation.total)} ر.ع</span></div>
       ${quotation.advancePct > 0 ? `<div class="tt adv"><span class="l">الدفعة المقدمة (${quotation.advancePct}%)</span><span class="v">${fmtCur(quotation.advanceAmount)} ر.ع</span></div>` : ""}
     </div>
-    ${(qrInsta || qrMaps) ? `<div class="totals-qr">
-      ${qrInsta ? `<div class="tq"><img src="${qrInsta}" alt="Instagram" /><div class="cap"><b>إنستقرام</b><br/>${esc(companyInstagram.replace(/^https?:\/\/(www\.)?instagram\.com\//i, "@").replace(/\/$/, ""))}</div></div>` : ""}
-      ${qrMaps ? `<div class="tq"><img src="${qrMaps}" alt="Location" /><div class="cap"><b>موقع المصنع</b><br/>امسح للوصول</div></div>` : ""}
-    </div>` : ""}
   </div>
 
   <!-- NOTE -->
