@@ -182,6 +182,7 @@ export default function ReportsPage() {
 
   return (
     <div>
+      <DateFixTool />
       <div className="flex items-center justify-between mb-6">
         <h1 className="text-2xl font-bold flex items-center gap-2">
           <BarChart3 className="w-6 h-6" />
@@ -431,6 +432,101 @@ export default function ReportsPage() {
           )}
         </div>
       </div>
+    </div>
+  );
+}
+
+/* ─────────────── Creation-date fix tool (admin/manager) ─────────────── */
+interface DateFixItem { id: string; quoteNumber: string; customerName: string; createdAt: string; deliveryDate: string | null; proposedDate: string; }
+
+function DateFixTool() {
+  const { t, locale, dateLocale } = useI18n();
+  const [allowed, setAllowed] = useState(false);
+  const [items, setItems] = useState<DateFixItem[] | null | undefined>(undefined);
+  const [busy, setBusy] = useState(false);
+  const [doneMsg, setDoneMsg] = useState("");
+
+  useEffect(() => {
+    fetch("/api/me").then((r) => (r.ok ? r.json() : null)).then((m) => {
+      if (m) setAllowed(m.role === "admin" || m.role === "ceo" || m.role === "manager" || (m.permissions || []).includes("trash"));
+    }).catch(() => {});
+  }, []);
+
+  const scan = () => {
+    setItems(null); setDoneMsg("");
+    fetch("/api/quotations/date-audit").then((r) => (r.ok ? r.json() : { items: [] }))
+      .then((d) => setItems(d.items || [])).catch(() => setItems([]));
+  };
+  const apply = async () => {
+    if (!confirm(t("rpDateFixConfirm"))) return;
+    setBusy(true); setDoneMsg("");
+    try {
+      const res = await fetch("/api/quotations/date-audit", { method: "POST" });
+      const d = await res.json().catch(() => ({ fixed: 0 }));
+      setDoneMsg(`${t("rpDateFixDone")} (${d.fixed})`);
+      setItems([]);
+    } finally { setBusy(false); }
+  };
+
+  const fmtD = (s: string) => new Date(s).toLocaleDateString(dateLocale);
+  if (!allowed) return null;
+
+  return (
+    <div className="bg-white dark:bg-gray-800 border border-amber-200 dark:border-amber-800/60 rounded p-5 mb-6 no-print">
+      <div className="flex items-center justify-between gap-3 flex-wrap">
+        <div>
+          <h2 className="text-sm font-bold text-amber-700 dark:text-amber-300 uppercase tracking-wider">{t("rpDateFixTitle")}</h2>
+          <p className="text-xs text-gray-400 mt-1 max-w-xl">{t("rpDateFixSub")}</p>
+        </div>
+        <div className="flex items-center gap-2 shrink-0">
+          <button onClick={scan} disabled={items === null}
+            className="px-4 h-10 rounded-lg border border-gray-200 dark:border-gray-700 text-gray-600 dark:text-gray-300 text-sm font-bold hover:bg-gray-50 dark:hover:bg-gray-700 disabled:opacity-50">
+            {items === null ? t("loadingDots") : t("rpDateFixScan")}
+          </button>
+          {items && items.length > 0 && (
+            <button onClick={apply} disabled={busy}
+              className="px-4 h-10 rounded-lg bg-amber-600 hover:bg-amber-700 text-white text-sm font-bold disabled:opacity-50">
+              {busy ? t("loadingDots") : `${t("rpDateFixApply")} (${items.length})`}
+            </button>
+          )}
+        </div>
+      </div>
+
+      {doneMsg && <p className="mt-3 text-sm font-semibold text-emerald-600">✓ {doneMsg}</p>}
+
+      {items !== undefined && items !== null && (
+        <div className="mt-4">
+          {items.length === 0 && !doneMsg ? (
+            <p className="text-sm font-semibold text-emerald-600">{t("rpDateFixNone")}</p>
+          ) : items.length > 0 ? (
+            <>
+              <p className="text-sm font-semibold text-amber-700 dark:text-amber-400 mb-3"><span className="font-mono-en">{items.length}</span> {t("rpDateFixFound")}</p>
+              <div className="overflow-x-auto rounded-lg border border-gray-100 dark:border-gray-700 max-h-72 overflow-y-auto">
+                <table className="w-full text-sm">
+                  <thead className="bg-gray-50 dark:bg-gray-700/40 text-gray-500 text-xs sticky top-0">
+                    <tr>
+                      <th className="p-2 text-right">{t("rpColOrder")}</th>
+                      <th className="p-2 text-right">{t("rpColCustomer")}</th>
+                      <th className="p-2 text-right">{t("rpColCurrent")}</th>
+                      <th className="p-2 text-right">{t("rpColProposed")}</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {items.slice(0, 300).map((it) => (
+                      <tr key={it.id} className="border-t border-gray-100 dark:border-gray-700">
+                        <td className="p-2 font-mono-en font-bold">{it.quoteNumber}</td>
+                        <td className="p-2">{displayName(it.customerName, locale)}</td>
+                        <td className="p-2 font-mono-en text-red-600">{fmtD(it.createdAt)}</td>
+                        <td className="p-2 font-mono-en text-emerald-600">{fmtD(it.proposedDate)}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </>
+          ) : null}
+        </div>
+      )}
     </div>
   );
 }

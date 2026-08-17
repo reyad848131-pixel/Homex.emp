@@ -297,6 +297,17 @@ const translations = {
   pcAttentionOnly: { ar: "المحتاجة طلب فقط", en: "Needs order only" },
 
   // ── Reports finance summary + expenses ──
+  // ── Creation-date fix tool ──
+  rpDateFixTitle: { ar: "تصحيح تواريخ الإنشاء", en: "Fix creation dates" },
+  rpDateFixSub: { ar: "بعض العروض المستوردة تاريخ إنشائها مسجّل في المستقبل (اتسجّل تاريخ التسليم بدل الإنشاء)، وهذا يخرّب ترتيب «الأحدث». افحص وصحّح.", en: "Some imported quotations have a future creation date (a delivery date stored as the creation date), which breaks the newest-first sort. Scan and fix." },
+  rpDateFixScan: { ar: "فحص", en: "Scan" },
+  rpDateFixApply: { ar: "تصحيح الآن", en: "Fix now" },
+  rpDateFixNone: { ar: "✓ ما فيه عروض بتاريخ مستقبلي — الترتيب سليم.", en: "✓ No quotations with a future date — the sort is clean." },
+  rpDateFixFound: { ar: "عرض تاريخ إنشائه مستقبلي (سيُصحَّح):", en: "quotations with a future creation date (will be fixed):" },
+  rpDateFixConfirm: { ar: "تصحيح تواريخ الإنشاء المستقبلية لهذه العروض؟", en: "Fix the future creation dates for these quotations?" },
+  rpDateFixDone: { ar: "تم تصحيح التواريخ", en: "Dates fixed" },
+  rpColCurrent: { ar: "التاريخ الحالي", en: "Current date" },
+  rpColProposed: { ar: "التاريخ الصحيح", en: "Corrected date" },
   rpFinanceTitle: { ar: "الملخّص المالي", en: "Financial summary" },
   rpTotalSales: { ar: "إجمالي المبيعات", en: "Total sales" },
   rpTotalPaid: { ar: "المبالغ المدفوعة", en: "Amounts paid" },
