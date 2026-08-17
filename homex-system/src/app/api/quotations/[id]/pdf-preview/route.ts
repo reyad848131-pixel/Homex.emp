@@ -149,13 +149,14 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ id: 
     box-shadow: 0 10px 40px rgba(0,0,0,.10); position: relative; overflow: hidden;
   }
 
-  /* watermark — brand logo (faint), falls back to the monogram letter */
+  /* watermark — brand logo (faint), perfectly centred; falls back to monogram */
   .watermark {
-    position: absolute; top: 320px; left: 50%; transform: translateX(-50%);
-    font-size: 460px; font-weight: 900; color: #26262510; line-height: 1;
+    position: absolute; top: 0; inset-inline: 0; height: 1040px;
+    display: flex; align-items: center; justify-content: center;
     z-index: 0; pointer-events: none; user-select: none;
+    font-size: 540px; font-weight: 900; color: #2626260d; line-height: 1;
   }
-  .watermark img { width: 460px; height: 460px; object-fit: contain; opacity: 0.05; }
+  .watermark img { width: 620px; height: 620px; object-fit: contain; opacity: 0.055; }
   .page > *:not(.watermark) { position: relative; z-index: 1; }
 
   /* ===== LETTERHEAD ===== */
