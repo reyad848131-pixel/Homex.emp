@@ -35,6 +35,7 @@ const nextConfig: NextConfig = {
   // dynamic segment with "*" instead.
   outputFileTracingIncludes: {
     "/api/quotations/*/pdf-file": ["./node_modules/@sparticuz/chromium/**/*"],
+    "/api/public/quote/*/pdf-file": ["./node_modules/@sparticuz/chromium/**/*"],
   },
   async headers() {
     return [

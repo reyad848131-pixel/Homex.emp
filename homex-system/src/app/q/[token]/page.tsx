@@ -139,6 +139,13 @@ export default async function PublicQuotePage({ params }: { params: Promise<{ to
             )}
             <div className="flex justify-between text-gray-500 px-1 pt-1"><span>المتبقّي</span><span className="font-mono-en">{money(remaining)}</span></div>
           </div>
+
+          {/* Download the official branded PDF straight from this page. */}
+          <a href={`/api/public/quote/${token}/pdf-file`} target="_blank" rel="noopener noreferrer"
+            className="mt-5 flex items-center justify-center gap-2 w-full bg-gray-800 hover:bg-gray-900 text-white font-bold py-3.5 rounded-xl transition-colors">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+            تحميل عرض السعر PDF
+          </a>
         </div>
 
         {q.status === "accepted" && (() => {

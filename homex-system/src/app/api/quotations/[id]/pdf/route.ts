@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { Prisma } from "@prisma/client";
 import { getAuth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { getSettings } from "@/lib/settings";
@@ -9,32 +10,30 @@ import QRCode from "qrcode";
 // save toolbar) and by headless Chromium for the WhatsApp PDF via pdf-file.
 // Palette/fonts: official Homex — Cairo + Montserrat, Iridium + sage + neutrals.
 
+// The exact shape the document builder needs. Shared so the public token route
+// can fetch and render the very same design.
+export type QuotationForPdf = Prisma.QuotationGetPayload<{
+  include: {
+    customer: true;
+    employee: { select: { id: true; name: true } };
+    items: { include: { category: true } };
+  };
+}>;
+
 function esc(str: string | null | undefined): string {
   if (!str) return "";
   return str.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
 }
 
-export async function GET(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
-  try {
-    const session = await getAuth();
-    if (!session) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-    const user = session.user as { id: string; role: string };
-    const { id } = await params;
-
-    const quotation = await prisma.quotation.findFirst({
-      where: { id },
-      include: {
-        customer: true,
-        employee: { select: { id: true, name: true } },
-        items: { include: { category: true }, orderBy: { sortOrder: "asc" } },
-      },
-    });
-    if (!quotation) return NextResponse.json({ error: "Not found" }, { status: 404 });
-    if (user.role === "sales" && quotation.employee.id !== user.id) {
-      return NextResponse.json({ error: "Forbidden" }, { status: 403 });
-    }
-
-    const s = await getSettings();
+// Builds the complete HTML of the official quotation document. Extracted so the
+// authenticated route (below) and the public token route render the EXACT same
+// design. `opts.toolbar` injects the on-screen save toolbar; the public/real-PDF
+// render passes none.
+export async function buildQuotationPdfHtml(
+  quotation: QuotationForPdf,
+  s: Record<string, string>,
+  opts: { toolbar?: string } = {},
+): Promise<string> {
     const companyName = s.company_name || "Homex";
     const companyPhone = s.company_phone || "+968 97460716";
     const companyAddress = s.company_address || "بهلاء، محافظة الداخلية، عُمان";
@@ -305,7 +304,7 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ id: 
 </style>
 </head>
 <body>
-${pdfToolbar(`/quotations/${id}`, `/api/quotations/${id}/pdf-file`)}
+${opts.toolbar || ""}
 <div class="page">
   ${wmEnabled ? `<div class="watermark" style="font-size:${Math.round(wmSize * 0.95)}px">${
     wmImage
@@ -414,9 +413,36 @@ ${pdfToolbar(`/quotations/${id}`, `/api/quotations/${id}/pdf-file`)}
 </body>
 </html>`;
 
+  return html;
+}
+
+export async function GET(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
+  try {
+    const session = await getAuth();
+    if (!session) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    const user = session.user as { id: string; role: string };
+    const { id } = await params;
+
+    const quotation = await prisma.quotation.findFirst({
+      where: { id },
+      include: {
+        customer: true,
+        employee: { select: { id: true, name: true } },
+        items: { include: { category: true }, orderBy: { sortOrder: "asc" } },
+      },
+    });
+    if (!quotation) return NextResponse.json({ error: "Not found" }, { status: 404 });
+    if (user.role === "sales" && quotation.employee.id !== user.id) {
+      return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+    }
+
+    const s = await getSettings();
+    const html = await buildQuotationPdfHtml(quotation, s, {
+      toolbar: pdfToolbar(`/quotations/${id}`, `/api/quotations/${id}/pdf-file`),
+    });
     return new NextResponse(html, { headers: { "Content-Type": "text/html; charset=utf-8" } });
   } catch (e) {
-    console.error("API error [/api/quotations/[id]/pdf-preview]:", e);
+    console.error("API error [/api/quotations/[id]/pdf]:", e);
     return NextResponse.json({ error: "Server error" }, { status: 500 });
   }
 }
