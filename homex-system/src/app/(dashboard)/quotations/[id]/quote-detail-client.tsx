@@ -330,9 +330,14 @@ export default function QuoteDetailClient({
   // (attaches an actual PDF in WhatsApp on iPad/mobile). File name = quote
   // number + customer name. Falls back to a download where file-share isn't
   // supported (most desktops).
-  const handleSendPdf = async () => {
+  const handleSendPdf = async (viaWhatsApp = false) => {
     if (!q || sendingPdf) return;
     setWaMenu(false);
+    // On desktop we can't attach a file to WhatsApp Web automatically, so the
+    // "send PDF via WhatsApp" flow opens the customer's chat (caption ready) and
+    // downloads the file to attach. Reserve the WhatsApp tab NOW, inside the
+    // click, so the popup blocker doesn't kill it after the async PDF render.
+    const waWin = viaWhatsApp ? window.open("", "_blank") : null;
     setSendingPdf(true);
     try {
       const { buildQuotationPdfBlob, preferShareSheet, sharePdf } = await import("@/lib/share-pdf");
@@ -350,15 +355,26 @@ export default function QuoteDetailClient({
       });
       if (preferShareSheet()) {
         // iPad / iPhone PWA: a direct download won't save, so present the
-        // one-tap native share sheet (Save to Files / WhatsApp…).
+        // one-tap native share sheet, which can hand the file straight to
+        // WhatsApp — no web tab needed.
+        waWin?.close();
         setPdfShare({ blob, fileName, caption });
       } else {
-        // Desktop (and Android): save the file straight to Downloads in this
-        // single click — no extra dialog.
+        // Desktop (and Android): save the file to Downloads.
         await sharePdf(blob, fileName, caption);
-        toast.success(t("pdfSaved"));
+        if (viaWhatsApp) {
+          // Open WhatsApp with the chat + caption ready; attach the downloaded
+          // file and the pre-filled text becomes its caption.
+          const waUrl = waLinkFor(q.customer.phoneCode || "+968", q.customer.phone, caption);
+          if (waWin) waWin.location.href = waUrl;
+          else window.open(waUrl, "_blank"); // reserved tab was blocked; best effort
+          toast.success(t("pdfDownloaded"));
+        } else {
+          toast.success(t("pdfSaved"));
+        }
       }
     } catch (e) {
+      waWin?.close();
       const err = e as Error;
       if (err?.name !== "AbortError") toast.error(`${t("pdfShareFailed")}: ${err?.message || ""}`.slice(0, 200));
     } finally {
@@ -516,7 +532,7 @@ export default function QuoteDetailClient({
             </button>
             {/* iOS PWAs can't save an inline PDF, so prepare the real file and
                 open the native sheet (Save to Files / Print / share). */}
-            <button onClick={handleSendPdf} disabled={sendingPdf}
+            <button onClick={() => handleSendPdf(false)} disabled={sendingPdf}
               className="flex items-center gap-2 px-4 py-2 border border-gray-200 rounded text-sm font-bold hover:bg-gray-50 disabled:opacity-50">
               {sendingPdf ? <Clock className="w-4 h-4 animate-spin" /> : <Download className="w-4 h-4" />}
               PDF
@@ -535,7 +551,7 @@ export default function QuoteDetailClient({
                       className="flex w-full items-center gap-2 px-4 py-3 text-sm font-bold text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-700 text-right">
                       <MessageCircle className="w-4 h-4 text-green-600 shrink-0" /> {t("waApprovalMsg")}
                     </button>
-                    <button onClick={handleSendPdf}
+                    <button onClick={() => handleSendPdf(true)}
                       className="flex w-full items-center gap-2 px-4 py-3 text-sm font-bold text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-700 border-t border-gray-100 dark:border-gray-700 text-right">
                       <Download className="w-4 h-4 text-green-600 shrink-0" /> {t("waSendPdf")}
                     </button>
