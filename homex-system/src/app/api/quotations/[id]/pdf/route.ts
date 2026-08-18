@@ -53,6 +53,11 @@ export async function buildQuotationPdfHtml(
     const vMap: Record<string, string> = { top: "flex-start", center: "center", bottom: "flex-end" };
     const stampJustify = hMap[s.stamp_halign || "center"] || "center";
     const stampAlign = vMap[s.stamp_valign || "bottom"] || "flex-end";
+    // Customer signature: same size/position controls as the stamp, so the two
+    // boxes can be balanced.
+    const signSize = Math.max(30, Math.min(160, parseInt(s.sign_size || "70", 10) || 70));
+    const signJustify = hMap[s.sign_halign || "center"] || "center";
+    const signAlign = vMap[s.sign_valign || "bottom"] || "flex-end";
     // Accept a bare Instagram handle or a full URL.
     const instaUrl = companyInstagram
       ? (/^https?:\/\//i.test(companyInstagram) ? companyInstagram : `https://instagram.com/${companyInstagram.replace(/^@/, "")}`)
@@ -292,11 +297,11 @@ export async function buildQuotationPdfHtml(
   @media print {
     body { background:#fff; }
     .page { margin:0; max-width:100%; box-shadow:none; }
-    /* Never split these blocks across a page break — a signature/stamp box or a
-       totals card cut in half between two pages looks unprofessional on the
-       copy the customer receives. If a block doesn't fit in the remaining space
-       it moves whole to the next page. */
-    .approve, .sign-cols, .sign-box, .totals, .totals-card, .note, .facts { break-inside: avoid; }
+    /* Only the signature/stamp row is protected from a mid-block page break (a
+       box cut in half looks unprofessional). Everything else flows naturally and
+       fills the page, so there's no wasted gap — the signatures move to a fresh
+       page only when they genuinely don't fit in the space left. */
+    .sign-cols, .sign-box { break-inside: avoid; }
     .items tr, .items thead { break-inside: avoid; }
     /* The terms list may still flow across pages if it's long. */
     .terms { break-inside: auto; }
@@ -385,7 +390,7 @@ ${opts.toolbar || ""}
     <div class="sign-cols">
       <div class="sign-box">
         <div class="t">توقيع العميل</div>
-        <div class="sign-line">${signed && quotation.signatureData ? `<img src="${quotation.signatureData}" alt="signature" />` : ``}</div>
+        <div class="sign-line" style="justify-content:${signJustify};align-items:${signAlign}">${signed && quotation.signatureData ? `<img src="${quotation.signatureData}" alt="signature" style="max-height:${signSize}px" />` : ``}</div>
         <div class="sign-meta"><span>${signed ? esc(quotation.signerName || "") : "الاسم"}</span><span>${signed ? esc(signedDate) : "التاريخ"}</span></div>
       </div>
       <div class="sign-box">
