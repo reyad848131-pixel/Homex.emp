@@ -39,39 +39,43 @@ export const DEFAULT_WA_PDF =
 {companyPhone}`;
 
 export const DEFAULT_WA_DELIVERY =
-`مرحباً {customer} 👋
-طلبكم جاهز للتوصيل.
-الموعد: {date} {time}
-نرجو تأكيد الموعد 🙏
+`مرحباً {customer} 🌿
 
-{company}
+يسرّنا إبلاغك بأن طلبك رقم *{number}* أصبح جاهزاً للتوصيل 🚚
+موعد التوصيل: *{date}* {time}
+
+نرجو تأكيد الموعد ليصلك في وقته المناسب 🙏
+*{company}*
 {companyPhone}`;
 
 export const DEFAULT_WA_COMPLETED =
-`مرحباً {customer} 👋
-يسعدنا إبلاغكم أن طلبكم {number} قد اكتمل تجهيزه ✅
-سنتواصل معكم قريباً لترتيب التوصيل.
-شكراً لثقتكم 🙏
+`مرحباً {customer} 🌿
 
-{company}
+يسعدنا إبلاغك بأن طلبك رقم *{number}* قد اكتمل تجهيزه بالكامل ✅
+وسنتواصل معك قريباً لترتيب موعد التوصيل.
+
+شكراً لثقتك، ويسعدنا خدمتك دائماً 🤍
+*{company}*
 {companyPhone}`;
 
 export const DEFAULT_WA_READY =
-`مرحباً {customer} 👋
-طلبكم {number} أصبح جاهزاً للتوصيل 🚚
-{date}
-يرجى إبلاغنا بالوقت المناسب لكم 🙏
+`مرحباً {customer} 🌿
 
-{company}
+طلبك رقم *{number}* أصبح جاهزاً للتوصيل 🚚
+يرجى إبلاغنا بالوقت المناسب لك ونحن على أتمّ الاستعداد.
+
+نسعد بخدمتك دائماً 🙏
+*{company}*
 {companyPhone}`;
 
 export const DEFAULT_WA_DELIVERED =
 `مرحباً {customer} 🌟
-تم توصيل طلبكم {number} بنجاح ✅
-نتمنى أن ينال إعجابكم، ونسعد بخدمتكم دائماً.
-شكراً لثقتكم بنا 🙏
 
-{company}
+تم توصيل طلبك رقم *{number}* بنجاح ✅
+نتمنى أن ينال إعجابك، ويسعدنا خدمتك في كل مرة.
+
+شكراً لثقتك بنا 🤍
+*{company}*
 {companyPhone}`;
 
 // Fill a template with values and clean up the result: unknown placeholders are
