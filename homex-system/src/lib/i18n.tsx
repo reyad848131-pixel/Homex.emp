@@ -770,6 +770,7 @@ const translations = {
   pdfReadyTitle: { ar: "ملف PDF جاهز", en: "PDF ready" },
   pdfReadySub: { ar: "اضغط للحفظ في الملفات أو الطباعة أو المشاركة (واتساب وغيره).", en: "Tap to save to Files, print, or share (WhatsApp, etc.)." },
   pdfShareNow: { ar: "حفظ / طباعة / مشاركة", en: "Save / print / share" },
+  pdfSaved: { ar: "تم حفظ ملف PDF في مجلد التنزيلات ✓", en: "PDF saved to your Downloads folder ✓" },
   vatNumber: { ar: "الرقم الضريبي", en: "VAT number" },
   globalSearchPlaceholder: { ar: "بحث عن عرض أو عميل...", en: "Search a quote or customer..." },
   searching: { ar: "جاري البحث...", en: "Searching..." },

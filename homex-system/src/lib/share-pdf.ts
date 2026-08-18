@@ -20,11 +20,28 @@ export async function buildQuotationPdfBlob(quotationId: string): Promise<Blob> 
   return blob;
 }
 
-// True when the browser can share an actual file (iPad/most mobiles).
+// True when the browser can share an actual file (iPad/most mobiles — and also
+// Windows Chrome/Edge, which have a system share sheet).
 export function canShareFiles(): boolean {
   try {
     const f = new File([new Blob()], "t.pdf", { type: "application/pdf" });
     return !!(navigator.canShare && navigator.canShare({ files: [f] }));
+  } catch {
+    return false;
+  }
+}
+
+// iOS/iPadOS is the one platform where a programmatic PDF download is
+// unreliable (in a standalone PWA the file just opens inline with no save
+// control), so there we route "save" through the native share sheet
+// ("Save to Files"). Everywhere else — desktop Windows/Mac, Android — a direct
+// download works and is the simpler one-click path, so we skip the sheet.
+export function preferShareSheet(): boolean {
+  try {
+    const ua = navigator.userAgent || "";
+    const isIOS = /iPad|iPhone|iPod/.test(ua) ||
+      (navigator.platform === "MacIntel" && (navigator.maxTouchPoints || 0) > 1);
+    return isIOS && canShareFiles();
   } catch {
     return false;
   }

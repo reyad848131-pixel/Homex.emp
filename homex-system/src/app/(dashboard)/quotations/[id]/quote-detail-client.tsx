@@ -335,7 +335,7 @@ export default function QuoteDetailClient({
     setWaMenu(false);
     setSendingPdf(true);
     try {
-      const { buildQuotationPdfBlob } = await import("@/lib/share-pdf");
+      const { buildQuotationPdfBlob, preferShareSheet, sharePdf } = await import("@/lib/share-pdf");
       const blob = await buildQuotationPdfBlob(q.id);
       const fileName = `${q.quoteNumber} - ${displayName(q.customer.name, locale)}`;
       // Same caption as the quote message, without the approval link.
@@ -348,8 +348,16 @@ export default function QuoteDetailClient({
         company: initialCompany.name,
         companyPhone: initialCompany.phone,
       });
-      // Ready — wait for a fresh tap to actually open the share sheet.
-      setPdfShare({ blob, fileName, caption });
+      if (preferShareSheet()) {
+        // iPad / iPhone PWA: a direct download won't save, so present the
+        // one-tap native share sheet (Save to Files / WhatsApp…).
+        setPdfShare({ blob, fileName, caption });
+      } else {
+        // Desktop (and Android): save the file straight to Downloads in this
+        // single click — no extra dialog.
+        await sharePdf(blob, fileName, caption);
+        toast.success(t("pdfSaved"));
+      }
     } catch (e) {
       const err = e as Error;
       if (err?.name !== "AbortError") toast.error(`${t("pdfShareFailed")}: ${err?.message || ""}`.slice(0, 200));
