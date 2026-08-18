@@ -184,7 +184,12 @@ export function brandCss(): string {
   .fq .cap{font-size:9.5px;color:var(--muted);margin-top:5px;letter-spacing:.3px}
   .fq .cap b{color:var(--sage-d);font-weight:700}
 
-  @media print{ body{background:#fff} .page{margin:0;max-width:100%;box-shadow:none} }
+  @media print{
+    body{background:#fff} .page{margin:0;max-width:100%;box-shadow:none}
+    /* Keep money/summary/signature blocks whole across page breaks. */
+    .totals,.totals-card,.paybar,.paybox,.note,.facts,.hero,.kvgrid,.sign-cols{break-inside:avoid}
+    .items tr,.items thead,.kv{break-inside:avoid}
+  }
 </style>`;
 }
 

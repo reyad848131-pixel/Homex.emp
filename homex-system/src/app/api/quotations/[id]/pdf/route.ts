@@ -293,7 +293,13 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ id: 
   @media print {
     body { background:#fff; }
     .page { margin:0; max-width:100%; box-shadow:none; }
-    /* Keep the terms with the signatures; break only if the content overflows. */
+    /* Never split these blocks across a page break — a signature/stamp box or a
+       totals card cut in half between two pages looks unprofessional on the
+       copy the customer receives. If a block doesn't fit in the remaining space
+       it moves whole to the next page. */
+    .approve, .sign-cols, .sign-box, .totals, .totals-card, .note, .facts { break-inside: avoid; }
+    .items tr, .items thead { break-inside: avoid; }
+    /* The terms list may still flow across pages if it's long. */
     .terms { break-inside: auto; }
   }
 </style>
