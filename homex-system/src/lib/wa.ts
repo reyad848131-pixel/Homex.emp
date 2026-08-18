@@ -8,26 +8,34 @@ export const WA_PLACEHOLDERS = [
 ] as const;
 
 export const DEFAULT_WA_QUOTE =
-`*عرض سعر - {number}*
-العميل: {customer}
-الإجمالي: {total}
-الدفعة المقدمة ({advancePct}%): {advance}
+`مرحباً {customer} 🌿
 
-للاطّلاع والموافقة:
+يسعدنا أن نضع بين يديك عرض السعر الخاص بطلبك من *{company}*.
+
+📄 *عرض سعر رقم {number}*
+• الإجمالي: *{total}*
+• الدفعة المقدمة ({advancePct}%): {advance}
+
+للاطّلاع على كامل التفاصيل والموافقة إلكترونياً:
 {link}
 
-{company}
+يسعدنا خدمتك، ونحن جاهزون لأي استفسار 🤍
+*{company}*
 {companyPhone}`;
 
-// Caption sent alongside the PDF file — same as the quote message but without
-// the online approval link (the PDF itself is the deliverable here).
+// Caption sent alongside the PDF file — same warm message but without the
+// online approval link (the attached PDF is the deliverable here).
 export const DEFAULT_WA_PDF =
-`*عرض سعر - {number}*
-العميل: {customer}
-الإجمالي: {total}
-الدفعة المقدمة ({advancePct}%): {advance}
+`مرحباً {customer} 🌿
 
-{company}
+يسعدنا أن نرفق لك عرض السعر الخاص بطلبك من *{company}* بصيغة PDF.
+
+📄 *عرض سعر رقم {number}*
+• الإجمالي: *{total}*
+• الدفعة المقدمة ({advancePct}%): {advance}
+
+يسعدنا خدمتك، ونحن جاهزون لأي استفسار 🤍
+*{company}*
 {companyPhone}`;
 
 export const DEFAULT_WA_DELIVERY =
