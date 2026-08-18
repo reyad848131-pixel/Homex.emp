@@ -24,8 +24,9 @@ describe("renderWaTemplate", () => {
 });
 
 describe("waLinkFor", () => {
-  it("builds a wa.me link with digits only and encoded text", () => {
+  it("builds a WhatsApp link with digits only and encoded text", () => {
+    // No browser in the test env → the desktop web.whatsapp.com link.
     const link = waLinkFor("+968", "9123 4567", "hi there");
-    expect(link).toBe("https://wa.me/96891234567?text=hi%20there");
+    expect(link).toBe("https://web.whatsapp.com/send?phone=96891234567&text=hi%20there");
   });
 });

@@ -88,8 +88,25 @@ export function renderWaTemplate(tpl: string, vars: Record<string, string>): str
   return out;
 }
 
-// Build a wa.me link for a phone (code + number) and a ready message.
+// Build a WhatsApp deep link for a phone (code + number) and a ready message.
+// On phones we use wa.me, which opens the native app directly. On desktop we go
+// straight to web.whatsapp.com instead: wa.me is a redirector that some
+// networks/DNS fail to resolve (DNS_PROBE_FINISHED_NXDOMAIN — "site can't be
+// reached"), whereas web.whatsapp.com is the very client the user is already
+// signed into, so it always resolves. Falls back to wa.me when there's no
+// browser (server render / tests).
 export function waLinkFor(phoneCode: string, phone: string, text: string): string {
   const num = `${phoneCode || "+968"}${phone}`.replace(/[^0-9]/g, "");
-  return `https://wa.me/${num}?text=${encodeURIComponent(text)}`;
+  const encoded = encodeURIComponent(text);
+  let isMobile = false;
+  try {
+    if (typeof navigator !== "undefined") {
+      const ua = navigator.userAgent || "";
+      isMobile = /Android|iPhone|iPad|iPod/i.test(ua) ||
+        (navigator.platform === "MacIntel" && (navigator.maxTouchPoints || 0) > 1);
+    }
+  } catch { /* ignore — default to desktop web link below */ }
+  return isMobile
+    ? `https://wa.me/${num}?text=${encoded}`
+    : `https://web.whatsapp.com/send?phone=${num}&text=${encoded}`;
 }
