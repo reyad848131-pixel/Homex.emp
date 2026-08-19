@@ -140,6 +140,7 @@ ${pdfToolbar(`/quotations/${q.id}`)}
     <div class="totals-card">
       <div class="tt sub"><span class="l">الإجمالي الفرعي</span><span class="v">${fmtCur(q.subtotal)} <span style="color:var(--muted);font-weight:600">ر.ع</span></span></div>
       <div class="tt"><span class="l">ضريبة القيمة المضافة ${(q.vatRate * 100).toFixed(0)}%</span><span class="v">${fmtCur(q.vatAmount)}</span></div>
+      ${q.discountAmount > 0 ? `<div class="tt"><span class="l">الخصم</span><span class="v" style="color:#a4442f">− ${fmtCur(q.discountAmount)}</span></div>` : ""}
       <div class="tt grand"><span class="l">المبلغ الإجمالي</span><span class="v">${fmtCur(q.total)} ر.ع</span></div>
     </div>
   </div>

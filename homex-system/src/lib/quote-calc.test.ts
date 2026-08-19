@@ -77,6 +77,40 @@ describe("computeQuoteTotals", () => {
     expect(totals.advanceAmount).toBe(0);
   });
 
+  it("subtracts the discount from the grand total (post-VAT)", () => {
+    const totals = computeQuoteTotals(
+      [{ categoryId: "c1", quantity: 1, unitPrice: 100 }],
+      0.05,
+      40,
+      { discountAmount: 5 },
+    );
+    expect(totals.subtotal).toBe(100);
+    expect(totals.vatAmount).toBe(5);
+    expect(totals.discountAmount).toBe(5);
+    expect(totals.total).toBe(100); // 100 + 5 − 5
+    expect(totals.advanceAmount).toBe(40); // 40% of 100
+  });
+
+  it("caps the discount at the gross total (never negative)", () => {
+    const totals = computeQuoteTotals([{ categoryId: "c1", unitPrice: 100 }], 0.05, 0, { discountAmount: 999 });
+    expect(totals.total).toBe(0);
+    expect(totals.discountAmount).toBe(105);
+  });
+
+  it("uses a fixed advance override and derives its percentage", () => {
+    const totals = computeQuoteTotals([{ categoryId: "c1", unitPrice: 100 }], 0.05, 40, { advanceAmount: 50 });
+    expect(totals.total).toBe(105);
+    expect(totals.advanceIsFixed).toBe(true);
+    expect(totals.advanceAmount).toBe(50);
+    expect(totals.advancePct).toBeCloseTo(47.619, 2); // 50 / 105 * 100
+  });
+
+  it("clamps a fixed advance to the total", () => {
+    const totals = computeQuoteTotals([{ categoryId: "c1", unitPrice: 100 }], 0.05, 40, { advanceAmount: 999 });
+    expect(totals.advanceAmount).toBe(105);
+    expect(totals.advancePct).toBe(100);
+  });
+
   it("includes per-line extras in the subtotal", () => {
     const totals = computeQuoteTotals([{ categoryId: "c1", quantity: 2, unitPrice: 100, extras: 25 }], 0, 0);
     expect(totals.subtotal).toBe(225); // 2*100 + 25

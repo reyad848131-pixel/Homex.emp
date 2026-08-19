@@ -51,6 +51,10 @@ export default function NewQuotationPage() {
   const [items, setItems] = useState<LineItem[]>([]);
   const [saving, setSaving] = useState(false);
   const [advancePct, setAdvancePct] = useState(15);
+  // Discount off the grand total, and an optional fixed (rounded) advance amount
+  // that overrides the percentage.
+  const [discount, setDiscount] = useState(0);
+  const [advanceOverride, setAdvanceOverride] = useState<number | null>(null);
   const [vatRate, setVatRate] = useState(0.05);
   const [notes, setNotes] = useState("");
   const [employeeName, setEmployeeName] = useState("");
@@ -89,10 +93,19 @@ export default function NewQuotationPage() {
 
   const wilayats = customer.governorate ? GOVERNORATES[customer.governorate] || [] : [];
 
+  const round3 = (n: number) => Math.round(n * 1000) / 1000;
   const subtotal = items.reduce((s, i) => s + i.lineTotal, 0);
   const vat = subtotal * vatRate;
-  const total = subtotal + vat;
-  const advance = total * (advancePct / 100);
+  const grossTotal = subtotal + vat;
+  const discountAmt = Math.min(grossTotal, Math.max(0, discount || 0));
+  const total = round3(grossTotal - discountAmt);
+  const advance = advanceOverride != null
+    ? Math.min(total, Math.max(0, advanceOverride))
+    : round3(total * (advancePct / 100));
+  const remaining = round3(total - advance);
+  // One-tap "round" helpers: drop the fils so the figure is a whole rial.
+  const roundTotalDown = () => setDiscount(round3(discountAmt + (total - Math.floor(total))));
+  const roundAdvanceDown = () => setAdvanceOverride(Math.floor(advance));
 
   const fmtCur = (n: number) => `${n.toFixed(3)} ${t("omr")}`;
 
@@ -252,6 +265,8 @@ export default function NewQuotationPage() {
           items: items.map(({ id, categoryNameAr, categoryNameEn, ...rest }) => rest),
           notes,
           advancePct,
+          discountAmount: discountAmt,
+          advanceAmount: advanceOverride,
           vatRate,
           quoteDate,
           deliveryDate,
@@ -370,7 +385,7 @@ export default function NewQuotationPage() {
             </div>
             <div>
               <label className="block text-sm font-semibold text-gray-600 mb-1.5">{t("advancePctLabel")}</label>
-              <NumField value={advancePct} onChange={setAdvancePct} min={0} max={100} int
+              <NumField value={advancePct} onChange={(v) => { setAdvancePct(v); setAdvanceOverride(null); }} min={0} max={100} int
                 className={cn(fieldBase, "font-mono-en text-center")} />
             </div>
             <div>
@@ -380,15 +395,36 @@ export default function NewQuotationPage() {
             </div>
           </div>
 
+          {/* Discount off the grand total + one-tap round */}
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+            <div>
+              <label className="block text-sm font-semibold text-gray-600 mb-1.5">{t("discountLabel")}</label>
+              <div className="flex gap-2">
+                <NumField value={discount} onChange={setDiscount} min={0}
+                  className={cn(fieldBase, "font-mono-en flex-1")} />
+                <button type="button" onClick={roundTotalDown} disabled={total <= 0}
+                  className="shrink-0 px-4 rounded-lg border border-gray-300 dark:border-gray-600 text-sm font-bold hover:bg-gray-50 dark:hover:bg-gray-700 disabled:opacity-40">{t("roundDown")}</button>
+              </div>
+              <p className="text-xs text-gray-400 mt-1">{t("roundTotalHint")}</p>
+            </div>
+          </div>
+
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
             <div>
               <label className="block text-sm font-semibold text-gray-600 mb-1.5">{t("advanceAmountLabel")}</label>
-              <input type="text" value={total > 0 ? fmtCur(advance) : `0.000 ${t("omr")}`} readOnly
-                className={cn(fieldRO, "font-mono-en")} />
+              <div className="flex gap-2">
+                <input type="text" value={total > 0 ? fmtCur(advance) : `0.000 ${t("omr")}`} readOnly
+                  className={cn(fieldRO, "font-mono-en flex-1")} />
+                <button type="button" onClick={roundAdvanceDown} disabled={total <= 0}
+                  className="shrink-0 px-4 rounded-lg border border-gray-300 dark:border-gray-600 text-sm font-bold hover:bg-gray-50 dark:hover:bg-gray-700 disabled:opacity-40">{t("roundDown")}</button>
+              </div>
+              {advanceOverride != null && (
+                <p className="text-xs text-gray-400 mt-1">{t("advanceRounded")} — <button type="button" onClick={() => setAdvanceOverride(null)} className="underline hover:text-gray-600">{t("backToPct")}</button></p>
+              )}
             </div>
             <div>
               <label className="block text-sm font-semibold text-gray-600 mb-1.5">{t("remainingAmountLabel")}</label>
-              <input type="text" value={total > 0 ? fmtCur(total - advance) : `0.000 ${t("omr")}`} readOnly
+              <input type="text" value={total > 0 ? fmtCur(remaining) : `0.000 ${t("omr")}`} readOnly
                 className={cn(fieldRO, "font-mono-en")} />
             </div>
           </div>
@@ -625,6 +661,12 @@ export default function NewQuotationPage() {
                     <span className="text-gray-500">{t("vat")} ({(vatRate * 100).toFixed(0)}%)</span>
                     <span className="font-bold font-mono-en">{fmtCur(vat)}</span>
                   </div>
+                  {discountAmt > 0 && (
+                    <div className="flex justify-between text-sm">
+                      <span className="text-gray-500">{t("discountRow")}</span>
+                      <span className="font-bold font-mono-en text-[#a4442f]">− {fmtCur(discountAmt)}</span>
+                    </div>
+                  )}
                   <div className="flex justify-between text-base pt-2 border-t border-gray-200">
                     <span className="font-bold">{t("grandTotal")}</span>
                     <span className="font-black font-mono-en text-lg">{fmtCur(total)}</span>
@@ -713,12 +755,18 @@ export default function NewQuotationPage() {
                 <span className="text-gray-400 text-sm">{t("vat")} ({(vatRate * 100).toFixed(0)}%)</span>
                 <span className="font-bold font-mono-en">{fmtCur(vat)}</span>
               </div>
+              {discountAmt > 0 && (
+                <div className="flex justify-between items-center mb-3">
+                  <span className="text-gray-400 text-sm">{t("discountRow")}</span>
+                  <span className="font-bold font-mono-en text-red-300">− {fmtCur(discountAmt)}</span>
+                </div>
+              )}
               <div className="flex justify-between items-center pt-3 border-t border-gray-700">
                 <span className="font-bold text-lg">{t("finalTotal")}</span>
                 <span className="text-2xl font-black font-mono-en">{fmtCur(total)}</span>
               </div>
               <div className="flex justify-between items-center mt-2">
-                <span className="text-gray-400 text-sm">{t("advancePayment")} ({advancePct}%)</span>
+                <span className="text-gray-400 text-sm">{t("advancePayment")}{advanceOverride == null ? ` (${advancePct}%)` : ""}</span>
                 <span className="font-bold font-mono-en text-green-400">{fmtCur(advance)}</span>
               </div>
             </div>

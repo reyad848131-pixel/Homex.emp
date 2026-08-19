@@ -51,7 +51,7 @@ export async function POST(req: NextRequest) {
     const parsed = parseBody(createQuotationSchema, await req.json());
     if (!parsed.ok) return NextResponse.json({ error: parsed.error, code: "invalid" }, { status: 400 });
 
-    const { customer: customerData, items, notes, advancePct, deliveryDate, deliveryTime } = parsed.data;
+    const { customer: customerData, items, notes, advancePct, discountAmount, advanceAmount, deliveryDate, deliveryTime } = parsed.data;
 
     // Curtain counts are unrestricted — any number is allowed (no wilayat
     // minimum enforced).
@@ -81,7 +81,10 @@ export async function POST(req: NextRequest) {
     const finalAdvancePct = advancePct ?? defaultAdvance;
 
     // Recompute every monetary field server-side — never trust client totals.
-    const totals = computeQuoteTotals(items, vatRate, finalAdvancePct);
+    const totals = computeQuoteTotals(items, vatRate, finalAdvancePct, {
+      discountAmount: discountAmount ?? 0,
+      advanceAmount: advanceAmount ?? null,
+    });
 
     const quotation = await withUniqueRetry(async () => {
       const quoteNumber = await generateQuoteNumber(prisma);
@@ -92,11 +95,15 @@ export async function POST(req: NextRequest) {
         employee: { connect: { id: user.id } },
         status: "draft",
         subtotal: totals.subtotal,
+        discountType: "amount",
+        discountValue: totals.discountAmount,
+        discountAmount: totals.discountAmount,
         vatRate: totals.vatRate,
         vatAmount: totals.vatAmount,
         total: totals.total,
         advancePct: totals.advancePct,
         advanceAmount: totals.advanceAmount,
+        advanceIsFixed: totals.advanceIsFixed,
         notes,
         deliveryDate: deliveryDate ? new Date(deliveryDate) : null,
         deliveryTime: deliveryDate ? (deliveryTime || null) : null,

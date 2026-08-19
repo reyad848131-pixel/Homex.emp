@@ -62,38 +62,70 @@ export function sanitizeItem(item: RawItem, sortOrder: number): SanitizedItem {
 export interface QuoteTotals {
   items: SanitizedItem[];
   subtotal: number;
+  discountAmount: number;
   vatRate: number;
   vatAmount: number;
   total: number;
   advancePct: number;
   advanceAmount: number;
+  advanceIsFixed: boolean;
+}
+
+export interface QuoteTotalsOpts {
+  // Discount taken off the grand total (post-VAT), in rials. Capped to the
+  // gross total so a quote can't go negative.
+  discountAmount?: number;
+  // A fixed advance figure (rials) the user rounded to directly. When provided,
+  // it overrides advancePct and the percentage is derived from it for display.
+  advanceAmount?: number | null;
 }
 
 /**
  * Recomputes every monetary field of a quotation from its raw items plus the
- * VAT rate and advance percentage. All totals are derived here — never taken
- * from the request body.
+ * VAT rate, advance percentage and optional discount / fixed advance. All
+ * totals are derived here — never taken from the request body.
+ *
+ * Money model (all transparent on the document):
+ *   subtotal  = Σ line totals
+ *   vatAmount = subtotal × vatRate
+ *   total     = subtotal + vatAmount − discountAmount
+ *   advance   = fixed override, else total × advancePct%
  */
 export function computeQuoteTotals(
   rawItems: RawItem[],
   vatRate: number,
-  advancePct: number
+  advancePct: number,
+  opts: QuoteTotalsOpts = {},
 ): QuoteTotals {
   const items = rawItems.map((it, idx) => sanitizeItem(it, idx));
   const subtotal = round3(items.reduce((sum, it) => sum + it.lineTotal, 0));
   const safeVatRate = Math.max(0, num(vatRate, 0.05));
   const vatAmount = round3(subtotal * safeVatRate);
-  const total = round3(subtotal + vatAmount);
-  const safeAdvancePct = Math.min(100, Math.max(0, num(advancePct, 15)));
-  const advanceAmount = round3(total * (safeAdvancePct / 100));
+  const grossTotal = round3(subtotal + vatAmount);
+  const discountAmount = Math.min(grossTotal, Math.max(0, round3(num(opts.discountAmount, 0))));
+  const total = round3(grossTotal - discountAmount);
+
+  let advanceIsFixed = false;
+  let advanceAmount: number;
+  let safeAdvancePct: number;
+  if (opts.advanceAmount != null && Number.isFinite(opts.advanceAmount)) {
+    advanceIsFixed = true;
+    advanceAmount = Math.min(total, Math.max(0, round3(opts.advanceAmount)));
+    safeAdvancePct = total > 0 ? round3((advanceAmount / total) * 100) : 0;
+  } else {
+    safeAdvancePct = Math.min(100, Math.max(0, num(advancePct, 15)));
+    advanceAmount = round3(total * (safeAdvancePct / 100));
+  }
 
   return {
     items,
     subtotal,
+    discountAmount,
     vatRate: safeVatRate,
     vatAmount,
     total,
     advancePct: safeAdvancePct,
     advanceAmount,
+    advanceIsFixed,
   };
 }

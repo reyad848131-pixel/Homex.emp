@@ -185,9 +185,9 @@ model Quotation {
   status        String    @default("draft")
   statusComment String?   @map("status_comment")
   subtotal      Float     @default(0)
-  // Reserved columns (discount feature removed from the UI); kept with
-  // defaults so an existing DB isn't forced into a destructive column drop.
-  discountType  String    @default("percent") @map("discount_type")
+  // Discount applied to the grand total (post-VAT). discountType/discountValue
+  // are kept for compatibility; discountAmount is the rials taken off the total.
+  discountType  String    @default("amount") @map("discount_type")
   discountValue Float     @default(0) @map("discount_value")
   discountAmount Float    @default(0) @map("discount_amount")
   vatRate       Float     @default(0.05) @map("vat_rate")
@@ -195,6 +195,9 @@ model Quotation {
   total         Float     @default(0)
   advancePct    Float     @default(15) @map("advance_pct")
   advanceAmount Float     @default(0) @map("advance_amount")
+  // When true, advanceAmount is a fixed (rounded) figure the user set directly,
+  // rather than advancePct % of the total.
+  advanceIsFixed Boolean  @default(false) @map("advance_is_fixed")
   notes         String?
   // Set when a manager edits the quotation after it was locked (invoiced /
   // paid / accepted) — records the justification and moment for the audit trail.

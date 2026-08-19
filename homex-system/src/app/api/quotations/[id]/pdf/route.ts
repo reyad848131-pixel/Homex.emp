@@ -377,8 +377,9 @@ ${opts.toolbar || ""}
     <div class="totals-card">
       <div class="tt sub"><span class="l">الإجمالي الفرعي</span><span class="v">${fmtCur(quotation.subtotal)} <span style="color:var(--muted);font-weight:600">ر.ع</span></span></div>
       <div class="tt"><span class="l">ضريبة القيمة المضافة ${(quotation.vatRate * 100).toFixed(0)}%</span><span class="v">${fmtCur(quotation.vatAmount)}</span></div>
+      ${quotation.discountAmount > 0 ? `<div class="tt"><span class="l">الخصم</span><span class="v" style="color:#a4442f">− ${fmtCur(quotation.discountAmount)}</span></div>` : ""}
       <div class="tt grand"><span class="l">المبلغ الإجمالي</span><span class="v">${fmtCur(quotation.total)} ر.ع</span></div>
-      ${quotation.advancePct > 0 ? `<div class="tt adv"><span class="l">الدفعة المقدمة (${quotation.advancePct}%)</span><span class="v">${fmtCur(quotation.advanceAmount)} ر.ع</span></div>` : ""}
+      ${quotation.advanceAmount > 0 ? `<div class="tt adv"><span class="l">الدفعة المقدمة${quotation.advanceIsFixed ? "" : ` (${Math.round(quotation.advancePct)}%)`}</span><span class="v">${fmtCur(quotation.advanceAmount)} ر.ع</span></div>` : ""}
     </div>
   </div>
 

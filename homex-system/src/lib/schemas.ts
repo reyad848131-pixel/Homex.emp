@@ -52,6 +52,10 @@ export const createQuotationSchema = z.object({
   items: z.array(quoteItemSchema).min(1, "يجب إضافة بند واحد على الأقل"),
   notes: z.string().nullish(),
   advancePct: z.coerce.number().min(0).max(100).optional(),
+  // Optional discount off the grand total, and an optional fixed (rounded)
+  // advance amount that overrides the percentage.
+  discountAmount: z.coerce.number().min(0).optional(),
+  advanceAmount: z.coerce.number().min(0).nullish(),
   deliveryDate: z.string().nullish(),
   deliveryTime: z.string().nullish(),
 });
@@ -62,6 +66,8 @@ export const updateQuotationItemsSchema = z.object({
   customerId: z.string().optional(),
   vatRate: z.coerce.number().min(0).optional(),
   advancePct: z.coerce.number().min(0).max(100).optional(),
+  discountAmount: z.coerce.number().min(0).optional(),
+  advanceAmount: z.coerce.number().min(0).nullish(),
   notes: z.string().nullish(),
   deliveryDate: z.string().nullish(),
   deliveryTime: z.string().nullish(),

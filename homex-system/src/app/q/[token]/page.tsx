@@ -133,9 +133,12 @@ export default async function PublicQuotePage({ params }: { params: Promise<{ to
           <div className="mt-5 space-y-2 text-sm">
             <div className="flex justify-between"><span className="text-gray-500">الإجمالي الفرعي</span><span className="font-mono-en font-bold">{money(q.subtotal)}</span></div>
             <div className="flex justify-between"><span className="text-gray-500">الضريبة ({Math.round((q.vatRate || 0) * 100)}%)</span><span className="font-mono-en font-bold">{money(q.vatAmount)}</span></div>
+            {q.discountAmount > 0 && (
+              <div className="flex justify-between"><span className="text-gray-500">الخصم</span><span className="font-mono-en font-bold text-[#a4442f]">− {money(q.discountAmount)}</span></div>
+            )}
             <div className="flex justify-between items-center bg-gray-800 text-white rounded-xl px-4 py-3 mt-3"><span className="font-extrabold">الإجمالي</span><span className="font-mono-en font-black text-base">{money(q.total)}</span></div>
-            {q.advancePct > 0 && (
-              <div className="flex justify-between items-center bg-[#eef0ea] text-[#6f7e62] rounded-lg px-4 py-2.5 mt-2"><span className="font-bold">الدفعة المقدمة ({q.advancePct}%)</span><span className="font-mono-en font-bold">{money(q.advanceAmount)}</span></div>
+            {q.advanceAmount > 0 && (
+              <div className="flex justify-between items-center bg-[#eef0ea] text-[#6f7e62] rounded-lg px-4 py-2.5 mt-2"><span className="font-bold">الدفعة المقدمة{q.advanceIsFixed ? "" : ` (${Math.round(q.advancePct)}%)`}</span><span className="font-mono-en font-bold">{money(q.advanceAmount)}</span></div>
             )}
             <div className="flex justify-between text-gray-500 px-1 pt-1"><span>المتبقّي</span><span className="font-mono-en">{money(remaining)}</span></div>
           </div>

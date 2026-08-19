@@ -129,7 +129,8 @@ export async function PATCH(
       const newTotals = computeQuoteTotals(
         body.items,
         body.vatRate ?? quotation.vatRate ?? 0.05,
-        body.advancePct ?? quotation.advancePct ?? 15
+        body.advancePct ?? quotation.advancePct ?? 15,
+        { discountAmount: body.discountAmount ?? 0, advanceAmount: body.advanceAmount ?? null },
       );
       if (newTotalBelowPaid(newTotals.total, paid)) {
         return NextResponse.json(
@@ -166,7 +167,8 @@ export async function PATCH(
         const totals = computeQuoteTotals(
           body.items,
           body.vatRate ?? quotation.vatRate ?? 0.05,
-          body.advancePct ?? quotation.advancePct ?? 15
+          body.advancePct ?? quotation.advancePct ?? 15,
+          { discountAmount: body.discountAmount ?? 0, advanceAmount: body.advanceAmount ?? null },
         );
 
         if (body.customer && body.customerId) {
@@ -187,11 +189,15 @@ export async function PATCH(
           where: { id },
           data: {
             subtotal: totals.subtotal,
+            discountType: "amount",
+            discountValue: totals.discountAmount,
+            discountAmount: totals.discountAmount,
             vatRate: totals.vatRate,
             vatAmount: totals.vatAmount,
             total: totals.total,
             advancePct: totals.advancePct,
             advanceAmount: totals.advanceAmount,
+            advanceIsFixed: totals.advanceIsFixed,
             notes: body.notes,
             customerId: body.customerId,
             ...(locked && isManager ? {

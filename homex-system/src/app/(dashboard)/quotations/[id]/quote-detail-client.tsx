@@ -26,9 +26,11 @@ interface QuotationDetail {
   subtotal: number;
   vatRate: number;
   vatAmount: number;
+  discountAmount: number;
   total: number;
   advancePct: number;
   advanceAmount: number;
+  advanceIsFixed: boolean;
   notes: string | null;
   managerEditNote: string | null;
   managerEditedAt: string | null;
@@ -724,12 +726,18 @@ export default function QuoteDetailClient({
                 <span className="text-gray-500">{t("vat")} ({(q.vatRate * 100).toFixed(0)}%)</span>
                 <span className="font-bold font-mono-en">{fmtCur(q.vatAmount)}</span>
               </div>
+              {q.discountAmount > 0 && (
+                <div className="flex justify-between text-sm">
+                  <span className="text-gray-500">{t("discountRow")}</span>
+                  <span className="font-bold font-mono-en text-[#a4442f]">− {fmtCur(q.discountAmount)}</span>
+                </div>
+              )}
               <div className="flex justify-between text-lg pt-2 border-t border-gray-200">
                 <span className="font-bold">{t("grandTotal")}</span>
                 <span className="font-black font-mono-en">{fmtCur(q.total)}</span>
               </div>
               <div className="flex justify-between text-sm">
-                <span className="text-gray-500">{t("advancePayment")} ({q.advancePct}%)</span>
+                <span className="text-gray-500">{t("advancePayment")}{q.advanceIsFixed ? "" : ` (${Math.round(q.advancePct)}%)`}</span>
                 <span className="font-bold font-mono-en text-green-600">{fmtCur(q.advanceAmount)}</span>
               </div>
             </div>
@@ -1137,12 +1145,13 @@ export default function QuoteDetailClient({
           <div className="w-64 space-y-1 text-sm">
             <div className="flex justify-between"><span>{t("subtotal")}</span><span className="font-bold font-mono-en">{fmtCur(q.subtotal)}</span></div>
             <div className="flex justify-between"><span>{t("tax")} ({(q.vatRate * 100).toFixed(0)}%)</span><span className="font-mono-en">{fmtCur(q.vatAmount)}</span></div>
+            {q.discountAmount > 0 && <div className="flex justify-between"><span>{t("discountRow")}</span><span className="font-mono-en text-[#a4442f]">− {fmtCur(q.discountAmount)}</span></div>}
             <div className="flex justify-between border-t-2 border-gray-900 pt-2 text-lg">
               <span className="font-bold">{t("grandTotal")}</span>
               <span className="font-black font-mono-en">{fmtCur(q.total)}</span>
             </div>
             <div className="flex justify-between text-green-700">
-              <span>{t("advancePayment")} ({q.advancePct}%)</span>
+              <span>{t("advancePayment")}{q.advanceIsFixed ? "" : ` (${Math.round(q.advancePct)}%)`}</span>
               <span className="font-bold font-mono-en">{fmtCur(q.advanceAmount)}</span>
             </div>
           </div>
