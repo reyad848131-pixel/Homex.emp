@@ -3,6 +3,7 @@ import { getAuth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { getSettings } from "@/lib/settings";
 import { roundMoney } from "@/lib/utils";
+import { boardEditorId, canAccessBoard } from "@/lib/delivery-board";
 
 export const dynamic = "force-dynamic";
 
@@ -18,6 +19,10 @@ export async function GET(req: NextRequest) {
   try {
     const session = await getAuth();
     if (!session) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    const user = session.user as { id: string; role: string };
+    if (!canAccessBoard(user.role, user.id, await boardEditorId())) {
+      return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+    }
 
     const { searchParams } = new URL(req.url);
     const m = /^(\d{4})-(\d{2})$/.exec(searchParams.get("month") || "");
