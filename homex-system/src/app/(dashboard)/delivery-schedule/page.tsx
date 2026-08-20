@@ -164,6 +164,15 @@ export default function DeliverySchedulePage() {
   // status, so the cached calendar is stale — drop it and reload.
   const refreshCalendar = useCallback(() => { calCache.current = {}; loadCalendar(); }, [loadCalendar]);
 
+  // Schedule a ready-for-delivery order onto a day from the calendar's + button.
+  // It may not be in the cached calendar yet (no date), so refresh after saving.
+  const addReadyToDay = useCallback((id: string, date: string) => {
+    fetch("/api/work-orders", {
+      method: "PATCH", headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ id, deliveryDate: date }),
+    }).then(() => { refreshCalendar(); loadStats(); }).catch(() => {});
+  }, [refreshCalendar]);
+
   useEffect(() => {
     fetch("/api/employees")
       .then((r) => (r.ok ? r.json() : []))
@@ -431,6 +440,7 @@ export default function DeliverySchedulePage() {
             onPrevMonth={() => setMonthAnchor((d) => new Date(d.getFullYear(), d.getMonth() - 1, 1))}
             onNextMonth={() => setMonthAnchor((d) => new Date(d.getFullYear(), d.getMonth() + 1, 1))}
             onReschedule={reschedule}
+            onAddReady={addReadyToDay}
             canEdit={canEdit}
           />
         )}

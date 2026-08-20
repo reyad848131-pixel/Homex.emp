@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 import { cn } from "@/lib/utils";
 import { useI18n } from "@/lib/i18n";
 import { displayName } from "@/lib/translit";
-import { Phone, MessageCircle, FileText, X, User } from "lucide-react";
+import { Phone, MessageCircle, FileText, X, User, Plus, Loader2 } from "lucide-react";
 
 // A single delivery mapped for the calendar view.
 export interface CalItem {
@@ -50,6 +50,7 @@ interface CalCtx {
   setDragId: Dispatch<SetStateAction<string | null>>;
   setOverKey: Dispatch<SetStateAction<string | null>>;
   setOpenDay: Dispatch<SetStateAction<Date | null>>;
+  setAddDay: Dispatch<SetStateAction<Date | null>>;
   onReschedule: (id: string, date: string) => void;
   itemsOn: (day: Date) => CalItem[];
 }
@@ -96,9 +97,16 @@ function DayCell({ day, ctx }: { day: Date; ctx: CalCtx }) {
       )}
     >
       <div className="flex items-center justify-between px-0.5">
-        {busy
-          ? <span className="text-[9px] font-bold text-red-600 bg-red-100 dark:bg-red-900/30 dark:text-red-300 px-1.5 py-0.5 rounded-full">{dayItems.length}</span>
-          : <span />}
+        {ctx.canEdit
+          ? <button
+              onClick={(e) => { e.stopPropagation(); ctx.setAddDay(day); }}
+              title="إضافة طلب جاهز للتوصيل"
+              className="w-5 h-5 rounded-md flex items-center justify-center text-gray-300 hover:text-white hover:bg-[#8b9a7b] transition-colors">
+              <Plus className="w-3.5 h-3.5" />
+            </button>
+          : (busy
+            ? <span className="text-[9px] font-bold text-red-600 bg-red-100 dark:bg-red-900/30 dark:text-red-300 px-1.5 py-0.5 rounded-full">{dayItems.length}</span>
+            : <span />)}
         <span className={cn("text-[14px] font-black font-mono-en leading-none", isToday ? "bg-gray-900 dark:bg-white text-white dark:text-gray-900 w-6 h-6 rounded-md flex items-center justify-center" : "text-gray-700 dark:text-gray-200")}>{day.getDate()}</span>
       </div>
       <div className="flex flex-col gap-1">
@@ -123,7 +131,7 @@ function MonthGrid({ anchor, ctx }: { anchor: Date; ctx: CalCtx }) {
 }
 
 export function DeliveryCalendar({
-  monthAnchor, items, onToday, onPrevMonth, onNextMonth, onReschedule, canEdit,
+  monthAnchor, items, onToday, onPrevMonth, onNextMonth, onReschedule, onAddReady, canEdit,
 }: {
   monthAnchor: Date;
   items: CalItem[];
@@ -131,6 +139,9 @@ export function DeliveryCalendar({
   onPrevMonth: () => void;
   onNextMonth: () => void;
   onReschedule: (id: string, date: string) => void;
+  // Schedule a ready-for-delivery order (possibly with no date yet) onto a day —
+  // needs a calendar refresh so a newly-scheduled order appears.
+  onAddReady?: (id: string, date: string) => void;
   canEdit: boolean;
 }) {
   const router = useRouter();
@@ -141,6 +152,10 @@ export function DeliveryCalendar({
   const [dragId, setDragId] = useState<string | null>(null);
   const [overKey, setOverKey] = useState<string | null>(null);
   const [openDay, setOpenDay] = useState<Date | null>(null);
+  const [addDay, setAddDay] = useState<Date | null>(null);
+  const [ready, setReady] = useState<any[] | null>(null);
+  const [readyLoading, setReadyLoading] = useState(false);
+  const [readyQ, setReadyQ] = useState("");
   const today = new Date(); today.setHours(0, 0, 0, 0);
   const waHref = (it: CalItem) => `https://wa.me/${`${it.phoneCode}${it.phone}`.replace(/\D/g, "")}`;
 
@@ -150,6 +165,21 @@ export function DeliveryCalendar({
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
   }, [openDay]);
+
+  // When the + on a day opens, load the ready-for-delivery orders once.
+  useEffect(() => {
+    if (!addDay) return;
+    setReadyQ("");
+    setReadyLoading(true);
+    fetch("/api/work-orders?workStatus=ready_for_delivery")
+      .then((r) => (r.ok ? r.json() : { quotations: [] }))
+      .then((d) => setReady(d.quotations || []))
+      .catch(() => setReady([]))
+      .finally(() => setReadyLoading(false));
+    const onKey = (e: KeyboardEvent) => { if (e.key === "Escape") setAddDay(null); };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [addDay]);
 
   // ── Finger-following carousel ──────────────────────────────────────────────
   // Three month panels (next / current / prev, LTR) sit in a track translated
@@ -221,7 +251,18 @@ export function DeliveryCalendar({
   const itemsOn = (day: Date) =>
     items.filter((it) => sameDay(new Date(it.date), day)).sort((a, b) => (a.time || "~").localeCompare(b.time || "~"));
 
-  const ctx: CalCtx = { canEdit, locale, today, dragId, overKey, setDragId, setOverKey, setOpenDay, onReschedule, itemsOn };
+  const ctx: CalCtx = { canEdit, locale, today, dragId, overKey, setDragId, setOverKey, setOpenDay, setAddDay, onReschedule, itemsOn };
+
+  const scheduleReady = (id: string) => {
+    if (!addDay) return;
+    (onAddReady || onReschedule)(id, ymd(addDay));
+    setReady((prev) => (prev ? prev.filter((q) => q.id !== id) : prev));
+  };
+  const readyFiltered = (ready || []).filter((q) => {
+    const s = readyQ.trim();
+    if (!s) return true;
+    return (q.customer?.name || "").includes(s) || (q.quoteNumber || "").includes(s) || (q.customer?.wilayat || "").includes(s);
+  });
 
   return (
     <div>
@@ -262,6 +303,42 @@ export function DeliveryCalendar({
         </div>
       </div>
       <p className="text-xs text-gray-400 text-center mt-3">{t("dcHintTap")}{canEdit ? t("dcHintReschedule") : ""}</p>
+
+      {/* Add ready-for-delivery order to a day */}
+      {addDay && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm" onClick={() => setAddDay(null)}>
+          <div className="bg-white dark:bg-gray-900 rounded-2xl shadow-2xl w-full max-w-md max-h-[82vh] flex flex-col border border-gray-200 dark:border-gray-700" onClick={(e) => e.stopPropagation()}>
+            <div className="flex items-center justify-between p-4 border-b border-gray-100 dark:border-gray-700">
+              <div>
+                <div className="text-base font-black text-gray-900 dark:text-white">{t("dcReadyOrders")}</div>
+                <div className="text-xs text-gray-400 font-semibold">{dayNames[(addDay.getDay() + 1) % 7]} · <span className="font-mono-en">{addDay.getDate()} {monthNames[addDay.getMonth()]}</span></div>
+              </div>
+              <button onClick={() => setAddDay(null)} className="w-9 h-9 rounded-full border border-gray-200 dark:border-gray-700 text-gray-500 flex items-center justify-center hover:bg-gray-100 dark:hover:bg-gray-800"><X className="w-4 h-4" /></button>
+            </div>
+            <div className="p-3 border-b border-gray-100 dark:border-gray-700">
+              <div className="flex items-center gap-2 bg-gray-50 dark:bg-gray-800 rounded-lg px-3">
+                <input value={readyQ} onChange={(e) => setReadyQ(e.target.value)} placeholder={t("dcSearchOrder")} className="flex-1 bg-transparent py-2.5 text-sm outline-none" />
+                {readyLoading && <Loader2 className="w-4 h-4 animate-spin text-gray-400" />}
+              </div>
+            </div>
+            <div className="p-3 overflow-y-auto flex flex-col gap-2">
+              {readyLoading && !ready ? (
+                <div className="flex justify-center py-8"><Loader2 className="w-6 h-6 animate-spin text-gray-300" /></div>
+              ) : readyFiltered.length === 0 ? (
+                <div className="text-center text-gray-400 py-8 text-sm">{t("dcNoReady")}</div>
+              ) : readyFiltered.map((q) => (
+                <div key={q.id} className="flex items-center gap-2 rounded-xl border border-gray-200 dark:border-gray-700 p-2.5">
+                  <div className="flex-1 min-w-0">
+                    <div className="font-bold text-gray-900 dark:text-white truncate">{displayName(q.customer?.name || "—", locale)} <span className="font-mono-en text-xs text-gray-400">{q.quoteNumber}</span></div>
+                    <div className="text-[11px] text-gray-400">{q.customer?.governorate} — {q.customer?.wilayat}{q.deliveryDate ? <span className="font-mono-en"> · {new Date(q.deliveryDate).toLocaleDateString("en-GB")}</span> : <span className="text-amber-600"> · {t("dcNoDate")}</span>}</div>
+                  </div>
+                  <button onClick={() => scheduleReady(q.id)} className="shrink-0 flex items-center gap-1 text-xs font-bold text-white bg-[#8b9a7b] hover:bg-[#6f7e62] px-3 py-1.5 rounded-lg"><Plus className="w-3.5 h-3.5" />{t("dcAddToDay")}</button>
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Day detail modal */}
       {openDay && (() => {
