@@ -16,8 +16,9 @@ export interface CalItem {
   quoteNumber: string;
   phone: string;
   phoneCode: string;
-  date: string;          // deliveryDate (ISO)
+  date: string;          // deliveryDate (ISO) — the START day
   time: string | null;   // "HH:MM" or null
+  days: number;          // consecutive days it occupies (>=1)
   driver: string;
   status: "ready" | "late" | "delivered";
 }
@@ -55,8 +56,12 @@ interface CalCtx {
   itemsOn: (day: Date) => CalItem[];
 }
 
-function Chip({ it, ctx }: { it: CalItem; ctx: CalCtx }) {
+function Chip({ it, ctx, day }: { it: CalItem; ctx: CalCtx; day: Date }) {
   const s = STATUS[it.status];
+  const span = Math.max(1, it.days || 1);
+  const start = new Date(it.date); start.setHours(0, 0, 0, 0);
+  const d0 = new Date(day); d0.setHours(0, 0, 0, 0);
+  const idx = Math.round((d0.getTime() - start.getTime()) / 86400000) + 1;
   return (
     <div
       draggable={ctx.canEdit}
@@ -72,6 +77,7 @@ function Chip({ it, ctx }: { it: CalItem; ctx: CalCtx }) {
       <div className="text-[11.5px] font-bold text-gray-800 dark:text-gray-100 flex items-center gap-1 min-w-0">
         {it.status === "delivered" && <span className="text-emerald-600 shrink-0">✔</span>}
         <span className="truncate">{displayName(it.name, ctx.locale)}</span>
+        {span > 1 && <span className="shrink-0 text-[8.5px] font-mono-en font-bold text-white bg-[#8b9a7b] rounded px-1 leading-tight">{idx}/{span}</span>}
       </div>
       <div className="text-[10px] text-gray-500 truncate">{it.wilayat}{it.time ? <span className="font-mono-en"> · {it.time}</span> : null}</div>
     </div>
@@ -110,7 +116,7 @@ function DayCell({ day, ctx }: { day: Date; ctx: CalCtx }) {
         <span className={cn("text-[14px] font-black font-mono-en leading-none", isToday ? "bg-gray-900 dark:bg-white text-white dark:text-gray-900 w-6 h-6 rounded-md flex items-center justify-center" : "text-gray-700 dark:text-gray-200")}>{day.getDate()}</span>
       </div>
       <div className="flex flex-col gap-1">
-        {dayItems.map((it) => <Chip key={it.id} it={it} ctx={ctx} />)}
+        {dayItems.map((it) => <Chip key={it.id} it={it} ctx={ctx} day={day} />)}
       </div>
     </div>
   );
@@ -139,9 +145,9 @@ export function DeliveryCalendar({
   onPrevMonth: () => void;
   onNextMonth: () => void;
   onReschedule: (id: string, date: string) => void;
-  // Schedule a ready-for-delivery order (possibly with no date yet) onto a day —
-  // needs a calendar refresh so a newly-scheduled order appears.
-  onAddReady?: (id: string, date: string) => void;
+  // Schedule a ready-for-delivery order (possibly with no date yet) onto a day
+  // for `days` consecutive days — needs a calendar refresh so it appears.
+  onAddReady?: (id: string, date: string, days: number) => void;
   canEdit: boolean;
 }) {
   const router = useRouter();
@@ -156,6 +162,7 @@ export function DeliveryCalendar({
   const [ready, setReady] = useState<any[] | null>(null);
   const [readyLoading, setReadyLoading] = useState(false);
   const [readyQ, setReadyQ] = useState("");
+  const [addDays, setAddDays] = useState(1);
   const today = new Date(); today.setHours(0, 0, 0, 0);
   const waHref = (it: CalItem) => `https://wa.me/${`${it.phoneCode}${it.phone}`.replace(/\D/g, "")}`;
 
@@ -170,6 +177,7 @@ export function DeliveryCalendar({
   useEffect(() => {
     if (!addDay) return;
     setReadyQ("");
+    setAddDays(1);
     setReadyLoading(true);
     fetch("/api/work-orders?workStatus=ready_for_delivery")
       .then((r) => (r.ok ? r.json() : { quotations: [] }))
@@ -248,14 +256,22 @@ export function DeliveryCalendar({
   const curCount = items.filter((it) => sameMonth(new Date(it.date), cur)).length;
   const monthLabel = `${monthNames[cur.getMonth()]} ${cur.getFullYear()}`;
 
+  // An order occupies `days` consecutive days starting on its date, so it shows
+  // on each day in that span (a 3-day install appears on all three).
   const itemsOn = (day: Date) =>
-    items.filter((it) => sameDay(new Date(it.date), day)).sort((a, b) => (a.time || "~").localeCompare(b.time || "~"));
+    items.filter((it) => {
+      const start = new Date(it.date); start.setHours(0, 0, 0, 0);
+      const d0 = new Date(day); d0.setHours(0, 0, 0, 0);
+      const diff = Math.round((d0.getTime() - start.getTime()) / 86400000);
+      return diff >= 0 && diff < Math.max(1, it.days || 1);
+    }).sort((a, b) => (a.time || "~").localeCompare(b.time || "~"));
 
   const ctx: CalCtx = { canEdit, locale, today, dragId, overKey, setDragId, setOverKey, setOpenDay, setAddDay, onReschedule, itemsOn };
 
   const scheduleReady = (id: string) => {
     if (!addDay) return;
-    (onAddReady || onReschedule)(id, ymd(addDay));
+    if (onAddReady) onAddReady(id, ymd(addDay), addDays);
+    else onReschedule(id, ymd(addDay));
     setReady((prev) => (prev ? prev.filter((q) => q.id !== id) : prev));
   };
   const readyFiltered = (ready || []).filter((q) => {
@@ -315,10 +331,18 @@ export function DeliveryCalendar({
               </div>
               <button onClick={() => setAddDay(null)} className="w-9 h-9 rounded-full border border-gray-200 dark:border-gray-700 text-gray-500 flex items-center justify-center hover:bg-gray-100 dark:hover:bg-gray-800"><X className="w-4 h-4" /></button>
             </div>
-            <div className="p-3 border-b border-gray-100 dark:border-gray-700">
+            <div className="p-3 border-b border-gray-100 dark:border-gray-700 space-y-2.5">
               <div className="flex items-center gap-2 bg-gray-50 dark:bg-gray-800 rounded-lg px-3">
                 <input value={readyQ} onChange={(e) => setReadyQ(e.target.value)} placeholder={t("dcSearchOrder")} className="flex-1 bg-transparent py-2.5 text-sm outline-none" />
                 {readyLoading && <Loader2 className="w-4 h-4 animate-spin text-gray-400" />}
+              </div>
+              {/* Number of consecutive days the added order occupies. */}
+              <div className="flex items-center gap-2 flex-wrap">
+                <span className="text-xs font-bold text-gray-500">{t("dcDurationDays")}:</span>
+                {[1, 2, 3, 4, 5].map((n) => (
+                  <button key={n} onClick={() => setAddDays(n)}
+                    className={cn("w-8 h-8 rounded-lg text-sm font-bold border", addDays === n ? "bg-[#8b9a7b] text-white border-[#8b9a7b]" : "border-gray-200 dark:border-gray-700 text-gray-600 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700")}>{n}</button>
+                ))}
               </div>
             </div>
             <div className="p-3 overflow-y-auto flex flex-col gap-2">

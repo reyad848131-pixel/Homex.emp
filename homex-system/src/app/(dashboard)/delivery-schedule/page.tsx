@@ -24,6 +24,7 @@ interface DeliveryQuotation {
   deliveryDate: string;
   deliveryDateEstimated?: boolean;
   deliveryTime: string | null;
+  deliveryDays?: number;
   deliveryDriver: string | null;
   deliveryLocation: string | null;
   apptConfirmed: boolean;
@@ -140,6 +141,7 @@ export default function DeliverySchedulePage() {
           phoneCode: q.customer?.phoneCode || "+968",
           date: q.deliveryDate,
           time: q.deliveryTime,
+          days: Math.max(1, q.deliveryDays || 1),
           driver: q.deliveryDriver || DEFAULT_DRIVER,
           status: cal === "delivered" ? "delivered" : late ? "late" : "ready",
         } as CalItem;
@@ -166,10 +168,10 @@ export default function DeliverySchedulePage() {
 
   // Schedule a ready-for-delivery order onto a day from the calendar's + button.
   // It may not be in the cached calendar yet (no date), so refresh after saving.
-  const addReadyToDay = useCallback((id: string, date: string) => {
+  const addReadyToDay = useCallback((id: string, date: string, days: number = 1) => {
     fetch("/api/work-orders", {
       method: "PATCH", headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ id, deliveryDate: date }),
+      body: JSON.stringify({ id, deliveryDate: date, deliveryDays: days }),
     }).then(() => { refreshCalendar(); loadStats(); }).catch(() => {});
   }, [refreshCalendar]);
 

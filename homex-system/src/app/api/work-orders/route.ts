@@ -43,7 +43,7 @@ export async function PATCH(req: NextRequest) {
 
     const body = await req.json();
     const { id, workStatus, hasOrangeAlert, hasRedAlert, workNotes, woodStatus, fabricStatus,
-      deliveryDriver, apptConfirmed, deliveryDate, deliveryTime, deliveryLocation } = body;
+      deliveryDriver, apptConfirmed, deliveryDate, deliveryTime, deliveryLocation, deliveryDays } = body;
 
     if (!id) return NextResponse.json({ error: "Missing id" }, { status: 400 });
 
@@ -76,6 +76,7 @@ export async function PATCH(req: NextRequest) {
       data.deliveryDateEstimated = false;
     }
     if (deliveryTime !== undefined) data.deliveryTime = deliveryTime || null;
+    if (deliveryDays !== undefined) data.deliveryDays = Math.max(1, Math.min(14, parseInt(String(deliveryDays), 10) || 1));
     if (woodStatus !== undefined && validMaterialStatuses.includes(woodStatus)) data.woodStatus = woodStatus;
     if (fabricStatus !== undefined && validMaterialStatuses.includes(fabricStatus)) data.fabricStatus = fabricStatus;
 

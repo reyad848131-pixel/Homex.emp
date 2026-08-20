@@ -224,6 +224,9 @@ model Quotation {
   // Optional time-of-day for the delivery (stored as "HH:MM"); pairs with
   // deliveryDate to schedule the delivery precisely.
   deliveryTime  String?   @map("delivery_time")
+  // How many consecutive days this delivery/installation occupies (starts on
+  // deliveryDate). 1 = a single day; used to span the order across the calendar.
+  deliveryDays  Int       @default(1) @map("delivery_days")
   validUntil    DateTime? @map("valid_until")
   expiryNotified Boolean  @default(false) @map("expiry_notified")
   followUpNotified Boolean @default(false) @map("follow_up_notified")

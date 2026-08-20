@@ -108,6 +108,7 @@ const translations = {
   dcAddToDay: { ar: "أضف لهذا اليوم", en: "Add to this day" },
   dcSearchOrder: { ar: "بحث بالاسم أو رقم العرض…", en: "Search by name or quote #…" },
   dcNoDate: { ar: "بدون تاريخ", en: "No date" },
+  dcDurationDays: { ar: "عدد الأيام", en: "Days" },
   dcCall: { ar: "اتصال", en: "Call" },
   dcOpenOrder: { ar: "فتح الطلب", en: "Open order" },
   dcClose: { ar: "إغلاق", en: "Close" },
