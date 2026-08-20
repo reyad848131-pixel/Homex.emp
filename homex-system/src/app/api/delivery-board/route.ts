@@ -3,7 +3,7 @@ import { getAuth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { roundMoney } from "@/lib/utils";
 import { normalizeCredential } from "@/lib/text";
-import { boardEditorId, canAccessBoard } from "@/lib/delivery-board";
+import { boardEditorId, canEditBoard } from "@/lib/delivery-board";
 
 // Monthly delivery board: a curated, one-editor organisational view of
 // deliveries. Data is pulled live from the quotations, so it always reflects
@@ -44,11 +44,9 @@ export async function GET(req: NextRequest) {
     const user = session.user as { id: string; role: string };
     const { searchParams } = new URL(req.url);
 
+    // Everyone may view; only the owner + designated editor may edit.
     const editorId = await boardEditorId();
-    if (!canAccessBoard(user.role, user.id, editorId)) {
-      return NextResponse.json({ error: "Forbidden", code: "forbidden" }, { status: 403 });
-    }
-    const canEdit = true; // anyone who can reach the board can edit it
+    const canEdit = canEditBoard(user.role, user.id, editorId);
 
     // Search mode: find quotations to add to the board (by name / number / phone).
     const q = (searchParams.get("q") || "").trim();

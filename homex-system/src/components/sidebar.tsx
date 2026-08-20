@@ -51,9 +51,6 @@ interface SidebarProps {
   // are shown only when that permission is present (dashboard has none — always
   // visible). Falls back to showing everything if not provided.
   permissions?: string[];
-  // The delivery board is private (owner + one designated editor only), so its
-  // visibility is decided server-side and passed in, not via `perm`.
-  canSeeBoard?: boolean;
 }
 
 // `perm: undefined` → always visible. Otherwise the item shows when the user's
@@ -67,7 +64,7 @@ const allItems: Array<{ href: string; labelKey: TranslationKey; icon: any; perm?
   { href: "/leads", labelKey: "leads", icon: Inbox, perm: ["customers", "quotes"] },
   { href: "/work-orders", labelKey: "workOrders", icon: Truck, perm: ["work_orders"] },
   { href: "/delivery-schedule", labelKey: "deliverySchedule", icon: CalendarClock, perm: ["deliveries", "deliveries_view"] },
-  { href: "/delivery-board", labelKey: "dbTitle", icon: CalendarCheck, perm: ["deliveries", "deliveries_view", "work_orders"] },
+  { href: "/delivery-board", labelKey: "dbTitle", icon: CalendarCheck },
   { href: "/estimated-dates", labelKey: "estimatedDatesNav", icon: CalendarClock, perm: ["work_orders"] },
   { href: "/service-requests", labelKey: "serviceRequests", icon: LifeBuoy, perm: ["deliveries"] },
   { href: "/photography", labelKey: "photography", icon: Camera, perm: ["photography"] },
@@ -84,7 +81,7 @@ const allItems: Array<{ href: string; labelKey: TranslationKey; icon: any; perm?
   { href: "/trash", labelKey: "trash", icon: Trash2, perm: ["trash"] },
 ];
 
-export function Sidebar({ user, permissions, canSeeBoard }: SidebarProps) {
+export function Sidebar({ user, permissions }: SidebarProps) {
   const pathname = usePathname();
   const router = useRouter();
   const [mobileOpen, setMobileOpen] = useState(false);
@@ -105,17 +102,14 @@ export function Sidebar({ user, permissions, canSeeBoard }: SidebarProps) {
 
   // Show an item when it needs no permission, or the user's role grants it.
   // Legacy fallback: if permissions weren't supplied, use the old role tiers.
-  const items = allItems.filter((it) => {
-    // Delivery board: private — shown only to the owner and the designated
-    // editor (decided server-side), never by role permissions.
-    if (it.href === "/delivery-board") return !!canSeeBoard;
-    if (permissions) return !it.perm || it.perm.some((p) => permissions.includes(p));
-    // Legacy fallback when permissions weren't supplied.
-    if (!it.perm) return true;
-    if (user.role === "admin") return true;
-    if (user.role === "manager") return !it.perm.some((p) => ["employees", "categories", "audit", "settings"].includes(p));
-    return it.perm.some((p) => ["quotes", "customers"].includes(p));
-  });
+  const items = permissions
+    ? allItems.filter((it) => !it.perm || it.perm.some((p) => permissions.includes(p)))
+    : allItems.filter((it) => {
+        if (!it.perm) return true;
+        if (user.role === "admin") return true;
+        if (user.role === "manager") return !it.perm.some((p) => ["employees", "categories", "audit", "settings"].includes(p));
+        return it.perm.some((p) => ["quotes", "customers"].includes(p));
+      });
 
   const content = (
     <>

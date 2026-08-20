@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { getAuth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { logAction } from "@/lib/audit";
-import { boardEditorId, canAccessBoard, DELIVERY_STATUSES } from "@/lib/delivery-board";
+import { boardEditorId, canEditBoard, DELIVERY_STATUSES } from "@/lib/delivery-board";
 
 // Edit a delivery-board entry. Only the designated board editor (or an owner)
 // may write. Changes go straight onto the quotation — the delivery date/time,
@@ -18,8 +18,8 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
     const { id } = await params;
 
     const editorId = await boardEditorId();
-    if (!canAccessBoard(user.role, user.id, editorId)) {
-      return NextResponse.json({ error: "غير مصرّح — لوحة التوصيلات مخصّصة للمالك والمحرّر المحدّد فقط", code: "forbidden" }, { status: 403 });
+    if (!canEditBoard(user.role, user.id, editorId)) {
+      return NextResponse.json({ error: "غير مصرّح — تعديل لوحة التوصيلات للمالك والمحرّر المحدّد فقط", code: "forbidden" }, { status: 403 });
     }
 
     const body = await req.json().catch(() => ({}));
