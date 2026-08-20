@@ -254,9 +254,10 @@ export default function EditQuotationPage({ params }: { params: Promise<{ id: st
     } finally { setSaving(false); }
   };
 
-  // Save just the customer info (+ delivery date) without touching items — for
-  // quick fixes like a mistyped name on a freshly imported order, where there
-  // are no items yet so the full save is blocked.
+  // Quick save of everything on this page — customer info AND the pricing on
+  // this screen (VAT, advance, discount, notes) — without touching the item
+  // list or navigating the steps. Totals are recomputed server-side from the
+  // existing items; on a locked quote the edit reason is adopted automatically.
   const saveInfoOnly = async () => {
     if (!canProceed(1)) { toast.error(t("completeCustomerFirst")); return; }
     setSaving(true); setSaveError("");
@@ -264,9 +265,17 @@ export default function EditQuotationPage({ params }: { params: Promise<{ id: st
       const res = await fetch(`/api/quotations/${id}`, {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
-        // Customer only — no items, no delivery date (so an imported estimated
-        // date isn't silently marked confirmed just by fixing a name).
-        body: JSON.stringify({ customerId, customer }),
+        // No items and no delivery date (so an imported estimated date isn't
+        // silently confirmed) — but the page's pricing/notes are saved.
+        body: JSON.stringify({
+          customerId, customer,
+          vatRate,
+          advancePct,
+          discountAmount: discountAmt,
+          advanceAmount: advanceOverride,
+          notes,
+          ...(locked && editReason.trim() ? { editReason: editReason.trim() } : {}),
+        }),
       });
       if (res.ok) {
         toast.success(t("customerInfoSaved"));

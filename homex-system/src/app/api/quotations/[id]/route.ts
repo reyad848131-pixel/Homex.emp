@@ -291,6 +291,45 @@ export async function PATCH(
       await logAction(user.id, "update", "customer", body.customerId, "customer_info_edit");
     }
 
+    // Pricing / advance / discount save WITHOUT re-sending items (the quick
+    // "save customer data" button on the edit page). Totals are recomputed
+    // server-side from the EXISTING items using the new VAT / advance / discount,
+    // so money is never trusted from the client. On a locked quote the edit
+    // reason is adopted automatically (typed one if given, else a default) so
+    // there's still an audit trail without the extra step.
+    const hasPricing = !body.items && (body.vatRate !== undefined || body.advancePct !== undefined || body.discountAmount !== undefined || body.advanceAmount !== undefined);
+    if (hasPricing) {
+      const existing = await prisma.quoteItem.findMany({ where: { quotationId: id }, orderBy: { sortOrder: "asc" } });
+      const totals = computeQuoteTotals(
+        existing.map((it) => ({ categoryId: it.categoryId, quantity: it.quantity, unitPrice: it.unitPrice, extras: it.extras, description: it.description })),
+        body.vatRate ?? quotation.vatRate ?? 0.05,
+        body.advancePct ?? quotation.advancePct ?? 15,
+        {
+          discountAmount: body.discountAmount ?? quotation.discountAmount ?? 0,
+          advanceAmount: body.advanceAmount !== undefined ? body.advanceAmount : (quotation.advanceIsFixed ? quotation.advanceAmount : null),
+        },
+      );
+      if (locked) {
+        const paidAgg = await prisma.payment.aggregate({ where: { quotationId: id }, _sum: { amount: true } });
+        const paid = roundMoney(paidAgg._sum.amount || 0);
+        if (newTotalBelowPaid(totals.total, paid)) {
+          return NextResponse.json({ error: `الإجمالي الجديد (${roundMoney(totals.total).toFixed(3)}) أقل من المبلغ المدفوع (${paid.toFixed(3)})`, code: "below_paid" }, { status: 400 });
+        }
+        allowedFields.managerEditNote = (typeof body.editReason === "string" && body.editReason.trim()) ? body.editReason.trim() : "تعديل الأسعار من صفحة بيانات الزبون";
+        allowedFields.managerEditedAt = new Date();
+      }
+      allowedFields.subtotal = totals.subtotal;
+      allowedFields.discountType = "amount";
+      allowedFields.discountValue = totals.discountAmount;
+      allowedFields.discountAmount = totals.discountAmount;
+      allowedFields.vatRate = totals.vatRate;
+      allowedFields.vatAmount = totals.vatAmount;
+      allowedFields.total = totals.total;
+      allowedFields.advancePct = totals.advancePct;
+      allowedFields.advanceAmount = totals.advanceAmount;
+      allowedFields.advanceIsFixed = totals.advanceIsFixed;
+    }
+
     const updated = await prisma.quotation.update({
       where: { id },
       data: allowedFields,

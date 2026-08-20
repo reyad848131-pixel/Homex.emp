@@ -90,8 +90,8 @@ const translations = {
 
   // ── Customer-only quick save (edit page) ──
   saveCustomerInfo: { ar: "حفظ بيانات الزبون", en: "Save customer info" },
-  saveCustomerHint: { ar: "عدّلت بيانات الزبون فقط؟ احفظها مباشرة بدون إضافة بنود.", en: "Changed only the customer's info? Save it directly without adding items." },
-  customerInfoSaved: { ar: "تم حفظ بيانات الزبون", en: "Customer info saved" },
+  saveCustomerHint: { ar: "يحفظ بيانات الزبون + الدفعة والخصم والضريبة والملاحظات مباشرة — بدون تعديل البنود ولا زيارة باقي الأقسام.", en: "Saves the customer info + advance, discount, VAT and notes directly — without touching items or visiting the other steps." },
+  customerInfoSaved: { ar: "تم الحفظ", en: "Saved" },
   completeCustomerFirst: { ar: "أكمل بيانات الزبون أولاً", en: "Complete the customer's info first" },
 
   // ── Delivery calendar ──
