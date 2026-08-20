@@ -29,7 +29,36 @@ export default function DeliveryBoardClient() {
   const [results, setResults] = useState<SearchResult[]>([]);
   const [searching, setSearching] = useState(false);
 
+  // Bulk import (editor only)
+  const [importOpen, setImportOpen] = useState(false);
+  const [importYear, setImportYear] = useState(() => new Date().getFullYear());
+  const [importRows, setImportRows] = useState<any[] | null>(null);
+  const [importSummary, setImportSummary] = useState<any>(null);
+  const [importBusy, setImportBusy] = useState(false);
+
   const fmt = (n: number) => (n || 0).toFixed(3);
+
+  const runImport = async (file: File) => {
+    setImportBusy(true); setImportRows(null); setImportSummary(null);
+    try {
+      const fd = new FormData(); fd.append("file", file); fd.append("year", String(importYear));
+      const res = await fetch("/api/delivery-board/import", { method: "POST", body: fd });
+      const d = await res.json().catch(() => ({}));
+      if (!res.ok) { toast.error(d.error || "تعذّر قراءة الملف"); return; }
+      setImportRows(d.rows || []); setImportSummary(d.summary || null);
+    } finally { setImportBusy(false); }
+  };
+  const applyImport = async () => {
+    const entries = (importRows || []).filter((r) => r.status === "matched" && r.id).map((r) => ({ id: r.id, date: r.date }));
+    if (entries.length === 0) { toast.error("لا يوجد صفوف مطابقة"); return; }
+    setImportBusy(true);
+    try {
+      const res = await fetch("/api/delivery-board/apply", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ entries }) });
+      const d = await res.json().catch(() => ({}));
+      if (res.ok) { toast.success(`${t("dbImported")}: ${d.applied}`); setImportOpen(false); setImportRows(null); load(); }
+      else toast.error(d.error || "تعذّر");
+    } finally { setImportBusy(false); }
+  };
 
   const load = useCallback(() => {
     setLoading(true);
@@ -104,6 +133,10 @@ export default function DeliveryBoardClient() {
         <Truck className="w-6 h-6 text-[#6f7e62]" />
         <h1 className="text-xl font-black text-gray-900 dark:text-gray-100">{t("dbTitle")}</h1>
         <div className="flex-1" />
+        {canEdit && (
+          <button onClick={() => { setImportOpen(true); setImportRows(null); setImportSummary(null); }}
+            className="flex items-center gap-1.5 px-3 py-2 border border-gray-200 dark:border-gray-700 rounded-lg text-sm font-bold hover:bg-gray-50 dark:hover:bg-gray-700"><FileSpreadsheet className="w-4 h-4" /> {t("dbImport")}</button>
+        )}
         <a href={`/api/delivery-board/print?month=${month}`} target="_blank" rel="noopener noreferrer"
           className="flex items-center gap-1.5 px-3 py-2 border border-gray-200 dark:border-gray-700 rounded-lg text-sm font-bold hover:bg-gray-50 dark:hover:bg-gray-700"><Printer className="w-4 h-4" /> {t("print")}</a>
         <a href={`/api/delivery-board/export?month=${month}`}
@@ -225,6 +258,74 @@ export default function DeliveryBoardClient() {
               })}
             </tbody>
           </table>
+        </div>
+      )}
+
+      {/* Bulk import modal */}
+      {importOpen && (
+        <div className="fixed inset-0 z-50 flex items-start sm:items-center justify-center p-4 bg-black/50 overflow-y-auto" onClick={() => setImportOpen(false)}>
+          <div className="bg-white dark:bg-gray-800 rounded-2xl w-full max-w-2xl shadow-xl my-8" onClick={(e) => e.stopPropagation()}>
+            <div className="flex items-center justify-between p-5 border-b border-gray-100 dark:border-gray-700">
+              <h2 className="font-bold text-lg">{t("dbImportTitle")}</h2>
+              <button onClick={() => setImportOpen(false)} className="text-gray-400 hover:text-gray-600"><X className="w-5 h-5" /></button>
+            </div>
+            <div className="p-5 space-y-4">
+              <p className="text-xs text-gray-500">{t("dbImportHint")}</p>
+              <div className="flex flex-wrap items-end gap-3">
+                <label className="text-sm">
+                  <span className="block text-[11px] font-bold text-gray-500 mb-1">{t("dbYear")}</span>
+                  <input type="number" value={importYear} onChange={(e) => setImportYear(parseInt(e.target.value) || importYear)} className="field font-mono-en w-28" />
+                </label>
+                <label className="flex items-center gap-2 px-4 h-10 rounded-lg bg-[#8b9a7b] hover:bg-[#6f7e62] text-white font-bold text-sm cursor-pointer">
+                  <FileSpreadsheet className="w-4 h-4" /> {t("dbChooseFile")}
+                  <input type="file" accept=".xlsx,.xls" className="hidden" onChange={(e) => { const f = e.target.files?.[0]; if (f) runImport(f); e.currentTarget.value = ""; }} />
+                </label>
+                {importBusy && <Loader2 className="w-5 h-5 animate-spin text-gray-400" />}
+              </div>
+
+              {importSummary && (
+                <div className="flex flex-wrap gap-2 text-xs font-bold">
+                  <span className="px-2 py-1 rounded bg-[#eef0ea] text-[#4a5740]">{t("dbMatched")}: {importSummary.matched}</span>
+                  {importSummary.ambiguous > 0 && <span className="px-2 py-1 rounded bg-amber-50 text-amber-700">{t("dbAmbiguous")}: {importSummary.ambiguous}</span>}
+                  {importSummary.notfound > 0 && <span className="px-2 py-1 rounded bg-red-50 text-red-600">{t("dbNotFound")}: {importSummary.notfound}</span>}
+                  {importSummary.nodate > 0 && <span className="px-2 py-1 rounded bg-gray-100 text-gray-500">{t("dbNoDate")}: {importSummary.nodate}</span>}
+                </div>
+              )}
+
+              {importRows && (
+                <div className="max-h-72 overflow-y-auto border border-gray-100 dark:border-gray-700 rounded-lg">
+                  <table className="w-full text-xs">
+                    <thead className="bg-gray-50 dark:bg-gray-900/40 sticky top-0"><tr>
+                      <th className="p-2 text-right">المُدخل</th><th className="p-2 text-right">العميل</th><th className="p-2">الكوتيشن</th><th className="p-2">التاريخ</th><th className="p-2">الحالة</th>
+                    </tr></thead>
+                    <tbody>
+                      {importRows.map((r, i) => (
+                        <tr key={i} className="border-t border-gray-50 dark:border-gray-700/50">
+                          <td className="p-2 text-right text-gray-500">{r.input}</td>
+                          <td className="p-2 text-right font-semibold">{r.customerName || "—"}</td>
+                          <td className="p-2 text-center font-mono-en text-gray-400">{r.quoteNumber || "—"}</td>
+                          <td className="p-2 text-center font-mono-en">{r.date || "—"}</td>
+                          <td className="p-2 text-center">
+                            <span className={`px-1.5 py-0.5 rounded font-bold ${r.status === "matched" ? "bg-[#eef0ea] text-[#4a5740]" : r.status === "ambiguous" ? "bg-amber-50 text-amber-700" : r.status === "nodate" ? "bg-gray-100 text-gray-500" : "bg-red-50 text-red-600"}`}>
+                              {r.status === "matched" ? t("dbMatched") : r.status === "ambiguous" ? t("dbAmbiguous") : r.status === "nodate" ? t("dbNoDate") : t("dbNotFound")}
+                            </span>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              )}
+            </div>
+            {importRows && importSummary?.matched > 0 && (
+              <div className="p-5 border-t border-gray-100 dark:border-gray-700">
+                <button onClick={applyImport} disabled={importBusy}
+                  className="w-full h-11 rounded-xl bg-gray-900 dark:bg-white dark:text-gray-900 text-white font-bold flex items-center justify-center gap-2 disabled:opacity-50">
+                  {importBusy ? <Loader2 className="w-5 h-5 animate-spin" /> : null} {t("dbApplyBtn")} ({importSummary.matched})
+                </button>
+              </div>
+            )}
+          </div>
         </div>
       )}
     </div>
