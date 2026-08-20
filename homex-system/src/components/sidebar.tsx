@@ -7,6 +7,7 @@ import { cn } from "@/lib/utils";
 import { useI18n, type TranslationKey } from "@/lib/i18n";
 import {
   LayoutDashboard,
+  CalendarCheck,
   FileText,
   FilePlus,
   Users,
@@ -63,6 +64,7 @@ const allItems: Array<{ href: string; labelKey: TranslationKey; icon: any; perm?
   { href: "/leads", labelKey: "leads", icon: Inbox, perm: ["customers", "quotes"] },
   { href: "/work-orders", labelKey: "workOrders", icon: Truck, perm: ["work_orders"] },
   { href: "/delivery-schedule", labelKey: "deliverySchedule", icon: CalendarClock, perm: ["deliveries", "deliveries_view"] },
+  { href: "/delivery-board", labelKey: "dbTitle", icon: CalendarCheck, perm: ["deliveries", "deliveries_view", "work_orders"] },
   { href: "/estimated-dates", labelKey: "estimatedDatesNav", icon: CalendarClock, perm: ["work_orders"] },
   { href: "/service-requests", labelKey: "serviceRequests", icon: LifeBuoy, perm: ["deliveries"] },
   { href: "/photography", labelKey: "photography", icon: Camera, perm: ["photography"] },

@@ -25,6 +25,7 @@ export default function SettingsPage() {
 
   type BackupRow = { id: string; size: number; source: string; createdAt: string };
   const [backups, setBackups] = useState<BackupRow[]>([]);
+  const [employees, setEmployees] = useState<{ id: string; name: string }[]>([]);
 
   const loadBackups = () => {
     fetch("/api/backup?list=true")
@@ -36,6 +37,7 @@ export default function SettingsPage() {
   useEffect(() => {
     fetch("/api/settings").then((r) => r.json()).then(setSettings);
     fetch("/api/logo").then((r) => r.json()).then((d) => setLogo(d.logo || ""));
+    fetch("/api/employees").then((r) => (r.ok ? r.json() : [])).then((d) => setEmployees(Array.isArray(d) ? d : (d.employees || []))).catch(() => {});
     loadBackups();
   }, []);
 
@@ -389,6 +391,16 @@ export default function SettingsPage() {
               </select>
             </div>
           </div>
+        </div>
+
+        {/* Delivery board editor */}
+        <div className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded p-6">
+          <h2 className="text-base font-bold mb-1">{t("dbEditorSetting")}</h2>
+          <p className="text-xs text-gray-400 mb-4">{t("dbEditorHint")}</p>
+          <select value={settings.delivery_board_editor || ""} onChange={(e) => update("delivery_board_editor", e.target.value)} className="field max-w-sm">
+            <option value="">{t("dbNoOne")}</option>
+            {employees.map((emp) => <option key={emp.id} value={emp.id}>{emp.name}</option>)}
+          </select>
         </div>
 
         {/* WhatsApp message templates */}

@@ -228,6 +228,11 @@ model Quotation {
   expiryNotified Boolean  @default(false) @map("expiry_notified")
   followUpNotified Boolean @default(false) @map("follow_up_notified")
   workStatus    String?   @map("work_status")
+  // Monthly delivery board (a curated, one-editor organizational view). The
+  // board reuses deliveryDate/deliveryTime/deliveryLocation/workNotes so edits
+  // here sync everywhere; these two are board-specific.
+  onDeliveryBoard Boolean @default(false) @map("on_delivery_board")
+  deliveryStatus String?  @map("delivery_status") // booked | contacted | delivered | notified
   // Delivery-schedule fields: assigned driver/team name and whether the
   // delivery appointment was confirmed with the customer.
   deliveryDriver String?  @map("delivery_driver")
@@ -293,6 +298,7 @@ model Quotation {
   // (workStatus + installDate), the quotations list (status + createdAt), and
   // a salesperson's own quotations newest-first (employeeId + createdAt).
   @@index([workStatus, deliveryDate])
+  @@index([onDeliveryBoard, deliveryDate])
   @@index([workStatus, installDate])
   @@index([photoStatus])
   @@index([importBatch])
