@@ -29,6 +29,12 @@ export default function DeliveryBoardClient() {
   const [results, setResults] = useState<SearchResult[]>([]);
   const [searching, setSearching] = useState(false);
 
+  // Per-day inline "add a customer to this date"
+  const [addDate, setAddDate] = useState<string | null>(null);
+  const [addQ, setAddQ] = useState("");
+  const [addResults, setAddResults] = useState<SearchResult[]>([]);
+  const [addSearching, setAddSearching] = useState(false);
+
   // Bulk import (editor only)
   const [importOpen, setImportOpen] = useState(false);
   const [importYear, setImportYear] = useState(() => new Date().getFullYear());
@@ -83,12 +89,27 @@ export default function DeliveryBoardClient() {
     return () => clearTimeout(h);
   }, [q]);
 
+  useEffect(() => {
+    if (!addQ.trim()) { setAddResults([]); return; }
+    const h = setTimeout(() => {
+      setAddSearching(true);
+      fetch(`/api/delivery-board?q=${encodeURIComponent(addQ.trim())}`)
+        .then((r) => (r.ok ? r.json() : null))
+        .then((d) => setAddResults(d?.results || []))
+        .catch(() => setAddResults([]))
+        .finally(() => setAddSearching(false));
+    }, 300);
+    return () => clearTimeout(h);
+  }, [addQ]);
+
   const patch = async (id: string, body: Record<string, unknown>) => {
     const res = await fetch(`/api/delivery-board/${id}`, { method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) });
     if (res.ok) { load(); return true; }
     const e = await res.json().catch(() => ({})); toast.error(e.error || "تعذّر الحفظ"); return false;
   };
   const addToBoard = async (id: string) => { if (await patch(id, { onDeliveryBoard: true })) { setQ(""); setResults([]); toast.success(t("dbAdded")); } };
+  const openAdd = (iso: string) => { setAddDate(iso); setAddQ(""); setAddResults([]); };
+  const addToDate = async (id: string, iso: string) => { if (await patch(id, { onDeliveryBoard: true, deliveryDate: iso })) { setAddDate(null); setAddQ(""); setAddResults([]); toast.success(t("dbAdded")); } };
   const removeFromBoard = async (id: string) => { if (confirm(t("dbRemoveConfirm"))) await patch(id, { onDeliveryBoard: false }); };
 
   const shiftMonth = (delta: number) => { const [y, m] = month.split("-").map(Number); const d = new Date(y, m - 1 + delta, 1); setMonth(`${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`); };
@@ -108,10 +129,11 @@ export default function DeliveryBoardClient() {
     const days = new Date(y, mo, 0).getDate();
     const byDay: Record<number, Entry[]> = {};
     for (const e of scheduled) { if (!e.deliveryDate) continue; const d = new Date(e.deliveryDate); if (d.getFullYear() === y && d.getMonth() === mo - 1) (byDay[d.getDate()] ||= []).push(e); }
-    const out: { day: number; weekday: string; dateLabel: string; list: Entry[] }[] = [];
+    const out: { day: number; iso: string; weekday: string; dateLabel: string; list: Entry[] }[] = [];
     for (let day = 1; day <= days; day++) {
       const d = new Date(y, mo - 1, day);
-      out.push({ day, weekday: d.toLocaleDateString(dateLocale, { weekday: "long" }), dateLabel: `${day}/${mo}`, list: byDay[day] || [] });
+      const iso = `${y}-${String(mo).padStart(2, "0")}-${String(day).padStart(2, "0")}`;
+      out.push({ day, iso, weekday: d.toLocaleDateString(dateLocale, { weekday: "long" }), dateLabel: `${day}/${mo}`, list: byDay[day] || [] });
     }
     return out;
   }, [month, scheduled, dateLocale]);
@@ -219,21 +241,32 @@ export default function DeliveryBoardClient() {
               {rows.map((r) => {
                 const span = Math.max(1, r.list.length);
                 const isWeekend = r.weekday.includes("جمعة");
+                const totalCols = canEdit ? 10 : 9;
+                const out: any[] = [];
+
                 if (r.list.length === 0) {
-                  return (
-                    <tr key={r.day} className={isWeekend ? "bg-gray-50/60 dark:bg-gray-900/20" : ""}>
+                  out.push(
+                    <tr key={r.iso} className={isWeekend ? "bg-gray-50/60 dark:bg-gray-900/20" : ""}>
                       <td className={`${td} font-bold text-gray-500`}>{r.weekday}</td>
                       <td className={`${td} font-mono-en text-gray-400`}>{r.dateLabel}</td>
-                      <td className={td} colSpan={canEdit ? 8 : 7}></td>
+                      <td className={`${td} text-right ${canEdit ? "cursor-pointer group" : ""}`} colSpan={canEdit ? 8 : 7}
+                        onClick={canEdit ? () => openAdd(r.iso) : undefined}>
+                        {canEdit && (
+                          <span className="text-xs text-gray-300 group-hover:text-[#6f7e62] inline-flex items-center gap-1"><Plus className="w-3.5 h-3.5" />{t("dbAdd")}</span>
+                        )}
+                      </td>
                     </tr>
                   );
-                }
-                return r.list.map((e, i) => {
-                  const pay = payInfo(e);
-                  return (
+                } else {
+                  r.list.forEach((e, i) => {
+                    const pay = payInfo(e);
+                    out.push(
                     <tr key={e.id} className={isWeekend ? "bg-gray-50/60 dark:bg-gray-900/20" : ""}>
                       {i === 0 && <td className={`${td} font-bold text-gray-600 dark:text-gray-300`} rowSpan={span}>{r.weekday}</td>}
-                      {i === 0 && <td className={`${td} font-mono-en text-gray-500`} rowSpan={span}>{r.dateLabel}</td>}
+                      {i === 0 && <td className={`${td} font-mono-en text-gray-500`} rowSpan={span}>
+                        {r.dateLabel}
+                        {canEdit && <button onClick={() => openAdd(r.iso)} title={t("dbAdd")} className="block mx-auto mt-1 text-gray-300 hover:text-[#6f7e62]"><Plus className="w-3.5 h-3.5" /></button>}
+                      </td>}
                       <td className={`${td} text-right`}>
                         <a href={`/quotations/${e.id}`} className="font-bold text-gray-900 dark:text-gray-100 hover:text-[#6f7e62]">{e.customerName}</a>
                         <span className="block text-[11px] text-gray-400 font-mono-en">{e.quoteNumber}{e.deliveryTime ? ` · ${e.deliveryTime}` : ""}</span>
@@ -253,8 +286,42 @@ export default function DeliveryBoardClient() {
                       </td>
                       {canEdit && <td className={td}><button onClick={() => removeFromBoard(e.id)} className="text-red-300 hover:text-red-500" title={t("dbRemove")}><X className="w-4 h-4" /></button></td>}
                     </tr>
+                    );
+                  });
+                }
+
+                if (canEdit && addDate === r.iso) {
+                  out.push(
+                    <tr key={r.iso + "-add"}>
+                      <td colSpan={totalCols} className="p-2 bg-[#f6f6f3] dark:bg-gray-900/40">
+                        <div className="flex items-center gap-2">
+                          <Search className="w-4 h-4 text-gray-400 shrink-0" />
+                          <input autoFocus value={addQ} onChange={(e) => setAddQ(e.target.value)} placeholder={t("dbSearchAdd")}
+                            className="flex-1 bg-transparent text-sm outline-none py-1" />
+                          {addSearching && <Loader2 className="w-4 h-4 animate-spin text-gray-400" />}
+                          <button onClick={() => setAddDate(null)} className="text-gray-400 hover:text-gray-600"><X className="w-4 h-4" /></button>
+                        </div>
+                        {addResults.length > 0 && (
+                          <div className="mt-1 max-h-52 overflow-y-auto rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800">
+                            {addResults.map((rr) => (
+                              <div key={rr.id} className="flex items-center gap-2 px-2 py-1.5 hover:bg-gray-50 dark:hover:bg-gray-700 border-b border-gray-50 dark:border-gray-700/50 last:border-0">
+                                <div className="flex-1 min-w-0 text-right">
+                                  <span className="font-bold">{rr.customerName}</span> <span className="font-mono-en text-xs text-gray-400">{rr.quoteNumber}</span>
+                                  <span className="block text-[11px] text-gray-400 font-mono-en">{rr.phoneCode} {rr.phone} · {fmt(rr.total)} ر.ع</span>
+                                </div>
+                                {rr.onDeliveryBoard && (rr.deliveryDate || "").slice(0, 10) === r.iso
+                                  ? <span className="text-[11px] font-bold text-[#6f7e62] px-2">{t("dbAdded")} ✓</span>
+                                  : <button onClick={() => addToDate(rr.id, r.iso)} className="shrink-0 flex items-center gap-1 text-xs font-bold text-white bg-[#8b9a7b] hover:bg-[#6f7e62] px-2.5 py-1 rounded-lg"><Plus className="w-3.5 h-3.5" />{t("dbAdd")}</button>}
+                              </div>
+                            ))}
+                          </div>
+                        )}
+                      </td>
+                    </tr>
                   );
-                });
+                }
+
+                return out;
               })}
             </tbody>
           </table>
