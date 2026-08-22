@@ -1157,9 +1157,10 @@ const translations = {
   dbNoOne: { ar: "لا أحد (المالك فقط يعدّل)", en: "No one (only the owner edits)" },
   // Price-edit permission
   peSetting: { ar: "صلاحية تعديل الأسعار", en: "Price-edit permission" },
-  peHint: { ar: "أنت (المالك) فقط والأشخاص المحدّدون هنا يقدرون يغيّرون سعر البند أو يدخلون سعراً يدوياً. أي أحد غيرهم — حتى المدراء — يشتغل بالأسعار المعتمدة فقط ولا يقدر يعدّلها.", en: "You (the owner) and the people selected here are the only ones who can change an item's price or enter a manual price. Everyone else — managers included — works with the approved prices only and cannot change them." },
-  peNoOne: { ar: "لا أحد (المالك فقط)", en: "No one (only the owner)" },
+  peHint: { ar: "رياض وسالم مسموح لهم دائماً (مثبّتون). اختر أي موظفين آخرين تعطيهم صلاحية تغيير سعر البند أو إدخال سعر يدوي. أي أحد غيرهم — حتى المدراء والـ CEO — يشتغل بالأسعار المعتمدة فقط ولا يقدر يعدّلها.", en: "Riyad and Salim are always allowed (pinned). Tick any other employees you want to let change an item's price or enter a manual price. Everyone else — managers and the CEO included — works with the approved prices only and cannot change them." },
+  peNoOne: { ar: "لا يوجد موظفون", en: "No employees" },
   peLocked: { ar: "السعر معتمد — لا يمكن تعديله", en: "Approved price — cannot be changed" },
+  peOwnerBadge: { ar: "مثبّت", en: "Always" },
   dbImport: { ar: "استيراد", en: "Import" },
   dbImportTitle: { ar: "استيراد عملاء للّوحة", en: "Import customers to the board" },
   dbImportHint: { ar: "ارفع ملف Excel فيه عمود (رقم الكوتيشن أو الهاتف أو اسم العميل) وعمود (التاريخ). نطابق كل صف مع كوتيشنه ونعرض معاينة قبل الإضافة.", en: "Upload an Excel with a column for (quote #, phone, or customer name) and a (date) column. Each row is matched to its quotation and previewed before adding." },

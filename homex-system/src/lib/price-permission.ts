@@ -15,13 +15,18 @@ export async function priceEditorIds(): Promise<string[]> {
   return raw.split(",").map((s) => s.trim()).filter(Boolean);
 }
 
-// Who may set or change prices in a quotation. Only the owner (CEO) and the
-// employees explicitly designated in Settings — managers and system admins are
-// NOT included automatically; the owner adds them to the list if wanted.
-// Everyone else works with the approved (auto-computed) prices only, and may
-// not enter a manual custom price either.
-export function canEditPrice(role: string, userId: string, editorIds: string[]): boolean {
-  return role === "ceo" || editorIds.includes(userId);
+// The two permanent price owners — Riyad and Salim — identified by their civil
+// id (login id), so the permission never depends on their role. They can always
+// set / change prices and can't be removed from the settings UI. Everyone else,
+// the CEO account included, is restricted unless designated in Settings.
+export const PRICE_OWNER_CIVIL_IDS = ["2016", "1389"];
+
+// Who may set or change prices in a quotation: the two permanent owners (by
+// civil id) plus the employees explicitly designated in Settings. Everyone else
+// — managers, system admins and even the CEO — works with the approved
+// (auto-computed) prices only and may not enter a manual custom price either.
+export function canEditPrice(civilId: string, userId: string, editorIds: string[]): boolean {
+  return PRICE_OWNER_CIVIL_IDS.includes(civilId) || editorIds.includes(userId);
 }
 
 // Server guard mirroring the UI lock: when a user is NOT allowed to edit prices,

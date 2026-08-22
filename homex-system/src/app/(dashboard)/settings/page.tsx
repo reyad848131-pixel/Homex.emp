@@ -4,6 +4,7 @@ import { useState, useEffect, useRef } from "react";
 import { Settings, Save, Building2, Download, Database, FileSpreadsheet, ScrollText, Upload, Trash2, ImageIcon, ShieldCheck, Smartphone, MessageCircle } from "lucide-react";
 import { DEFAULT_WA_QUOTE, DEFAULT_WA_DELIVERY, DEFAULT_WA_COMPLETED, DEFAULT_WA_READY, DEFAULT_WA_DELIVERED } from "@/lib/wa";
 import { useI18n } from "@/lib/i18n";
+import { cn } from "@/lib/utils";
 import { AppIconEditor } from "@/components/app-icon-editor";
 
 export default function SettingsPage() {
@@ -25,7 +26,7 @@ export default function SettingsPage() {
 
   type BackupRow = { id: string; size: number; source: string; createdAt: string };
   const [backups, setBackups] = useState<BackupRow[]>([]);
-  const [employees, setEmployees] = useState<{ id: string; name: string }[]>([]);
+  const [employees, setEmployees] = useState<{ id: string; name: string; civilId?: string }[]>([]);
 
   const loadBackups = () => {
     fetch("/api/backup?list=true")
@@ -408,6 +409,9 @@ export default function SettingsPage() {
           <h2 className="text-base font-bold mb-1">{t("peSetting")}</h2>
           <p className="text-xs text-gray-400 mb-4">{t("peHint")}</p>
           {(() => {
+            // Permanent owners (Riyad / Salim by civil id) are always allowed and
+            // can't be unchecked — kept in sync with PRICE_OWNER_CIVIL_IDS.
+            const OWNER_CIVIL_IDS = ["2016", "1389"];
             let ids: string[] = [];
             try { const a = JSON.parse(settings.price_edit_editors || "[]"); if (Array.isArray(a)) ids = a.filter((x) => typeof x === "string"); } catch { /* ignore */ }
             const toggle = (id: string) => {
@@ -417,12 +421,16 @@ export default function SettingsPage() {
             if (employees.length === 0) return <p className="text-sm text-gray-400">{t("peNoOne")}</p>;
             return (
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 max-w-xl">
-                {employees.map((emp) => (
-                  <label key={emp.id} className="flex items-center gap-2 px-3 py-2 rounded-lg border border-gray-200 dark:border-gray-700 cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-700/50">
-                    <input type="checkbox" checked={ids.includes(emp.id)} onChange={() => toggle(emp.id)} className="rounded" />
-                    <span className="text-sm font-semibold">{emp.name}</span>
-                  </label>
-                ))}
+                {employees.map((emp) => {
+                  const owner = OWNER_CIVIL_IDS.includes(emp.civilId || "");
+                  return (
+                    <label key={emp.id} className={cn("flex items-center gap-2 px-3 py-2 rounded-lg border", owner ? "border-emerald-300 dark:border-emerald-700 bg-emerald-50 dark:bg-emerald-900/20 cursor-default" : "border-gray-200 dark:border-gray-700 cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-700/50")}>
+                      <input type="checkbox" checked={owner || ids.includes(emp.id)} disabled={owner} onChange={() => !owner && toggle(emp.id)} className="rounded" />
+                      <span className="text-sm font-semibold">{emp.name}</span>
+                      {owner && <span className="ms-auto text-[10px] font-bold text-emerald-600 dark:text-emerald-400">{t("peOwnerBadge")}</span>}
+                    </label>
+                  );
+                })}
               </div>
             );
           })()}

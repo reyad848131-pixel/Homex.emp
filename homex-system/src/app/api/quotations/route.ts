@@ -59,7 +59,7 @@ export async function POST(req: NextRequest) {
     // override or manual-priced item, mirroring the locked UI.
     {
       const editorIds = await priceEditorIds().catch(() => [] as string[]);
-      if (!canEditPrice(user.role, user.id, editorIds)) {
+      if (!canEditPrice(user.civilId, user.id, editorIds)) {
         const cats = await prisma.category.findMany({ select: { id: true, pricingType: true, basePrice: true } });
         const catById = new Map(cats.map((c) => [c.id, { pricingType: c.pricingType, basePrice: c.basePrice || 0 }]));
         if (hasPriceOverride(items as any, catById)) {
