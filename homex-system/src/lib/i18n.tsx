@@ -1155,6 +1155,11 @@ const translations = {
   dbEditorSetting: { ar: "محرّر لوحة التوصيلات", en: "Delivery board editor" },
   dbEditorHint: { ar: "الجميع يشاهد لوحة التوصيلات. هذا الشخص (بالإضافة للمالك) هو الوحيد المخوّل بالتعديل — إضافة/حذف، تغيير التاريخ والحالة والملاحظات. الباقي مشاهدة فقط.", en: "Everyone can view the delivery board. This person (plus the owner) is the only one allowed to edit it — add/remove, change dates, status and notes. Everyone else is view-only." },
   dbNoOne: { ar: "لا أحد (المالك فقط يعدّل)", en: "No one (only the owner edits)" },
+  // Price-edit permission
+  peSetting: { ar: "صلاحية تعديل الأسعار", en: "Price-edit permission" },
+  peHint: { ar: "أنت (المالك) فقط والأشخاص المحدّدون هنا يقدرون يغيّرون سعر البند أو يدخلون سعراً يدوياً. أي أحد غيرهم — حتى المدراء — يشتغل بالأسعار المعتمدة فقط ولا يقدر يعدّلها.", en: "You (the owner) and the people selected here are the only ones who can change an item's price or enter a manual price. Everyone else — managers included — works with the approved prices only and cannot change them." },
+  peNoOne: { ar: "لا أحد (المالك فقط)", en: "No one (only the owner)" },
+  peLocked: { ar: "السعر معتمد — لا يمكن تعديله", en: "Approved price — cannot be changed" },
   dbImport: { ar: "استيراد", en: "Import" },
   dbImportTitle: { ar: "استيراد عملاء للّوحة", en: "Import customers to the board" },
   dbImportHint: { ar: "ارفع ملف Excel فيه عمود (رقم الكوتيشن أو الهاتف أو اسم العميل) وعمود (التاريخ). نطابق كل صف مع كوتيشنه ونعرض معاينة قبل الإضافة.", en: "Upload an Excel with a column for (quote #, phone, or customer name) and a (date) column. Each row is matched to its quotation and previewed before adding." },

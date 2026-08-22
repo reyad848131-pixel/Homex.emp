@@ -8,6 +8,7 @@ import { computeQuoteTotals } from "@/lib/quote-calc";
 import { parseBody, createQuotationSchema } from "@/lib/schemas";
 import { getQuotationsList } from "@/lib/quotations-list";
 import { userCan } from "@/lib/permissions";
+import { priceEditorIds, canEditPrice, hasPriceOverride } from "@/lib/price-permission";
 
 export async function GET(req: NextRequest) {
   try {
@@ -52,6 +53,20 @@ export async function POST(req: NextRequest) {
     if (!parsed.ok) return NextResponse.json({ error: parsed.error, code: "invalid" }, { status: 400 });
 
     const { customer: customerData, items, notes, advancePct, discountAmount, advanceAmount, deliveryDate, deliveryTime } = parsed.data;
+
+    // Price-edit permission: users who aren't the owner or a designated price
+    // editor may only submit approved (auto-computed) prices — reject any manual
+    // override or manual-priced item, mirroring the locked UI.
+    {
+      const editorIds = await priceEditorIds().catch(() => [] as string[]);
+      if (!canEditPrice(user.role, user.id, editorIds)) {
+        const cats = await prisma.category.findMany({ select: { id: true, pricingType: true, basePrice: true } });
+        const catById = new Map(cats.map((c) => [c.id, { pricingType: c.pricingType, basePrice: c.basePrice || 0 }]));
+        if (hasPriceOverride(items as any, catById)) {
+          return NextResponse.json({ error: "غير مصرّح بتعديل الأسعار — الأسعار المعتمدة فقط", code: "price_locked" }, { status: 403 });
+        }
+      }
+    }
 
     // Curtain counts are unrestricted — any number is allowed (no wilayat
     // minimum enforced).

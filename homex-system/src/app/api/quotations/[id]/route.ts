@@ -9,6 +9,7 @@ import { roundMoney } from "@/lib/utils";
 import { getSetting } from "@/lib/settings";
 import { isFinanciallyLocked, newTotalBelowPaid, canSetStatus } from "@/lib/quote-rules";
 import { userCan } from "@/lib/permissions";
+import { priceEditorIds, canEditPrice, hasPriceOverride } from "@/lib/price-permission";
 
 const VALID_STATUSES = ["draft", "pending", "approved", "declined", "revised"];
 
@@ -156,6 +157,18 @@ export async function PATCH(
     if (body.items) {
       const parsed = parseBody(updateQuotationItemsSchema, body);
       if (!parsed.ok) return NextResponse.json({ error: parsed.error, code: "invalid" }, { status: 400 });
+
+      // Price-edit permission: non-editors may only submit approved prices.
+      {
+        const editorIds = await priceEditorIds().catch(() => [] as string[]);
+        if (!canEditPrice(user.role, user.id, editorIds)) {
+          const cats = await prisma.category.findMany({ select: { id: true, pricingType: true, basePrice: true } });
+          const catById = new Map(cats.map((c) => [c.id, { pricingType: c.pricingType, basePrice: c.basePrice || 0 }]));
+          if (hasPriceOverride(body.items as any, catById)) {
+            return NextResponse.json({ error: "غير مصرّح بتعديل الأسعار — الأسعار المعتمدة فقط", code: "price_locked" }, { status: 403 });
+          }
+        }
+      }
 
       // Curtain counts are unrestricted on edit too — any number is allowed
       // (no wilayat minimum enforced).

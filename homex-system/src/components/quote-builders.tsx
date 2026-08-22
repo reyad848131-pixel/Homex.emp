@@ -4,9 +4,32 @@
 // (quotations/new) and edit (quotations/[id]/edit) pages. Extracted here so the
 // pricing logic lives in one place instead of being duplicated across two files.
 
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, createContext, useContext } from "react";
 import { useI18n } from "@/lib/i18n";
 import { cn } from "@/lib/utils";
+
+// Whether the current user may set / change item prices. Defaults to true so
+// existing call sites are unaffected; the quotation pages wrap the builder in a
+// provider carrying the real permission (owner + designated employees only).
+// When false, the price-override button and every manual price field lock.
+const PriceEditContext = createContext(true);
+export function PriceEditProvider({ can, children }: { can: boolean; children: React.ReactNode }) {
+  return <PriceEditContext.Provider value={can}>{children}</PriceEditContext.Provider>;
+}
+export function useCanEditPrice() {
+  return useContext(PriceEditContext);
+}
+
+// A read-only "approved price — cannot be changed" pill shown in place of a
+// price input for users without the price-edit permission.
+function LockedPricePill() {
+  const { t } = useI18n();
+  return (
+    <span className="inline-flex items-center gap-1 px-2.5 h-8 rounded-lg border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800 text-xs font-bold text-gray-400">
+      🔒 {t("peLocked")}
+    </span>
+  );
+}
 
 export interface Category {
   id: string;
@@ -221,11 +244,15 @@ function UnitPriceOverride({
   rateLabel?: string;
 }) {
   const { t } = useI18n();
+  const canEdit = useCanEditPrice();
   const [open, setOpen] = useState(false);
   const [mode, setMode] = useState<"rate" | "total">(priceOverride != null ? "total" : "rate");
   const [rateDraft, setRateDraft] = useState<string>(String(rateOverride ?? defaultRate));
   const [totalDraft, setTotalDraft] = useState<string>(String(priceOverride ?? computedPrice.toFixed(3)));
   const active = rateOverride != null || priceOverride != null;
+
+  // No price-edit permission → the calculated price is shown but can't be changed.
+  if (!canEdit) return <LockedPricePill />;
 
   useEffect(() => {
     if (open) {
@@ -373,6 +400,7 @@ function useResetFlatOnChange(signature: number, priceOverride: number | null, c
 
 function KitchenBuilder({ config, governorate, wilayat, onUpdate, initial }: { config: any; governorate: string; wilayat: string; onUpdate: BuilderUpdate; initial?: BuilderInitial }) {
   const { t } = useI18n();
+  const canEditPrice = useCanEditPrice();
   const [length, setLength] = useState(initial?.length ?? 4);
   const [unitType, setUnitType] = useState<"1unit" | "2unit" | "3unit">(initial?.unitType ?? "2unit");
   const [island, setIsland] = useState<"none" | "small" | "large">(initial?.island ?? "none");
@@ -441,8 +469,12 @@ function KitchenBuilder({ config, governorate, wilayat, onUpdate, initial }: { c
       {isManual && (
         <div>
           <label className="block text-sm font-semibold text-gray-600 mb-1.5">{t("pricePerMeterLabel")} (OMR)</label>
-          <NumField value={manualBase} onChange={setManualBase} min={1} int
-            className="field font-mono-en text-center" />
+          {canEditPrice ? (
+            <NumField value={manualBase} onChange={setManualBase} min={1} int
+              className="field font-mono-en text-center" />
+          ) : (
+            <div className="field font-mono-en text-center flex items-center justify-center gap-1.5 text-gray-400 select-none">🔒 {t("peLocked")}</div>
+          )}
           <p className="text-xs text-amber-600 mt-1">{governorate}: {t("manualPriceHint")}</p>
         </div>
       )}
@@ -489,6 +521,7 @@ function KitchenBuilder({ config, governorate, wilayat, onUpdate, initial }: { c
 // + porcelain surcharge). No unit toggle or island.
 function PantryBuilder({ config, governorate, wilayat, onUpdate, initial }: { config: any; governorate: string; wilayat: string; onUpdate: BuilderUpdate; initial?: BuilderInitial }) {
   const { t } = useI18n();
+  const canEditPrice = useCanEditPrice();
   const [length, setLength] = useState(initial?.length ?? 3);
   const [manualBase, setManualBase] = useState(initial?.manualBase ?? 130);
   const [note, setNote] = useState<string>(initial?.note ?? "");
@@ -535,8 +568,12 @@ function PantryBuilder({ config, governorate, wilayat, onUpdate, initial }: { co
       {isManual && (
         <div>
           <label className="block text-sm font-semibold text-gray-600 mb-1.5">{t("pricePerMeterLabel")} (OMR)</label>
-          <NumField value={manualBase} onChange={setManualBase} min={1} int
-            className="field font-mono-en text-center" />
+          {canEditPrice ? (
+            <NumField value={manualBase} onChange={setManualBase} min={1} int
+              className="field font-mono-en text-center" />
+          ) : (
+            <div className="field font-mono-en text-center flex items-center justify-center gap-1.5 text-gray-400 select-none">🔒 {t("peLocked")}</div>
+          )}
           <p className="text-xs text-amber-600 mt-1">{governorate}: {t("manualPriceHint")}</p>
         </div>
       )}
@@ -1499,6 +1536,7 @@ function TVTableBuilder({ config, onUpdate, initial }: { config: any; onUpdate: 
 
 function GenericBuilder({ cat, onUpdate, initial }: { cat: Category; onUpdate: BuilderUpdate; initial?: BuilderInitial }) {
   const { t } = useI18n();
+  const canEditPrice = useCanEditPrice();
   const [desc, setDesc] = useState(initial?.desc ?? "");
   const [price, setPrice] = useState(initial?.price ?? (cat.basePrice || 0));
   const [width, setWidth] = useState(initial?.width ?? 1);
@@ -1545,8 +1583,12 @@ function GenericBuilder({ cat, onUpdate, initial }: { cat: Category; onUpdate: B
       {cat.pricingType === "manual" ? (
         <div>
           <label className="block text-sm font-semibold text-gray-600 mb-1.5">{t("priceOMR")}</label>
-          <NumField value={price} onChange={setPrice} min={0}
-            className="field font-mono-en text-center" />
+          {canEditPrice ? (
+            <NumField value={price} onChange={setPrice} min={0}
+              className="field font-mono-en text-center" />
+          ) : (
+            <div className="field font-mono-en text-center flex items-center justify-center gap-1.5 text-gray-400 select-none">🔒 {t("peLocked")}</div>
+          )}
         </div>
       ) : (
         <div className="grid grid-cols-2 gap-4">
@@ -1673,12 +1715,14 @@ export function CategoryBuilder({
   wilayat,
   onUpdate,
   initial,
+  canEditPrice = true,
 }: {
   cat: Category;
   governorate: string;
   wilayat: string;
   onUpdate: BuilderUpdate;
   initial?: BuilderInitial;
+  canEditPrice?: boolean;
 }) {
   const config = cat.config
     ? typeof cat.config === "string"
@@ -1686,6 +1730,7 @@ export function CategoryBuilder({
       : cat.config
     : {};
 
+  const inner = (() => {
   switch (cat.id) {
     case "kitchens":
       return <KitchenBuilder config={config} governorate={governorate} wilayat={wilayat} onUpdate={onUpdate} initial={initial} />;
@@ -1716,4 +1761,7 @@ export function CategoryBuilder({
     default:
       return <GenericBuilder cat={cat} onUpdate={onUpdate} initial={initial} />;
   }
+  })();
+
+  return <PriceEditProvider can={canEditPrice}>{inner}</PriceEditProvider>;
 }

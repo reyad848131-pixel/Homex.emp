@@ -58,6 +58,8 @@ export default function NewQuotationPage() {
   const [vatRate, setVatRate] = useState(0.05);
   const [notes, setNotes] = useState("");
   const [employeeName, setEmployeeName] = useState("");
+  // Only the owner + designated employees may set / change prices (from /api/me).
+  const [canEditPrice, setCanEditPrice] = useState(true);
   const [quoteDate, setQuoteDate] = useState(() => new Date().toISOString().split("T")[0]);
   const [deliveryDate, setDeliveryDate] = useState("");
   const [deliveryTime, setDeliveryTime] = useState("");
@@ -79,7 +81,7 @@ export default function NewQuotationPage() {
 
   useEffect(() => {
     fetch("/api/categories").then((r) => r.ok ? r.json() : []).then(setCategories).catch(() => {});
-    fetch("/api/me").then((r) => r.ok ? r.json() : {}).then((u: any) => setEmployeeName(u?.name || "")).catch(() => {});
+    fetch("/api/me").then((r) => r.ok ? r.json() : {}).then((u: any) => { setEmployeeName(u?.name || ""); setCanEditPrice(u?.canEditPrice !== false); }).catch(() => {});
     fetch("/api/settings").then((r) => r.ok ? r.json() : {}).then((s: any) => {
       // Don't override values already restored from a saved draft.
       if (draftAppliedRef.current) return;
@@ -303,6 +305,7 @@ export default function NewQuotationPage() {
         wilayat={customer.wilayat}
         onUpdate={handleBuilderUpdate}
         initial={builderInitial}
+        canEditPrice={canEditPrice}
       />
     );
   };

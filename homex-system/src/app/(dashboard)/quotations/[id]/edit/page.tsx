@@ -70,10 +70,11 @@ export default function EditQuotationPage({ params }: { params: Promise<{ id: st
   const [locked, setLocked] = useState(false);
   const [editReason, setEditReason] = useState("");
   const [isManager, setIsManager] = useState(true);
+  const [canEditPrice, setCanEditPrice] = useState(true);
 
   useEffect(() => {
     fetch("/api/me").then((r) => (r.ok ? r.json() : null)).then((m) => {
-      if (m) setIsManager(m.role === "admin" || m.role === "ceo" || m.role === "manager");
+      if (m) { setIsManager(m.role === "admin" || m.role === "ceo" || m.role === "manager"); setCanEditPrice(m.canEditPrice !== false); }
     }).catch(() => {});
   }, []);
   // Reference total from an Excel import — shown so the user can add items until
@@ -298,6 +299,7 @@ export default function EditQuotationPage({ params }: { params: Promise<{ id: st
         wilayat={customer.wilayat}
         onUpdate={handleBuilderUpdate}
         initial={builderInitial}
+        canEditPrice={canEditPrice}
       />
     );
   };
