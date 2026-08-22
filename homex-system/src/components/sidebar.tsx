@@ -30,6 +30,7 @@ import {
   Trash2,
   FileSpreadsheet,
   HardHat,
+  Blinds,
 } from "lucide-react";
 import { useState, useEffect } from "react";
 import { DarkModeToggle } from "@/components/dark-mode-toggle";
@@ -65,6 +66,7 @@ const allItems: Array<{ href: string; labelKey: TranslationKey; icon: any; perm?
   { href: "/work-orders", labelKey: "workOrders", icon: Truck, perm: ["work_orders"] },
   { href: "/delivery-schedule", labelKey: "deliverySchedule", icon: CalendarClock, perm: ["deliveries", "deliveries_view"] },
   { href: "/delivery-board", labelKey: "dbTitle", icon: CalendarCheck },
+  { href: "/curtain-orders", labelKey: "coTitle", icon: Blinds },
   { href: "/estimated-dates", labelKey: "estimatedDatesNav", icon: CalendarClock, perm: ["work_orders"] },
   { href: "/service-requests", labelKey: "serviceRequests", icon: LifeBuoy, perm: ["deliveries"] },
   { href: "/photography", labelKey: "photography", icon: Camera, perm: ["photography"] },
