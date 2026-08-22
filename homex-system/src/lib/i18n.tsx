@@ -1161,6 +1161,9 @@ const translations = {
   peNoOne: { ar: "لا يوجد موظفون", en: "No employees" },
   peLocked: { ar: "السعر معتمد — لا يمكن تعديله", en: "Approved price — cannot be changed" },
   peOwnerBadge: { ar: "مثبّت", en: "Always" },
+  // Settings access
+  saSetting: { ar: "من يمكنه الوصول للإعدادات", en: "Who can access Settings" },
+  saHint: { ar: "رياض وسالم فقط يفتحون الإعدادات (مثبّتون). اختر أي موظفين آخرين تعطيهم صلاحية الوصول للإعدادات. أي أحد غيرهم — حتى المدراء والـ CEO — ما يشوف صفحة الإعدادات إطلاقاً.", en: "Only Riyad and Salim can open Settings (pinned). Tick any other employees you want to grant access. Everyone else — managers and the CEO included — cannot see the Settings page at all." },
   dbImport: { ar: "استيراد", en: "Import" },
   dbImportTitle: { ar: "استيراد عملاء للّوحة", en: "Import customers to the board" },
   dbImportHint: { ar: "ارفع ملف Excel فيه عمود (رقم الكوتيشن أو الهاتف أو اسم العميل) وعمود (التاريخ). نطابق كل صف مع كوتيشنه ونعرض معاينة قبل الإضافة.", en: "Upload an Excel with a column for (quote #, phone, or customer name) and a (date) column. Each row is matched to its quotation and previewed before adding." },

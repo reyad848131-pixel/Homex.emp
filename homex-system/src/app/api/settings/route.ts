@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { getAuth } from "@/lib/auth";
 import { getSettings, setSetting } from "@/lib/settings";
 import { logAction } from "@/lib/audit";
+import { settingsAccessIds, canAccessSettings } from "@/lib/settings-access";
 
 export async function GET() {
   try {
@@ -32,8 +33,9 @@ export async function PUT(req: NextRequest) {
     if (!session) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
     const user = session.user as any;
-    if (user.role !== "admin" && user.role !== "ceo") {
-      return NextResponse.json({ error: "Admin only" }, { status: 403 });
+    const editorIds = await settingsAccessIds().catch(() => [] as string[]);
+    if (!canAccessSettings(user.civilId, user.id, editorIds)) {
+      return NextResponse.json({ error: "غير مصرّح بالوصول للإعدادات", code: "forbidden" }, { status: 403 });
     }
 
     const body = await req.json();

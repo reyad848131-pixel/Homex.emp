@@ -48,6 +48,7 @@ const ROLE_KEYS: Record<string, TranslationKey> = {
 
 interface SidebarProps {
   user: { name: string; role: string; civilId: string };
+  canAccessSettings?: boolean;
   // Permission keys the current user's role grants. Menu items with a `perm`
   // are shown only when that permission is present (dashboard has none — always
   // visible). Falls back to showing everything if not provided.
@@ -83,7 +84,7 @@ const allItems: Array<{ href: string; labelKey: TranslationKey; icon: any; perm?
   { href: "/trash", labelKey: "trash", icon: Trash2, perm: ["trash"] },
 ];
 
-export function Sidebar({ user, permissions }: SidebarProps) {
+export function Sidebar({ user, permissions, canAccessSettings }: SidebarProps) {
   const pathname = usePathname();
   const router = useRouter();
   const [mobileOpen, setMobileOpen] = useState(false);
@@ -104,14 +105,17 @@ export function Sidebar({ user, permissions }: SidebarProps) {
 
   // Show an item when it needs no permission, or the user's role grants it.
   // Legacy fallback: if permissions weren't supplied, use the old role tiers.
-  const items = permissions
+  const items = (permissions
     ? allItems.filter((it) => !it.perm || it.perm.some((p) => permissions.includes(p)))
     : allItems.filter((it) => {
         if (!it.perm) return true;
         if (user.role === "admin") return true;
         if (user.role === "manager") return !it.perm.some((p) => ["employees", "categories", "audit", "settings"].includes(p));
         return it.perm.some((p) => ["quotes", "customers"].includes(p));
-      });
+      })
+  // Settings is owner-only (Riyad / Salim + designated), decided server-side —
+  // never by the generic "settings" permission.
+  ).filter((it) => it.href !== "/settings" || canAccessSettings);
 
   const content = (
     <>
