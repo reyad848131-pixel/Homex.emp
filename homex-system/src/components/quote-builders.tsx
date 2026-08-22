@@ -97,6 +97,39 @@ export function NumField({
   );
 }
 
+// A number field you can BOTH type into and step with − / + buttons. Keeps the
+// full typing behaviour of NumField (paste, decimals, Arabic digits) but flanks
+// it with a minus and plus so the quantity can be nudged up/down by hand.
+// Clamps to [min, max]; `step` defaults to 1.
+export function NumStepper({
+  value, onChange, min, max, int, step = 1, className, fieldClassName,
+}: {
+  value: number;
+  onChange: (n: number) => void;
+  min?: number; max?: number; int?: boolean; step?: number;
+  className?: string; fieldClassName?: string;
+}) {
+  const clamp = (n: number) => {
+    if (min != null) n = Math.max(min, n);
+    if (max != null) n = Math.min(max, n);
+    return int ? Math.round(n) : Math.round(n * 1000) / 1000;
+  };
+  const btn =
+    "w-10 shrink-0 rounded-lg border border-gray-200 dark:border-gray-600 text-gray-700 dark:text-gray-200 font-black text-xl leading-none flex items-center justify-center hover:bg-gray-100 dark:hover:bg-gray-800 active:scale-95 transition disabled:opacity-30 disabled:pointer-events-none";
+  return (
+    <div className={cn("flex items-stretch gap-1.5", className)}>
+      <button type="button" aria-label="−" className={btn}
+        onClick={() => onChange(clamp(value - step))}
+        disabled={min != null && value <= min}>−</button>
+      <NumField value={value} onChange={(n) => onChange(clamp(n))} min={min} max={max} int={int}
+        className={cn("flex-1 min-w-0", fieldClassName)} />
+      <button type="button" aria-label="+" className={btn}
+        onClick={() => onChange(clamp(value + step))}
+        disabled={max != null && value >= max}>+</button>
+    </div>
+  );
+}
+
 // A compact, theme-aware counter row for whole-number quantities (glass doors,
 // LED points, curtains…). Label + optional hint on one side, − / + around the
 // value on the other, and an optional line total. One shared look everywhere so

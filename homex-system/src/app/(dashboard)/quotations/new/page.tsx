@@ -7,7 +7,7 @@ import { cn } from "@/lib/utils";
 import { useI18n } from "@/lib/i18n";
 import { normalizePhone } from "@/lib/text";
 import { useToast } from "@/components/toast";
-import { CategoryBuilder, NumField, type Category } from "@/components/quote-builders";
+import { CategoryBuilder, NumField, NumStepper, type Category } from "@/components/quote-builders";
 import {
   ChefHat, DoorOpen, Lamp, Blinds, Sparkles, BedDouble,
   Layers, Tv, Monitor, Sofa, WashingMachine, Plus, Refrigerator, Coffee, Columns2, BookOpen,
@@ -572,8 +572,13 @@ export default function NewQuotationPage() {
                   <div className="grid grid-cols-2 gap-4 mt-4">
                     <div>
                       <label className="block text-sm font-semibold text-gray-600 mb-1.5">{selectedCat?.id === "sofa-set" ? t("pricePerMeter") : t("quantity")}</label>
-                      <NumField value={builderQty} onChange={setBuilderQty} min={0.1}
-                        className="field text-center font-mono-en" />
+                      {selectedCat?.id === "sofa-set" ? (
+                        <NumField value={builderQty} onChange={setBuilderQty} min={0.1}
+                          className="field text-center font-mono-en" />
+                      ) : (
+                        <NumStepper value={builderQty} onChange={setBuilderQty} min={0.1} step={1}
+                          fieldClassName="field text-center font-mono-en" />
+                      )}
                     </div>
                     <div className="flex items-end">
                       <div className="bg-gray-100 rounded px-4 py-2.5 text-center w-full">
