@@ -26,6 +26,7 @@ function entryShape(q: any) {
     region: q.deliveryLocation || [q.customer?.governorate, q.customer?.wilayat].filter(Boolean).join(" – "),
     deliveryDate: q.deliveryDate ? q.deliveryDate.toISOString() : null,
     deliveryTime: q.deliveryTime || "",
+    deliveryDays: Math.max(1, q.deliveryDays || 1),
     deliveryStatus: q.deliveryStatus || "",
     workNotes: q.workNotes || "",
     status: q.status,
@@ -87,12 +88,16 @@ export async function GET(req: NextRequest) {
     const mon = m ? parseInt(m[2], 10) - 1 : now.getMonth();
     const start = new Date(year, mon, 1);
     const end = new Date(year, mon + 1, 1);
+    // Reach ~2 weeks back so a multi-day delivery that STARTED late last month
+    // but spans into this month is fetched too; the client places it on the
+    // covered days only.
+    const spanStart = new Date(year, mon, 1 - 14);
 
     const rows = await prisma.quotation.findMany({
       where: {
         onDeliveryBoard: true,
         OR: [
-          { deliveryDate: { gte: start, lt: end } },
+          { deliveryDate: { gte: spanStart, lt: end } },
           { deliveryDate: null },
         ],
       },

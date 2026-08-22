@@ -8,7 +8,7 @@ import { ChevronRight, ChevronLeft, Search, Plus, Loader2, Truck, Printer, FileS
 interface Entry {
   id: string; quoteNumber: string; customerName: string; phone: string; phoneCode: string;
   governorate: string; wilayat: string; address: string; region: string;
-  deliveryDate: string | null; deliveryTime: string; deliveryStatus: string; workNotes: string;
+  deliveryDate: string | null; deliveryTime: string; deliveryDays: number; deliveryStatus: string; workNotes: string;
   status: string; itemCount: number; total: number; advanceAmount: number; paid: number; remaining: number;
 }
 interface SearchResult { id: string; quoteNumber: string; onDeliveryBoard: boolean; customerName: string; phone: string; phoneCode: string; total: number; deliveryDate: string | null; }
@@ -34,6 +34,7 @@ export default function DeliveryBoardClient() {
   const [addQ, setAddQ] = useState("");
   const [addResults, setAddResults] = useState<SearchResult[]>([]);
   const [addSearching, setAddSearching] = useState(false);
+  const [addDays, setAddDays] = useState(1); // how many consecutive days to add
 
   // Bulk import (editor only)
   const [importOpen, setImportOpen] = useState(false);
@@ -108,8 +109,8 @@ export default function DeliveryBoardClient() {
     const e = await res.json().catch(() => ({})); toast.error(e.error || "تعذّر الحفظ"); return false;
   };
   const addToBoard = async (id: string) => { if (await patch(id, { onDeliveryBoard: true })) { setQ(""); setResults([]); toast.success(t("dbAdded")); } };
-  const openAdd = (iso: string) => { setAddDate(iso); setAddQ(""); setAddResults([]); };
-  const addToDate = async (id: string, iso: string) => { if (await patch(id, { onDeliveryBoard: true, deliveryDate: iso })) { setAddDate(null); setAddQ(""); setAddResults([]); toast.success(t("dbAdded")); } };
+  const openAdd = (iso: string) => { setAddDate(iso); setAddQ(""); setAddResults([]); setAddDays(1); };
+  const addToDate = async (id: string, iso: string) => { if (await patch(id, { onDeliveryBoard: true, deliveryDate: iso, deliveryDays: addDays })) { setAddDate(null); setAddQ(""); setAddResults([]); toast.success(t("dbAdded")); } };
   const removeFromBoard = async (id: string) => { if (confirm(t("dbRemoveConfirm"))) await patch(id, { onDeliveryBoard: false }); };
 
   const shiftMonth = (delta: number) => { const [y, m] = month.split("-").map(Number); const d = new Date(y, m - 1 + delta, 1); setMonth(`${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`); };
@@ -128,7 +129,18 @@ export default function DeliveryBoardClient() {
     const [y, mo] = month.split("-").map(Number);
     const days = new Date(y, mo, 0).getDate();
     const byDay: Record<number, Entry[]> = {};
-    for (const e of scheduled) { if (!e.deliveryDate) continue; const d = new Date(e.deliveryDate); if (d.getFullYear() === y && d.getMonth() === mo - 1) (byDay[d.getDate()] ||= []).push(e); }
+    // Each entry occupies `deliveryDays` consecutive days from its start date, so
+    // it appears on every covered day within this month (a 2-day install shows
+    // on both days).
+    for (const e of scheduled) {
+      if (!e.deliveryDate) continue;
+      const start = new Date(e.deliveryDate); start.setHours(0, 0, 0, 0);
+      const span = Math.max(1, e.deliveryDays || 1);
+      for (let k = 0; k < span; k++) {
+        const d = new Date(start); d.setDate(start.getDate() + k);
+        if (d.getFullYear() === y && d.getMonth() === mo - 1) (byDay[d.getDate()] ||= []).push(e);
+      }
+    }
     const out: { day: number; iso: string; weekday: string; dateLabel: string; list: Entry[] }[] = [];
     for (let day = 1; day <= days; day++) {
       const d = new Date(y, mo - 1, day);
@@ -260,8 +272,13 @@ export default function DeliveryBoardClient() {
                 } else {
                   r.list.forEach((e, i) => {
                     const pay = payInfo(e);
+                    const dDays = Math.max(1, e.deliveryDays || 1);
+                    const startMs = new Date(e.deliveryDate as string).setHours(0, 0, 0, 0);
+                    const rowMs = new Date(r.iso + "T00:00:00").getTime();
+                    const spanIdx = Math.round((rowMs - startMs) / 86400000) + 1;
+                    const isStart = spanIdx === 1;
                     out.push(
-                    <tr key={e.id} className={isWeekend ? "bg-gray-50/60 dark:bg-gray-900/20" : ""}>
+                    <tr key={e.id + "-" + r.iso} className={isWeekend ? "bg-gray-50/60 dark:bg-gray-900/20" : ""}>
                       {i === 0 && <td className={`${td} font-bold text-gray-600 dark:text-gray-300`} rowSpan={span}>{r.weekday}</td>}
                       {i === 0 && <td className={`${td} font-mono-en text-gray-500`} rowSpan={span}>
                         {r.dateLabel}
@@ -269,7 +286,17 @@ export default function DeliveryBoardClient() {
                       </td>}
                       <td className={`${td} text-right`}>
                         <a href={`/quotations/${e.id}`} className="font-bold text-gray-900 dark:text-gray-100 hover:text-[#6f7e62]">{e.customerName}</a>
-                        <span className="block text-[11px] text-gray-400 font-mono-en">{e.quoteNumber}{e.deliveryTime ? ` · ${e.deliveryTime}` : ""}</span>
+                        {dDays > 1 && <span className="ms-1 align-middle text-[9px] font-mono-en font-bold text-white bg-[#8b9a7b] rounded px-1">{spanIdx}/{dDays}</span>}
+                        <span className="block text-[11px] text-gray-400 font-mono-en">
+                          {e.quoteNumber}{e.deliveryTime ? ` · ${e.deliveryTime}` : ""}
+                          {canEdit && isStart && <>
+                            {" · "}
+                            <select value={dDays} onChange={(ev) => patch(e.id, { deliveryDays: Number(ev.target.value) })}
+                              className="bg-transparent text-[#6f7e62] font-bold outline-none cursor-pointer" title={t("dcDurationDays")}>
+                              {[1, 2, 3, 4, 5, 6, 7].map((n) => <option key={n} value={n}>{n} {n === 1 ? "يوم" : "أيام"}</option>)}
+                            </select>
+                          </>}
+                        </span>
                       </td>
                       <td className={`${td} text-gray-600 dark:text-gray-300`}>{e.region}</td>
                       <td className={`${td} font-mono-en`}>{fmt(e.total)}</td>
@@ -294,11 +321,20 @@ export default function DeliveryBoardClient() {
                   out.push(
                     <tr key={r.iso + "-add"}>
                       <td colSpan={totalCols} className="p-2 bg-[#f6f6f3] dark:bg-gray-900/40">
-                        <div className="flex items-center gap-2">
+                        <div className="flex items-center gap-2 flex-wrap">
                           <Search className="w-4 h-4 text-gray-400 shrink-0" />
                           <input autoFocus value={addQ} onChange={(e) => setAddQ(e.target.value)} placeholder={t("dbSearchAdd")}
-                            className="flex-1 bg-transparent text-sm outline-none py-1" />
+                            className="flex-1 min-w-[160px] bg-transparent text-sm outline-none py-1" />
                           {addSearching && <Loader2 className="w-4 h-4 animate-spin text-gray-400" />}
+                          <div className="flex items-center gap-1.5 text-xs">
+                            <span className="font-bold text-gray-500">{t("dcDurationDays")}:</span>
+                            {[1, 2, 3].map((n) => (
+                              <button key={n} onClick={() => setAddDays(n)}
+                                className={`w-7 h-7 rounded-lg font-bold border ${addDays === n ? "bg-[#8b9a7b] text-white border-[#8b9a7b]" : "border-gray-200 dark:border-gray-600 text-gray-600 dark:text-gray-300"}`}>{n}</button>
+                            ))}
+                            <input type="number" min={1} max={14} value={addDays} onChange={(e) => setAddDays(Math.max(1, Math.min(14, parseInt(e.target.value) || 1)))}
+                              className="w-12 text-center bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-600 rounded-lg py-1 font-mono-en" title={t("dcDurationDays")} />
+                          </div>
                           <button onClick={() => setAddDate(null)} className="text-gray-400 hover:text-gray-600"><X className="w-4 h-4" /></button>
                         </div>
                         {addResults.length > 0 && (

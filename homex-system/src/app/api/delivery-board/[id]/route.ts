@@ -39,6 +39,7 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
       }
     }
     if (body.deliveryTime !== undefined) data.deliveryTime = body.deliveryTime || null;
+    if (body.deliveryDays !== undefined) data.deliveryDays = Math.max(1, Math.min(14, parseInt(String(body.deliveryDays), 10) || 1));
     if (body.deliveryLocation !== undefined) data.deliveryLocation = body.deliveryLocation || null;
     if (body.workNotes !== undefined) data.workNotes = body.workNotes || null;
     if (body.deliveryStatus !== undefined) {
