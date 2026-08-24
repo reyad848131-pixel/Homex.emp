@@ -56,6 +56,7 @@ export async function GET(req: NextRequest) {
         kind: "quote" as const,
         quotationId: q.id,
         quoteNumber: q.quoteNumber,
+        boardStatus: q.workStatus || "", // work-board status drives the colour
         customerName: q.customer?.name || "",
         phone: q.customer?.phone || "",
         phoneCode: q.customer?.phoneCode || "",
@@ -88,6 +89,7 @@ export async function GET(req: NextRequest) {
         kind: "standalone" as const,
         quotationId: null,
         quoteNumber: "",
+        boardStatus: "",
         customerName: co.custName || "",
         phone: co.custPhone || "",
         phoneCode: co.custPhoneCode || "",

@@ -5,9 +5,11 @@ import { useI18n } from "@/lib/i18n";
 import { useToast } from "@/components/toast";
 import { Blinds, Loader2, TrendingUp, FileSpreadsheet, Plus, Trash2 } from "lucide-react";
 import { CURTAIN_WORK_STATUSES } from "@/lib/curtain-orders";
+import { WORK_STATUS_MAP } from "@/lib/types";
 
 interface Entry {
   id: string; kind: "quote" | "standalone"; quotationId: string | null; quoteNumber: string;
+  boardStatus: string;
   customerName: string; phone: string; phoneCode: string; region: string;
   deliveryDate: string | null; status: string; curtainCount: number; curtainTotal: number;
   advanceBillNo: string; ourPrice: number; ourPriceOverridden: boolean;
@@ -19,6 +21,17 @@ const STATUS_LABEL_KEYS: Record<string, string> = {
   placed: "coStPlaced", awaiting: "coStAwaiting", manufacturing: "coStManufacturing",
   completed: "coStCompleted", ready: "coStReady", delivered: "coStDelivered",
 };
+// Start-border accent per work-board status, so a linked row's colour tracks
+// إدارة الأعمال at a glance.
+const BOARD_ACCENT: Record<string, string> = {
+  needs_preparation: "border-s-4 border-s-blue-400",
+  ready_to_execute: "border-s-4 border-s-pink-400",
+  in_progress: "border-s-4 border-s-gray-400",
+  completed: "border-s-4 border-s-green-400",
+  ready_for_delivery: "border-s-4 border-s-teal-400",
+  delivered: "border-s-4 border-s-yellow-400",
+};
+
 const STATUS_COLOR: Record<string, string> = {
   placed: "bg-gray-100 text-gray-700 dark:bg-gray-700 dark:text-gray-200",
   awaiting: "bg-amber-100 text-amber-800 dark:bg-amber-900/40 dark:text-amber-300",
@@ -188,7 +201,7 @@ export default function CurtainOrdersClient() {
                 const diff = (isFinite(ourVal) ? ourVal : 0) - (isFinite(outVal) ? outVal : 0);
                 const std = e.kind === "standalone";
                 return (
-                  <tr key={e.id} className="border-b border-gray-100 dark:border-gray-700/50 hover:bg-gray-50/60 dark:hover:bg-gray-700/30">
+                  <tr key={e.id} className={`border-b border-gray-100 dark:border-gray-700/50 hover:bg-gray-50/60 dark:hover:bg-gray-700/30 ${!std && e.boardStatus ? (BOARD_ACCENT[e.boardStatus] || "") : ""}`}>
                     <td className="p-2 text-center text-gray-400">{i + 1}</td>
                     <td className="p-2">
                       {std ? (
@@ -251,10 +264,19 @@ export default function CurtainOrdersClient() {
                         placeholder={t("coManufacturerPlaceholder")} className={inputCls + " w-32"} />
                     </td>
                     <td className="p-2 text-center">
-                      <select value={e.workStatus} onChange={(ev) => save(e.id, { workStatus: ev.target.value })}
-                        className={`px-2 py-1 rounded-full text-xs font-bold border-0 outline-none cursor-pointer ${STATUS_COLOR[e.workStatus] || STATUS_COLOR.placed}`}>
-                        {CURTAIN_WORK_STATUSES.map((s) => <option key={s} value={s} className="bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100">{t(STATUS_LABEL_KEYS[s] as any)}</option>)}
-                      </select>
+                      {std ? (
+                        // Standalone: manual curtain status, editable.
+                        <select value={e.workStatus} onChange={(ev) => save(e.id, { workStatus: ev.target.value })}
+                          className={`px-2 py-1 rounded-full text-xs font-bold border-0 outline-none cursor-pointer ${STATUS_COLOR[e.workStatus] || STATUS_COLOR.placed}`}>
+                          {CURTAIN_WORK_STATUSES.map((s) => <option key={s} value={s} className="bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100">{t(STATUS_LABEL_KEYS[s] as any)}</option>)}
+                        </select>
+                      ) : e.boardStatus && WORK_STATUS_MAP[e.boardStatus] ? (
+                        // Linked: follows the work board (read-only, colour from there).
+                        <span className={`inline-block px-2.5 py-1 rounded-full text-xs font-bold ${WORK_STATUS_MAP[e.boardStatus].badgeColor}`}
+                          title={t("coStatusFromBoard")}>{WORK_STATUS_MAP[e.boardStatus].label}</span>
+                      ) : (
+                        <span className="text-xs text-gray-400">—</span>
+                      )}
                       {savingId === e.id && <Loader2 className="w-3 h-3 animate-spin inline-block ms-1 text-gray-400" />}
                     </td>
                     <td className="p-2 text-center">
