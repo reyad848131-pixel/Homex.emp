@@ -311,22 +311,38 @@ model Quotation {
   @@map("quotations")
 }
 
-// Curtains are made by an external subcontractor. When a quotation containing
-// curtain items is executed, it shows up here. "ourPrice" is what we bill the
+// Curtains are made by an external subcontractor. "ourPrice" is what we bill the
 // customer for the curtains (Salim price); "outsidePrice" is what the
 // subcontractor charges us. The difference is Homex's profit on the curtains.
+//
+// A row is one of two kinds:
+//  - LINKED: quotationId is set — the customer / phone / place / delivery date /
+//    curtain count are read live from the quotation; only the pricing, bill no,
+//    manufacturer and status are stored here.
+//  - STANDALONE: quotationId is null — a historical / external order (e.g.
+//    imported from the old Excel) with no quotation in the system, so its own
+//    customer fields below carry the data.
 model CurtainOrder {
   id            String   @id @default(cuid())
-  quotationId   String   @unique @map("quotation_id")
+  quotationId   String?  @unique @map("quotation_id")
   advanceBillNo String?  @map("advance_bill_no")
   ourPrice      Float?   @map("our_price")
   outsidePrice  Float    @default(0) @map("outside_price")
   manufacturer  String?
   workStatus    String   @default("placed") @map("work_status")
+
+  // Standalone-only fields (ignored when quotationId is set).
+  custName      String?   @map("cust_name")
+  custPhone     String?   @map("cust_phone")
+  custPhoneCode String?   @map("cust_phone_code")
+  place         String?
+  deliveryDate  DateTime? @map("delivery_date")
+  curtainCount  Int?      @map("curtain_count")
+
   createdAt     DateTime @default(now()) @map("created_at")
   updatedAt     DateTime @updatedAt @map("updated_at")
 
-  quotation Quotation @relation(fields: [quotationId], references: [id], onDelete: Cascade)
+  quotation Quotation? @relation(fields: [quotationId], references: [id], onDelete: Cascade)
 
   @@index([workStatus])
   @@map("curtain_orders")
