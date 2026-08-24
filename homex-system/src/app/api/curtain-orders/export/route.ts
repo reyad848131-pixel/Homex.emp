@@ -25,10 +25,10 @@ export async function GET(_req: NextRequest) {
     if (!session) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
     const quotes = await prisma.quotation.findMany({
-      where: { status: { not: "declined" }, items: { some: { category: { pricingType: "curtains" } } } },
+      where: { status: { not: "declined" }, items: { some: { categoryId: "curtains" } } },
       include: {
         customer: { select: { name: true, phone: true, phoneCode: true, governorate: true, wilayat: true } },
-        items: { where: { category: { pricingType: "curtains" } }, select: { description: true, lineTotal: true } },
+        items: { where: { categoryId: "curtains" }, select: { description: true, lineTotal: true } },
         curtainOrder: true,
       },
       take: 1000,

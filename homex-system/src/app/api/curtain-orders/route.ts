@@ -31,12 +31,12 @@ export async function GET(req: NextRequest) {
     const quotes = await prisma.quotation.findMany({
       where: {
         status: { not: "declined" },
-        items: { some: { category: { pricingType: "curtains" } } },
+        items: { some: { categoryId: "curtains" } },
       },
       include: {
         customer: { select: { name: true, phone: true, phoneCode: true, governorate: true, wilayat: true, address: true } },
         items: {
-          where: { category: { pricingType: "curtains" } },
+          where: { categoryId: "curtains" },
           select: { description: true, lineTotal: true },
         },
         curtainOrder: true,
