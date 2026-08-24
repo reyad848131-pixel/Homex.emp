@@ -1207,6 +1207,7 @@ const translations = {
   coSaved: { ar: "تم الحفظ", en: "Saved" },
   coDefault: { ar: "افتراضي", en: "default" },
   coImport: { ar: "استيراد Excel", en: "Import Excel" },
+  coExport: { ar: "تصدير Excel", en: "Export Excel" },
   coImportTitle: { ar: "استيراد طلبات ستائر", en: "Import curtain orders" },
   coImportHint: { ar: "ارفع ملف Excel لطلبات الستائر القديمة. الأعمدة المدعومة: الاسم، الهاتف، المكان، التاريخ، رقم السند، سعرنا، سعر المورّد، المصنّع، عدد الستائر، الحالة. نطابق كل صف مع كوتيشنه إن وُجد (يصير مرتبط)، وإلا يُضاف كطلب مستقل.", en: "Upload an Excel of old curtain orders. Supported columns: name, phone, place, date, bill no, our price, supplier price, manufacturer, count, status. Each row is matched to its quotation when found (linked), otherwise added standalone." },
   coImportLinked: { ar: "مرتبط بكوتيشن", en: "Linked to a quote" },

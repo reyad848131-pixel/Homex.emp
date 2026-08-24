@@ -3,7 +3,7 @@
 import { useState, useEffect, useCallback } from "react";
 import { useI18n } from "@/lib/i18n";
 import { useToast } from "@/components/toast";
-import { Blinds, Loader2, TrendingUp, FileSpreadsheet, Plus, Trash2, X } from "lucide-react";
+import { Blinds, Loader2, TrendingUp, FileSpreadsheet, Plus, Trash2 } from "lucide-react";
 import { CURTAIN_WORK_STATUSES } from "@/lib/curtain-orders";
 
 interface Entry {
@@ -89,13 +89,13 @@ export default function CurtainOrdersClient() {
   };
 
   const seedNabhani = async () => {
-    if (!confirm("إضافة قائمة سلطان النبهاني (12 طلب)؟ يربط الموجود بكوتيشناته ويضيف الباقي مستقل. آمن لو تكرر.")) return;
+    if (!confirm("إضافة قائمة سلطان النبهاني (12 طلب) كطلبات مستقلة؟ يحذف أي محاولة سابقة لنفس السندات ويضيفهم من جديد.")) return;
     setSeeding(true);
     try {
       const res = await fetch("/api/curtain-orders/seed", { method: "POST" });
       const d = await res.json().catch(() => ({}));
       if (!res.ok) { toast.error(d.error || "تعذّرت الإضافة"); return; }
-      toast.success(`تمت الإضافة — مرتبط: ${d.linked || 0} · مستقل: ${d.standalone || 0}${d.skipped ? ` · مكرّر: ${d.skipped}` : ""}`);
+      toast.success(`تمت إضافة ${d.added || 0} طلب${d.removedFirst ? ` (حُذف ${d.removedFirst} قديم)` : ""}`);
       await load();
     } finally { setSeeding(false); }
   };
@@ -118,38 +118,6 @@ export default function CurtainOrdersClient() {
   const clearDraft = (id: string, k: keyof Entry) =>
     setDraft((d) => { const row = { ...d[id] }; delete row[k]; return { ...d, [id]: row }; });
 
-  // ── Import modal ──
-  const [importOpen, setImportOpen] = useState(false);
-  const [importYear, setImportYear] = useState(() => new Date().getFullYear());
-  const [importRows, setImportRows] = useState<any[] | null>(null);
-  const [importSummary, setImportSummary] = useState<any>(null);
-  const [importBusy, setImportBusy] = useState(false);
-
-  const runImport = async (file: File) => {
-    setImportBusy(true); setImportRows(null); setImportSummary(null);
-    try {
-      const fd = new FormData(); fd.append("file", file); fd.append("year", String(importYear));
-      const res = await fetch("/api/curtain-orders/import", { method: "POST", body: fd });
-      const d = await res.json().catch(() => ({}));
-      if (!res.ok) { toast.error(d.error || "تعذّر قراءة الملف"); return; }
-      setImportRows(d.rows || []); setImportSummary(d.summary || null);
-    } finally { setImportBusy(false); }
-  };
-  const applyImport = async () => {
-    if (!importRows || importRows.length === 0) return;
-    setImportBusy(true);
-    try {
-      const res = await fetch("/api/curtain-orders/apply", {
-        method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ rows: importRows }),
-      });
-      const d = await res.json().catch(() => ({}));
-      if (!res.ok) { toast.error(d.error || "تعذّر الاستيراد"); return; }
-      toast.success(`${t("coImported")}: ${(d.linked || 0) + (d.standalone || 0)}`);
-      setImportOpen(false); setImportRows(null); setImportSummary(null);
-      await load();
-    } finally { setImportBusy(false); }
-  };
-
   const inputCls = "w-full px-2 py-1 rounded border border-gray-200 dark:border-gray-600 bg-transparent text-xs outline-none focus:border-[#6f7e62]";
 
   return (
@@ -165,7 +133,7 @@ export default function CurtainOrdersClient() {
           </button>
         )}
         <button onClick={addManual} className="flex items-center gap-1.5 px-3 py-2 border border-gray-200 dark:border-gray-700 rounded-lg text-sm font-bold hover:bg-gray-50 dark:hover:bg-gray-700"><Plus className="w-4 h-4" /> {t("coAddManual")}</button>
-        <button onClick={() => { setImportOpen(true); setImportRows(null); setImportSummary(null); }} className="flex items-center gap-1.5 px-3 py-2 border border-gray-200 dark:border-gray-700 rounded-lg text-sm font-bold hover:bg-gray-50 dark:hover:bg-gray-700"><FileSpreadsheet className="w-4 h-4" /> {t("coImport")}</button>
+        <a href="/api/curtain-orders/export" className="flex items-center gap-1.5 px-3 py-2 border border-gray-200 dark:border-gray-700 rounded-lg text-sm font-bold hover:bg-gray-50 dark:hover:bg-gray-700"><FileSpreadsheet className="w-4 h-4" /> {t("coExport")}</a>
         <select value={statusFilter} onChange={(e) => setStatusFilter(e.target.value)}
           className="px-3 py-2 border border-gray-200 dark:border-gray-700 rounded-lg text-sm font-bold bg-white dark:bg-gray-800">
           <option value="">{t("coAllStatuses")}</option>
@@ -297,72 +265,6 @@ export default function CurtainOrdersClient() {
               })}
             </tbody>
           </table>
-        </div>
-      )}
-
-      {/* Import modal */}
-      {importOpen && (
-        <div className="fixed inset-0 z-40 bg-black/40 flex items-start justify-center overflow-y-auto p-4" onClick={() => setImportOpen(false)}>
-          <div className="bg-white dark:bg-gray-800 rounded-2xl w-full max-w-3xl shadow-xl my-8" onClick={(e) => e.stopPropagation()}>
-            <div className="flex items-center justify-between p-5 border-b border-gray-200 dark:border-gray-700">
-              <h2 className="text-base font-black flex items-center gap-2"><FileSpreadsheet className="w-5 h-5 text-[#6f7e62]" /> {t("coImportTitle")}</h2>
-              <button onClick={() => setImportOpen(false)} className="p-1 rounded hover:bg-gray-100 dark:hover:bg-gray-700"><X className="w-5 h-5" /></button>
-            </div>
-            <div className="p-5 space-y-4">
-              <p className="text-xs text-gray-400">{t("coImportHint")}</p>
-              <div className="flex items-center gap-3 flex-wrap">
-                <label className="text-sm font-semibold">{t("coDefaultYear")}</label>
-                <input type="number" value={importYear} onChange={(e) => setImportYear(parseInt(e.target.value) || new Date().getFullYear())}
-                  className="w-24 px-2 py-1.5 rounded border border-gray-200 dark:border-gray-700 bg-transparent text-sm font-mono-en text-center" />
-                <label className="flex items-center gap-1.5 px-3 py-2 rounded-lg bg-[#6f7e62] text-white text-sm font-bold cursor-pointer hover:opacity-90">
-                  {importBusy ? <Loader2 className="w-4 h-4 animate-spin" /> : <FileSpreadsheet className="w-4 h-4" />} {t("coChooseFile")}
-                  <input type="file" accept=".xlsx,.xls" className="hidden" onChange={(e) => { const f = e.target.files?.[0]; if (f) runImport(f); e.currentTarget.value = ""; }} />
-                </label>
-              </div>
-
-              {importSummary && (
-                <div className="flex gap-3 text-xs font-bold">
-                  <span className="px-2.5 py-1 rounded bg-green-50 dark:bg-green-900/20 text-green-700 dark:text-green-300">{t("coImportLinked")}: {importSummary.linked}</span>
-                  <span className="px-2.5 py-1 rounded bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300">{t("coImportStandalone")}: {importSummary.standalone}</span>
-                </div>
-              )}
-
-              {importRows && importRows.length > 0 && (
-                <div className="max-h-80 overflow-y-auto border border-gray-200 dark:border-gray-700 rounded-lg">
-                  <table className="w-full text-xs">
-                    <thead className="bg-gray-50 dark:bg-gray-900/50 sticky top-0"><tr>
-                      <th className="p-2 text-start">{t("coColCustomer")}</th><th className="p-2 text-start">{t("coColPhone")}</th>
-                      <th className="p-2 text-center">{t("coColOur")}</th><th className="p-2 text-center">{t("coColOutside")}</th>
-                      <th className="p-2 text-center">{t("coColStatus")}</th><th className="p-2 text-center"></th>
-                    </tr></thead>
-                    <tbody>
-                      {importRows.map((r, idx) => (
-                        <tr key={idx} className="border-t border-gray-100 dark:border-gray-700/50">
-                          <td className="p-2 font-semibold">{r.name || "—"}</td>
-                          <td className="p-2" dir="ltr">{r.phone || "—"}</td>
-                          <td className="p-2 text-center font-mono-en">{r.ourPrice != null ? Number(r.ourPrice).toFixed(3) : "—"}</td>
-                          <td className="p-2 text-center font-mono-en">{Number(r.outsidePrice || 0).toFixed(3)}</td>
-                          <td className="p-2 text-center">{t(STATUS_LABEL_KEYS[r.workStatus] as any)}</td>
-                          <td className="p-2 text-center">
-                            <span className={`px-1.5 py-0.5 rounded text-[10px] font-bold ${r.status === "linked" ? "bg-green-100 text-green-700 dark:bg-green-900/40 dark:text-green-300" : "bg-gray-100 text-gray-600 dark:bg-gray-700 dark:text-gray-300"}`}>
-                              {r.status === "linked" ? t("coImportLinked") : t("coImportStandalone")}
-                            </span>
-                          </td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
-              )}
-
-              {importRows && importRows.length > 0 && (
-                <button onClick={applyImport} disabled={importBusy}
-                  className="w-full h-11 rounded-lg bg-gray-900 dark:bg-white dark:text-gray-900 text-white font-bold flex items-center justify-center gap-2 disabled:opacity-50">
-                  {importBusy && <Loader2 className="w-4 h-4 animate-spin" />} {t("coApply")} ({importRows.length})
-                </button>
-              )}
-            </div>
-          </div>
         </div>
       )}
     </div>

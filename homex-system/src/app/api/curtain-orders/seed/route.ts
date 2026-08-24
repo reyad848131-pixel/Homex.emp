@@ -37,58 +37,36 @@ const ROWS: Row[] = [
 ];
 
 async function run(userId: string) {
-  const result = { linked: 0, standalone: 0, skipped: 0, details: [] as string[] };
+  const bills = ROWS.map((r) => r.bill);
 
+  // Clean slate: remove any earlier attempt for these bills — whether it was
+  // linked to a quotation or standalone — so we always end with exactly these
+  // rows as standalone. (Deleting a linked CurtainOrder only removes the
+  // tracking row, never the quotation.)
+  const removed = await prisma.curtainOrder.deleteMany({ where: { advanceBillNo: { in: bills } } });
+
+  // Add all rows as STANDALONE (external) — no quotation linking.
   for (const r of ROWS) {
-    const pricing = {
-      advanceBillNo: r.bill,
-      ourPrice: r.our,
-      outsidePrice: r.out,
-      manufacturer: "Sultan Al Nabhani",
-      workStatus: "placed",
-    };
-
-    // Match a single quotation by phone, else a unique name.
-    let matchId: string | null = null;
     const phone = normalizeCredential(r.phone || "");
-    if (phone) {
-      const list = await prisma.quotation.findMany({ where: { customer: { phone: { contains: phone } } }, select: { id: true }, take: 2 });
-      if (list.length === 1) matchId = list[0].id;
-    }
-    if (!matchId) {
-      const list = await prisma.quotation.findMany({ where: { customer: { name: { contains: r.name, mode: "insensitive" } } }, select: { id: true }, take: 2 });
-      if (list.length === 1) matchId = list[0].id;
-    }
-
-    if (matchId) {
-      await prisma.curtainOrder.upsert({
-        where: { quotationId: matchId },
-        create: { quotationId: matchId, ...pricing },
-        update: pricing,
-      });
-      result.linked++;
-      result.details.push(`${r.name} → linked`);
-    } else {
-      // Idempotency: skip if a standalone with the same bill already exists.
-      const dupe = await prisma.curtainOrder.findFirst({ where: { quotationId: null, advanceBillNo: r.bill }, select: { id: true } });
-      if (dupe) { result.skipped++; result.details.push(`${r.name} → skipped (exists)`); continue; }
-      await prisma.curtainOrder.create({
-        data: {
-          ...pricing,
-          custName: r.name,
-          custPhone: phone || null,
-          custPhoneCode: phone ? "+968" : null,
-          place: r.place || null,
-          deliveryDate: new Date(r.date),
-          curtainCount: null,
-        },
-      });
-      result.standalone++;
-      result.details.push(`${r.name} → standalone`);
-    }
+    await prisma.curtainOrder.create({
+      data: {
+        advanceBillNo: r.bill,
+        ourPrice: r.our,
+        outsidePrice: r.out,
+        manufacturer: "Sultan Al Nabhani",
+        workStatus: "placed",
+        custName: r.name,
+        custPhone: phone || null,
+        custPhoneCode: phone ? "+968" : null,
+        place: r.place || null,
+        deliveryDate: new Date(r.date),
+        curtainCount: null,
+      },
+    });
   }
 
-  await logAction(userId, "curtain_order_seed", "curtain_order", undefined, JSON.stringify({ linked: result.linked, standalone: result.standalone, skipped: result.skipped })).catch(() => {});
+  const result = { added: ROWS.length, removedFirst: removed.count };
+  await logAction(userId, "curtain_order_seed", "curtain_order", undefined, JSON.stringify(result)).catch(() => {});
   return result;
 }
 
