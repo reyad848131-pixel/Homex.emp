@@ -30,23 +30,18 @@ export function canEditPrice(civilId: string, userId: string, editorIds: string[
 }
 
 // Server guard mirroring the UI lock: when a user is NOT allowed to edit prices,
-// they must submit only approved (auto-computed) prices. Reject the request if
-// any item carries a manual price override, or a manual-category item whose
-// price differs from the category's approved base price. Returns true if a
-// violation is found. `catById` maps categoryId → { pricingType, basePrice }.
+// they must not CHANGE a calculated price. Reject the request only if an item
+// carries a manual rate/total override (the ✎ تعديل السعر popover). Entering a
+// price for a manual item that has no automatic price (e.g. "أخرى", or a kitchen
+// in an unpriced region) is always allowed. Returns true if a violation exists.
 export function hasPriceOverride(
   items: Array<{ categoryId: string; details?: unknown; unitPrice?: unknown }>,
-  catById: Map<string, { pricingType: string; basePrice: number }>
+  _catById?: Map<string, { pricingType: string; basePrice: number }>
 ): boolean {
   for (const it of items || []) {
     let d: any = it.details;
     if (typeof d === "string") { try { d = JSON.parse(d); } catch { d = null; } }
     if (d && (d.rateOverride != null || d.priceOverride != null)) return true;
-    const cat = catById.get(it.categoryId);
-    if (cat && cat.pricingType === "manual") {
-      const price = typeof it.unitPrice === "string" ? parseFloat(it.unitPrice) : Number(it.unitPrice);
-      if (Number.isFinite(price) && Math.abs(price - (cat.basePrice || 0)) > 0.0005) return true;
-    }
   }
   return false;
 }

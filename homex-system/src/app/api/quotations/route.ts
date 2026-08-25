@@ -59,12 +59,8 @@ export async function POST(req: NextRequest) {
     // override or manual-priced item, mirroring the locked UI.
     {
       const editorIds = await priceEditorIds().catch(() => [] as string[]);
-      if (!canEditPrice(user.civilId, user.id, editorIds)) {
-        const cats = await prisma.category.findMany({ select: { id: true, pricingType: true, basePrice: true } });
-        const catById = new Map(cats.map((c) => [c.id, { pricingType: c.pricingType, basePrice: c.basePrice || 0 }]));
-        if (hasPriceOverride(items as any, catById)) {
-          return NextResponse.json({ error: "غير مصرّح بتعديل الأسعار — الأسعار المعتمدة فقط", code: "price_locked" }, { status: 403 });
-        }
+      if (!canEditPrice(user.civilId, user.id, editorIds) && hasPriceOverride(items as any)) {
+        return NextResponse.json({ error: "غير مصرّح بتعديل الأسعار — الأسعار المعتمدة فقط", code: "price_locked" }, { status: 403 });
       }
     }
 

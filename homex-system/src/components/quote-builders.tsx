@@ -400,7 +400,6 @@ function useResetFlatOnChange(signature: number, priceOverride: number | null, c
 
 function KitchenBuilder({ config, governorate, wilayat, onUpdate, initial }: { config: any; governorate: string; wilayat: string; onUpdate: BuilderUpdate; initial?: BuilderInitial }) {
   const { t } = useI18n();
-  const canEditPrice = useCanEditPrice();
   const [length, setLength] = useState(initial?.length ?? 4);
   const [unitType, setUnitType] = useState<"1unit" | "2unit" | "3unit">(initial?.unitType ?? "2unit");
   const [island, setIsland] = useState<"none" | "small" | "large">(initial?.island ?? "none");
@@ -469,12 +468,8 @@ function KitchenBuilder({ config, governorate, wilayat, onUpdate, initial }: { c
       {isManual && (
         <div>
           <label className="block text-sm font-semibold text-gray-600 mb-1.5">{t("pricePerMeterLabel")} (OMR)</label>
-          {canEditPrice ? (
-            <NumField value={manualBase} onChange={setManualBase} min={1} int
-              className="field font-mono-en text-center" />
-          ) : (
-            <div className="field font-mono-en text-center flex items-center justify-center gap-1.5 text-gray-400 select-none">🔒 {t("peLocked")}</div>
-          )}
+          <NumField value={manualBase} onChange={setManualBase} min={1} int
+            className="field font-mono-en text-center" />
           <p className="text-xs text-amber-600 mt-1">{governorate}: {t("manualPriceHint")}</p>
         </div>
       )}
@@ -521,7 +516,6 @@ function KitchenBuilder({ config, governorate, wilayat, onUpdate, initial }: { c
 // + porcelain surcharge). No unit toggle or island.
 function PantryBuilder({ config, governorate, wilayat, onUpdate, initial }: { config: any; governorate: string; wilayat: string; onUpdate: BuilderUpdate; initial?: BuilderInitial }) {
   const { t } = useI18n();
-  const canEditPrice = useCanEditPrice();
   const [length, setLength] = useState(initial?.length ?? 3);
   const [manualBase, setManualBase] = useState(initial?.manualBase ?? 130);
   const [note, setNote] = useState<string>(initial?.note ?? "");
@@ -568,12 +562,8 @@ function PantryBuilder({ config, governorate, wilayat, onUpdate, initial }: { co
       {isManual && (
         <div>
           <label className="block text-sm font-semibold text-gray-600 mb-1.5">{t("pricePerMeterLabel")} (OMR)</label>
-          {canEditPrice ? (
-            <NumField value={manualBase} onChange={setManualBase} min={1} int
-              className="field font-mono-en text-center" />
-          ) : (
-            <div className="field font-mono-en text-center flex items-center justify-center gap-1.5 text-gray-400 select-none">🔒 {t("peLocked")}</div>
-          )}
+          <NumField value={manualBase} onChange={setManualBase} min={1} int
+            className="field font-mono-en text-center" />
           <p className="text-xs text-amber-600 mt-1">{governorate}: {t("manualPriceHint")}</p>
         </div>
       )}
@@ -1536,7 +1526,6 @@ function TVTableBuilder({ config, onUpdate, initial }: { config: any; onUpdate: 
 
 function GenericBuilder({ cat, onUpdate, initial }: { cat: Category; onUpdate: BuilderUpdate; initial?: BuilderInitial }) {
   const { t } = useI18n();
-  const canEditPrice = useCanEditPrice();
   const [desc, setDesc] = useState(initial?.desc ?? "");
   const [price, setPrice] = useState(initial?.price ?? (cat.basePrice || 0));
   const [width, setWidth] = useState(initial?.width ?? 1);
@@ -1582,13 +1571,11 @@ function GenericBuilder({ cat, onUpdate, initial }: { cat: Category; onUpdate: B
 
       {cat.pricingType === "manual" ? (
         <div>
+          {/* A manual item (e.g. "أخرى") has no automatic price, so anyone may
+              enter one — the price lock only guards CHANGING a calculated price. */}
           <label className="block text-sm font-semibold text-gray-600 mb-1.5">{t("priceOMR")}</label>
-          {canEditPrice ? (
-            <NumField value={price} onChange={setPrice} min={0}
-              className="field font-mono-en text-center" />
-          ) : (
-            <div className="field font-mono-en text-center flex items-center justify-center gap-1.5 text-gray-400 select-none">🔒 {t("peLocked")}</div>
-          )}
+          <NumField value={price} onChange={setPrice} min={0}
+            className="field font-mono-en text-center" />
         </div>
       ) : (
         <div className="grid grid-cols-2 gap-4">
