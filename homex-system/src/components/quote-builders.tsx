@@ -20,17 +20,6 @@ export function useCanEditPrice() {
   return useContext(PriceEditContext);
 }
 
-// A read-only "approved price — cannot be changed" pill shown in place of a
-// price input for users without the price-edit permission.
-function LockedPricePill() {
-  const { t } = useI18n();
-  return (
-    <span className="inline-flex items-center gap-1 px-2.5 h-8 rounded-lg border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800 text-xs font-bold text-gray-400">
-      🔒 {t("peLocked")}
-    </span>
-  );
-}
-
 export interface Category {
   id: string;
   nameAr: string;
@@ -251,9 +240,6 @@ function UnitPriceOverride({
   const [totalDraft, setTotalDraft] = useState<string>(String(priceOverride ?? computedPrice.toFixed(3)));
   const active = rateOverride != null || priceOverride != null;
 
-  // No price-edit permission → the calculated price is shown but can't be changed.
-  if (!canEdit) return <LockedPricePill />;
-
   useEffect(() => {
     if (open) {
       setMode(priceOverride != null ? "total" : "rate");
@@ -274,6 +260,10 @@ function UnitPriceOverride({
     }
     setOpen(false);
   };
+
+  // No price-edit permission → the ✎ button simply isn't offered. Everything
+  // else stays normal; the calculated price still shows on the row.
+  if (!canEdit) return null;
 
   return (
     <div className="relative inline-block">
