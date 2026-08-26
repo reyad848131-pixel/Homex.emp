@@ -126,7 +126,7 @@ export function DateDrillNav({
           {months.map((m, i) => (
             <button key={i} onClick={() => { setMonth0(i); reset("month"); }}
               className={cn(chip(month0 === i), "px-3 py-1.5 min-w-[68px]")}>
-              {m}
+              {m} <span className="font-mono-en opacity-60">({i + 1})</span>
             </button>
           ))}
         </div>
