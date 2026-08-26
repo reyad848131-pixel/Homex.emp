@@ -111,6 +111,8 @@ const translations = {
   dcNoSearchResult: { ar: "لا نتائج للبحث", en: "No results" },
   dcNoMonthOrders: { ar: "لا كوتيشنات في هذا الشهر — ابحث عن أي كوتيشن بالأعلى", en: "No orders this month — search any quote above" },
   dcAlreadyScheduled: { ar: "مجدول", en: "Scheduled" },
+  dcPrevMonth: { ar: "الشهر السابق", en: "Previous month" },
+  dcNextMonth: { ar: "الشهر التالي", en: "Next month" },
   dcPlanned: { ar: "تجهيز:", en: "Planned:" },
   dcNoDate: { ar: "بدون تاريخ", en: "No date" },
   dcDurationDays: { ar: "عدد الأيام", en: "Days" },

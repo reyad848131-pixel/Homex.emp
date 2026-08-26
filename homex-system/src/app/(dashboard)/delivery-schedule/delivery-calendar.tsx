@@ -6,7 +6,7 @@ import { cn } from "@/lib/utils";
 import { useI18n } from "@/lib/i18n";
 import { useDebouncedValue } from "@/lib/hooks";
 import { displayName } from "@/lib/translit";
-import { Phone, MessageCircle, FileText, X, User, Plus, Loader2, CalendarCheck } from "lucide-react";
+import { Phone, MessageCircle, FileText, X, User, Plus, Loader2, CalendarCheck, ChevronLeft, ChevronRight } from "lucide-react";
 
 const pad2 = (n: number) => String(n).padStart(2, "0");
 
@@ -304,6 +304,18 @@ export function DeliveryCalendar({
     <div>
       {/* Toolbar */}
       <div className="flex items-center gap-2 mb-3 flex-wrap">
+        {/* Prev / next month — for mouse & keyboard (swipe also works on touch).
+            In RTL the previous month sits on the right. */}
+        <div className="flex items-center gap-1">
+          <button onClick={onPrevMonth} aria-label={t("dcPrevMonth")} title={t("dcPrevMonth")}
+            className="w-9 h-9 rounded-full border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-gray-600 dark:text-gray-200 flex items-center justify-center hover:bg-gray-50 dark:hover:bg-gray-700">
+            <ChevronRight className="w-5 h-5" />
+          </button>
+          <button onClick={onNextMonth} aria-label={t("dcNextMonth")} title={t("dcNextMonth")}
+            className="w-9 h-9 rounded-full border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-gray-600 dark:text-gray-200 flex items-center justify-center hover:bg-gray-50 dark:hover:bg-gray-700">
+            <ChevronLeft className="w-5 h-5" />
+          </button>
+        </div>
         <div className="min-w-[130px]">
           <div className="text-[15px] font-black text-gray-900 dark:text-white">{monthLabel}</div>
           <div className="text-xs text-gray-400 font-semibold"><span className="font-mono-en">{curCount}</span> {t("dcThisMonth")}</div>
