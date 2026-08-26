@@ -14,9 +14,21 @@ export interface WorkOrdersParams {
   month?: string | null;
 }
 
+// One-time heal: the old "completed" (مكتمل) status was merged into
+// "ready_for_delivery" (جاهز). Migrate any leftover rows once per server
+// instance — idempotent and cheap (indexed, no matches after the first run).
+let mergedCompleted = false;
+async function healCompletedStatus() {
+  if (mergedCompleted) return;
+  mergedCompleted = true;
+  try { await prisma.quotation.updateMany({ where: { workStatus: "completed" }, data: { workStatus: "ready_for_delivery" } }); }
+  catch { mergedCompleted = false; }
+}
+
 // Single source of truth for the work-orders / schedule query, used by the API
 // route and by server-rendered pages so the board paints with real data.
 export async function getWorkOrders(p: WorkOrdersParams) {
+  await healCompletedStatus();
   const where: any = { deliveryDate: { not: null } };
 
   if (p.month) {

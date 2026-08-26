@@ -565,7 +565,7 @@ const translations = {
   readyToExecute: { ar: "جاهز للتنفيذ", en: "Ready to Execute" },
   inProgress: { ar: "قيد التنفيذ", en: "In Progress" },
   completed: { ar: "مكتمل", en: "Completed" },
-  readyForDelivery: { ar: "جاهز للتوصيل", en: "Ready for Delivery" },
+  readyForDelivery: { ar: "جاهز", en: "Ready" },
   delivered: { ar: "تم التوصيل", en: "Delivered" },
   wood: { ar: "أخشاب", en: "Wood" },
   fabric: { ar: "أقمشة", en: "Fabric" },

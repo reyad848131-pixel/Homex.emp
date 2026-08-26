@@ -8,7 +8,7 @@ import { useDebouncedValue } from "@/lib/hooks";
 import { useI18n, useTranslatedMonths, type TranslationKey } from "@/lib/i18n";
 import { TableSkeleton, CardsSkeleton } from "@/components/skeleton";
 import { DateDrillNav, type DateRange } from "@/components/date-drill-nav";
-import { renderWaTemplate, waLinkFor, DEFAULT_WA_COMPLETED, DEFAULT_WA_READY, DEFAULT_WA_DELIVERED } from "@/lib/wa";
+import { renderWaTemplate, waLinkFor, DEFAULT_WA_READY, DEFAULT_WA_DELIVERED } from "@/lib/wa";
 import {
   Truck,
   Search,
@@ -80,7 +80,6 @@ const WORK_STATUS_KEYS: Record<string, TranslationKey> = {
   needs_preparation: "needsPreparation",
   ready_to_execute: "readyToExecute",
   in_progress: "inProgress",
-  completed: "completed",
   ready_for_delivery: "readyForDelivery",
   delivered: "delivered",
 };
@@ -88,7 +87,7 @@ const WORK_STATUS_KEYS: Record<string, TranslationKey> = {
 // Lifecycle order for the "sort by stage" toggle: يحتاج طلب → جاهز للتنفيذ →
 // قيد التنفيذ → مكتمل → جاهز للتوصيل → تم التوصيل. Anything without a status
 // sorts to the very bottom.
-const WORK_STATUS_ORDER = ["needs_preparation", "ready_to_execute", "in_progress", "completed", "ready_for_delivery", "delivered"];
+const WORK_STATUS_ORDER = ["needs_preparation", "ready_to_execute", "in_progress", "ready_for_delivery", "delivered"];
 const statusRank = (ws: string | null | undefined) => {
   const i = ws ? WORK_STATUS_ORDER.indexOf(ws) : -1;
   return i < 0 ? WORK_STATUS_ORDER.length : i;
@@ -100,8 +99,7 @@ const WORK_CARD_TINT: Record<string, string> = {
   needs_preparation: "bg-blue-50/70 dark:bg-blue-950/60 border-blue-200 dark:border-blue-600",
   ready_to_execute: "bg-pink-50/70 dark:bg-pink-950/60 border-pink-200 dark:border-pink-600",
   in_progress: "bg-slate-100 dark:bg-slate-700/60 border-slate-300 dark:border-slate-400",
-  completed: "bg-green-50/70 dark:bg-green-950/60 border-green-200 dark:border-green-600",
-  ready_for_delivery: "bg-teal-50/70 dark:bg-teal-950/60 border-teal-200 dark:border-teal-600",
+  ready_for_delivery: "bg-green-50/70 dark:bg-green-950/60 border-green-200 dark:border-green-600",
   delivered: "bg-amber-50/70 dark:bg-yellow-950/60 border-amber-200 dark:border-yellow-500",
 };
 
@@ -220,7 +218,7 @@ export function WorkOrdersClient({ initialData }: { initialData: { quotations: W
   // and the pending confirmation prompt.
   const [waTemplates, setWaTemplates] = useState<{ completed: string; ready: string; delivered: string }>({ completed: "", ready: "", delivered: "" });
   const [waCompany, setWaCompany] = useState({ name: "", phone: "" });
-  const [waPrompt, setWaPrompt] = useState<{ q: WorkQuotation; status: "completed" | "ready_for_delivery" | "delivered" } | null>(null);
+  const [waPrompt, setWaPrompt] = useState<{ q: WorkQuotation; status: "ready_for_delivery" | "delivered" } | null>(null);
   const [workers, setWorkers] = useState<WorkerLite[]>([]);
   const [prodId, setProdId] = useState<string | null>(null);
   const debouncedSearch = useDebouncedValue(search);
@@ -317,7 +315,7 @@ export function WorkOrdersClient({ initialData }: { initialData: { quotations: W
     updateLocal(id, patch);
     patchApi({ id, workStatus });
     // Offer to notify the customer on the milestones the business cares about.
-    if (workStatus === "completed" || workStatus === "ready_for_delivery" || workStatus === "delivered") {
+    if (workStatus === "ready_for_delivery" || workStatus === "delivered") {
       const q = data?.quotations.find((x) => x.id === id);
       if (q && q.customer?.phone) setWaPrompt({ q, status: workStatus });
     }
@@ -327,9 +325,7 @@ export function WorkOrdersClient({ initialData }: { initialData: { quotations: W
   const sendWaNotice = () => {
     if (!waPrompt) return;
     const { q, status } = waPrompt;
-    const tpl = status === "completed"
-      ? (waTemplates.completed || DEFAULT_WA_COMPLETED)
-      : status === "delivered"
+    const tpl = status === "delivered"
       ? (waTemplates.delivered || DEFAULT_WA_DELIVERED)
       : (waTemplates.ready || DEFAULT_WA_READY);
     const msg = renderWaTemplate(tpl, {
@@ -738,15 +734,6 @@ export function WorkOrdersClient({ initialData }: { initialData: { quotations: W
                       <ChevronLeft className="w-5 h-5 text-gray-400 group-hover:text-teal-600 shrink-0" />
                     </button>
 
-                    {q.workStatus === "completed" && (
-                      <button
-                        onClick={() => handleStatusChange(q.id, "ready_for_delivery")}
-                        className="w-full flex items-center justify-center gap-2 px-4 py-2.5 rounded-lg bg-teal-600 hover:bg-teal-700 text-white text-sm font-bold transition-colors shadow-sm"
-                      >
-                        <Truck className="w-4 h-4" />
-                        {t("moveToDelivery")}
-                      </button>
-                    )}
                     {q.workStatus === "ready_for_delivery" && (
                       <div className="flex items-center justify-between gap-3 px-4 py-2.5 rounded-lg bg-teal-50 dark:bg-teal-900/20 border border-teal-200 dark:border-teal-800">
                         <span className="flex items-center gap-2 text-sm font-bold text-teal-700 dark:text-teal-300">
@@ -917,7 +904,7 @@ export function WorkOrdersClient({ initialData }: { initialData: { quotations: W
         <div className="fixed inset-0 bg-black/40 z-50 flex items-center justify-center p-4" onClick={() => setWaPrompt(null)}>
           <div className="bg-white dark:bg-gray-800 rounded-xl p-5 w-full max-w-sm" onClick={(e) => e.stopPropagation()}>
             <h3 className="font-bold mb-1 flex items-center gap-2">
-              <Truck className="w-4 h-4" /> {waPrompt.status === "completed" ? t("woWaCompleted") : waPrompt.status === "delivered" ? t("deliveredStatus") : t("readyForDelivery")}
+              <Truck className="w-4 h-4" /> {waPrompt.status === "delivered" ? t("deliveredStatus") : t("readyForDelivery")}
             </h3>
             <p className="text-sm text-gray-500 mb-4">
               {t("woWaAskPre")} <b>{displayName(waPrompt.q.customer.name, locale)}</b> {t("woWaAskPost")}
