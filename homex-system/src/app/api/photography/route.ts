@@ -4,8 +4,10 @@ import { prisma } from "@/lib/prisma";
 import { logAction } from "@/lib/audit";
 import { userCan } from "@/lib/permissions";
 
-// A job may enter the photo queue only after the work is actually done.
-const PHOTO_ELIGIBLE_WORK_STATUSES = ["delivered"];
+// A job may enter the photo queue once the work is finished — "جاهز"
+// (ready_for_delivery) or already delivered. (Was delivered-only before the
+// "مكتمل"/"جاهز" merge; jobs now stop at "جاهز", so the photographer needs it.)
+const PHOTO_ELIGIBLE_WORK_STATUSES = ["ready_for_delivery", "delivered"];
 const VALID_PHOTO_STATUSES = ["ready", "done"];
 
 // Access: managers/admin/ceo, anyone with the photography permission (the

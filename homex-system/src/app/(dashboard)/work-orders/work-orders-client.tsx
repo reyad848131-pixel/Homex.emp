@@ -751,9 +751,11 @@ export function WorkOrdersClient({ initialData }: { initialData: { quotations: W
                         </button>
                       </div>
                     )}
-                    {/* Photography: once the job is delivered a manager
-                        can flag it into the photographer's queue. */}
-                    {q.workStatus === "delivered" && (
+                    {/* Photography: once the job is finished ("جاهز") or
+                        delivered a manager can flag it into the photographer's
+                        queue. (Before the "مكتمل"/"جاهز" merge the trigger was
+                        delivered-only; jobs now stop at "جاهز", so include it.) */}
+                    {(q.workStatus === "ready_for_delivery" || q.workStatus === "delivered") && (
                       !q.photoStatus ? (
                         <button
                           onClick={() => handleMarkPhotographable(q.id)}
