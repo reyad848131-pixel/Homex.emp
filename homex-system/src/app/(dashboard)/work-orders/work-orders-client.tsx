@@ -84,6 +84,17 @@ const WORK_STATUS_KEYS: Record<string, TranslationKey> = {
   delivered: "delivered",
 };
 
+// Whole-card tint per work status, so the status colour fills the entire order
+// card (not just the small badge) and is readable at a glance.
+const WORK_CARD_TINT: Record<string, string> = {
+  needs_preparation: "bg-blue-50 dark:bg-blue-900/15 border-blue-200 dark:border-blue-800",
+  ready_to_execute: "bg-pink-50 dark:bg-pink-900/15 border-pink-200 dark:border-pink-800",
+  in_progress: "bg-slate-50 dark:bg-slate-800/40 border-slate-300 dark:border-slate-600",
+  completed: "bg-green-50 dark:bg-green-900/15 border-green-200 dark:border-green-800",
+  ready_for_delivery: "bg-teal-50 dark:bg-teal-900/15 border-teal-200 dark:border-teal-800",
+  delivered: "bg-yellow-50 dark:bg-yellow-900/15 border-yellow-200 dark:border-yellow-800",
+};
+
 function getDaysRemaining(deliveryDate: string): number {
   const now = new Date();
   now.setHours(0, 0, 0, 0);
@@ -527,13 +538,15 @@ export function WorkOrdersClient({ initialData }: { initialData: { quotations: W
               <div
                 key={q.id}
                 className={cn(
-                  "bg-white dark:bg-gray-800 border rounded-lg overflow-hidden transition-all",
-                  "border-gray-200 dark:border-gray-700",
-                  (q.hasRedAlert || autoUrgent) && q.workStatus !== "delivered" && "border-red-300 dark:border-red-700"
+                  "border rounded-lg overflow-hidden transition-all",
+                  // Whole-card tint by work status; falls back to plain white.
+                  (q.workStatus && WORK_CARD_TINT[q.workStatus]) || "bg-white dark:bg-gray-800 border-gray-200 dark:border-gray-700",
+                  // Urgent orders keep a strong red border on top of the tint.
+                  (q.hasRedAlert || autoUrgent) && q.workStatus !== "delivered" && "border-red-400 dark:border-red-600"
                 )}
               >
                 <div
-                  className="flex items-center gap-3 p-4 cursor-pointer hover:bg-gray-50/50 dark:hover:bg-gray-700/30 transition-colors"
+                  className="flex items-center gap-3 p-4 cursor-pointer hover:bg-black/[0.03] dark:hover:bg-white/[0.03] transition-colors"
                   onClick={() => setExpandedId(isExpanded ? null : q.id)}
                 >
                   <div className="flex-1 min-w-0">
