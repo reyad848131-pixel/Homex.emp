@@ -87,12 +87,12 @@ const WORK_STATUS_KEYS: Record<string, TranslationKey> = {
 // Whole-card tint per work status, so the status colour fills the entire order
 // card (not just the small badge) and is readable at a glance.
 const WORK_CARD_TINT: Record<string, string> = {
-  needs_preparation: "bg-blue-100 dark:bg-blue-950/60 border-blue-300 dark:border-blue-600",
-  ready_to_execute: "bg-pink-100 dark:bg-pink-950/60 border-pink-300 dark:border-pink-600",
-  in_progress: "bg-slate-200 dark:bg-slate-700/60 border-slate-400 dark:border-slate-400",
-  completed: "bg-green-100 dark:bg-green-950/60 border-green-300 dark:border-green-600",
-  ready_for_delivery: "bg-teal-100 dark:bg-teal-950/60 border-teal-300 dark:border-teal-600",
-  delivered: "bg-yellow-100 dark:bg-yellow-950/60 border-yellow-300 dark:border-yellow-500",
+  needs_preparation: "bg-blue-50/70 dark:bg-blue-950/60 border-blue-200 dark:border-blue-600",
+  ready_to_execute: "bg-pink-50/70 dark:bg-pink-950/60 border-pink-200 dark:border-pink-600",
+  in_progress: "bg-slate-100 dark:bg-slate-700/60 border-slate-300 dark:border-slate-400",
+  completed: "bg-green-50/70 dark:bg-green-950/60 border-green-200 dark:border-green-600",
+  ready_for_delivery: "bg-teal-50/70 dark:bg-teal-950/60 border-teal-200 dark:border-teal-600",
+  delivered: "bg-amber-50/70 dark:bg-yellow-950/60 border-amber-200 dark:border-yellow-500",
 };
 
 function getDaysRemaining(deliveryDate: string): number {
