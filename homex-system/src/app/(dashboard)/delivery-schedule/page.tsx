@@ -21,8 +21,8 @@ interface DeliveryQuotation {
   id: string;
   quoteNumber: string;
   total: number;
-  deliveryDate: string;
-  deliveryDateEstimated?: boolean;
+  dispatchDate: string;      // the scheduled delivery day (the schedule keys off this)
+  deliveryDate?: string;     // the work board's planned date (reference only)
   deliveryTime: string | null;
   deliveryDays?: number;
   deliveryDriver: string | null;
@@ -84,9 +84,11 @@ export default function DeliverySchedulePage() {
   // date drill-nav filters the calendar on top, not this list.
   const fetchData = useCallback(() => {
     setRows(null);
-    const params = new URLSearchParams({ workStatus: tab === "queue" ? "ready_for_delivery" : "delivered" });
+    // The list shows every SCHEDULED order (dispatchDate set), split by whether
+    // it's been delivered — independent of the work board.
+    const params = new URLSearchParams({ delivered: tab === "queue" ? "0" : "1" });
     if (debouncedSearch) params.set("search", debouncedSearch);
-    fetch(`/api/work-orders?${params}`)
+    fetch(`/api/delivery-schedule?${params}`)
       .then((r) => r.json())
       .then((d) => setRows(d.quotations || []))
       .catch(() => setRows([]));
@@ -103,10 +105,10 @@ export default function DeliverySchedulePage() {
   const fetchYear = useCallback(async (year: number): Promise<DeliveryQuotation[]> => {
     if (calCache.current[year]) return calCache.current[year];
     const from = `${year}-01-01`, to = `${year}-12-31`;
-    const qp = (ws: string) => `/api/work-orders?${new URLSearchParams({ workStatus: ws, deliveryFrom: from, deliveryTo: to })}`;
+    const qp = (delivered: string) => `/api/delivery-schedule?${new URLSearchParams({ delivered, from, to })}`;
     const [a, b] = await Promise.all([
-      fetch(qp("ready_for_delivery")).then((r) => r.json()).catch(() => ({ quotations: [] })),
-      fetch(qp("delivered")).then((r) => r.json()).catch(() => ({ quotations: [] })),
+      fetch(qp("0")).then((r) => r.json()).catch(() => ({ quotations: [] })),
+      fetch(qp("1")).then((r) => r.json()).catch(() => ({ quotations: [] })),
     ]);
     const rows = [
       ...(a.quotations || []).map((q: DeliveryQuotation) => ({ ...q, _cal: "ready" })),
@@ -127,10 +129,10 @@ export default function DeliverySchedulePage() {
   const calItems: CalItem[] = useMemo(() => {
     const s = debouncedSearch.trim();
     return (calRows || [])
-      .filter((q) => q.deliveryDate)
+      .filter((q) => q.dispatchDate)
       .map((q) => {
         const cal = (q as DeliveryQuotation & { _cal?: string })._cal;
-        const late = cal !== "delivered" && (daysUntil(q.deliveryDate) ?? 0) < 0;
+        const late = cal !== "delivered" && (daysUntil(q.dispatchDate) ?? 0) < 0;
         return {
           id: q.id,
           name: q.customer?.name || "—",
@@ -139,7 +141,7 @@ export default function DeliverySchedulePage() {
           quoteNumber: q.quoteNumber,
           phone: q.customer?.phone || "",
           phoneCode: q.customer?.phoneCode || "+968",
-          date: q.deliveryDate,
+          date: q.dispatchDate,
           time: q.deliveryTime,
           days: Math.max(1, q.deliveryDays || 1),
           driver: q.deliveryDriver || DEFAULT_DRIVER,
@@ -152,13 +154,13 @@ export default function DeliverySchedulePage() {
   const reschedule = (id: string, date: string) => {
     // Update in memory (and cache) only — no reload, so month switching stays instant.
     setCalRows((prev) => {
-      const next = prev ? prev.map((q) => (q.id === id ? { ...q, deliveryDate: date, deliveryDateEstimated: false } : q)) : prev;
+      const next = prev ? prev.map((q) => (q.id === id ? { ...q, dispatchDate: date } : q)) : prev;
       if (next) calCache.current[calYear] = next;
       return next;
     });
     fetch("/api/work-orders", {
       method: "PATCH", headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ id, deliveryDate: date }),
+      body: JSON.stringify({ id, dispatchDate: date }),
     }).then(() => { loadStats(); }).catch(() => {});
   };
 
@@ -166,12 +168,12 @@ export default function DeliverySchedulePage() {
   // status, so the cached calendar is stale — drop it and reload.
   const refreshCalendar = useCallback(() => { calCache.current = {}; loadCalendar(); }, [loadCalendar]);
 
-  // Schedule a ready-for-delivery order onto a day from the calendar's + button.
-  // It may not be in the cached calendar yet (no date), so refresh after saving.
+  // Place an order on a day from the calendar's + button — sets its dispatchDate
+  // (the work board's deliveryDate is never touched). Refresh so it appears.
   const addReadyToDay = useCallback((id: string, date: string, days: number = 1) => {
     fetch("/api/work-orders", {
       method: "PATCH", headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ id, deliveryDate: date, deliveryDays: days }),
+      body: JSON.stringify({ id, dispatchDate: date, deliveryDays: days }),
     }).then(() => { refreshCalendar(); loadStats(); }).catch(() => {});
   }, [refreshCalendar]);
 
@@ -233,7 +235,7 @@ export default function DeliverySchedulePage() {
 
   const openReschedule = (q: DeliveryQuotation) => {
     setReschedId(q.id);
-    setReschedDate(q.deliveryDate ? new Date(q.deliveryDate).toISOString().split("T")[0] : "");
+    setReschedDate(q.dispatchDate ? new Date(q.dispatchDate).toISOString().split("T")[0] : "");
     setReschedTime(q.deliveryTime || "");
   };
 
@@ -243,7 +245,7 @@ export default function DeliverySchedulePage() {
     setReschedId(null);
     fetch("/api/work-orders", {
       method: "PATCH", headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ id, deliveryDate: reschedDate, deliveryTime: reschedTime || null }),
+      body: JSON.stringify({ id, dispatchDate: reschedDate, deliveryTime: reschedTime || null }),
     }).then(() => fetchData()).catch(() => fetchData());
   };
 
@@ -256,7 +258,7 @@ export default function DeliverySchedulePage() {
     const msg = renderWaTemplate(waTemplate || DEFAULT_WA_DELIVERY, {
       customer: q.customer.name,
       number: q.quoteNumber,
-      date: fmtDate(q.deliveryDate),
+      date: fmtDate(q.dispatchDate),
       time: q.deliveryTime || "",
       location: q.deliveryLocation || "",
       company: company.name,
@@ -288,7 +290,7 @@ export default function DeliverySchedulePage() {
   // Apply "today only" filter, then bucket.
   const visible = useMemo(() => {
     let list = rows || [];
-    if (todayOnly) list = list.filter((q) => getDaysRemaining(q.deliveryDate) === 0);
+    if (todayOnly) list = list.filter((q) => getDaysRemaining(q.dispatchDate) === 0);
     return list;
   }, [rows, todayOnly]);
 
@@ -307,7 +309,7 @@ export default function DeliverySchedulePage() {
       key: g.key,
       label: t(g.labelKey),
       tone: g.tone,
-      items: visible.filter((q) => g.test(getDaysRemaining(q.deliveryDate))),
+      items: visible.filter((q) => g.test(getDaysRemaining(q.dispatchDate))),
     })).filter((s) => s.items.length > 0);
   }, [visible, view, t]);
 
@@ -478,7 +480,7 @@ export default function DeliverySchedulePage() {
               </div>
               <div className="space-y-3">
                 {s.items.map((q) => {
-                  const days = getDaysRemaining(q.deliveryDate);
+                  const days = getDaysRemaining(q.dispatchDate);
                   const remaining = remainingOf(q);
                   const telNumber = `${q.customer.phoneCode}${q.customer.phone}`;
                   const isDelivered = tab === "delivered";
@@ -508,10 +510,7 @@ export default function DeliverySchedulePage() {
                         <div className="text-left shrink-0">
                           <p className="text-sm font-bold text-gray-900 dark:text-white flex items-center gap-1.5">
                             <CalendarClock className="w-4 h-4 text-teal-600" />
-                            <span className="font-mono-en">{fmtDate(q.deliveryDate)}</span>
-                            {q.deliveryDateEstimated && (
-                              <span className="rounded px-1 py-0.5 text-[10px] font-bold bg-indigo-100 text-indigo-700 dark:bg-indigo-900/40 dark:text-indigo-300" title={t("dsEstimatedTitle")}>{t("edEstimated")}</span>
-                            )}
+                            <span className="font-mono-en">{fmtDate(q.dispatchDate)}</span>
                           </p>
                           {q.deliveryTime && (
                             <p className="text-xs text-gray-500 mt-0.5 flex items-center gap-1 justify-end">

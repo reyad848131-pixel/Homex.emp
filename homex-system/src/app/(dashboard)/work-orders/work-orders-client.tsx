@@ -56,6 +56,7 @@ interface WorkQuotation {
   total: number;
   notes: string | null;
   deliveryDate: string;
+  dispatchDate: string | null;
   deliveryTime: string | null;
   workStatus: string | null;
   hasOrangeAlert: boolean;
@@ -596,6 +597,9 @@ export function WorkOrdersClient({ initialData }: { initialData: { quotations: W
                         <span className={cn("text-[10px] font-bold px-2 py-0.5 rounded", ws.badgeColor)}>
                           {t(wsKey)}
                         </span>
+                      )}
+                      {q.dispatchDate && q.workStatus !== "delivered" && (
+                        <span className="text-[10px] font-bold px-2 py-0.5 rounded bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-300">{t("woDispatchSet")}</span>
                       )}
                       {q.hasOrangeAlert && (
                         <span className="text-[10px] font-bold px-2 py-0.5 rounded bg-orange-100 text-orange-600 dark:bg-orange-900/30 dark:text-orange-300">{t("note")}</span>

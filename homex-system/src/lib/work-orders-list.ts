@@ -101,3 +101,53 @@ export async function getWorkOrders(p: WorkOrdersParams) {
 
   return { quotations, counts };
 }
+
+// One-time backfill: the delivery schedule moved from deliveryDate to the new
+// dispatchDate. Seed dispatchDate from deliveryDate for orders that were already
+// on the schedule (ready-for-delivery / delivered) so nothing disappears when
+// the split ships. Runs once per server instance; idempotent (only fills NULLs).
+let dispatchBackfilled = false;
+async function backfillDispatch() {
+  if (dispatchBackfilled) return;
+  dispatchBackfilled = true;
+  try {
+    await prisma.$executeRaw`UPDATE "quotations" SET "dispatch_date" = "delivery_date" WHERE "work_status" IN ('ready_for_delivery', 'delivered') AND "delivery_date" IS NOT NULL AND "dispatch_date" IS NULL`;
+  } catch { dispatchBackfilled = false; }
+}
+
+// The DELIVERY SCHEDULE query — keyed off dispatchDate (the day an order was
+// placed on the calendar), completely independent of the work board's
+// deliveryDate. Returns the orders scheduled within [from, to]. `search` filters
+// by name / number. This is what the calendar and the per-day list read.
+export async function getDeliverySchedule(p: { from?: string | null; to?: string | null; search?: string | null; delivered?: boolean }) {
+  await backfillDispatch();
+  const where: any = { dispatchDate: { not: null } };
+  if (p.from || p.to) {
+    where.dispatchDate = {};
+    if (p.from) where.dispatchDate.gte = new Date(p.from);
+    if (p.to) where.dispatchDate.lte = new Date(p.to + "T23:59:59.999Z");
+    if (!p.from) where.dispatchDate.not = null;
+  }
+  if (p.delivered === true) where.workStatus = "delivered";
+  else if (p.delivered === false) where.workStatus = { not: "delivered" };
+  const search = p.search ? normalizeCredential(p.search) : "";
+  if (search) {
+    where.OR = [
+      { quoteNumber: { contains: search, mode: "insensitive" as const } },
+      { originalNumber: { contains: search, mode: "insensitive" as const } },
+      { customer: { name: { contains: search, mode: "insensitive" as const } } },
+    ];
+  }
+  const quotations = await prisma.quotation.findMany({
+    where,
+    include: {
+      customer: { select: { name: true, phone: true, phoneCode: true, governorate: true, wilayat: true, address: true } },
+      employee: { select: { name: true } },
+      items: { select: { description: true, quantity: true }, orderBy: { sortOrder: "asc" } },
+      payments: { select: { amount: true } },
+    },
+    orderBy: [{ dispatchDate: "asc" }, { deliveryTime: "asc" }],
+    take: 1500,
+  });
+  return { quotations };
+}

@@ -25,7 +25,7 @@ export async function GET(req: NextRequest) {
     const end = new Date(now.getFullYear(), now.getMonth(), now.getDate() + 1, 23, 59, 59, 999);
 
     const deliveries = await prisma.quotation.findMany({
-      where: { workStatus: "ready_for_delivery", deliveryDate: { gte: start, lte: end } },
+      where: { dispatchDate: { gte: start, lte: end }, workStatus: { not: "delivered" } },
       select: { quoteNumber: true, deliveryDriver: true, customer: { select: { name: true } } },
     });
 

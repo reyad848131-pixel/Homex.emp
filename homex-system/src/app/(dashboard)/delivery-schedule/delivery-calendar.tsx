@@ -4,8 +4,11 @@ import { useState, useRef, useEffect, type Dispatch, type SetStateAction } from 
 import { useRouter } from "next/navigation";
 import { cn } from "@/lib/utils";
 import { useI18n } from "@/lib/i18n";
+import { useDebouncedValue } from "@/lib/hooks";
 import { displayName } from "@/lib/translit";
-import { Phone, MessageCircle, FileText, X, User, Plus, Loader2 } from "lucide-react";
+import { Phone, MessageCircle, FileText, X, User, Plus, Loader2, CalendarCheck } from "lucide-react";
+
+const pad2 = (n: number) => String(n).padStart(2, "0");
 
 // A single delivery mapped for the calendar view.
 export interface CalItem {
@@ -106,7 +109,7 @@ function DayCell({ day, ctx }: { day: Date; ctx: CalCtx }) {
         {ctx.canEdit
           ? <button
               onClick={(e) => { e.stopPropagation(); ctx.setAddDay(day); }}
-              title="إضافة طلب جاهز للتوصيل"
+              title="إضافة كوتيشن لهذا اليوم"
               className="w-5 h-5 rounded-md flex items-center justify-center text-gray-300 hover:text-white hover:bg-[#8b9a7b] transition-colors">
               <Plus className="w-3.5 h-3.5" />
             </button>
@@ -173,21 +176,41 @@ export function DeliveryCalendar({
     return () => window.removeEventListener("keydown", onKey);
   }, [openDay]);
 
-  // When the + on a day opens, load the ready-for-delivery orders once.
+  const debouncedReadyQ = useDebouncedValue(readyQ);
+  // When the + on a day opens, reset and (below) load this month's orders.
   useEffect(() => {
     if (!addDay) return;
     setReadyQ("");
     setAddDays(1);
-    setReadyLoading(true);
-    fetch("/api/work-orders?workStatus=ready_for_delivery")
-      .then((r) => (r.ok ? r.json() : { quotations: [] }))
-      .then((d) => setReady(d.quotations || []))
-      .catch(() => setReady([]))
-      .finally(() => setReadyLoading(false));
     const onKey = (e: KeyboardEvent) => { if (e.key === "Escape") setAddDay(null); };
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
   }, [addDay]);
+
+  // Load the pick list: when searching, search ALL work-board orders (so a quote
+  // from another month can be pulled in); otherwise list this month's work-board
+  // orders (by their planned deliveryDate) for quick picking.
+  useEffect(() => {
+    if (!addDay) { setReady(null); return; }
+    const s = debouncedReadyQ.trim();
+    let url: string;
+    if (s) {
+      url = `/api/work-orders?search=${encodeURIComponent(s)}`;
+    } else {
+      const y = addDay.getFullYear(), m = addDay.getMonth();
+      const from = `${y}-${pad2(m + 1)}-01`;
+      const to = `${y}-${pad2(m + 1)}-${pad2(new Date(y, m + 1, 0).getDate())}`;
+      url = `/api/work-orders?deliveryFrom=${from}&deliveryTo=${to}`;
+    }
+    setReadyLoading(true);
+    let cancelled = false;
+    fetch(url)
+      .then((r) => (r.ok ? r.json() : { quotations: [] }))
+      .then((d) => { if (!cancelled) setReady(d.quotations || []); })
+      .catch(() => { if (!cancelled) setReady([]); })
+      .finally(() => { if (!cancelled) setReadyLoading(false); });
+    return () => { cancelled = true; };
+  }, [addDay, debouncedReadyQ]);
 
   // ── Finger-following carousel ──────────────────────────────────────────────
   // Three month panels (next / current / prev, LTR) sit in a track translated
@@ -274,11 +297,8 @@ export function DeliveryCalendar({
     else onReschedule(id, ymd(addDay));
     setReady((prev) => (prev ? prev.filter((q) => q.id !== id) : prev));
   };
-  const readyFiltered = (ready || []).filter((q) => {
-    const s = readyQ.trim();
-    if (!s) return true;
-    return (q.customer?.name || "").includes(s) || (q.quoteNumber || "").includes(s) || (q.customer?.wilayat || "").includes(s);
-  });
+  // Search is server-side now; the list is shown as-is.
+  const readyFiltered = ready || [];
 
   return (
     <div>
@@ -326,7 +346,7 @@ export function DeliveryCalendar({
           <div className="bg-white dark:bg-gray-900 rounded-2xl shadow-2xl w-full max-w-md max-h-[82vh] flex flex-col border border-gray-200 dark:border-gray-700" onClick={(e) => e.stopPropagation()}>
             <div className="flex items-center justify-between p-4 border-b border-gray-100 dark:border-gray-700">
               <div>
-                <div className="text-base font-black text-gray-900 dark:text-white">{t("dcReadyOrders")}</div>
+                <div className="text-base font-black text-gray-900 dark:text-white">{t("dcAddOrderTitle")}</div>
                 <div className="text-xs text-gray-400 font-semibold">{dayNames[(addDay.getDay() + 1) % 7]} · <span className="font-mono-en">{addDay.getDate()} {monthNames[addDay.getMonth()]}</span></div>
               </div>
               <button onClick={() => setAddDay(null)} className="w-9 h-9 rounded-full border border-gray-200 dark:border-gray-700 text-gray-500 flex items-center justify-center hover:bg-gray-100 dark:hover:bg-gray-800"><X className="w-4 h-4" /></button>
@@ -349,12 +369,15 @@ export function DeliveryCalendar({
               {readyLoading && !ready ? (
                 <div className="flex justify-center py-8"><Loader2 className="w-6 h-6 animate-spin text-gray-300" /></div>
               ) : readyFiltered.length === 0 ? (
-                <div className="text-center text-gray-400 py-8 text-sm">{t("dcNoReady")}</div>
+                <div className="text-center text-gray-400 py-8 text-sm">{readyQ.trim() ? t("dcNoSearchResult") : t("dcNoMonthOrders")}</div>
               ) : readyFiltered.map((q) => (
                 <div key={q.id} className="flex items-center gap-2 rounded-xl border border-gray-200 dark:border-gray-700 p-2.5">
                   <div className="flex-1 min-w-0">
-                    <div className="font-bold text-gray-900 dark:text-white truncate">{displayName(q.customer?.name || "—", locale)} <span className="font-mono-en text-xs text-gray-400">{q.quoteNumber}</span></div>
-                    <div className="text-[11px] text-gray-400">{q.customer?.governorate} — {q.customer?.wilayat}{q.deliveryDate ? <span className="font-mono-en"> · {new Date(q.deliveryDate).toLocaleDateString("en-GB")}</span> : <span className="text-amber-600"> · {t("dcNoDate")}</span>}</div>
+                    <div className="font-bold text-gray-900 dark:text-white truncate flex items-center gap-1.5">
+                      {displayName(q.customer?.name || "—", locale)} <span className="font-mono-en text-xs text-gray-400">{q.quoteNumber}</span>
+                      {q.dispatchDate && <span className="shrink-0 inline-flex items-center gap-0.5 text-[9px] font-bold text-emerald-700 bg-emerald-100 dark:bg-emerald-900/30 dark:text-emerald-300 px-1.5 py-0.5 rounded-full"><CalendarCheck className="w-2.5 h-2.5" />{t("dcAlreadyScheduled")}</span>}
+                    </div>
+                    <div className="text-[11px] text-gray-400">{q.customer?.governorate} — {q.customer?.wilayat}{q.deliveryDate ? <span className="font-mono-en"> · {t("dcPlanned")} {new Date(q.deliveryDate).toLocaleDateString("en-GB")}</span> : ""}</div>
                   </div>
                   <button onClick={() => scheduleReady(q.id)} className="shrink-0 flex items-center gap-1 text-xs font-bold text-white bg-[#8b9a7b] hover:bg-[#6f7e62] px-3 py-1.5 rounded-lg"><Plus className="w-3.5 h-3.5" />{t("dcAddToDay")}</button>
                 </div>

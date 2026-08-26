@@ -224,6 +224,13 @@ model Quotation {
   // Optional time-of-day for the delivery (stored as "HH:MM"); pairs with
   // deliveryDate to schedule the delivery precisely.
   deliveryTime  String?   @map("delivery_time")
+  // The DISPATCH date: the actual day the delivery is scheduled on the delivery
+  // schedule. Separate from deliveryDate — deliveryDate is the fixed planned/
+  // preparation date the work board is organised by and measures the team
+  // against (never moved by scheduling), while dispatchDate is set/changed only
+  // from the delivery schedule when an order is placed on a calendar day. Null
+  // until the order is scheduled.
+  dispatchDate  DateTime? @map("dispatch_date")
   // How many consecutive days this delivery/installation occupies (starts on
   // deliveryDate). 1 = a single day; used to span the order across the calendar.
   deliveryDays  Int       @default(1) @map("delivery_days")
@@ -302,6 +309,7 @@ model Quotation {
   // (workStatus + installDate), the quotations list (status + createdAt), and
   // a salesperson's own quotations newest-first (employeeId + createdAt).
   @@index([workStatus, deliveryDate])
+  @@index([dispatchDate])
   @@index([onDeliveryBoard, deliveryDate])
   @@index([workStatus, installDate])
   @@index([photoStatus])

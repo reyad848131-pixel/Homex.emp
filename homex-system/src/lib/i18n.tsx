@@ -106,7 +106,12 @@ const translations = {
   dcReadyOrders: { ar: "الطلبات الجاهزة للتوصيل", en: "Ready-for-delivery orders" },
   dcNoReady: { ar: "لا توجد طلبات جاهزة للتوصيل", en: "No ready-for-delivery orders" },
   dcAddToDay: { ar: "أضف لهذا اليوم", en: "Add to this day" },
-  dcSearchOrder: { ar: "بحث بالاسم أو رقم العرض…", en: "Search by name or quote #…" },
+  dcSearchOrder: { ar: "ابحث عن أي كوتيشن (الاسم أو الرقم)…", en: "Search any quote (name or #)…" },
+  dcAddOrderTitle: { ar: "أضف كوتيشن ليوم التوصيل", en: "Add an order to this delivery day" },
+  dcNoSearchResult: { ar: "لا نتائج للبحث", en: "No results" },
+  dcNoMonthOrders: { ar: "لا كوتيشنات في هذا الشهر — ابحث عن أي كوتيشن بالأعلى", en: "No orders this month — search any quote above" },
+  dcAlreadyScheduled: { ar: "مجدول", en: "Scheduled" },
+  dcPlanned: { ar: "تجهيز:", en: "Planned:" },
   dcNoDate: { ar: "بدون تاريخ", en: "No date" },
   dcDurationDays: { ar: "عدد الأيام", en: "Days" },
   dcCall: { ar: "اتصال", en: "Call" },
@@ -542,6 +547,7 @@ const translations = {
 
   // Work Orders
   workOrdersTitle: { ar: "إدارة الأعمال والتسليم", en: "Work Orders & Delivery" },
+  woDispatchSet: { ar: "موعد تسليم محدد", en: "Delivery date set" },
   woSortDefault: { ar: "ترتيب: الأولوية", en: "Sort: priority" },
   woSortByStage: { ar: "ترتيب: مراحل العمل", en: "Sort: by stage" },
   woSortByStageHint: { ar: "بدّل الترتيب: افتراضي (الأولوية والأحدث) ↔ حسب مرحلة العمل (يحتاج طلب فوق ثم جاهز للتنفيذ فقيد التنفيذ… وتم التوصيل تحت)", en: "Toggle order: default (priority + newest) ↔ by work stage (needs-order on top, then ready-to-execute, in-progress… delivered at the bottom)" },
