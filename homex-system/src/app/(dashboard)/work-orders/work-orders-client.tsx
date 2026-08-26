@@ -26,6 +26,7 @@ import {
   Package,
   Camera,
   HardHat,
+  ListOrdered,
 } from "lucide-react";
 import { initials } from "@/lib/workers";
 import { displayName } from "@/lib/translit";
@@ -82,6 +83,15 @@ const WORK_STATUS_KEYS: Record<string, TranslationKey> = {
   completed: "completed",
   ready_for_delivery: "readyForDelivery",
   delivered: "delivered",
+};
+
+// Lifecycle order for the "sort by stage" toggle: يحتاج طلب → جاهز للتنفيذ →
+// قيد التنفيذ → مكتمل → جاهز للتوصيل → تم التوصيل. Anything without a status
+// sorts to the very bottom.
+const WORK_STATUS_ORDER = ["needs_preparation", "ready_to_execute", "in_progress", "completed", "ready_for_delivery", "delivered"];
+const statusRank = (ws: string | null | undefined) => {
+  const i = ws ? WORK_STATUS_ORDER.indexOf(ws) : -1;
+  return i < 0 ? WORK_STATUS_ORDER.length : i;
 };
 
 // Whole-card tint per work status, so the status colour fills the entire order
@@ -197,6 +207,15 @@ export function WorkOrdersClient({ initialData }: { initialData: { quotations: W
   const [editingNotes, setEditingNotes] = useState<string | null>(null);
   const [notesText, setNotesText] = useState("");
   const [showFilters, setShowFilters] = useState(false);
+  // Toggle: sort the whole board by work-stage lifecycle instead of the default
+  // (priority/delay + newest). Remembered per browser.
+  const [sortByStatus, setSortByStatus] = useState(false);
+  useEffect(() => {
+    try { setSortByStatus(localStorage.getItem("wo_sort_by_status") === "1"); } catch { /* ignore */ }
+  }, []);
+  const toggleSortByStatus = () => {
+    setSortByStatus((v) => { const nv = !v; try { localStorage.setItem("wo_sort_by_status", nv ? "1" : "0"); } catch { /* ignore */ } return nv; });
+  };
   // WhatsApp notify-on-status-change: editable templates + company signature,
   // and the pending confirmation prompt.
   const [waTemplates, setWaTemplates] = useState<{ completed: string; ready: string; delivered: string }>({ completed: "", ready: "", delivered: "" });
@@ -413,9 +432,24 @@ export function WorkOrdersClient({ initialData }: { initialData: { quotations: W
 
       <DateDrillNav onChange={handleDateNav} />
 
-      <div className="flex items-center justify-between mb-4 px-1">
+      <div className="flex items-center justify-between mb-4 px-1 gap-3">
         <span className="text-sm font-bold text-gray-700 dark:text-gray-200">{navLabel}</span>
-        <span className="text-sm font-bold text-gray-400 font-mono-en">{data.quotations.length} {t("work")}</span>
+        <div className="flex items-center gap-3">
+          <button
+            onClick={toggleSortByStatus}
+            title={t("woSortByStageHint")}
+            className={cn(
+              "inline-flex items-center gap-1.5 px-3 h-9 rounded-lg border text-xs font-bold transition-colors",
+              sortByStatus
+                ? "bg-gray-900 text-white border-gray-900 dark:bg-white dark:text-gray-900 dark:border-white"
+                : "bg-white dark:bg-gray-800 border-gray-200 dark:border-gray-700 text-gray-600 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700"
+            )}
+          >
+            <ListOrdered className="w-4 h-4" />
+            {sortByStatus ? t("woSortByStage") : t("woSortDefault")}
+          </button>
+          <span className="text-sm font-bold text-gray-400 font-mono-en">{data.quotations.length} {t("work")}</span>
+        </div>
       </div>
 
       <div className="flex gap-3 mb-4 flex-wrap">
@@ -515,7 +549,10 @@ export function WorkOrdersClient({ initialData }: { initialData: { quotations: W
         </div>
       ) : (
         <div className="space-y-3">
-          {data.quotations.map((q) => {
+          {(sortByStatus
+            ? [...data.quotations].sort((a, b) => statusRank(a.workStatus) - statusRank(b.workStatus))
+            : data.quotations
+          ).map((q) => {
             const days = getDaysRemaining(q.deliveryDate);
             const autoUrgent = isAutoUrgent(q.deliveryDate, q.workStatus);
             const ws = q.workStatus ? WORK_STATUS_MAP[q.workStatus] : null;
