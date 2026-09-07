@@ -141,7 +141,7 @@ export async function PATCH(
         body.advancePct ?? quotation.advancePct ?? 15,
         { discountAmount: body.discountAmount ?? 0, advanceAmount: body.advanceAmount ?? null, ...feeOpts },
       );
-      if (newTotalBelowPaid(newTotals.total, paid)) {
+      if (newTotalBelowPaid(newTotals.total, paid, quotation.total)) {
         return NextResponse.json(
           { error: `الإجمالي الجديد (${roundMoney(newTotals.total).toFixed(3)}) أقل من المبلغ المدفوع (${paid.toFixed(3)})`, code: "below_paid" },
           { status: 400 }
@@ -331,7 +331,7 @@ export async function PATCH(
       if (locked) {
         const paidAgg = await prisma.payment.aggregate({ where: { quotationId: id }, _sum: { amount: true } });
         const paid = roundMoney(paidAgg._sum.amount || 0);
-        if (newTotalBelowPaid(totals.total, paid)) {
+        if (newTotalBelowPaid(totals.total, paid, quotation.total)) {
           return NextResponse.json({ error: `الإجمالي الجديد (${roundMoney(totals.total).toFixed(3)}) أقل من المبلغ المدفوع (${paid.toFixed(3)})`, code: "below_paid" }, { status: 400 });
         }
         allowedFields.managerEditNote = (typeof body.editReason === "string" && body.editReason.trim()) ? body.editReason.trim() : "تعديل الأسعار من صفحة بيانات الزبون";

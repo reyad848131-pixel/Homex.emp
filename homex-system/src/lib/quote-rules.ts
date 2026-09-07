@@ -12,10 +12,14 @@ export function isFinanciallyLocked(q: {
   return !!q.invoice || (q._count?.payments ?? 0) > 0 || q.status === "accepted" || !!q.signedAt;
 }
 
-// A manager override must never drop the total below what the customer already
-// paid (that would imply money owed back / a broken balance).
-export function newTotalBelowPaid(newTotal: number, paid: number): boolean {
-  return roundMoney(newTotal) < roundMoney(paid);
+// A manager override must never DROP the total below what the customer already
+// paid (that would imply money owed back / a broken balance). It only blocks an
+// edit that actually *reduces* the total: pass `prevTotal` so a save that keeps
+// or raises the total — e.g. fixing the customer's name on a quote whose total
+// is already at/below the paid amount — is allowed. Omitting prevTotal keeps the
+// old "any total below paid" behaviour.
+export function newTotalBelowPaid(newTotal: number, paid: number, prevTotal: number = Infinity): boolean {
+  return roundMoney(newTotal) < roundMoney(paid) && roundMoney(newTotal) < roundMoney(prevTotal);
 }
 
 export type StatusDecision = { ok: true } | { ok: false; reason: "sales_decline" | "needs_approval_role" };

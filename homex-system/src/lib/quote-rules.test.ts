@@ -33,6 +33,17 @@ describe("newTotalBelowPaid", () => {
     // 0.1 + 0.2 = 0.30000000000000004; rounded both sides -> equal, not below.
     expect(newTotalBelowPaid(0.1 + 0.2, 0.3)).toBe(false);
   });
+  it("does not block an edit that keeps the (already below-paid) total unchanged", () => {
+    // Empty quote (total 0) with a 500 payment; a customer-only edit keeps it 0.
+    expect(newTotalBelowPaid(0, 500, 0)).toBe(false);
+  });
+  it("does not block an edit that raises the total, even if still below paid", () => {
+    expect(newTotalBelowPaid(400, 500, 300)).toBe(false);
+  });
+  it("still blocks an edit that reduces the total below the amount paid", () => {
+    // Real items worth 600 with a 500 payment, edited down to 0 — must stay blocked.
+    expect(newTotalBelowPaid(0, 500, 600)).toBe(true);
+  });
 });
 
 describe("canSetStatus", () => {
