@@ -88,7 +88,7 @@ const WORK_STATUS_KEYS: Record<string, TranslationKey> = {
 // Lifecycle order for the "sort by stage" toggle: يحتاج طلب → جاهز للتنفيذ →
 // قيد التنفيذ → مكتمل → جاهز للتوصيل → تم التوصيل. Anything without a status
 // sorts to the very bottom.
-const WORK_STATUS_ORDER = ["needs_preparation", "ready_to_execute", "in_progress", "ready_for_delivery", "delivered"];
+const WORK_STATUS_ORDER = ["ready_for_delivery", "in_progress", "ready_to_execute", "needs_preparation", "delivered"];
 const statusRank = (ws: string | null | undefined) => {
   const i = ws ? WORK_STATUS_ORDER.indexOf(ws) : -1;
   return i < 0 ? WORK_STATUS_ORDER.length : i;
