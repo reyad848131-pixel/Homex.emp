@@ -267,10 +267,10 @@ export default function EditQuotationPage({ params }: { params: Promise<{ id: st
     } finally { setSaving(false); }
   };
 
-  // Quick save of everything on this page — customer info AND the pricing on
-  // this screen (VAT, advance, discount, notes) — without touching the item
-  // list or navigating the steps. Totals are recomputed server-side from the
-  // existing items; on a locked quote the edit reason is adopted automatically.
+  // Save the CUSTOMER DATA ONLY — name/phone/wilayat/address — without touching
+  // the price, totals or items. Sends nothing but the customer so the server
+  // takes its dedicated customer-info path (no pricing recompute, no below-paid
+  // guard, no risk of zeroing an imported total). Works even on a locked quote.
   const saveInfoOnly = async () => {
     if (!canProceed(1)) { toast.error(t("completeCustomerFirst")); return; }
     setSaving(true); setSaveError("");
@@ -278,15 +278,8 @@ export default function EditQuotationPage({ params }: { params: Promise<{ id: st
       const res = await fetch(`/api/quotations/${id}`, {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
-        // No items and no delivery date (so an imported estimated date isn't
-        // silently confirmed) — but the page's pricing/notes are saved.
         body: JSON.stringify({
           customerId, customer,
-          vatRate,
-          advancePct,
-          discountAmount: discountAmt,
-          advanceAmount: advanceOverride,
-          notes,
           ...(locked && editReason.trim() ? { editReason: editReason.trim() } : {}),
         }),
       });
