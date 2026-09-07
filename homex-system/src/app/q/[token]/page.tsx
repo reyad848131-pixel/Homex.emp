@@ -1,5 +1,6 @@
 import { prisma } from "@/lib/prisma";
 import { getSettings } from "@/lib/settings";
+import { spreadAdditionalFee } from "@/lib/quote-calc";
 import { QuoteDecision } from "./decision";
 
 export const dynamic = "force-dynamic";
@@ -67,6 +68,12 @@ export default async function PublicQuotePage({ params }: { params: Promise<{ to
   const remaining = (q.total || 0) - (q.advanceAmount || 0);
   const monogram = (companyName.trim()[0] || "H").toUpperCase();
 
+  // Fold the hidden "رسوم إضافية" invisibly into the shown line prices + subtotal
+  // (VAT and total already include it) so the customer never sees a fee line.
+  const { items: displayItems, subtotal: displaySubtotal } = q.additionalFee > 0
+    ? spreadAdditionalFee(q.items, q.additionalFee, q.vatRate)
+    : { items: q.items, subtotal: q.subtotal };
+
   return (
     <div dir="rtl" className="min-h-screen bg-gray-100 py-6 px-4 font-cairo">
       <div className="max-w-2xl mx-auto space-y-4">
@@ -116,7 +123,7 @@ export default async function PublicQuotePage({ params }: { params: Promise<{ to
                 </tr>
               </thead>
               <tbody>
-                {q.items.map((it, i) => (
+                {displayItems.map((it, i) => (
                   <tr key={it.id} className={`border-b border-gray-100 ${i % 2 ? "bg-gray-50" : ""}`}>
                     <td className="py-2.5 px-3">
                       <p className="font-semibold text-gray-800">{it.description}</p>
@@ -131,7 +138,7 @@ export default async function PublicQuotePage({ params }: { params: Promise<{ to
           </div>
 
           <div className="mt-5 space-y-2 text-sm">
-            <div className="flex justify-between"><span className="text-gray-500">الإجمالي الفرعي</span><span className="font-mono-en font-bold">{money(q.subtotal)}</span></div>
+            <div className="flex justify-between"><span className="text-gray-500">الإجمالي الفرعي</span><span className="font-mono-en font-bold">{money(displaySubtotal)}</span></div>
             <div className="flex justify-between"><span className="text-gray-500">الضريبة ({Math.round((q.vatRate || 0) * 100)}%)</span><span className="font-mono-en font-bold">{money(q.vatAmount)}</span></div>
             {q.discountAmount > 0 && (
               <div className="flex justify-between"><span className="text-gray-500">الخصم</span><span className="font-mono-en font-bold text-[#a4442f]">− {money(q.discountAmount)}</span></div>

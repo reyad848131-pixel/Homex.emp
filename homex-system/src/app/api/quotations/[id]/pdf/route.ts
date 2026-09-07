@@ -4,6 +4,7 @@ import { getAuth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { getSettings } from "@/lib/settings";
 import { pdfToolbar } from "@/lib/pdf-shell";
+import { spreadAdditionalFee } from "@/lib/quote-calc";
 import QRCode from "qrcode";
 
 // Official quotation document (premium redesign). Rendered on screen (with the
@@ -82,7 +83,13 @@ export async function buildQuotationPdfHtml(
     const qrInsta = instaUrl ? await qrGen(instaUrl) : "";
     const qrMaps = companyMaps ? await qrGen(companyMaps) : "";
 
-    const itemRows = quotation.items.map((item, i) => `
+    // Fold the hidden "رسوم إضافية" invisibly into the line prices + subtotal so
+    // the customer's document stays consistent with no visible fee line.
+    const { items: displayItems, subtotal: displaySubtotal } = quotation.additionalFee > 0
+      ? spreadAdditionalFee(quotation.items, quotation.additionalFee, quotation.vatRate)
+      : { items: quotation.items, subtotal: quotation.subtotal };
+
+    const itemRows = displayItems.map((item, i) => `
       <tr>
         <td class="c-idx">${i + 1}</td>
         <td class="c-desc">${esc(item.description)}</td>
@@ -375,7 +382,7 @@ ${opts.toolbar || ""}
       ${qrMaps ? `<div class="tq"><img src="${qrMaps}" alt="Location" /><div class="cap"><b>موقع المصنع</b><br/>امسح للوصول</div></div>` : ""}
     </div>` : ""}
     <div class="totals-card">
-      <div class="tt sub"><span class="l">الإجمالي الفرعي</span><span class="v">${fmtCur(quotation.subtotal)} <span style="color:var(--muted);font-weight:600">ر.ع</span></span></div>
+      <div class="tt sub"><span class="l">الإجمالي الفرعي</span><span class="v">${fmtCur(displaySubtotal)} <span style="color:var(--muted);font-weight:600">ر.ع</span></span></div>
       <div class="tt"><span class="l">ضريبة القيمة المضافة ${(quotation.vatRate * 100).toFixed(0)}%</span><span class="v">${fmtCur(quotation.vatAmount)}</span></div>
       ${quotation.discountAmount > 0 ? `<div class="tt"><span class="l">الخصم</span><span class="v" style="color:#a4442f">− ${fmtCur(quotation.discountAmount)}</span></div>` : ""}
       <div class="tt grand"><span class="l">المبلغ الإجمالي</span><span class="v">${fmtCur(quotation.total)} ر.ع</span></div>

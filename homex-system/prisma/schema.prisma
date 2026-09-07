@@ -192,6 +192,10 @@ model Quotation {
   discountAmount Float    @default(0) @map("discount_amount")
   vatRate       Float     @default(0.05) @map("vat_rate")
   vatAmount     Float     @default(0) @map("vat_amount")
+  // A hidden "رسوم إضافية" (VAT-inclusive) auto-added when the works subtotal
+  // reaches the configured threshold. Stored separately so item prices stay
+  // clean; it is folded invisibly into the customer-facing document.
+  additionalFee Float     @default(0) @map("additional_fee")
   total         Float     @default(0)
   advancePct    Float     @default(15) @map("advance_pct")
   advanceAmount Float     @default(0) @map("advance_amount")

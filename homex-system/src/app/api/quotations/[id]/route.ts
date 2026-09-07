@@ -6,7 +6,7 @@ import { notify, notifyAdmins } from "@/lib/notifications";
 import { computeQuoteTotals } from "@/lib/quote-calc";
 import { parseBody, updateQuotationItemsSchema } from "@/lib/schemas";
 import { roundMoney } from "@/lib/utils";
-import { getSetting } from "@/lib/settings";
+import { getSetting, getSettings } from "@/lib/settings";
 import { isFinanciallyLocked, newTotalBelowPaid, canSetStatus } from "@/lib/quote-rules";
 import { userCan } from "@/lib/permissions";
 import { priceEditorIds, canEditPrice, hasPriceOverride } from "@/lib/price-permission";
@@ -79,6 +79,14 @@ export async function PATCH(
     const isManager = (user.role === "admin" || user.role === "ceo") || user.role === "manager";
     const locked = isFinanciallyLocked(quotation);
 
+    // Hidden additional-fee settings, applied to every server-side recompute
+    // below so an edit keeps (or drops) the fee exactly as a fresh create would.
+    const feeCfg = await getSettings();
+    const feeOpts = {
+      additionalFeeAmount: parseFloat(feeCfg.additional_fee_amount || "0") || 0,
+      additionalFeeThreshold: parseFloat(feeCfg.additional_fee_threshold || "0") || 0,
+    };
+
     // Convert an approved quote into a confirmed contract: lock it (status
     // "accepted") and push it onto the work board with the agreed delivery date.
     if (body.action === "contract") {
@@ -131,7 +139,7 @@ export async function PATCH(
         body.items,
         body.vatRate ?? quotation.vatRate ?? 0.05,
         body.advancePct ?? quotation.advancePct ?? 15,
-        { discountAmount: body.discountAmount ?? 0, advanceAmount: body.advanceAmount ?? null },
+        { discountAmount: body.discountAmount ?? 0, advanceAmount: body.advanceAmount ?? null, ...feeOpts },
       );
       if (newTotalBelowPaid(newTotals.total, paid)) {
         return NextResponse.json(
@@ -177,7 +185,7 @@ export async function PATCH(
           body.items,
           body.vatRate ?? quotation.vatRate ?? 0.05,
           body.advancePct ?? quotation.advancePct ?? 15,
-          { discountAmount: body.discountAmount ?? 0, advanceAmount: body.advanceAmount ?? null },
+          { discountAmount: body.discountAmount ?? 0, advanceAmount: body.advanceAmount ?? null, ...feeOpts },
         );
 
         if (body.customer && body.customerId) {
@@ -203,6 +211,7 @@ export async function PATCH(
             discountAmount: totals.discountAmount,
             vatRate: totals.vatRate,
             vatAmount: totals.vatAmount,
+            additionalFee: totals.additionalFee,
             total: totals.total,
             advancePct: totals.advancePct,
             advanceAmount: totals.advanceAmount,
@@ -316,6 +325,7 @@ export async function PATCH(
         {
           discountAmount: body.discountAmount ?? quotation.discountAmount ?? 0,
           advanceAmount: body.advanceAmount !== undefined ? body.advanceAmount : (quotation.advanceIsFixed ? quotation.advanceAmount : null),
+          ...feeOpts,
         },
       );
       if (locked) {
@@ -333,6 +343,7 @@ export async function PATCH(
       allowedFields.discountAmount = totals.discountAmount;
       allowedFields.vatRate = totals.vatRate;
       allowedFields.vatAmount = totals.vatAmount;
+      allowedFields.additionalFee = totals.additionalFee;
       allowedFields.total = totals.total;
       allowedFields.advancePct = totals.advancePct;
       allowedFields.advanceAmount = totals.advanceAmount;

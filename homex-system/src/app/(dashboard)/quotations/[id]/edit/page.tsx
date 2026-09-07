@@ -47,6 +47,8 @@ export default function EditQuotationPage({ params }: { params: Promise<{ id: st
   const [discount, setDiscount] = useState(0);
   const [advanceOverride, setAdvanceOverride] = useState<number | null>(null);
   const [vatRate, setVatRate] = useState(0.05);
+  const [feeAmount, setFeeAmount] = useState(0);
+  const [feeThreshold, setFeeThreshold] = useState(0);
   const [notes, setNotes] = useState("");
   const [customerId, setCustomerId] = useState("");
   const [quoteNumber, setQuoteNumber] = useState("");
@@ -129,6 +131,14 @@ export default function EditQuotationPage({ params }: { params: Promise<{ id: st
     });
   }, [id]);
 
+  // Additional-fee settings so the on-screen total matches what the server saves.
+  useEffect(() => {
+    fetch("/api/settings").then((r) => r.ok ? r.json() : {}).then((s: any) => {
+      setFeeAmount(parseFloat(s.additional_fee_amount || "0") || 0);
+      setFeeThreshold(parseFloat(s.additional_fee_threshold || "0") || 0);
+    }).catch(() => {});
+  }, []);
+
   const catName = (cat: Category) => locale === "en" ? cat.nameEn : cat.nameAr;
   const itemCatName = (item: LineItem) => locale === "en" ? item.categoryNameEn : item.categoryNameAr;
 
@@ -136,7 +146,9 @@ export default function EditQuotationPage({ params }: { params: Promise<{ id: st
   const round3 = (n: number) => Math.round(n * 1000) / 1000;
   const subtotal = items.reduce((s, i) => s + i.lineTotal, 0);
   const vat = round3(subtotal * vatRate);
-  const grossTotal = round3(subtotal + vat);
+  // Hidden additional fee (VAT-inclusive) auto-added once works ≥ threshold.
+  const additionalFee = feeAmount > 0 && feeThreshold > 0 && subtotal >= feeThreshold ? round3(feeAmount) : 0;
+  const grossTotal = round3(subtotal + vat + additionalFee);
   const discountAmt = Math.min(grossTotal, Math.max(0, discount || 0));
   const total = round3(grossTotal - discountAmt);
   const advance = advanceOverride != null
@@ -697,6 +709,7 @@ export default function EditQuotationPage({ params }: { params: Promise<{ id: st
                 <div className="border-t border-gray-100 mt-4 pt-4 space-y-2">
                   <div className="flex justify-between text-sm"><span className="text-gray-500">{t("subtotal")}</span><span className="font-bold font-mono-en">{fmtCur(subtotal)}</span></div>
                   <div className="flex justify-between text-sm"><span className="text-gray-500">{t("vat")} ({(vatRate * 100).toFixed(0)}%)</span><span className="font-bold font-mono-en">{fmtCur(vat)}</span></div>
+                  {additionalFee > 0 && <div className="flex justify-between text-sm"><span className="text-gray-500">{t("addFeeRow")}</span><span className="font-bold font-mono-en text-gray-400">{fmtCur(additionalFee)}</span></div>}
                   {discountAmt > 0 && <div className="flex justify-between text-sm"><span className="text-gray-500">{t("discountRow")}</span><span className="font-bold font-mono-en text-[#a4442f]">− {fmtCur(discountAmt)}</span></div>}
                   <div className="flex justify-between text-base pt-2 border-t border-gray-200"><span className="font-bold">{t("grandTotal")}</span><span className="font-black font-mono-en text-lg">{fmtCur(total)}</span></div>
                 </div>
@@ -772,6 +785,7 @@ export default function EditQuotationPage({ params }: { params: Promise<{ id: st
             <div className="bg-gray-900 text-white rounded p-5 mt-5">
               <div className="flex justify-between items-center mb-3"><span className="text-gray-400 text-sm">{t("subtotal")}</span><span className="font-bold font-mono-en">{fmtCur(subtotal)}</span></div>
               <div className="flex justify-between items-center mb-3"><span className="text-gray-400 text-sm">{t("vat")} ({(vatRate * 100).toFixed(0)}%)</span><span className="font-bold font-mono-en">{fmtCur(vat)}</span></div>
+              {additionalFee > 0 && <div className="flex justify-between items-center mb-3"><span className="text-gray-400 text-sm">{t("addFeeRow")}</span><span className="font-bold font-mono-en text-gray-400">{fmtCur(additionalFee)}</span></div>}
               {discountAmt > 0 && <div className="flex justify-between items-center mb-3"><span className="text-gray-400 text-sm">{t("discountRow")}</span><span className="font-bold font-mono-en text-red-300">− {fmtCur(discountAmt)}</span></div>}
               <div className="flex justify-between items-center pt-3 border-t border-gray-700"><span className="font-bold text-lg">{t("finalTotal")}</span><span className="text-2xl font-black font-mono-en">{fmtCur(total)}</span></div>
               <div className="flex justify-between items-center mt-2"><span className="text-gray-400 text-sm">{t("advancePayment")}{advanceOverride == null ? ` (${advancePct}%)` : ""}</span><span className="font-bold font-mono-en text-green-400">{fmtCur(advance)}</span></div>

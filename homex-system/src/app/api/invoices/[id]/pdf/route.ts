@@ -6,6 +6,7 @@ import {
   loadBrand, esc, iconLines, brandCss, watermarkHtml, letterheadHtml,
   footerHtml, printDateStr, makeQr,
 } from "@/lib/pdf-brand";
+import { spreadAdditionalFee } from "@/lib/quote-calc";
 
 // GCC/ZATCA-style TLV field: tag + length + UTF-8 value.
 function tlv(tag: number, value: string): Buffer {
@@ -67,7 +68,13 @@ export async function GET(
     const remaining = q.total - totalPaid;
     const fullyPaid = remaining <= 0.0005;
 
-    const itemRows = q.items.map((item, i) => `
+    // Fold the hidden additional fee invisibly into line prices + subtotal so the
+    // invoice stays consistent (Σ items = subtotal) with no visible fee line.
+    const { items: displayItems, subtotal: displaySubtotal } = q.additionalFee > 0
+      ? spreadAdditionalFee(q.items, q.additionalFee, q.vatRate)
+      : { items: q.items, subtotal: q.subtotal };
+
+    const itemRows = displayItems.map((item, i) => `
       <tr>
         <td class="c-idx">${i + 1}</td>
         <td class="c-desc">${esc(item.description)}</td>
@@ -138,7 +145,7 @@ ${pdfToolbar(`/quotations/${q.id}`)}
       <div class="tq"><img src="${qrTax}" alt="Tax QR" /><div class="cap"><b>فاتورة ضريبية</b><br/>امسح للتحقق</div></div>
     </div>` : ""}
     <div class="totals-card">
-      <div class="tt sub"><span class="l">الإجمالي الفرعي</span><span class="v">${fmtCur(q.subtotal)} <span style="color:var(--muted);font-weight:600">ر.ع</span></span></div>
+      <div class="tt sub"><span class="l">الإجمالي الفرعي</span><span class="v">${fmtCur(displaySubtotal)} <span style="color:var(--muted);font-weight:600">ر.ع</span></span></div>
       <div class="tt"><span class="l">ضريبة القيمة المضافة ${(q.vatRate * 100).toFixed(0)}%</span><span class="v">${fmtCur(q.vatAmount)}</span></div>
       ${q.discountAmount > 0 ? `<div class="tt"><span class="l">الخصم</span><span class="v" style="color:#a4442f">− ${fmtCur(q.discountAmount)}</span></div>` : ""}
       <div class="tt grand"><span class="l">المبلغ الإجمالي</span><span class="v">${fmtCur(q.total)} ر.ع</span></div>

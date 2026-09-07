@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { sanitizeItem, computeQuoteTotals } from "./quote-calc";
+import { sanitizeItem, computeQuoteTotals, spreadAdditionalFee } from "./quote-calc";
 
 describe("sanitizeItem", () => {
   it("recomputes lineTotal from quantity/unitPrice/extras and ignores the client value", () => {
@@ -115,5 +115,38 @@ describe("computeQuoteTotals", () => {
     const totals = computeQuoteTotals([{ categoryId: "c1", quantity: 2, unitPrice: 100, extras: 25 }], 0, 0);
     expect(totals.subtotal).toBe(225); // 2*100 + 25
     expect(totals.total).toBe(225);    // no VAT
+  });
+
+  it("adds no additional fee below the threshold", () => {
+    const totals = computeQuoteTotals(
+      [{ categoryId: "c1", quantity: 1, unitPrice: 9000 }], 0.05, 0,
+      { additionalFeeAmount: 144, additionalFeeThreshold: 10000 },
+    );
+    expect(totals.additionalFee).toBe(0);
+    expect(totals.subtotal).toBe(9000);
+    expect(totals.total).toBe(9450); // 9000 * 1.05, no fee
+  });
+
+  it("adds a VAT-inclusive fee at/above the threshold so the total rises by exactly the fee", () => {
+    const base = computeQuoteTotals(
+      [{ categoryId: "c1", quantity: 1, unitPrice: 10000 }], 0.05, 0,
+      { additionalFeeAmount: 144, additionalFeeThreshold: 10000 },
+    );
+    expect(base.additionalFee).toBe(144);
+    expect(base.subtotal).toBe(10000);        // stored subtotal stays clean
+    // Grand total = 10000*1.05 (10500) + 144 = 10644, exactly +144 over the fee-less total.
+    expect(base.total).toBe(10644);
+  });
+
+  it("keeps subtotal clean and folds the fee into the customer view via spreadAdditionalFee", () => {
+    const items = [
+      { lineTotal: 6000, unitPrice: 6000, extras: 0, quantity: 1 },
+      { lineTotal: 4000, unitPrice: 4000, extras: 0, quantity: 1 },
+    ];
+    const view = spreadAdditionalFee(items, 144, 0.05);
+    // feeNet = 144 / 1.05 = 137.143; shown subtotal = 10000 + 137.143.
+    expect(view.subtotal).toBe(10137.143);
+    const sum = Math.round(view.items.reduce((s, it) => s + it.lineTotal, 0) * 1000) / 1000;
+    expect(sum).toBe(view.subtotal); // Σ items === shown subtotal (no orphan cents)
   });
 });

@@ -90,11 +90,15 @@ export async function POST(req: NextRequest) {
     const defaultAdvance = parseFloat(cfg.advance_pct || "15") || 15;
     const validityDays = parseInt(cfg.quote_validity_days || "30") || 30;
     const finalAdvancePct = advancePct ?? defaultAdvance;
+    const feeAmount = parseFloat(cfg.additional_fee_amount || "0") || 0;
+    const feeThreshold = parseFloat(cfg.additional_fee_threshold || "0") || 0;
 
     // Recompute every monetary field server-side — never trust client totals.
     const totals = computeQuoteTotals(items, vatRate, finalAdvancePct, {
       discountAmount: discountAmount ?? 0,
       advanceAmount: advanceAmount ?? null,
+      additionalFeeAmount: feeAmount,
+      additionalFeeThreshold: feeThreshold,
     });
 
     const quotation = await withUniqueRetry(async () => {
@@ -111,6 +115,7 @@ export async function POST(req: NextRequest) {
         discountAmount: totals.discountAmount,
         vatRate: totals.vatRate,
         vatAmount: totals.vatAmount,
+        additionalFee: totals.additionalFee,
         total: totals.total,
         advancePct: totals.advancePct,
         advanceAmount: totals.advanceAmount,

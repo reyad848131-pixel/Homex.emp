@@ -56,6 +56,8 @@ export default function NewQuotationPage() {
   const [discount, setDiscount] = useState(0);
   const [advanceOverride, setAdvanceOverride] = useState<number | null>(null);
   const [vatRate, setVatRate] = useState(0.05);
+  const [feeAmount, setFeeAmount] = useState(0);
+  const [feeThreshold, setFeeThreshold] = useState(0);
   const [notes, setNotes] = useState("");
   const [employeeName, setEmployeeName] = useState("");
   // Only the owner + designated employees may set / change prices (from /api/me).
@@ -87,6 +89,8 @@ export default function NewQuotationPage() {
       if (draftAppliedRef.current) return;
       if (s.vat_rate) setVatRate(parseFloat(s.vat_rate) / 100 || 0.05);
       if (s.advance_pct) setAdvancePct(parseInt(s.advance_pct) || 15);
+      setFeeAmount(parseFloat(s.additional_fee_amount || "0") || 0);
+      setFeeThreshold(parseFloat(s.additional_fee_threshold || "0") || 0);
     }).catch(() => {});
   }, []);
 
@@ -97,8 +101,11 @@ export default function NewQuotationPage() {
 
   const round3 = (n: number) => Math.round(n * 1000) / 1000;
   const subtotal = items.reduce((s, i) => s + i.lineTotal, 0);
-  const vat = subtotal * vatRate;
-  const grossTotal = subtotal + vat;
+  const vat = round3(subtotal * vatRate);
+  // Hidden additional fee (VAT-inclusive) auto-added once works ≥ threshold.
+  // Kept gross here so the shown total matches what the server stores exactly.
+  const additionalFee = feeAmount > 0 && feeThreshold > 0 && subtotal >= feeThreshold ? round3(feeAmount) : 0;
+  const grossTotal = round3(subtotal + vat + additionalFee);
   const discountAmt = Math.min(grossTotal, Math.max(0, discount || 0));
   const total = round3(grossTotal - discountAmt);
   const advance = advanceOverride != null
@@ -669,6 +676,12 @@ export default function NewQuotationPage() {
                     <span className="text-gray-500">{t("vat")} ({(vatRate * 100).toFixed(0)}%)</span>
                     <span className="font-bold font-mono-en">{fmtCur(vat)}</span>
                   </div>
+                  {additionalFee > 0 && (
+                    <div className="flex justify-between text-sm">
+                      <span className="text-gray-500">{t("addFeeRow")}</span>
+                      <span className="font-bold font-mono-en text-gray-400">{fmtCur(additionalFee)}</span>
+                    </div>
+                  )}
                   {discountAmt > 0 && (
                     <div className="flex justify-between text-sm">
                       <span className="text-gray-500">{t("discountRow")}</span>
@@ -763,6 +776,12 @@ export default function NewQuotationPage() {
                 <span className="text-gray-400 text-sm">{t("vat")} ({(vatRate * 100).toFixed(0)}%)</span>
                 <span className="font-bold font-mono-en">{fmtCur(vat)}</span>
               </div>
+              {additionalFee > 0 && (
+                <div className="flex justify-between items-center mb-3">
+                  <span className="text-gray-400 text-sm">{t("addFeeRow")}</span>
+                  <span className="font-bold font-mono-en text-gray-400">{fmtCur(additionalFee)}</span>
+                </div>
+              )}
               {discountAmt > 0 && (
                 <div className="flex justify-between items-center mb-3">
                   <span className="text-gray-400 text-sm">{t("discountRow")}</span>

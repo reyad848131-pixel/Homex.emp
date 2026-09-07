@@ -10,8 +10,9 @@ import { logAction } from "@/lib/audit";
 // Curtain-order tracker. Curtains are made by an external subcontractor:
 //  - LINKED rows come live from any quotation that contains curtain items (a
 //    quotation with a kitchen + cabinets + curtains contributes only its
-//    curtains here). They appear as soon as the quote is saved (any status
-//    except declined).
+//    curtains here). They appear only once the quote becomes a CONTRACT
+//    (status "accepted" — the customer accepted/signed or it was converted to a
+//    contract). Before that the subcontractor shouldn't start, so nothing shows.
 //  - STANDALONE rows are historical / external orders with no quotation (e.g.
 //    imported from the old Excel).
 // "ourPrice" is what the customer pays us for the curtains, "outsidePrice" is
@@ -26,11 +27,11 @@ export async function GET(req: NextRequest) {
     const { searchParams } = new URL(req.url);
     const statusFilter = (searchParams.get("workStatus") || "").trim();
 
-    // Quotations that contain curtain items — shown from the moment they're saved
-    // (any status except a declined one).
+    // Quotations that contain curtain items — shown only once accepted (turned
+    // into a contract). Until then the subcontractor order shouldn't exist.
     const quotes = await prisma.quotation.findMany({
       where: {
-        status: { not: "declined" },
+        status: "accepted",
         items: { some: { categoryId: "curtains" } },
       },
       include: {

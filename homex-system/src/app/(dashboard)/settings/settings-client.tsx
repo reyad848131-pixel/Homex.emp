@@ -530,6 +530,26 @@ export default function SettingsClient() {
                 className="field" />
             </div>
           </div>
+
+          <div className="mt-6 pt-5 border-t border-gray-200 dark:border-gray-700">
+            <h3 className="text-sm font-bold mb-1">{t("addFeeTitle")}</h3>
+            <p className="text-xs text-gray-500 mb-4">{t("addFeeHint")}</p>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <div>
+                <label className="block text-sm font-semibold text-gray-600 mb-1.5">{t("addFeeAmount")}</label>
+                <input type="number" step={0.001} min={0} value={settings.additional_fee_amount || "0"}
+                  onChange={(e) => update("additional_fee_amount", e.target.value)}
+                  className="field font-mono-en" />
+              </div>
+              <div>
+                <label className="block text-sm font-semibold text-gray-600 mb-1.5">{t("addFeeThreshold")}</label>
+                <input type="number" step={1} min={0} value={settings.additional_fee_threshold || "0"}
+                  onChange={(e) => update("additional_fee_threshold", e.target.value)}
+                  className="field font-mono-en" />
+              </div>
+            </div>
+            <p className="text-[11px] text-gray-400 mt-2">{t("addFeeNote")}</p>
+          </div>
         </div>
       </div>
 
