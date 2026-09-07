@@ -8,6 +8,7 @@ const CHECK_INTERVAL = 60_000;
 
 export function UpdateChecker() {
   const [updateAvailable, setUpdateAvailable] = useState(false);
+  const [newVersion, setNewVersion] = useState<string | null>(null);
   const initialVersion = useRef<string | null>(null);
   const { t } = useI18n();
 
@@ -20,6 +21,7 @@ export function UpdateChecker() {
         if (!initialVersion.current) {
           initialVersion.current = v;
         } else if (v !== initialVersion.current) {
+          setNewVersion(v);
           setUpdateAvailable(true);
         }
       } catch {}
@@ -37,6 +39,7 @@ export function UpdateChecker() {
         if (!res.ok) return;
         const { v } = await res.json();
         if (initialVersion.current && v !== initialVersion.current) {
+          setNewVersion(v);
           setUpdateAvailable(true);
         }
       } catch {}
@@ -82,8 +85,13 @@ export function UpdateChecker() {
         onClick={() => window.location.reload()}
         className="pointer-events-auto flex items-center gap-2 px-5 py-3 bg-gray-900 dark:bg-white text-white dark:text-gray-900 rounded-xl shadow-2xl text-sm font-bold animate-bounce hover:scale-105 transition-transform"
       >
-        <RefreshCw className="w-4 h-4" />
-        {t("updateAvailable")}
+        <RefreshCw className="w-4 h-4 shrink-0" />
+        <span className="flex flex-col items-start leading-tight">
+          <span>{t("updateAvailable")}</span>
+          {newVersion && (
+            <span className="text-[10px] font-mono-en font-medium opacity-70" dir="ltr">v: {newVersion}</span>
+          )}
+        </span>
       </button>
     </div>
   );

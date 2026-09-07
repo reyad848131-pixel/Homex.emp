@@ -1119,7 +1119,12 @@ const translations = {
   detailsCol: { ar: "التفاصيل", en: "Details" },
 
   // Update checker
-  updateAvailable: { ar: "تحديث متاح — اضغط للتحديث", en: "Update available — tap to refresh" },
+  updateAvailable: { ar: "يتوفّر إصدار جديد من هوميكس — اضغط للتحديث الآن", en: "A new version of Homex is available — tap to update now" },
+  updateCheck: { ar: "التأكد من وجود تحديث", en: "Check for updates" },
+  updateChecking: { ar: "جارٍ التحقق…", en: "Checking…" },
+  updateUpToDate: { ar: "أنت على آخر إصدار", en: "You're on the latest version" },
+  updateReady: { ar: "يتوفّر تحديث — حدّث الآن", en: "Update available — refresh now" },
+  versionLabel: { ar: "الإصدار", en: "Version" },
 
   // Language
   language: { ar: "English", en: "عربي" },

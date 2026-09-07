@@ -5,6 +5,7 @@ import { usePathname } from "next/navigation";
 import { useRouter } from "next/navigation";
 import { cn } from "@/lib/utils";
 import { useI18n, type TranslationKey } from "@/lib/i18n";
+import { SidebarUpdate } from "@/components/sidebar-update";
 import {
   LayoutDashboard,
   CalendarCheck,
@@ -185,6 +186,7 @@ export function Sidebar({ user, permissions, canAccessSettings }: SidebarProps) 
           <LogOut className="w-4 h-4" />
           {t("logout")}
         </button>
+        <SidebarUpdate />
       </div>
     </>
   );
