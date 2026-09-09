@@ -1348,6 +1348,8 @@ const translations = {
   sofaTriple: { ar: "كنب ثلاثي", en: "Triple sofa" },
   qbPerPiece: { ar: "الحبة", en: "piece" },
   qbWoodenSurcharge: { ar: "إطار خشبي", en: "Wooden frame" },
+  sofaModePieces: { ar: "بالحبة", en: "Per piece" },
+  sofaModeManual: { ar: "سعر يدوي", en: "Manual price" },
   nightstandType: { ar: "نوع الكومودينو", en: "Nightstand Type" },
   pricingMethod: { ar: "طريقة التسعير", en: "Pricing Method" },
   fixedMethod: { ar: "ثابت", en: "Fixed" },
