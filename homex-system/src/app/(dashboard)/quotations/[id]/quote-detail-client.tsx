@@ -97,6 +97,7 @@ export default function QuoteDetailClient({
   initialMe,
   initialCanManageMoney = false,
   initialWaTemplate = "",
+  initialWaPdf = "",
   initialCompany = { name: "", phone: "" },
 }: {
   id: string;
@@ -106,6 +107,7 @@ export default function QuoteDetailClient({
   initialMe: { id: string; role: string } | null;
   initialCanManageMoney?: boolean;
   initialWaTemplate?: string;
+  initialWaPdf?: string;
   initialCompany?: { name: string; phone: string };
 }) {
   const router = useRouter();
@@ -346,8 +348,8 @@ export default function QuoteDetailClient({
       const { buildQuotationPdfBlob, preferShareSheet, sharePdf } = await import("@/lib/share-pdf");
       const blob = await buildQuotationPdfBlob(q.id);
       const fileName = `${q.quoteNumber} - ${displayName(q.customer.name, locale)}`;
-      // Same caption as the quote message, without the approval link.
-      const caption = renderWaTemplate(DEFAULT_WA_PDF, {
+      // PDF caption — editable from Settings (wa_template_pdf), else the default.
+      const caption = renderWaTemplate(initialWaPdf || DEFAULT_WA_PDF, {
         customer: q.customer.name,
         number: q.quoteNumber,
         total: fmtCur(q.total),

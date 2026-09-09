@@ -58,6 +58,7 @@ export default async function QuotationDetailPage({ params }: { params: Promise<
       initialMe={user ? { id: user.id, role: user.role } : null}
       initialCanManageMoney={canManageMoney}
       initialWaTemplate={settings.wa_template_quote || ""}
+      initialWaPdf={settings.wa_template_pdf || ""}
       initialCompany={{ name: settings.company_name || "", phone: settings.company_phone || "" }}
     />
   );

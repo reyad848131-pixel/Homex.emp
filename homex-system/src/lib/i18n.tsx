@@ -376,7 +376,8 @@ const translations = {
   // ── Settings (WhatsApp templates) ──
   stWaTitle: { ar: "قوالب رسائل واتساب", en: "WhatsApp message templates" },
   stWaHint: { ar: "عدّل نصّ الرسائل الجاهزة. المتغيّرات المتاحة تُستبدَل تلقائياً:", en: "Edit the ready message text. Available variables are replaced automatically:" },
-  stWaQuote: { ar: "رسالة عرض السعر", en: "Quotation message" },
+  stWaQuote: { ar: "رسالة عرض السعر (مع الرابط)", en: "Quotation message (with link)" },
+  stWaPdf: { ar: "رسالة إرفاق ملف PDF", en: "PDF attachment message" },
   stWaDeliveryDate: { ar: "رسالة تأكيد موعد التوصيل", en: "Delivery-date confirmation message" },
   stWaCompleted: { ar: "رسالة «اكتمل الطلب»", en: "“Order completed” message" },
   stWaReady: { ar: "رسالة «جاهز للتوصيل»", en: "“Ready for delivery” message" },

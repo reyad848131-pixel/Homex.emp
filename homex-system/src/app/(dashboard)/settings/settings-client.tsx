@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useRef } from "react";
 import { Settings, Save, Building2, Download, Database, FileSpreadsheet, ScrollText, Upload, Trash2, ImageIcon, ShieldCheck, Smartphone, MessageCircle } from "lucide-react";
-import { DEFAULT_WA_QUOTE, DEFAULT_WA_DELIVERY, DEFAULT_WA_COMPLETED, DEFAULT_WA_READY, DEFAULT_WA_DELIVERED } from "@/lib/wa";
+import { DEFAULT_WA_QUOTE, DEFAULT_WA_PDF, DEFAULT_WA_DELIVERY, DEFAULT_WA_COMPLETED, DEFAULT_WA_READY, DEFAULT_WA_DELIVERED } from "@/lib/wa";
 import { useI18n } from "@/lib/i18n";
 import { cn } from "@/lib/utils";
 import { AppIconEditor } from "@/components/app-icon-editor";
@@ -478,6 +478,11 @@ export default function SettingsClient() {
               <label className="block text-sm font-semibold text-gray-600 mb-1.5">{t("stWaQuote")}</label>
               <textarea rows={7} value={settings.wa_template_quote ?? ""} onChange={(e) => update("wa_template_quote", e.target.value)}
                 className="field font-mono-en text-sm" dir="rtl" placeholder={DEFAULT_WA_QUOTE} />
+            </div>
+            <div>
+              <label className="block text-sm font-semibold text-gray-600 mb-1.5">{t("stWaPdf")}</label>
+              <textarea rows={7} value={settings.wa_template_pdf ?? ""} onChange={(e) => update("wa_template_pdf", e.target.value)}
+                className="field font-mono-en text-sm" dir="rtl" placeholder={DEFAULT_WA_PDF} />
             </div>
             <div>
               <label className="block text-sm font-semibold text-gray-600 mb-1.5">{t("stWaDeliveryDate")}</label>
