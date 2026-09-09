@@ -1165,25 +1165,52 @@ function PartitionBuilder({ config, onUpdate, initial }: { config: any; onUpdate
   );
 }
 
-function SofaBuilder({ config, onUpdate, initial }: { config: any; onUpdate: BuilderUpdate; initial?: BuilderInitial }) {
+// Per-piece prices for a seating set (طقم جلوس), priced by piece count and type.
+// Wooden frames add a flat surcharge to EACH piece. Edit these to reprice.
+const SOFA_UNIT_PRICES = { single: 115, double: 230, triple: 300 };
+const SOFA_WOODEN_SURCHARGE = 25;
+
+function SofaBuilder({ onUpdate, initial }: { config: any; onUpdate: BuilderUpdate; initial?: BuilderInitial }) {
   const { t } = useI18n();
-  const [type, setType] = useState(initial?.type ?? "standard");
-  const [price, setPrice] = useState(initial?.price ?? (config.standard?.min || 80));
+  const [type, setType] = useState<string>(initial?.type ?? "standard");
+  const [single, setSingle] = useState<number>(initial?.single ?? 0);
+  const [dbl, setDbl] = useState<number>(initial?.double ?? 0);
+  const [triple, setTriple] = useState<number>(initial?.triple ?? 1);
   const [note, setNote] = useState<string>(initial?.note ?? "");
   const [rateOverride, setRateOverride] = useState<number | null>(initial?.rateOverride ?? null);
   const [priceOverride, setPriceOverride] = useState<number | null>(initial?.priceOverride ?? null);
 
-  const rate = rateOverride ?? price;
+  const surcharge = type === "wooden" ? SOFA_WOODEN_SURCHARGE : 0;
+  const unit = {
+    single: SOFA_UNIT_PRICES.single + surcharge,
+    double: SOFA_UNIT_PRICES.double + surcharge,
+    triple: SOFA_UNIT_PRICES.triple + surcharge,
+  };
+  const computed = single * unit.single + dbl * unit.double + triple * unit.triple;
+  const rate = rateOverride ?? computed;
   useResetFlatOnChange(rate, priceOverride, () => setPriceOverride(null));
   const finalPrice = priceOverride ?? rate;
 
   useEffect(() => {
     const typeLabel = type === "wooden" ? t("woodenType") : t("standardType");
-    const desc = withNote(`طقم جلوس ${typeLabel}`, note);
-    onUpdate(desc, finalPrice, 0, { type, price, rateOverride, priceOverride, note });
-  }, [type, finalPrice, price, rateOverride, priceOverride, note, onUpdate]);
+    const parts: string[] = [];
+    if (single > 0) parts.push(`${t("sofaSingle")} ×${single}`);
+    if (dbl > 0) parts.push(`${t("sofaDouble")} ×${dbl}`);
+    if (triple > 0) parts.push(`${t("sofaTriple")} ×${triple}`);
+    const breakdown = parts.length ? ` — ${parts.join("، ")}` : "";
+    const desc = withNote(`طقم جلوس ${typeLabel}${breakdown}`, note);
+    onUpdate(desc, finalPrice, 0, { type, single, double: dbl, triple, rateOverride, priceOverride, note });
+  }, [type, single, dbl, triple, finalPrice, rateOverride, priceOverride, note, onUpdate]);
 
-  const range = config[type] || { min: 80, max: 95 };
+  const pieceRow = (label: string, unitPrice: number, count: number, setCount: (n: number) => void) => (
+    <div className="flex items-center justify-between gap-3">
+      <div className="min-w-0">
+        <p className="text-sm font-bold text-gray-800 dark:text-gray-100">{label}</p>
+        <p className="text-xs text-gray-400 font-mono-en">{unitPrice} {t("omr")} / {t("qbPerPiece")}</p>
+      </div>
+      <NumStepper value={count} onChange={setCount} min={0} int className="w-32 shrink-0" />
+    </div>
+  );
 
   return (
     <div className="space-y-4">
@@ -1191,24 +1218,35 @@ function SofaBuilder({ config, onUpdate, initial }: { config: any; onUpdate: Bui
         <label className="block text-sm font-semibold text-gray-600 mb-2">{t("typeLabel")}</label>
         <div className="flex gap-2">
           {[["standard", t("standardType")], ["wooden", t("woodenType")]].map(([k, l]) => (
-            <button key={k} onClick={() => { setType(k); setPrice(config[k]?.min || 80); }}
+            <button key={k} type="button" onClick={() => setType(k)}
               className={cn("flex-1 py-2.5 rounded text-sm font-bold border transition-colors",
                 type === k ? "bg-gray-900 text-white border-gray-900" : "bg-white border-gray-200 text-gray-600")}>
               {l}
             </button>
           ))}
         </div>
+        {type === "wooden" && (
+          <p className="text-xs text-amber-600 mt-1.5 font-semibold">
+            {t("qbWoodenSurcharge")} +{SOFA_WOODEN_SURCHARGE} {t("omr")} / {t("qbPerPiece")}
+          </p>
+        )}
       </div>
-      <div>
-        <label className="block text-sm font-semibold text-gray-600 mb-1.5">{t("price")} ({range.min} - {range.max} {t("omr")})</label>
-        <input type="range" min={range.min} max={range.max} value={price}
-          onChange={(e) => setPrice(parseInt(e.target.value))}
-          className="w-full accent-gray-900" />
-        <p className="text-center text-lg font-black font-mono-en mt-2">{price} {t("omr")}</p>
+
+      <div className="space-y-3 rounded-lg border border-gray-100 dark:border-gray-700 p-3">
+        {pieceRow(t("sofaSingle"), unit.single, single, setSingle)}
+        {pieceRow(t("sofaDouble"), unit.double, dbl, setDbl)}
+        {pieceRow(t("sofaTriple"), unit.triple, triple, setTriple)}
       </div>
-      <PriceOverrideRow defaultRate={price} rate={rate} computedPrice={rate}
+
+      <PriceOverrideRow defaultRate={computed} rate={rate} computedPrice={computed}
         rateOverride={rateOverride} priceOverride={priceOverride}
         onRateChange={setRateOverride} onPriceChange={setPriceOverride} rateLabel={t("qbBasePriceLabel")} />
+
+      <div className="flex items-center justify-between rounded-lg bg-gray-900 text-white px-4 py-2.5">
+        <span className="text-sm font-bold">{t("qbTotalPriceLabel")}</span>
+        <span className="font-mono-en font-black">{finalPrice.toFixed(3)} {t("omr")}</span>
+      </div>
+
       <ItemDescriptionField value={note} onChange={setNote} />
     </div>
   );
