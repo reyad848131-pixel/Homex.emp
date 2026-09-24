@@ -538,21 +538,34 @@ function KitchenBuilder({ config, governorate, wilayat, onUpdate, initial }: { c
       {accessories.length > 0 && (
         <div>
           <label className="block text-sm font-semibold text-gray-600 mb-2">{t("kitchenAccessories")}</label>
-          <div className="space-y-2 rounded-lg border border-gray-100 dark:border-gray-700 p-3">
-            {accessories.map((a) => (
-              <div key={a.id} className="flex items-center justify-between gap-3">
-                <div className="min-w-0">
-                  <p className="text-sm font-bold text-gray-800 dark:text-gray-100 truncate">{a.name}</p>
-                  <p className="text-xs text-gray-400 font-mono-en">{a.price} {t("omr")}</p>
+          <div className="space-y-2">
+            {accessories.map((a) => {
+              const c = accCount(a.id);
+              const active = c > 0;
+              return (
+                <div key={a.id} className={cn(
+                  "flex items-center justify-between gap-3 rounded-xl border p-3 transition-colors",
+                  active
+                    ? "border-gray-900 dark:border-gray-100 bg-gray-50 dark:bg-gray-800"
+                    : "border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800/40"
+                )}>
+                  <div className="min-w-0">
+                    <p className="text-sm font-bold text-gray-800 dark:text-gray-100 truncate">{a.name}</p>
+                    <p className="text-xs text-gray-400 font-mono-en">
+                      {a.price} {t("omr")}
+                      {active && <span className="text-emerald-600 dark:text-emerald-400"> · {(c * a.price).toFixed(0)} {t("omr")}</span>}
+                    </p>
+                  </div>
+                  <NumStepper value={c} onChange={(n) => setAccCount(a.id, n)} min={0} int className="w-28 shrink-0" />
                 </div>
-                <NumStepper value={accCount(a.id)} onChange={(n) => setAccCount(a.id, n)} min={0} int className="w-32 shrink-0" />
-              </div>
-            ))}
+              );
+            })}
           </div>
           {accExtras > 0 && (
-            <p className="text-xs text-emerald-600 mt-1">
-              {t("kitchenAccessories")}: {accExtras.toFixed(3)} {t("omr")} ({t("addedAsExtras")})
-            </p>
+            <div className="flex items-center justify-between mt-2 px-1">
+              <span className="text-xs font-semibold text-gray-500">{t("kitchenAccessories")} ({t("addedAsExtras")})</span>
+              <span className="text-sm font-black font-mono-en text-emerald-600 dark:text-emerald-400">+{accExtras.toFixed(3)} {t("omr")}</span>
+            </div>
           )}
         </div>
       )}
