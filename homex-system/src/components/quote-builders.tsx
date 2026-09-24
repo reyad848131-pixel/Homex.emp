@@ -414,6 +414,7 @@ function KitchenBuilder({ config, governorate, wilayat, onUpdate, initial }: { c
   const [length, setLength] = useState(initial?.length ?? 4);
   const [unitType, setUnitType] = useState<"1unit" | "2unit" | "3unit">(initial?.unitType ?? "2unit");
   const [island, setIsland] = useState<"none" | "small" | "large">(initial?.island ?? "none");
+  const [accIds, setAccIds] = useState<string[]>(Array.isArray(initial?.accIds) ? initial.accIds : []);
   const [manualBase, setManualBase] = useState(initial?.manualBase ?? 130);
   const [note, setNote] = useState<string>(initial?.note ?? "");
   const [rateOverride, setRateOverride] = useState<number | null>(initial?.rateOverride ?? null);
@@ -430,7 +431,10 @@ function KitchenBuilder({ config, governorate, wilayat, onUpdate, initial }: { c
   const area = Math.round(length * 100) / 100;
 
   const ISLAND_PRICES = { small: config?.island?.small || 390, large: config?.island?.large || 600 };
-  const extras = island !== "none" ? ISLAND_PRICES[island] : 0;
+  const accessories = pricing.kitchen.accessories;
+  const selectedAcc = accessories.filter((a) => accIds.includes(a.id));
+  const accExtras = selectedAcc.reduce((s, a) => s + a.price, 0);
+  const extras = (island !== "none" ? ISLAND_PRICES[island] : 0) + accExtras;
   const computedBase = area * pricePerSqm;
   const computedTotal = computedBase + extras;
   useResetFlatOnChange(computedTotal, priceOverride, () => setPriceOverride(null));
@@ -438,9 +442,11 @@ function KitchenBuilder({ config, governorate, wilayat, onUpdate, initial }: { c
 
   useEffect(() => {
     const unitLabel = unitType === "3unit" ? t("unit3Label") : unitType === "1unit" ? t("unit1Label") : t("unit2Label");
-    const desc = withNote(`مطبخ MDF - ${unitLabel} - ${length}م`, note);
-    onUpdate(desc, price, extras, { length, unitType, island, manualBase, rateOverride, priceOverride, note });
-  }, [length, unitType, island, price, extras, rateOverride, priceOverride, note, config, onUpdate]);
+    const names = accessories.filter((a) => accIds.includes(a.id)).map((a) => a.name);
+    const accPart = names.length ? ` · ${t("kitchenAccessories")}: ${names.join("، ")}` : "";
+    const desc = withNote(`مطبخ MDF - ${unitLabel} - ${length}م${accPart}`, note);
+    onUpdate(desc, price, extras, { length, unitType, island, accIds, manualBase, rateOverride, priceOverride, note });
+  }, [length, unitType, island, accIds, price, extras, rateOverride, priceOverride, note, config, onUpdate, accessories]);
 
   return (
     <div className="space-y-4">
@@ -518,6 +524,31 @@ function KitchenBuilder({ config, governorate, wilayat, onUpdate, initial }: { c
           </p>
         )}
       </div>
+
+      {accessories.length > 0 && (
+        <div>
+          <label className="block text-sm font-semibold text-gray-600 mb-2">{t("kitchenAccessories")}</label>
+          <div className="grid grid-cols-2 gap-2">
+            {accessories.map((a) => {
+              const on = accIds.includes(a.id);
+              return (
+                <button key={a.id} type="button"
+                  onClick={() => setAccIds((prev) => on ? prev.filter((x) => x !== a.id) : [...prev, a.id])}
+                  className={cn("flex items-center justify-between gap-2 py-2 px-3 rounded text-xs font-bold border transition-colors",
+                    on ? "bg-gray-900 text-white border-gray-900" : "bg-white dark:bg-gray-800 border-gray-200 dark:border-gray-700 text-gray-600 dark:text-gray-300")}>
+                  <span className="truncate">{a.name}</span>
+                  <span className="font-mono-en shrink-0">{a.price}</span>
+                </button>
+              );
+            })}
+          </div>
+          {accExtras > 0 && (
+            <p className="text-xs text-emerald-600 mt-1">
+              {t("kitchenAccessories")}: {accExtras.toFixed(3)} {t("omr")} ({t("addedAsExtras")})
+            </p>
+          )}
+        </div>
+      )}
 
       <ItemDescriptionField value={note} onChange={setNote} />
     </div>

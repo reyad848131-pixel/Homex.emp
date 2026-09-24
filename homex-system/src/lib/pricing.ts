@@ -20,6 +20,8 @@ export const RATE_KEYS = [
   "partition", "laundry", "dressing-table", "study-table", "tv-table", "tv-table-meter",
 ] as const;
 
+export interface KitchenAccessory { id: string; name: string; price: number }
+
 export interface PricingConfig {
   cabinets: { perMeter: number };
   bed: { wood: Record<string, number>; fabric: Record<string, number> };
@@ -27,7 +29,7 @@ export interface PricingConfig {
   curtains: { chiffon: number; blackout: number; combo: number; roll: number; motorBase: number; motorPerMeter: number };
   cladding: { milamin: number; chipboard: number; light: number };
   nightstand: { round: number; standard: number };
-  kitchen: { porcelain: number; base: Record<string, number> };
+  kitchen: { porcelain: number; base: Record<string, number>; accessories: KitchenAccessory[] };
   rates: Record<string, number>;
 }
 
@@ -48,6 +50,12 @@ export const DEFAULT_PRICING: PricingConfig = {
       "جنوب الشرقية": 140, "شمال الشرقية": 140, "الظاهرة": 135,
       "الداخلية": 125, "بهلاء": 120, "نزوى": 120, "الحمراء": 120,
     },
+    accessories: [
+      { id: "acc-waste", name: "سلة نفايات", price: 25 },
+      { id: "acc-corner", name: "كولم أركان", price: 45 },
+      { id: "acc-drawer", name: "مقسّم أدراج", price: 20 },
+      { id: "acc-spice", name: "رف بهارات", price: 15 },
+    ],
   },
   rates: {
     partition: 65, laundry: 60, "dressing-table": 120, "study-table": 120,
@@ -64,6 +72,21 @@ function mergeMap(stored: any, def: Record<string, number>): Record<string, numb
   const out: Record<string, number> = {};
   for (const k of Object.keys(def)) out[k] = num(stored?.[k], def[k]);
   return out;
+}
+
+// Kitchen accessories are a free-form LIST (managers add/remove/rename them), so
+// a stored array replaces the default wholesale (after validation); only when no
+// array is stored do the seed accessories apply.
+function mergeAccessories(stored: any, def: KitchenAccessory[]): KitchenAccessory[] {
+  if (!Array.isArray(stored)) return def.map((a) => ({ ...a }));
+  return stored
+    .filter((a) => a && typeof a === "object")
+    .map((a, i) => ({
+      id: typeof a.id === "string" && a.id ? a.id : `acc-${i}`,
+      name: typeof a.name === "string" ? a.name.slice(0, 60) : "",
+      price: num(a.price, 0),
+    }))
+    .filter((a) => a.name.trim());
 }
 
 // Produce a complete, validated PricingConfig by layering a stored (possibly
@@ -105,6 +128,7 @@ export function mergePricing(stored: any): PricingConfig {
     kitchen: {
       porcelain: num(s.kitchen?.porcelain, d.kitchen.porcelain),
       base: mergeMap(s.kitchen?.base, d.kitchen.base),
+      accessories: mergeAccessories(s.kitchen?.accessories, d.kitchen.accessories),
     },
     rates: mergeMap(s.rates, d.rates),
   };

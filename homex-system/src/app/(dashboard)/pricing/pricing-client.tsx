@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { Tag, Save, Loader2 } from "lucide-react";
+import { Tag, Save, Loader2, Plus, X } from "lucide-react";
 import { useI18n } from "@/lib/i18n";
 import { useToast } from "@/components/toast";
 import { DEFAULT_PRICING, BED_SIZE_KEYS, KITCHEN_REGION_KEYS, type PricingConfig } from "@/lib/pricing";
@@ -65,6 +65,12 @@ export default function PricingClient() {
     setP((prev) => ({ ...prev, kitchen: { ...prev.kitchen, base: { ...prev.kitchen.base, [region]: n } } }));
   const setRate = (id: string, n: number) =>
     setP((prev) => ({ ...prev, rates: { ...prev.rates, [id]: n } }));
+  const addAccessory = () =>
+    setP((prev) => ({ ...prev, kitchen: { ...prev.kitchen, accessories: [...prev.kitchen.accessories, { id: `acc-${Date.now().toString(36)}`, name: "", price: 0 }] } }));
+  const updateAccessory = (i: number, patch: Partial<{ name: string; price: number }>) =>
+    setP((prev) => ({ ...prev, kitchen: { ...prev.kitchen, accessories: prev.kitchen.accessories.map((a, idx) => idx === i ? { ...a, ...patch } : a) } }));
+  const removeAccessory = (i: number) =>
+    setP((prev) => ({ ...prev, kitchen: { ...prev.kitchen, accessories: prev.kitchen.accessories.filter((_, idx) => idx !== i) } }));
 
   if (loading) {
     return <div className="p-6 flex items-center gap-2 text-gray-500"><Loader2 className="w-5 h-5 animate-spin" /> …</div>;
@@ -142,6 +148,29 @@ export default function PricingClient() {
             <PriceField key={region} label={region} value={p.kitchen.base[region] ?? 0}
               onChange={(n) => setKitchenBase(region, n)} />
           ))}
+        </div>
+
+        <div className="mt-6 pt-5 border-t border-gray-200 dark:border-gray-700">
+          <h3 className="text-sm font-bold mb-3">{t("pricingAccessories")}</h3>
+          <div className="space-y-2">
+            {p.kitchen.accessories.map((a, i) => (
+              <div key={a.id} className="flex items-center gap-2">
+                <input value={a.name} onChange={(e) => updateAccessory(i, { name: e.target.value })}
+                  placeholder={t("pricingAccName")} className="field flex-1 text-sm" />
+                <input type="number" min={0} step={1} value={a.price}
+                  onChange={(e) => updateAccessory(i, { price: Math.max(0, parseFloat(e.target.value) || 0) })}
+                  className="field font-mono-en text-center w-24 shrink-0" />
+                <button type="button" onClick={() => removeAccessory(i)}
+                  className="w-9 h-9 shrink-0 grid place-items-center rounded-lg border border-gray-200 dark:border-gray-700 text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20" aria-label="delete">
+                  <X className="w-4 h-4" />
+                </button>
+              </div>
+            ))}
+          </div>
+          <button type="button" onClick={addAccessory}
+            className="mt-3 flex items-center gap-1.5 px-3 py-2 rounded-lg border border-dashed border-gray-300 dark:border-gray-600 text-sm font-bold text-gray-600 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700/50">
+            <Plus className="w-4 h-4" /> {t("pricingAddAccessory")}
+          </button>
         </div>
       </div>
 
