@@ -7,6 +7,7 @@
 import { useState, useEffect, useRef, createContext, useContext } from "react";
 import { useI18n } from "@/lib/i18n";
 import { cn } from "@/lib/utils";
+import { DEFAULT_PRICING, type PricingConfig } from "@/lib/pricing";
 
 // Whether the current user may set / change item prices. Defaults to true so
 // existing call sites are unaffected; the quotation pages wrap the builder in a
@@ -18,6 +19,26 @@ export function PriceEditProvider({ can, children }: { can: boolean; children: R
 }
 export function useCanEditPrice() {
   return useContext(PriceEditContext);
+}
+
+// The effective default prices (from the Pricing page). Defaults to the code
+// baseline so builders work with or without a provider; the provider fetches the
+// live values once and feeds them to every builder.
+const PricingContext = createContext<PricingConfig>(DEFAULT_PRICING);
+export function useProdPricing() {
+  return useContext(PricingContext);
+}
+export function PricingProvider({ children }: { children: React.ReactNode }) {
+  const [pricing, setPricing] = useState<PricingConfig>(DEFAULT_PRICING);
+  useEffect(() => {
+    let alive = true;
+    fetch("/api/pricing")
+      .then((r) => (r.ok ? r.json() : null))
+      .then((d) => { if (alive && d) setPricing(d as PricingConfig); })
+      .catch(() => {});
+    return () => { alive = false; };
+  }, []);
+  return <PricingContext.Provider value={pricing}>{children}</PricingContext.Provider>;
 }
 
 export interface Category {
@@ -598,10 +619,13 @@ function CabinetBuilder({ config, onUpdate, initial }: { config: any; onUpdate: 
   const [leds, setLeds] = useState(initial?.leds ?? 0);
   const [back18, setBack18] = useState<boolean>(Boolean(initial?.back18));
   const [backSqm, setBackSqm] = useState<number>(initial?.backSqm ?? 1);
-  const defaultRate = config.basePrice || 54;
   const [rateOverride, setRateOverride] = useState<number | null>(initial?.rateOverride ?? null);
   const [priceOverride, setPriceOverride] = useState<number | null>(initial?.priceOverride ?? null);
   const [note, setNote] = useState<string>(initial?.note ?? "");
+  const pricing = useProdPricing();
+  // Central Pricing page is the source of truth for the per-metre rate (the
+  // category's own config.basePrice is left for legacy/back-compat only).
+  const defaultRate = pricing.cabinets.perMeter;
   const rate = rateOverride ?? defaultRate;
 
   const backRate = config.back18 || 40; // سعر المتر المربع للخلفية ١٨ ملي
@@ -900,14 +924,11 @@ function LegsSelector({ value, onChange, config }: { value: string; onChange: (v
   );
 }
 
-const BED_PRICES: Record<string, Record<string, number>> = {
-  wood:   { "90x190": 120, "100x200": 130, "120x200": 135, "180x200": 390, "200x200": 400, "220x220": 410 },
-  fabric: { "90x190": 125, "100x200": 135, "120x200": 140, "180x200": 420, "200x200": 430, "220x220": 450 },
-};
 const BED_SIZES = ["90x190", "100x200", "120x200", "180x200", "200x200", "220x220"];
 
 function BedBuilder({ config, onUpdate, initial }: { config: any; onUpdate: BuilderUpdate; initial?: BuilderInitial }) {
   const { t } = useI18n();
+  const bedPrices: Record<string, Record<string, number>> = useProdPricing().bed;
   const [type, setType] = useState(initial?.type ?? "wood");
   const [size, setSize] = useState(initial?.size ?? "180x200");
   const [lighting, setLighting] = useState(initial?.lighting ?? false);
@@ -916,7 +937,7 @@ function BedBuilder({ config, onUpdate, initial }: { config: any; onUpdate: Buil
   const [rateOverride, setRateOverride] = useState<number | null>(initial?.rateOverride ?? null);
   const [priceOverride, setPriceOverride] = useState<number | null>(initial?.priceOverride ?? null);
 
-  const defaultRate = BED_PRICES[type]?.[size] || 160;
+  const defaultRate = bedPrices[type]?.[size] || 160;
   const rate = rateOverride ?? defaultRate;
   const extras = (lighting ? (config.lighting || 20) : 0) + legsExtra(config, legs);
   const computedTotal = rate + extras;
@@ -951,7 +972,7 @@ function BedBuilder({ config, onUpdate, initial }: { config: any; onUpdate: Buil
               className={cn("py-2 rounded text-xs font-bold border transition-colors",
                 size === s ? "bg-gray-900 text-white border-gray-900" : "bg-white border-gray-200 text-gray-600")}>
               {s}
-              <span className="block text-[10px] font-mono-en mt-0.5">{BED_PRICES[type]?.[s]} {t("omr")}</span>
+              <span className="block text-[10px] font-mono-en mt-0.5">{bedPrices[type]?.[s]} {t("omr")}</span>
             </button>
           ))}
         </div>
@@ -1165,13 +1186,11 @@ function PartitionBuilder({ config, onUpdate, initial }: { config: any; onUpdate
   );
 }
 
-// Per-piece prices for a seating set (طقم جلوس), priced by piece count and type.
-// Wooden frames add a flat surcharge to EACH piece. Edit these to reprice.
-const SOFA_UNIT_PRICES = { single: 115, double: 230, triple: 300 };
-const SOFA_WOODEN_SURCHARGE = 25;
-
+// Seating set (طقم جلوس): per-piece pricing. Defaults live in @/lib/pricing and
+// are editable from the Pricing page; the wooden type adds a per-piece surcharge.
 function SofaBuilder({ onUpdate, initial }: { config: any; onUpdate: BuilderUpdate; initial?: BuilderInitial }) {
   const { t } = useI18n();
+  const sofaP = useProdPricing().sofa;
   const [mode, setMode] = useState<"pieces" | "manual">(initial?.mode ?? "pieces");
   const [type, setType] = useState<string>(initial?.type ?? "standard");
   const [single, setSingle] = useState<number>(initial?.single ?? 0);
@@ -1182,11 +1201,11 @@ function SofaBuilder({ onUpdate, initial }: { config: any; onUpdate: BuilderUpda
   const [rateOverride, setRateOverride] = useState<number | null>(initial?.rateOverride ?? null);
   const [priceOverride, setPriceOverride] = useState<number | null>(initial?.priceOverride ?? null);
 
-  const surcharge = type === "wooden" ? SOFA_WOODEN_SURCHARGE : 0;
+  const surcharge = type === "wooden" ? sofaP.woodenSurcharge : 0;
   const unit = {
-    single: SOFA_UNIT_PRICES.single + surcharge,
-    double: SOFA_UNIT_PRICES.double + surcharge,
-    triple: SOFA_UNIT_PRICES.triple + surcharge,
+    single: sofaP.single + surcharge,
+    double: sofaP.double + surcharge,
+    triple: sofaP.triple + surcharge,
   };
   const piecesTotal = single * unit.single + dbl * unit.double + triple * unit.triple;
   const computed = mode === "manual" ? manualPrice : piecesTotal;
@@ -1246,7 +1265,7 @@ function SofaBuilder({ onUpdate, initial }: { config: any; onUpdate: BuilderUpda
         </div>
         {mode === "pieces" && type === "wooden" && (
           <p className="text-xs text-amber-600 mt-1.5 font-semibold">
-            {t("qbWoodenSurcharge")} +{SOFA_WOODEN_SURCHARGE} {t("omr")} / {t("qbPerPiece")}
+            {t("qbWoodenSurcharge")} +{sofaP.woodenSurcharge} {t("omr")} / {t("qbPerPiece")}
           </p>
         )}
       </div>
@@ -1804,5 +1823,5 @@ export function CategoryBuilder({
   }
   })();
 
-  return <PriceEditProvider can={canEditPrice}>{inner}</PriceEditProvider>;
+  return <PricingProvider><PriceEditProvider can={canEditPrice}>{inner}</PriceEditProvider></PricingProvider>;
 }

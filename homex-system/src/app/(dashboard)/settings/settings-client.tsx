@@ -466,6 +466,35 @@ export default function SettingsClient() {
           })()}
         </div>
 
+        <div className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded p-6">
+          <h2 className="text-base font-bold mb-1">{t("paSetting")}</h2>
+          <p className="text-xs text-gray-400 mb-4">{t("paHint")}</p>
+          {(() => {
+            const OWNER_CIVIL_IDS = ["2016", "1389"];
+            let ids: string[] = [];
+            try { const a = JSON.parse(settings.pricing_editors || "[]"); if (Array.isArray(a)) ids = a.filter((x) => typeof x === "string"); } catch { /* ignore */ }
+            const toggle = (id: string) => {
+              const next = ids.includes(id) ? ids.filter((x) => x !== id) : [...ids, id];
+              update("pricing_editors", JSON.stringify(next));
+            };
+            if (employees.length === 0) return <p className="text-sm text-gray-400">{t("peNoOne")}</p>;
+            return (
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 max-w-xl">
+                {employees.map((emp) => {
+                  const owner = OWNER_CIVIL_IDS.includes(emp.civilId || "");
+                  return (
+                    <label key={emp.id} className={cn("flex items-center gap-2 px-3 py-2 rounded-lg border", owner ? "border-emerald-300 dark:border-emerald-700 bg-emerald-50 dark:bg-emerald-900/20 cursor-default" : "border-gray-200 dark:border-gray-700 cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-700/50")}>
+                      <input type="checkbox" checked={owner || ids.includes(emp.id)} disabled={owner} onChange={() => !owner && toggle(emp.id)} className="rounded" />
+                      <span className="text-sm font-semibold">{emp.name}</span>
+                      {owner && <span className="ms-auto text-[10px] font-bold text-emerald-600 dark:text-emerald-400">{t("peOwnerBadge")}</span>}
+                    </label>
+                  );
+                })}
+              </div>
+            );
+          })()}
+        </div>
+
         {/* WhatsApp message templates */}
         <div className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded p-6">
           <h2 className="text-base font-bold mb-1 flex items-center gap-2"><MessageCircle className="w-4 h-4 text-gray-400" /> {t("stWaTitle")}</h2>
