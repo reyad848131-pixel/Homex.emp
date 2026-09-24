@@ -6,13 +6,29 @@
 
 export const BED_SIZE_KEYS = ["90x190", "100x200", "120x200", "180x200", "200x200", "220x220"] as const;
 
+// Kitchen base rate per region (per m², before the ×unit multiplier + porcelain).
+// A wilayat key wins over its governorate; a governorate not listed here has no
+// automatic price (the builder asks the rep to enter it manually).
+export const KITCHEN_REGION_KEYS = [
+  "مسقط", "البريمي", "شمال الباطنة", "جنوب الباطنة",
+  "جنوب الشرقية", "شمال الشرقية", "الظاهرة",
+  "الداخلية", "بهلاء", "نزوى", "الحمراء",
+] as const;
+
+// Simple per-unit rates keyed by category id (per m² unless the id says -meter).
+export const RATE_KEYS = [
+  "partition", "laundry", "dressing-table", "study-table", "tv-table", "tv-table-meter",
+] as const;
+
 export interface PricingConfig {
-  // Cabinets (خزائن): price per square metre (width × height × rate).
   cabinets: { perMeter: number };
-  // Beds (أسرّة): price per frame type and mattress size.
   bed: { wood: Record<string, number>; fabric: Record<string, number> };
-  // Seating sets (أطقم الجلوس): per-piece prices + the wooden-frame surcharge.
   sofa: { single: number; double: number; triple: number; woodenSurcharge: number };
+  curtains: { chiffon: number; blackout: number; combo: number; roll: number; motorBase: number; motorPerMeter: number };
+  cladding: { milamin: number; chipboard: number; light: number };
+  nightstand: { round: number; standard: number };
+  kitchen: { porcelain: number; base: Record<string, number> };
+  rates: Record<string, number>;
 }
 
 export const DEFAULT_PRICING: PricingConfig = {
@@ -22,6 +38,21 @@ export const DEFAULT_PRICING: PricingConfig = {
     fabric: { "90x190": 125, "100x200": 135, "120x200": 140, "180x200": 420, "200x200": 430, "220x220": 450 },
   },
   sofa: { single: 115, double: 230, triple: 300, woodenSurcharge: 25 },
+  curtains: { chiffon: 9, blackout: 9, combo: 12.5, roll: 15, motorBase: 50, motorPerMeter: 7.5 },
+  cladding: { milamin: 45, chipboard: 27, light: 20 },
+  nightstand: { round: 50, standard: 30 },
+  kitchen: {
+    porcelain: 55,
+    base: {
+      "مسقط": 130, "البريمي": 150, "شمال الباطنة": 135, "جنوب الباطنة": 135,
+      "جنوب الشرقية": 140, "شمال الشرقية": 140, "الظاهرة": 135,
+      "الداخلية": 125, "بهلاء": 120, "نزوى": 120, "الحمراء": 120,
+    },
+  },
+  rates: {
+    partition: 65, laundry: 60, "dressing-table": 120, "study-table": 120,
+    "tv-table": 50, "tv-table-meter": 65,
+  },
 };
 
 const num = (v: unknown, fallback: number): number => {
@@ -29,7 +60,7 @@ const num = (v: unknown, fallback: number): number => {
   return Number.isFinite(n) && (n as number) >= 0 ? (n as number) : fallback;
 };
 
-function mergeSizes(stored: any, def: Record<string, number>): Record<string, number> {
+function mergeMap(stored: any, def: Record<string, number>): Record<string, number> {
   const out: Record<string, number> = {};
   for (const k of Object.keys(def)) out[k] = num(stored?.[k], def[k]);
   return out;
@@ -41,17 +72,49 @@ function mergeSizes(stored: any, def: Record<string, number>): Record<string, nu
 // builder.
 export function mergePricing(stored: any): PricingConfig {
   const s = stored && typeof stored === "object" ? stored : {};
+  const d = DEFAULT_PRICING;
   return {
-    cabinets: { perMeter: num(s.cabinets?.perMeter, DEFAULT_PRICING.cabinets.perMeter) },
+    cabinets: { perMeter: num(s.cabinets?.perMeter, d.cabinets.perMeter) },
     bed: {
-      wood: mergeSizes(s.bed?.wood, DEFAULT_PRICING.bed.wood),
-      fabric: mergeSizes(s.bed?.fabric, DEFAULT_PRICING.bed.fabric),
+      wood: mergeMap(s.bed?.wood, d.bed.wood),
+      fabric: mergeMap(s.bed?.fabric, d.bed.fabric),
     },
     sofa: {
-      single: num(s.sofa?.single, DEFAULT_PRICING.sofa.single),
-      double: num(s.sofa?.double, DEFAULT_PRICING.sofa.double),
-      triple: num(s.sofa?.triple, DEFAULT_PRICING.sofa.triple),
-      woodenSurcharge: num(s.sofa?.woodenSurcharge, DEFAULT_PRICING.sofa.woodenSurcharge),
+      single: num(s.sofa?.single, d.sofa.single),
+      double: num(s.sofa?.double, d.sofa.double),
+      triple: num(s.sofa?.triple, d.sofa.triple),
+      woodenSurcharge: num(s.sofa?.woodenSurcharge, d.sofa.woodenSurcharge),
     },
+    curtains: {
+      chiffon: num(s.curtains?.chiffon, d.curtains.chiffon),
+      blackout: num(s.curtains?.blackout, d.curtains.blackout),
+      combo: num(s.curtains?.combo, d.curtains.combo),
+      roll: num(s.curtains?.roll, d.curtains.roll),
+      motorBase: num(s.curtains?.motorBase, d.curtains.motorBase),
+      motorPerMeter: num(s.curtains?.motorPerMeter, d.curtains.motorPerMeter),
+    },
+    cladding: {
+      milamin: num(s.cladding?.milamin, d.cladding.milamin),
+      chipboard: num(s.cladding?.chipboard, d.cladding.chipboard),
+      light: num(s.cladding?.light, d.cladding.light),
+    },
+    nightstand: {
+      round: num(s.nightstand?.round, d.nightstand.round),
+      standard: num(s.nightstand?.standard, d.nightstand.standard),
+    },
+    kitchen: {
+      porcelain: num(s.kitchen?.porcelain, d.kitchen.porcelain),
+      base: mergeMap(s.kitchen?.base, d.kitchen.base),
+    },
+    rates: mergeMap(s.rates, d.rates),
   };
+}
+
+// Kitchen base rate for a governorate/wilayat from the pricing config: a wilayat
+// entry wins over the governorate; an unlisted region returns null (manual).
+export function kitchenBaseFor(kitchen: PricingConfig["kitchen"], governorate: string, wilayat: string): number | null {
+  const b = kitchen.base || {};
+  if (wilayat && b[wilayat] != null) return b[wilayat];
+  if (governorate && b[governorate] != null) return b[governorate];
+  return null;
 }

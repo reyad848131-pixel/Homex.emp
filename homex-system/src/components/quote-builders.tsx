@@ -7,7 +7,7 @@
 import { useState, useEffect, useRef, createContext, useContext } from "react";
 import { useI18n } from "@/lib/i18n";
 import { cn } from "@/lib/utils";
-import { DEFAULT_PRICING, type PricingConfig } from "@/lib/pricing";
+import { DEFAULT_PRICING, kitchenBaseFor, type PricingConfig } from "@/lib/pricing";
 
 // Whether the current user may set / change item prices. Defaults to true so
 // existing call sites are unaffected; the quotation pages wrap the builder in a
@@ -419,9 +419,10 @@ function KitchenBuilder({ config, governorate, wilayat, onUpdate, initial }: { c
   const [rateOverride, setRateOverride] = useState<number | null>(initial?.rateOverride ?? null);
   const [priceOverride, setPriceOverride] = useState<number | null>(initial?.priceOverride ?? null);
 
-  const PORCELAIN_PRICE = config?.porcelainSurcharge || 55;
+  const pricing = useProdPricing();
+  const PORCELAIN_PRICE = pricing.kitchen.porcelain;
   const unitMultiplier = unitType === "3unit" ? 3 : unitType === "1unit" ? 1 : 2;
-  const autoBase = getKitchenBasePrice(governorate, wilayat);
+  const autoBase = kitchenBaseFor(pricing.kitchen, governorate, wilayat);
   const isManual = autoBase === null;
   const basePrice = isManual ? manualBase : autoBase;
   const defaultRate = (basePrice * unitMultiplier) + PORCELAIN_PRICE;
@@ -533,8 +534,9 @@ function PantryBuilder({ config, governorate, wilayat, onUpdate, initial }: { co
   const [rateOverride, setRateOverride] = useState<number | null>(initial?.rateOverride ?? null);
   const [priceOverride, setPriceOverride] = useState<number | null>(initial?.priceOverride ?? null);
 
-  const PORCELAIN_PRICE = config?.porcelainSurcharge || 55;
-  const autoBase = getKitchenBasePrice(governorate, wilayat);
+  const pricing = useProdPricing();
+  const PORCELAIN_PRICE = pricing.kitchen.porcelain;
+  const autoBase = kitchenBaseFor(pricing.kitchen, governorate, wilayat);
   const isManual = autoBase === null;
   const basePrice = isManual ? manualBase : autoBase;
   const defaultRate = basePrice + PORCELAIN_PRICE; // 1 unit
@@ -768,15 +770,16 @@ function CurtainBuilder({ config, onUpdate, initial }: { config: any; onUpdate: 
   const [priceOverride, setPriceOverride] = useState<number | null>(initial?.priceOverride ?? null);
   const [note, setNote] = useState<string>(initial?.note ?? "");
 
+  const cur = useProdPricing().curtains;
   const TYPES: Record<string, { label: string; price: number }> = {
-    chiffon: { label: t("chiffonOnly"), price: 9 },
-    blackout: { label: t("blackoutType"), price: 9 },
-    combo: { label: t("chiffonBlackout"), price: 12.5 },
-    roll: { label: "Roll", price: 15 },
+    chiffon: { label: t("chiffonOnly"), price: cur.chiffon },
+    blackout: { label: t("blackoutType"), price: cur.blackout },
+    combo: { label: t("chiffonBlackout"), price: cur.combo },
+    roll: { label: "Roll", price: cur.roll },
   };
 
-  const MOTOR_BASE = config?.electricMotor?.base || 50;
-  const MOTOR_PER_METER = config?.electricMotor?.perMeter || 7.5;
+  const MOTOR_BASE = cur.motorBase;
+  const MOTOR_PER_METER = cur.motorPerMeter;
 
   const defaultRate = TYPES[type]?.price || 9;
   const rate = rateOverride ?? defaultRate;
@@ -1001,11 +1004,12 @@ function CladdingBuilder({ config, onUpdate, initial }: { config: any; onUpdate:
   const [priceOverride, setPriceOverride] = useState<number | null>(initial?.priceOverride ?? null);
   const [note, setNote] = useState<string>(initial?.note ?? "");
 
+  const clad = useProdPricing().cladding;
   const TYPES: Record<string, { label: string; price: number }> = {
-    type1: { label: "Milamin", price: config?.types?.type1 || 45 },
-    type2: { label: t("chipboardAlt"), price: config?.types?.type2 || 27 },
+    type1: { label: "Milamin", price: clad.milamin },
+    type2: { label: t("chipboardAlt"), price: clad.chipboard },
   };
-  const LIGHT_PRICE = config?.lightPrice || 20;
+  const LIGHT_PRICE = clad.light;
 
   const defaultRate = TYPES[type]?.price || 45;
   const rate = rateOverride ?? defaultRate;
@@ -1119,7 +1123,7 @@ function PartitionBuilder({ config, onUpdate, initial }: { config: any; onUpdate
   const [priceOverride, setPriceOverride] = useState<number | null>(initial?.priceOverride ?? null);
   const [note, setNote] = useState<string>(initial?.note ?? "");
 
-  const defaultRate = config?.pricePerSqm || config?.basePrice || 65;
+  const defaultRate = useProdPricing().rates.partition;
   const pricePerSqm = rateOverride ?? defaultRate;
   const area = Math.round(length * width * 100) / 100;
   const computedPrice = Math.round(area * pricePerSqm * 1000) / 1000;
@@ -1309,7 +1313,8 @@ function NightstandBuilder({ config, onUpdate, initial }: { config: any; onUpdat
   const [rateOverride, setRateOverride] = useState<number | null>(initial?.rateOverride ?? null);
   const [priceOverride, setPriceOverride] = useState<number | null>(initial?.priceOverride ?? null);
 
-  const defaultRate = mode === "fixed" ? (config[type] || (type === "round" ? 50 : 30)) : customPrice;
+  const nsPricing = useProdPricing().nightstand;
+  const defaultRate = mode === "fixed" ? ((nsPricing as Record<string, number>)[type] ?? (type === "round" ? 50 : 30)) : customPrice;
   const rate = rateOverride ?? defaultRate;
   const extras = legsExtra(config, legs);
   const computedTotal = rate + extras;
@@ -1392,7 +1397,7 @@ function DressingBuilder({ config, onUpdate, initial }: { config: any; onUpdate:
   const [priceOverride, setPriceOverride] = useState<number | null>(initial?.priceOverride ?? null);
   const [note, setNote] = useState<string>(initial?.note ?? "");
 
-  const defaultRate = config.pricePerMeter || 120;
+  const defaultRate = useProdPricing().rates["dressing-table"];
   const rate = rateOverride ?? defaultRate;
   const extras = lighting ? lightCount * (config.lighting || 20) : 0;
   const computedBase = length * rate;
@@ -1458,7 +1463,7 @@ function LaundryBuilder({ config, onUpdate, initial }: { config: any; onUpdate: 
   const [priceOverride, setPriceOverride] = useState<number | null>(initial?.priceOverride ?? null);
   const [note, setNote] = useState<string>(initial?.note ?? "");
 
-  const defaultRate = config.pricePerSqm || 60;
+  const defaultRate = useProdPricing().rates.laundry;
   const rate = rateOverride ?? defaultRate;
   const extras = lighting ? lightCount * (config.lighting || 20) : 0;
   const computedBase = area * rate;
@@ -1517,8 +1522,9 @@ function LaundryBuilder({ config, onUpdate, initial }: { config: any; onUpdate: 
 
 function TVTableBuilder({ config, onUpdate, initial }: { config: any; onUpdate: BuilderUpdate; initial?: BuilderInitial }) {
   const { t } = useI18n();
-  const perSqm = config?.pricePerSqm ?? config?.basePrice ?? 50;
-  const perMeter = config?.pricePerMeter ?? 65;
+  const tvRates = useProdPricing().rates;
+  const perSqm = tvRates["tv-table"];
+  const perMeter = tvRates["tv-table-meter"];
   // Two TV-table types: "cladding" is priced by area (width × height), "floor"
   // is priced only by linear metre. Back-compat with the earlier method field.
   const [type, setType] = useState<"cladding" | "floor">(
@@ -1697,7 +1703,7 @@ function StudyTableBuilder({ config, onUpdate, initial }: { config: any; onUpdat
   const [priceOverride, setPriceOverride] = useState<number | null>(initial?.priceOverride ?? null);
   const [note, setNote] = useState<string>(initial?.note ?? "");
 
-  const defaultRate = config?.pricePerMeter || 120;
+  const defaultRate = useProdPricing().rates["study-table"];
   const rate = rateOverride ?? defaultRate;
   const claddingRate = config?.claddingPerSqm || 50;
   const claddingArea = Math.round(claddingWidth * claddingHeight * 100) / 100;

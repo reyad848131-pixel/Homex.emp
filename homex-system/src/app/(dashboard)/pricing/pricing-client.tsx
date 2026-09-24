@@ -4,7 +4,7 @@ import { useEffect, useState } from "react";
 import { Tag, Save, Loader2 } from "lucide-react";
 import { useI18n } from "@/lib/i18n";
 import { useToast } from "@/components/toast";
-import { DEFAULT_PRICING, BED_SIZE_KEYS, type PricingConfig } from "@/lib/pricing";
+import { DEFAULT_PRICING, BED_SIZE_KEYS, KITCHEN_REGION_KEYS, type PricingConfig } from "@/lib/pricing";
 
 // A labelled numeric price input (3-decimal OMR).
 function PriceField({ value, onChange, label }: { value: number; onChange: (n: number) => void; label: string }) {
@@ -55,6 +55,16 @@ export default function PricingClient() {
 
   const setBed = (frame: "wood" | "fabric", size: string, n: number) =>
     setP((prev) => ({ ...prev, bed: { ...prev.bed, [frame]: { ...prev.bed[frame], [size]: n } } }));
+  const setCurtain = (k: keyof PricingConfig["curtains"], n: number) =>
+    setP((prev) => ({ ...prev, curtains: { ...prev.curtains, [k]: n } }));
+  const setClad = (k: keyof PricingConfig["cladding"], n: number) =>
+    setP((prev) => ({ ...prev, cladding: { ...prev.cladding, [k]: n } }));
+  const setNight = (k: "round" | "standard", n: number) =>
+    setP((prev) => ({ ...prev, nightstand: { ...prev.nightstand, [k]: n } }));
+  const setKitchenBase = (region: string, n: number) =>
+    setP((prev) => ({ ...prev, kitchen: { ...prev.kitchen, base: { ...prev.kitchen.base, [region]: n } } }));
+  const setRate = (id: string, n: number) =>
+    setP((prev) => ({ ...prev, rates: { ...prev.rates, [id]: n } }));
 
   if (loading) {
     return <div className="p-6 flex items-center gap-2 text-gray-500"><Loader2 className="w-5 h-5 animate-spin" /> …</div>;
@@ -116,6 +126,69 @@ export default function PricingClient() {
               </div>
             </div>
           ))}
+        </div>
+      </div>
+
+      {/* Kitchens & pantry — per-region base rate + porcelain */}
+      <div className={card}>
+        <h2 className="text-base font-bold mb-1">{t("pricingKitchen")}</h2>
+        <p className="text-xs text-gray-400 mb-4">{t("pricingBedHint")}</p>
+        <div className="mb-4">
+          <PriceField label={t("pricingPorcelain")} value={p.kitchen.porcelain}
+            onChange={(n) => setP((prev) => ({ ...prev, kitchen: { ...prev.kitchen, porcelain: n } }))} />
+        </div>
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-8 gap-y-2.5">
+          {KITCHEN_REGION_KEYS.map((region) => (
+            <PriceField key={region} label={region} value={p.kitchen.base[region] ?? 0}
+              onChange={(n) => setKitchenBase(region, n)} />
+          ))}
+        </div>
+      </div>
+
+      {/* Curtains */}
+      <div className={card}>
+        <h2 className="text-base font-bold mb-4">{t("pricingCurtains")}</h2>
+        <div className="space-y-3">
+          <PriceField label={t("chiffonOnly")} value={p.curtains.chiffon} onChange={(n) => setCurtain("chiffon", n)} />
+          <PriceField label={t("blackoutType")} value={p.curtains.blackout} onChange={(n) => setCurtain("blackout", n)} />
+          <PriceField label={t("chiffonBlackout")} value={p.curtains.combo} onChange={(n) => setCurtain("combo", n)} />
+          <PriceField label="Roll" value={p.curtains.roll} onChange={(n) => setCurtain("roll", n)} />
+          <div className="pt-3 border-t border-gray-100 dark:border-gray-700 space-y-3">
+            <PriceField label={t("pricingMotorBase")} value={p.curtains.motorBase} onChange={(n) => setCurtain("motorBase", n)} />
+            <PriceField label={t("pricingMotorPerMeter")} value={p.curtains.motorPerMeter} onChange={(n) => setCurtain("motorPerMeter", n)} />
+          </div>
+        </div>
+      </div>
+
+      {/* Cladding */}
+      <div className={card}>
+        <h2 className="text-base font-bold mb-4">{t("pricingCladding")}</h2>
+        <div className="space-y-3">
+          <PriceField label={t("pricingCladMilamin")} value={p.cladding.milamin} onChange={(n) => setClad("milamin", n)} />
+          <PriceField label={t("pricingCladChip")} value={p.cladding.chipboard} onChange={(n) => setClad("chipboard", n)} />
+          <PriceField label={t("pricingLightUnit")} value={p.cladding.light} onChange={(n) => setClad("light", n)} />
+        </div>
+      </div>
+
+      {/* Nightstand */}
+      <div className={card}>
+        <h2 className="text-base font-bold mb-4">{t("pricingNightstand")}</h2>
+        <div className="space-y-3">
+          <PriceField label={t("roundType")} value={p.nightstand.round} onChange={(n) => setNight("round", n)} />
+          <PriceField label={t("standardType")} value={p.nightstand.standard} onChange={(n) => setNight("standard", n)} />
+        </div>
+      </div>
+
+      {/* Other simple per-unit rates */}
+      <div className={card}>
+        <h2 className="text-base font-bold mb-4">{t("pricingOtherRates")}</h2>
+        <div className="space-y-3">
+          <PriceField label={t("pricingRatePartition")} value={p.rates.partition} onChange={(n) => setRate("partition", n)} />
+          <PriceField label={t("pricingRateLaundry")} value={p.rates.laundry} onChange={(n) => setRate("laundry", n)} />
+          <PriceField label={t("pricingRateDressing")} value={p.rates["dressing-table"]} onChange={(n) => setRate("dressing-table", n)} />
+          <PriceField label={t("pricingRateStudy")} value={p.rates["study-table"]} onChange={(n) => setRate("study-table", n)} />
+          <PriceField label={t("pricingRateTvSqm")} value={p.rates["tv-table"]} onChange={(n) => setRate("tv-table", n)} />
+          <PriceField label={t("pricingRateTvMeter")} value={p.rates["tv-table-meter"]} onChange={(n) => setRate("tv-table-meter", n)} />
         </div>
       </div>
 
