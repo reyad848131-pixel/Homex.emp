@@ -155,7 +155,7 @@ export function NumStepper({
         onClick={() => onChange(clamp(value - step))}
         disabled={min != null && value <= min}>−</button>
       <NumField value={value} onChange={(n) => onChange(clamp(n))} min={min} max={max} int={int}
-        className={cn("flex-1 min-w-0", fieldClassName)} />
+        className={cn("flex-1 min-w-0 text-center font-mono-en font-bold rounded-lg border border-gray-200 dark:border-gray-600 bg-white dark:bg-gray-800 text-gray-800 dark:text-gray-100 px-1", fieldClassName)} />
       <button type="button" aria-label="+" className={btn}
         onClick={() => onChange(clamp(value + step))}
         disabled={max != null && value >= max}>+</button>
