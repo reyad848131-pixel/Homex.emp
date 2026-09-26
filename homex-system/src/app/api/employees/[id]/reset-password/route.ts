@@ -3,6 +3,7 @@ import { getAuth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { logAction } from "@/lib/audit";
 import { normalizeCredential } from "@/lib/text";
+import { SHORT_PWD_CIVIL_IDS } from "@/lib/password";
 import bcrypt from "bcryptjs";
 
 // Admin-only single-employee password reset: sets the password to the default
@@ -25,7 +26,9 @@ export async function POST(
     const emp = await prisma.employee.findFirst({ where: { id }, select: { id: true, name: true, civilId: true } });
     if (!emp) return NextResponse.json({ error: "Not found" }, { status: 404 });
 
-    const password = `Homex${emp.civilId}`;
+    // Owner accounts allowed to use their civil id as the password (Salim) get
+    // exactly that; everyone else gets the default "Homex" + civil id scheme.
+    const password = SHORT_PWD_CIVIL_IDS.includes(emp.civilId) ? emp.civilId : `Homex${emp.civilId}`;
     const hashed = await bcrypt.hash(normalizeCredential(password), 10);
     await prisma.employee.update({
       where: { id: emp.id },

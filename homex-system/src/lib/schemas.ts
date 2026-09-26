@@ -92,7 +92,9 @@ export const employeeUpdateSchema = z
     phoneCode: z.string().trim().nullish(),
     role: z.string().trim().min(1),
     isActive: z.boolean(),
-    password: z.string().min(6, "كلمة المرور يجب أن تكون 6 أحرف على الأقل"),
+    // Length is enforced in the route (per-account minimum — some owner accounts
+    // may use their civil id). min(1) here just requires it be non-empty.
+    password: z.string().min(1, "كلمة المرور مطلوبة"),
   })
   .partial()
   .refine((v) => Object.keys(v).length > 0, { message: "No fields to update" });
@@ -100,7 +102,8 @@ export const employeeUpdateSchema = z
 export const changePasswordSchema = z.object({
   action: z.literal("change-password"),
   currentPassword: z.string().min(1),
-  newPassword: z.string().min(6, "كلمة المرور يجب أن تكون 6 أحرف على الأقل"),
+  // Length enforced in the route (per-account minimum).
+  newPassword: z.string().min(1, "كلمة المرور مطلوبة"),
 });
 
 export const paymentSchema = z.object({

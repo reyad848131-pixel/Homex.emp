@@ -3,6 +3,7 @@ import { getAuth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { parseBody, changePasswordSchema } from "@/lib/schemas";
 import { normalizePhone } from "@/lib/text";
+import { passwordError } from "@/lib/password";
 import bcrypt from "bcryptjs";
 
 export async function GET() {
@@ -42,6 +43,9 @@ export async function PUT(req: NextRequest) {
       if (!valid) {
         return NextResponse.json({ error: "كلمة المرور الحالية غير صحيحة" }, { status: 400 });
       }
+
+      const pwdErr = passwordError(parsed.data.newPassword, employee.civilId);
+      if (pwdErr) return NextResponse.json({ error: pwdErr, code: "invalid" }, { status: 400 });
 
       const hashed = await bcrypt.hash(parsed.data.newPassword, 10);
       await prisma.employee.update({

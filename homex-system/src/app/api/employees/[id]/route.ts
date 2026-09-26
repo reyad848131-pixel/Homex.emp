@@ -5,6 +5,7 @@ import { logAction } from "@/lib/audit";
 import { parseBody, employeeUpdateSchema } from "@/lib/schemas";
 import { getAllRoles } from "@/lib/permissions";
 import { normalizeCredential } from "@/lib/login-guard";
+import { passwordError } from "@/lib/password";
 import bcrypt from "bcryptjs";
 
 export async function PATCH(
@@ -74,7 +75,11 @@ export async function PATCH(
     if (body.phoneCode !== undefined) data.phoneCode = body.phoneCode;
     if (body.role !== undefined) data.role = body.role;
     if (body.isActive !== undefined) data.isActive = body.isActive;
-    if (body.password) data.password = await bcrypt.hash(normalizeCredential(String(body.password)), 10);
+    if (body.password) {
+      const pwdErr = passwordError(String(body.password), target.civilId);
+      if (pwdErr) return NextResponse.json({ error: pwdErr, code: "invalid" }, { status: 400 });
+      data.password = await bcrypt.hash(normalizeCredential(String(body.password)), 10);
+    }
 
     const employee = await prisma.employee.update({
       where: { id },
