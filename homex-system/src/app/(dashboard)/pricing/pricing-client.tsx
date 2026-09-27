@@ -208,6 +208,13 @@ export default function PricingClient() {
         </div>
       </div>
 
+      {/* Lighting add-on */}
+      <div className={card}>
+        <h2 className="text-base font-bold mb-4">{t("lightingLabel")}</h2>
+        <PriceField label={t("pricingPerUnit")} value={p.lighting.perUnit}
+          onChange={(n) => setP((prev) => ({ ...prev, lighting: { perUnit: n } }))} />
+      </div>
+
       {/* Other simple per-unit rates */}
       <div className={card}>
         <h2 className="text-base font-bold mb-4">{t("pricingOtherRates")}</h2>

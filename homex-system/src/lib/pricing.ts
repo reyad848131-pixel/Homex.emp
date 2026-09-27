@@ -29,6 +29,7 @@ export interface PricingConfig {
   curtains: { chiffon: number; blackout: number; combo: number; roll: number; motorBase: number; motorPerMeter: number };
   cladding: { milamin: number; chipboard: number; light: number };
   nightstand: { round: number; standard: number };
+  lighting: { perUnit: number };
   kitchen: { porcelain: number; base: Record<string, number>; accessories: KitchenAccessory[] };
   rates: Record<string, number>;
 }
@@ -43,6 +44,7 @@ export const DEFAULT_PRICING: PricingConfig = {
   curtains: { chiffon: 9, blackout: 9, combo: 12.5, roll: 15, motorBase: 50, motorPerMeter: 7.5 },
   cladding: { milamin: 45, chipboard: 27, light: 20 },
   nightstand: { round: 50, standard: 30 },
+  lighting: { perUnit: 25 },
   kitchen: {
     porcelain: 55,
     base: {
@@ -130,6 +132,7 @@ export function mergePricing(stored: any): PricingConfig {
       round: num(s.nightstand?.round, d.nightstand.round),
       standard: num(s.nightstand?.standard, d.nightstand.standard),
     },
+    lighting: { perUnit: num(s.lighting?.perUnit, d.lighting.perUnit) },
     kitchen: {
       porcelain: num(s.kitchen?.porcelain, d.kitchen.porcelain),
       base: mergeMap(s.kitchen?.base, d.kitchen.base),

@@ -1359,6 +1359,7 @@ const translations = {
   pricingSurchargePerPiece: { ar: "إضافة للحبة", en: "surcharge per piece" },
   pricingBedHint: { ar: "السعر لكل نوع ومقاس (سم)", en: "Price per frame type and size (cm)" },
   pricingSaved: { ar: "تم حفظ الأسعار ✅", en: "Prices saved ✅" },
+  pricingPerUnit: { ar: "سعر الوحدة (ر.ع)", en: "Price per unit (OMR)" },
   pricingKitchen: { ar: "المطابخ والبانتري (سعر المتر حسب الولاية)", en: "Kitchens & pantry (per-m² rate by wilayat)" },
   pricingPorcelain: { ar: "البورسلان (يُضاف للمتر)", en: "Porcelain (added per m²)" },
   kitchenAccessories: { ar: "اكسسوارات المطبخ", en: "Kitchen accessories" },
