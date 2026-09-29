@@ -30,7 +30,7 @@ export interface PricingConfig {
   cladding: { milamin: number; chipboard: number; light: number };
   nightstand: { round: number; standard: number };
   lighting: { perUnit: number };
-  kitchen: { porcelain: number; base: Record<string, number>; accessories: KitchenAccessory[] };
+  kitchen: { porcelain: number; base: Record<string, number>; accessories: KitchenAccessory[]; baseSurcharge: number };
   rates: Record<string, number>;
 }
 
@@ -63,6 +63,7 @@ export const DEFAULT_PRICING: PricingConfig = {
       { id: "acc-cutlery", name: "منظم الملاعق والسكاكين", price: 15 },
       { id: "acc-plates-drawer", name: "منظم الصحون (درج)", price: 50 },
     ],
+    baseSurcharge: 45,
   },
   rates: {
     partition: 65, laundry: 60, "dressing-table": 120, "study-table": 120,
@@ -137,6 +138,7 @@ export function mergePricing(stored: any): PricingConfig {
       porcelain: num(s.kitchen?.porcelain, d.kitchen.porcelain),
       base: mergeMap(s.kitchen?.base, d.kitchen.base),
       accessories: mergeAccessories(s.kitchen?.accessories, d.kitchen.accessories),
+      baseSurcharge: num(s.kitchen?.baseSurcharge, d.kitchen.baseSurcharge),
     },
     rates: mergeMap(s.rates, d.rates),
   };

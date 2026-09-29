@@ -143,6 +143,10 @@ export default function PricingClient() {
           <PriceField label={t("pricingPorcelain")} value={p.kitchen.porcelain}
             onChange={(n) => setP((prev) => ({ ...prev, kitchen: { ...prev.kitchen, porcelain: n } }))} />
         </div>
+        <div className="mb-4">
+          <PriceField label={t("pricingKitchenSurcharge")} value={p.kitchen.baseSurcharge}
+            onChange={(n) => setP((prev) => ({ ...prev, kitchen: { ...prev.kitchen, baseSurcharge: n } }))} />
+        </div>
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-8 gap-y-2.5">
           {KITCHEN_REGION_KEYS.map((region) => (
             <PriceField key={region} label={region} value={p.kitchen.base[region] ?? 0}

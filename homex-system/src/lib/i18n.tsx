@@ -1363,6 +1363,8 @@ const translations = {
   pricingKitchen: { ar: "المطابخ والبانتري (سعر المتر حسب الولاية)", en: "Kitchens & pantry (per-m² rate by wilayat)" },
   pricingPorcelain: { ar: "البورسلان (يُضاف للمتر)", en: "Porcelain (added per m²)" },
   kitchenAccessories: { ar: "اكسسوارات المطبخ", en: "Kitchen accessories" },
+  kitchenBaseSurcharge: { ar: "رسوم أساسية مضمّنة", en: "Included base surcharge" },
+  pricingKitchenSurcharge: { ar: "رسوم أساسية للمطبخ (مخفية، لكل مطبخ)", en: "Kitchen base surcharge (hidden, per kitchen)" },
   pricingAccessories: { ar: "اكسسوارات المطبخ (اختيارية على المطبخ)", en: "Kitchen accessories (optional add-ons)" },
   pricingAccName: { ar: "اسم الاكسسوار", en: "Accessory name" },
   pricingAddAccessory: { ar: "+ إضافة اكسسوار", en: "+ Add accessory" },

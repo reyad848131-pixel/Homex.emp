@@ -465,7 +465,11 @@ function KitchenBuilder({ config, governorate, wilayat, onUpdate, initial }: { c
     setAccCounts((prev) => ({ ...prev, [id]: Math.max(0, Math.round(n)) }));
   const accExtras = accessories.reduce((s, a) => s + accCount(a.id) * a.price, 0);
   const extras = (island !== "none" ? ISLAND_PRICES[island] : 0) + accExtras + light.lightExtras;
-  const computedBase = area * pricePerSqm;
+  // Hidden per-kitchen surcharge folded into the base (invisible on the quote /
+  // to the customer; shown to staff below). Not applied when a flat total is
+  // typed — that figure is the final price.
+  const baseSurcharge = pricing.kitchen.baseSurcharge;
+  const computedBase = area * pricePerSqm + baseSurcharge;
   const computedTotal = computedBase + extras;
   useResetFlatOnChange(computedTotal, priceOverride, () => setPriceOverride(null));
   const price = priceOverride != null ? priceOverride - extras : computedBase;
@@ -530,6 +534,9 @@ function KitchenBuilder({ config, governorate, wilayat, onUpdate, initial }: { c
           {wilayat || governorate}: {basePrice} × {unitMultiplier} + {PORCELAIN_PRICE} ({t("porcelain")}) = <span className="font-bold font-mono-en">{defaultRate.toFixed(3)}</span> {t("omrPerSqm")}
         </p>
         <p className="text-sm font-bold font-mono-en text-gray-900 mt-1">{t("pricePerMeterLabel")} (OMR) {pricePerSqm.toFixed(3)}</p>
+        {baseSurcharge > 0 && (
+          <p className="text-[11px] text-amber-600 mt-1 font-semibold">{t("kitchenBaseSurcharge")}: +{baseSurcharge} {t("omr")} ({t("addedAsExtras")})</p>
+        )}
       </div>
 
       <PriceOverrideRow defaultRate={defaultRate} rate={pricePerSqm} computedPrice={computedTotal}
