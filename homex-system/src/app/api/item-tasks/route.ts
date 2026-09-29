@@ -2,12 +2,16 @@ import { NextRequest, NextResponse } from "next/server";
 import { getAuth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { userCan } from "@/lib/permissions";
+import { foremanAccessIds, canAccessForeman } from "@/lib/foreman-access";
 
 async function guard() {
   const session = await getAuth();
   if (!session) return { error: NextResponse.json({ error: "Unauthorized" }, { status: 401 }) };
-  const user = session.user as { role: string };
-  if (!(await userCan(user.role, "work_orders"))) {
+  const user = session.user as { id: string; role: string; civilId: string };
+  // The work board (work_orders) OR the foreman console may drive item tasks.
+  const allowed = (await userCan(user.role, "work_orders")) ||
+    canAccessForeman(user.civilId, user.id, await foremanAccessIds().catch(() => []));
+  if (!allowed) {
     return { error: NextResponse.json({ error: "Forbidden" }, { status: 403 }) };
   }
   return { user };

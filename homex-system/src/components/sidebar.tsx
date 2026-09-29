@@ -52,6 +52,7 @@ interface SidebarProps {
   user: { name: string; role: string; civilId: string };
   canAccessSettings?: boolean;
   canManagePricing?: boolean;
+  canAccessForeman?: boolean;
   // Permission keys the current user's role grants. Menu items with a `perm`
   // are shown only when that permission is present (dashboard has none — always
   // visible). Falls back to showing everything if not provided.
@@ -84,11 +85,12 @@ const allItems: Array<{ href: string; labelKey: TranslationKey; icon: any; perm?
   { href: "/error-logs", labelKey: "errorLogs", icon: AlertTriangle, perm: ["audit"] },
   { href: "/import", labelKey: "importExcel", icon: FileSpreadsheet, perm: ["settings"] },
   { href: "/pricing", labelKey: "pricingTitle", icon: Tag, perm: undefined },
+  { href: "/foreman", labelKey: "foremanTitle", icon: HardHat, perm: undefined },
   { href: "/settings", labelKey: "settings", icon: Settings, perm: ["settings"] },
   { href: "/trash", labelKey: "trash", icon: Trash2, perm: ["trash"] },
 ];
 
-export function Sidebar({ user, permissions, canAccessSettings, canManagePricing }: SidebarProps) {
+export function Sidebar({ user, permissions, canAccessSettings, canManagePricing, canAccessForeman }: SidebarProps) {
   const pathname = usePathname();
   const router = useRouter();
   const [mobileOpen, setMobileOpen] = useState(false);
@@ -120,7 +122,8 @@ export function Sidebar({ user, permissions, canAccessSettings, canManagePricing
   // Settings is owner-only (Riyad / Salim + designated), decided server-side —
   // never by the generic "settings" permission.
   ).filter((it) => it.href !== "/settings" || canAccessSettings)
-   .filter((it) => it.href !== "/pricing" || canManagePricing);
+   .filter((it) => it.href !== "/pricing" || canManagePricing)
+   .filter((it) => it.href !== "/foreman" || canAccessForeman);
 
   const content = (
     <>

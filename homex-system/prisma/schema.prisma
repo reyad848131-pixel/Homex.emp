@@ -300,6 +300,7 @@ model Quotation {
   serviceRequests ServiceRequest[]
   materialOrders  MaterialOrder[]
   curtainOrder    CurtainOrder?
+  installCrews    InstallCrew[]
 
   @@index([employeeId])
   @@index([customerId])
@@ -452,8 +453,60 @@ model Worker {
   createdAt DateTime @default(now()) @map("created_at")
 
   tasks ItemTask[]
+  attendance WorkerAttendance[]
+  crews      CrewMember[]
 
   @@map("workers")
+}
+
+// Foreman console: one worker's presence for a given day.
+model WorkerAttendance {
+  id        String   @id @default(cuid())
+  workerId  String   @map("worker_id")
+  date      DateTime // the day (stored at local midnight)
+  status    String   @default("present") // present | absent | onsite
+  note      String?
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @default(now()) @updatedAt @map("updated_at")
+
+  worker Worker @relation(fields: [workerId], references: [id], onDelete: Cascade)
+
+  @@unique([workerId, date])
+  @@index([date])
+  @@map("worker_attendance")
+}
+
+// Foreman console: the installation crew for one job on one day. requiredCount
+// is the headcount the site needs (set manually); members are the workers sent.
+model InstallCrew {
+  id            String   @id @default(cuid())
+  quotationId   String   @map("quotation_id")
+  date          DateTime // the install day
+  requiredCount Int      @default(1) @map("required_count")
+  notes         String?
+  createdAt     DateTime @default(now()) @map("created_at")
+  updatedAt     DateTime @default(now()) @updatedAt @map("updated_at")
+
+  quotation Quotation    @relation(fields: [quotationId], references: [id], onDelete: Cascade)
+  members   CrewMember[]
+
+  @@index([date])
+  @@index([quotationId])
+  @@map("install_crews")
+}
+
+model CrewMember {
+  id        String   @id @default(cuid())
+  crewId    String   @map("crew_id")
+  workerId  String   @map("worker_id")
+  createdAt DateTime @default(now()) @map("created_at")
+
+  crew   InstallCrew @relation(fields: [crewId], references: [id], onDelete: Cascade)
+  worker Worker      @relation(fields: [workerId], references: [id], onDelete: Cascade)
+
+  @@unique([crewId, workerId])
+  @@index([workerId])
+  @@map("crew_members")
 }
 
 // One production stage of a single quote item (e.g. the "دهان" stage of a bed),
