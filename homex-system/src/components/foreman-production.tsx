@@ -1,9 +1,11 @@
 "use client";
 
 import { useEffect, useMemo, useState, useCallback } from "react";
-import { Loader2, Check, ChevronDown, ChevronLeft, Plus, X, Trash2, Save, Wand2, Factory, Users, GitBranch, ArrowUp, ArrowDown, Phone } from "lucide-react";
+import Link from "next/link";
+import { Loader2, Check, ChevronDown, ChevronLeft, Plus, X, Trash2, Save, Wand2, Factory, Users, GitBranch, ArrowUp, ArrowDown, Phone, ExternalLink } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useToast } from "@/components/toast";
+import { DateDrillNav, type DateRange } from "@/components/date-drill-nav";
 
 type SpecRow = { labelAr: string; labelEn: string; value: string };
 type PTask = { id: string; stage: string; workerId: string | null; workerName: string; workerColor: string; done: boolean };
@@ -105,6 +107,14 @@ function ProductionFile({ data, reload }: { data: ProdFile; reload: () => void }
   const [openQuote, setOpenQuote] = useState<string | null>(null);
   const [workerId, setWorkerId] = useState<string>(data.workers[0]?.id || "");
   const [busy, setBusy] = useState(false);
+  const [range, setRange] = useState<DateRange | null>(null);
+
+  // Filter active quotes by their planned delivery date (the date the work is
+  // organised by). "All" (null range) shows everything, including undated.
+  const quotes = useMemo(() => {
+    if (!range) return data.quotes;
+    return data.quotes.filter((q) => q.deliveryDate && q.deliveryDate >= range.from && q.deliveryDate <= range.to);
+  }, [range, data.quotes]);
 
   const apply = async (body: any) => {
     setBusy(true);
@@ -121,11 +131,11 @@ function ProductionFile({ data, reload }: { data: ProdFile; reload: () => void }
   const workerItems = useMemo(() => {
     if (mode !== "worker" || !workerId) return [];
     const out: { quote: PQuote; item: PItem }[] = [];
-    for (const q of data.quotes) for (const it of q.items) {
+    for (const q of quotes) for (const it of q.items) {
       if (it.tasks.some((t) => t.workerId === workerId)) out.push({ quote: q, item: it });
     }
     return out;
-  }, [mode, workerId, data.quotes]);
+  }, [mode, workerId, quotes]);
 
   return (
     <div className="space-y-3">
@@ -136,13 +146,16 @@ function ProductionFile({ data, reload }: { data: ProdFile; reload: () => void }
             {l}
           </button>
         ))}
-        <span className="ms-auto self-center text-[11px] text-gray-400">كوتيشنات إدارة الأعمال: {data.quotes.length}</span>
+        <span className="ms-auto self-center text-[11px] text-gray-400">كوتيشنات إدارة الأعمال: {quotes.length}</span>
       </div>
 
+      {/* Flexible date filter (year › month › week › day) on the planned date */}
+      <DateDrillNav onChange={(r) => setRange(r)} />
+
       {mode === "quote" && (
-        data.quotes.length === 0 ? <p className="text-sm text-gray-400 p-6 text-center">لا توجد كوتيشنات قيد العمل.</p> : (
+        quotes.length === 0 ? <p className="text-sm text-gray-400 p-6 text-center">لا توجد كوتيشنات بهذا التاريخ.</p> : (
           <div className="space-y-2">
-            {data.quotes.map((q) => {
+            {quotes.map((q) => {
               const open = openQuote === q.id;
               const doneCount = q.items.reduce((a, it) => a + it.tasks.filter((t) => t.done).length, 0);
               const taskCount = q.items.reduce((a, it) => a + it.tasks.length, 0);
@@ -160,10 +173,14 @@ function ProductionFile({ data, reload }: { data: ProdFile; reload: () => void }
                   </button>
                   {open && (
                     <div className="p-3 pt-0 space-y-2">
-                      <div className="flex items-center gap-2 pb-1">
+                      <div className="flex flex-wrap items-center gap-2 pb-1">
                         {q.customerPhone && (
                           <a href={`tel:${q.customerPhone}`} className="inline-flex items-center gap-1 text-[11px] font-bold text-teal-600"><Phone className="w-3 h-3" /> {q.customerPhone}</a>
                         )}
+                        <Link href={`/quotations/${q.id}`} target="_blank"
+                          className="inline-flex items-center gap-1 text-[11px] font-bold px-2.5 py-1 rounded-lg border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-700">
+                          <ExternalLink className="w-3.5 h-3.5" /> فتح الكوتيشن كامل
+                        </Link>
                         <button disabled={busy} onClick={() => apply({ quotationId: q.id })}
                           className="ms-auto inline-flex items-center gap-1 text-[11px] font-bold px-2.5 py-1 rounded-lg bg-indigo-600 text-white hover:bg-indigo-700 disabled:opacity-50">
                           <Wand2 className="w-3.5 h-3.5" /> تطبيق مراحل الأقسام على الكل
@@ -198,7 +215,9 @@ function ProductionFile({ data, reload }: { data: ProdFile; reload: () => void }
             <div className="space-y-2">
               {workerItems.map(({ quote, item }) => (
                 <div key={item.id} className="space-y-1">
-                  <p className="text-[11px] text-gray-400 font-mono-en">{quote.quoteNumber} · {quote.customer}</p>
+                  <Link href={`/quotations/${quote.id}`} target="_blank" className="inline-flex items-center gap-1 text-[11px] text-gray-400 hover:text-teal-600 font-mono-en">
+                    {quote.quoteNumber} · {quote.customer} <ExternalLink className="w-3 h-3" />
+                  </Link>
                   <SpecSheet item={item} />
                 </div>
               ))}
