@@ -4,10 +4,11 @@
 // (quotations/new) and edit (quotations/[id]/edit) pages. Extracted here so the
 // pricing logic lives in one place instead of being duplicated across two files.
 
-import { useState, useEffect, useRef, createContext, useContext } from "react";
+import { useState, useEffect, useRef, useCallback, createContext, useContext } from "react";
 import { useI18n } from "@/lib/i18n";
 import { cn } from "@/lib/utils";
 import { DEFAULT_PRICING, kitchenBaseFor, type PricingConfig } from "@/lib/pricing";
+import { fieldsForCategory, type SpecsCatalog, type SpecField } from "@/lib/specs-catalog";
 
 // Whether the current user may set / change item prices. Defaults to true so
 // existing call sites are unaffected; the quotation pages wrap the builder in a
@@ -39,6 +40,81 @@ export function PricingProvider({ children }: { children: React.ReactNode }) {
     return () => { alive = false; };
   }, []);
   return <PricingContext.Provider value={pricing}>{children}</PricingContext.Provider>;
+}
+
+// The production specs catalog (wood / fabric / colour / channel option lists),
+// fetched once and shared with every builder so its spec dropdowns populate.
+const CatalogContext = createContext<SpecsCatalog>({ fields: [] });
+export function useSpecsCatalog() {
+  return useContext(CatalogContext);
+}
+export function CatalogProvider({ children }: { children: React.ReactNode }) {
+  const [catalog, setCatalog] = useState<SpecsCatalog>({ fields: [] });
+  useEffect(() => {
+    let alive = true;
+    fetch("/api/catalog")
+      .then((r) => (r.ok ? r.json() : null))
+      .then((d) => { if (alive && d) setCatalog(d as SpecsCatalog); })
+      .catch(() => {});
+    return () => { alive = false; };
+  }, []);
+  return <CatalogContext.Provider value={catalog}>{children}</CatalogContext.Provider>;
+}
+
+// The production-specs block shown under every builder. Renders one control per
+// catalog field applicable to the category: a dropdown of the defined options
+// plus a free-text "Other…" escape hatch. Values are stored on the item under
+// details.specs, keyed by the field id, so the foreman/workers read the full
+// spec (wood type, fabric code, colour, channels…) off the production pages.
+function SpecOne({ field, value, onChange }: { field: SpecField; value: string; onChange: (v: string) => void }) {
+  const { t, locale } = useI18n();
+  const label = locale === "ar" ? field.labelAr : field.labelEn;
+  // When the stored value isn't one of the defined options, the field is in
+  // free-text mode (an "Other…" value, or an option removed from the catalog).
+  const isCustom = value !== "" && !field.options.includes(value);
+  const [custom, setCustom] = useState(isCustom);
+
+  // Keep local free-text mode in sync if the incoming value becomes a known option.
+  useEffect(() => { if (!isCustom && custom && value !== "__other__") setCustom(false); }, [isCustom]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  return (
+    <label className="block">
+      <span className="text-xs font-semibold text-gray-500 dark:text-gray-400">{label}</span>
+      {custom ? (
+        <div className="flex gap-1.5 mt-1">
+          <input autoFocus value={value} onChange={(e) => onChange(e.target.value)} className="field flex-1" />
+          <button type="button" onClick={() => { setCustom(false); onChange(""); }} className="px-2 rounded-lg text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700 shrink-0">✕</button>
+        </div>
+      ) : (
+        <select
+          value={field.options.includes(value) ? value : ""}
+          onChange={(e) => { if (e.target.value === "__other__") { setCustom(true); onChange(""); } else onChange(e.target.value); }}
+          className="field w-full mt-1"
+        >
+          <option value="">{t("specsNone")}</option>
+          {field.options.map((o) => <option key={o} value={o}>{o}</option>)}
+          <option value="__other__">{t("specsOther")}</option>
+        </select>
+      )}
+    </label>
+  );
+}
+
+function SpecsSection({ categoryId, specs, onChange }: { categoryId: string; specs: Record<string, string>; onChange: (s: Record<string, string>) => void }) {
+  const { t } = useI18n();
+  const catalog = useSpecsCatalog();
+  const fields = fieldsForCategory(catalog, categoryId);
+  if (fields.length === 0) return null;
+  return (
+    <div className="mt-4 pt-4 border-t border-dashed border-gray-200 dark:border-gray-700">
+      <p className="text-sm font-bold text-gray-700 dark:text-gray-200 mb-2">{t("specsTitle")}</p>
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+        {fields.map((f) => (
+          <SpecOne key={f.id} field={f} value={specs[f.id] || ""} onChange={(v) => onChange({ ...specs, [f.id]: v })} />
+        ))}
+      </div>
+    </div>
+  );
 }
 
 export interface Category {
@@ -1897,38 +1973,73 @@ export function CategoryBuilder({
       : cat.config
     : {};
 
+  // Production specs selected for this item. Merged into the details the inner
+  // builder emits, so one `onUpdate` carries both the pricing control state and
+  // the specs. Refs keep the wrapped callback's identity stable (the inner
+  // builders list onUpdate in their effect deps) and let a specs change re-emit
+  // the last-known payload without re-running every builder effect.
+  const [specs, setSpecs] = useState<Record<string, string>>(
+    () => (initial?.specs && typeof initial.specs === "object" ? { ...initial.specs } : {})
+  );
+  const specsRef = useRef(specs);
+  specsRef.current = specs;
+  const onUpdateRef = useRef(onUpdate);
+  onUpdateRef.current = onUpdate;
+  const lastRef = useRef<{ d: string; p: number; e: number; details: Record<string, any> } | null>(null);
+
+  const wrappedUpdate = useCallback<BuilderUpdate>((d, p, e, details) => {
+    lastRef.current = { d, p, e, details: details || {} };
+    onUpdateRef.current(d, p, e, { ...(details || {}), specs: specsRef.current });
+  }, []);
+
+  const firstSpecEmit = useRef(true);
+  useEffect(() => {
+    if (firstSpecEmit.current) { firstSpecEmit.current = false; return; }
+    const l = lastRef.current;
+    if (l) onUpdateRef.current(l.d, l.p, l.e, { ...l.details, specs });
+  }, [specs]);
+
   const inner = (() => {
   switch (cat.id) {
     case "kitchens":
-      return <KitchenBuilder config={config} governorate={governorate} wilayat={wilayat} onUpdate={onUpdate} initial={initial} />;
+      return <KitchenBuilder config={config} governorate={governorate} wilayat={wilayat} onUpdate={wrappedUpdate} initial={initial} />;
     case "pantry":
-      return <PantryBuilder config={config} governorate={governorate} wilayat={wilayat} onUpdate={onUpdate} initial={initial} />;
+      return <PantryBuilder config={config} governorate={governorate} wilayat={wilayat} onUpdate={wrappedUpdate} initial={initial} />;
     case "cabinets":
-      return <CabinetBuilder config={config} onUpdate={onUpdate} initial={initial} />;
+      return <CabinetBuilder config={config} onUpdate={wrappedUpdate} initial={initial} />;
     case "nightstand":
-      return <NightstandBuilder config={config} onUpdate={onUpdate} initial={initial} />;
+      return <NightstandBuilder config={config} onUpdate={wrappedUpdate} initial={initial} />;
     case "curtains":
-      return <CurtainBuilder config={config} onUpdate={onUpdate} initial={initial} />;
+      return <CurtainBuilder config={config} onUpdate={wrappedUpdate} initial={initial} />;
     case "dressing-table":
-      return <DressingBuilder config={config} onUpdate={onUpdate} initial={initial} />;
+      return <DressingBuilder config={config} onUpdate={wrappedUpdate} initial={initial} />;
     case "bed":
-      return <BedBuilder config={config} onUpdate={onUpdate} initial={initial} />;
+      return <BedBuilder config={config} onUpdate={wrappedUpdate} initial={initial} />;
     case "cladding":
-      return <CladdingBuilder config={config} onUpdate={onUpdate} initial={initial} />;
+      return <CladdingBuilder config={config} onUpdate={wrappedUpdate} initial={initial} />;
     case "partition":
-      return <PartitionBuilder config={config} onUpdate={onUpdate} initial={initial} />;
+      return <PartitionBuilder config={config} onUpdate={wrappedUpdate} initial={initial} />;
     case "sofa-set":
-      return <SofaBuilder config={config} onUpdate={onUpdate} initial={initial} />;
+      return <SofaBuilder config={config} onUpdate={wrappedUpdate} initial={initial} />;
     case "laundry":
-      return <LaundryBuilder config={config} onUpdate={onUpdate} initial={initial} />;
+      return <LaundryBuilder config={config} onUpdate={wrappedUpdate} initial={initial} />;
     case "tv-table":
-      return <TVTableBuilder config={config} onUpdate={onUpdate} initial={initial} />;
+      return <TVTableBuilder config={config} onUpdate={wrappedUpdate} initial={initial} />;
     case "study-table":
-      return <StudyTableBuilder config={config} onUpdate={onUpdate} initial={initial} />;
+      return <StudyTableBuilder config={config} onUpdate={wrappedUpdate} initial={initial} />;
     default:
-      return <GenericBuilder cat={cat} onUpdate={onUpdate} initial={initial} />;
+      return <GenericBuilder cat={cat} onUpdate={wrappedUpdate} initial={initial} />;
   }
   })();
 
-  return <PricingProvider><PriceEditProvider can={canEditPrice}>{inner}</PriceEditProvider></PricingProvider>;
+  return (
+    <PricingProvider>
+      <CatalogProvider>
+        <PriceEditProvider can={canEditPrice}>
+          {inner}
+          <SpecsSection categoryId={cat.id} specs={specs} onChange={setSpecs} />
+        </PriceEditProvider>
+      </CatalogProvider>
+    </PricingProvider>
+  );
 }

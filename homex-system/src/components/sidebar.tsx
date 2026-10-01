@@ -33,6 +33,7 @@ import {
   HardHat,
   Blinds,
   Tag,
+  Palette,
 } from "lucide-react";
 import { useState, useEffect } from "react";
 import { DarkModeToggle } from "@/components/dark-mode-toggle";
@@ -52,6 +53,7 @@ interface SidebarProps {
   user: { name: string; role: string; civilId: string };
   canAccessSettings?: boolean;
   canManagePricing?: boolean;
+  canManageCatalog?: boolean;
   canAccessForeman?: boolean;
   // Permission keys the current user's role grants. Menu items with a `perm`
   // are shown only when that permission is present (dashboard has none — always
@@ -85,12 +87,13 @@ const allItems: Array<{ href: string; labelKey: TranslationKey; icon: any; perm?
   { href: "/error-logs", labelKey: "errorLogs", icon: AlertTriangle, perm: ["audit"] },
   { href: "/import", labelKey: "importExcel", icon: FileSpreadsheet, perm: ["settings"] },
   { href: "/pricing", labelKey: "pricingTitle", icon: Tag, perm: undefined },
+  { href: "/catalog", labelKey: "catalogTitle", icon: Palette, perm: undefined },
   { href: "/foreman", labelKey: "foremanTitle", icon: HardHat, perm: undefined },
   { href: "/settings", labelKey: "settings", icon: Settings, perm: ["settings"] },
   { href: "/trash", labelKey: "trash", icon: Trash2, perm: ["trash"] },
 ];
 
-export function Sidebar({ user, permissions, canAccessSettings, canManagePricing, canAccessForeman }: SidebarProps) {
+export function Sidebar({ user, permissions, canAccessSettings, canManagePricing, canManageCatalog, canAccessForeman }: SidebarProps) {
   const pathname = usePathname();
   const router = useRouter();
   const [mobileOpen, setMobileOpen] = useState(false);
@@ -123,6 +126,7 @@ export function Sidebar({ user, permissions, canAccessSettings, canManagePricing
   // never by the generic "settings" permission.
   ).filter((it) => it.href !== "/settings" || canAccessSettings)
    .filter((it) => it.href !== "/pricing" || canManagePricing)
+   .filter((it) => it.href !== "/catalog" || canManageCatalog)
    .filter((it) => it.href !== "/foreman" || canAccessForeman);
 
   const content = (
