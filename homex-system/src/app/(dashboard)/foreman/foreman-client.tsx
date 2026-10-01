@@ -1,9 +1,10 @@
 "use client";
 
 import { useEffect, useState, useCallback } from "react";
-import { ChevronRight, ChevronLeft, Check, X, HardHat, Truck, BarChart3, AlertTriangle, Plus, FileSpreadsheet, Loader2 } from "lucide-react";
+import { ChevronRight, ChevronLeft, Check, X, HardHat, Truck, BarChart3, AlertTriangle, Plus, FileSpreadsheet, Loader2, Factory } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useToast } from "@/components/toast";
+import ProductionConsole from "@/components/foreman-production";
 
 type Task = { id: string; stage: string; workerId: string | null; itemDesc: string; quoteId: string; quoteNumber: string; customer: string };
 type WorkerCard = { id: string; name: string; color: string; status: string; note: string; onCrew: boolean; open: Task[]; doneToday: Task[] };
@@ -16,7 +17,7 @@ const ATT = [["present", "حاضر"], ["onsite", "بالموقع"], ["absent", "
 
 export default function ForemanClient() {
   const toast = useToast();
-  const [tab, setTab] = useState<"board" | "install" | "reports">("board");
+  const [tab, setTab] = useState<"production" | "board" | "install" | "reports">("production");
   const [date, setDate] = useState(todayStr());
   const [data, setData] = useState<Board | null>(null);
   const [loading, setLoading] = useState(true);
@@ -65,7 +66,8 @@ export default function ForemanClient() {
         <h1 className="text-xl font-bold">لوحة الفورمن</h1>
       </div>
 
-      {/* Day navigation */}
+      {/* Day navigation — only for the day-scoped tabs */}
+      {(tab === "board" || tab === "install") && (
       <div className="flex items-center justify-between gap-2 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl p-2">
         <button onClick={() => setDate(shiftDay(date, -1))} className="p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700"><ChevronRight className="w-5 h-5" /></button>
         <div className="flex-1 text-center">
@@ -75,10 +77,11 @@ export default function ForemanClient() {
         <button onClick={() => setDate(shiftDay(date, 1))} className="p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700"><ChevronLeft className="w-5 h-5" /></button>
         {date !== todayStr() && <button onClick={() => setDate(todayStr())} className="px-3 py-1.5 rounded-lg bg-gray-900 dark:bg-white text-white dark:text-gray-900 text-xs font-bold">اليوم</button>}
       </div>
+      )}
 
       {/* Tabs */}
       <div className="flex gap-2">
-        {([["board", "العمّال", HardHat], ["install", "التركيب", Truck], ["reports", "التقارير", BarChart3]] as const).map(([k, l, Icon]) => (
+        {([["production", "الإنتاج", Factory], ["board", "العمّال", HardHat], ["install", "التركيب", Truck], ["reports", "التقارير", BarChart3]] as const).map(([k, l, Icon]) => (
           <button key={k} onClick={() => setTab(k)}
             className={cn("flex-1 flex items-center justify-center gap-2 py-2.5 rounded-lg text-sm font-bold border transition-colors",
               tab === k ? "bg-teal-600 text-white border-teal-600" : "bg-white dark:bg-gray-800 border-gray-200 dark:border-gray-700 text-gray-600 dark:text-gray-300")}>
@@ -87,7 +90,9 @@ export default function ForemanClient() {
         ))}
       </div>
 
-      {loading && <div className="flex items-center gap-2 text-gray-400 p-6"><Loader2 className="w-5 h-5 animate-spin" /> جارٍ التحميل…</div>}
+      {tab === "production" && <ProductionConsole />}
+
+      {loading && tab !== "production" && tab !== "reports" && <div className="flex items-center gap-2 text-gray-400 p-6"><Loader2 className="w-5 h-5 animate-spin" /> جارٍ التحميل…</div>}
 
       {!loading && tab === "board" && <BoardTab workers={workers} ready={data?.ready || []} onAtt={setAttendance} onReassign={reassign} onDone={markDone} />}
       {!loading && tab === "install" && <InstallTab installs={data?.installs || []} workers={workers} onRequired={setRequired} onNotes={setNotes} onAdd={addMember} onRemove={removeMember} />}

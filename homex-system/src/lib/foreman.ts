@@ -1,4 +1,7 @@
 import { prisma } from "@/lib/prisma";
+import { getSetting } from "@/lib/settings";
+import { mergeProduction, type ProductionConfig } from "@/lib/production";
+import { mergeSpecsCatalog, type SpecsCatalog } from "@/lib/specs-catalog";
 
 // Foreman console data. All "day" params are YYYY-MM-DD in the company's local
 // zone; we bound queries to that whole day.
@@ -12,6 +15,104 @@ export function dayBounds(dateStr: string) {
 
 // A quotation is "active" on the board while it is not yet delivered.
 const ACTIVE_WORK = ["needs_preparation", "ready_to_execute", "in_progress", "ready_for_delivery"];
+
+// ── Production structure config (stations + pipelines) and specs catalog ──
+
+export async function getProductionConfig(): Promise<ProductionConfig> {
+  let stored: unknown = {};
+  try { stored = JSON.parse((await getSetting("production", "")) || "{}"); } catch { stored = {}; }
+  return mergeProduction(stored);
+}
+
+export async function getSpecsCatalog(): Promise<SpecsCatalog> {
+  let stored: unknown = {};
+  try { stored = JSON.parse((await getSetting("specs_catalog", "")) || "{}"); } catch { stored = {}; }
+  return mergeSpecsCatalog(stored);
+}
+
+// Parse an item's details JSON and resolve its production specs (field id ->
+// value) into labelled rows using the catalog. Unknown/removed fields are kept
+// (labelled by their id) so nothing silently disappears.
+function specRows(detailsRaw: string | null, catalog: SpecsCatalog) {
+  let specs: Record<string, string> = {};
+  try {
+    const d = detailsRaw ? JSON.parse(detailsRaw) : null;
+    if (d && typeof d.specs === "object" && d.specs) specs = d.specs;
+  } catch { /* ignore malformed details */ }
+  const rows: { labelAr: string; labelEn: string; value: string }[] = [];
+  for (const [fid, val] of Object.entries(specs)) {
+    const value = typeof val === "string" ? val.trim() : "";
+    if (!value) continue;
+    const f = catalog.fields.find((x) => x.id === fid);
+    rows.push({ labelAr: f?.labelAr || fid, labelEn: f?.labelEn || fid, value });
+  }
+  return rows;
+}
+
+// The production file: every active (إدارة الأعمال) quotation with its items,
+// each item's full production specs and its production stages (tasks). This is
+// what the foreman and workers read to know exactly what to build — wood,
+// fabric, colour, channels, dimensions (in the description) and who does which
+// stage. Scoped strictly to signed/accepted work in progress.
+export async function getProductionFile() {
+  const [catalog, config, quotes, workers, categories] = await Promise.all([
+    getSpecsCatalog(),
+    getProductionConfig(),
+    prisma.quotation.findMany({
+      where: { workStatus: { in: ACTIVE_WORK }, deletedAt: null },
+      select: {
+        id: true, quoteNumber: true, workStatus: true, deliveryDate: true,
+        customer: { select: { name: true, phone: true } },
+        items: {
+          orderBy: { sortOrder: "asc" },
+          select: {
+            id: true, categoryId: true, description: true, details: true, quantity: true,
+            tasks: {
+              orderBy: { sortOrder: "asc" },
+              select: { id: true, stage: true, workerId: true, doneAt: true, worker: { select: { name: true, color: true } } },
+            },
+          },
+        },
+      },
+      orderBy: [{ deliveryDate: "asc" }, { quoteNumber: "asc" }],
+      take: 1000,
+    }),
+    prisma.worker.findMany({ where: { isActive: true }, orderBy: { sortOrder: "asc" }, select: { id: true, name: true, color: true } }),
+    prisma.category.findMany({ where: { isActive: true }, orderBy: { sortOrder: "asc" }, select: { id: true, nameAr: true, nameEn: true } }).catch(() => [] as { id: string; nameAr: string; nameEn: string }[]),
+  ]);
+
+  const workerName = new Map(workers.map((w) => [w.id, w.name]));
+
+  const mappedQuotes = quotes.map((q) => ({
+    id: q.id,
+    quoteNumber: q.quoteNumber,
+    workStatus: q.workStatus,
+    deliveryDate: q.deliveryDate ? q.deliveryDate.toISOString().slice(0, 10) : null,
+    customer: q.customer?.name || "",
+    customerPhone: q.customer?.phone || "",
+    items: q.items.map((it) => ({
+      id: it.id,
+      categoryId: it.categoryId,
+      description: it.description,
+      quantity: it.quantity,
+      specs: specRows(it.details, catalog),
+      hasPipeline: it.tasks.length > 0,
+      tasks: it.tasks.map((t) => ({
+        id: t.id, stage: t.stage, workerId: t.workerId,
+        workerName: t.worker?.name || "", workerColor: t.worker?.color || "",
+        done: !!t.doneAt,
+      })),
+    })),
+  }));
+
+  const stations = config.stations.map((s) => ({
+    ...s,
+    mainWorkerName: s.mainWorkerId ? workerName.get(s.mainWorkerId) || "" : "",
+    subNames: s.subWorkerIds.map((id) => workerName.get(id) || "").filter(Boolean),
+  }));
+
+  return { quotes: mappedQuotes, workers, categories, stations, pipelines: config.pipelines, defaultPipeline: config.defaultPipeline };
+}
 
 export interface ForemanTask {
   id: string; stage: string; workerId: string | null; doneAt: string | null;
