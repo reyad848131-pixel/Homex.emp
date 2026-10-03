@@ -69,22 +69,39 @@ export async function POST(req: NextRequest) {
     let customerId: string | null = null;
 
     if (body.mode === "new") {
-      // Brand-new customer with no quote yet: create (or reuse an existing
-      // customer with the same phone) and attach the request straight to them.
+      // "New customer" entry. But guard against mislabelling / duplicating a
+      // customer who ALREADY exists in the system:
+      //   1. If their phone already has a quotation → link the request to that
+      //      quote so it shows as the existing customer (not "زبون جديد"), and
+      //      create NOTHING new.
+      //   2. Else reuse a customer record with the same phone if one exists.
+      //   3. Only when truly unknown do we create a brand-new customer.
       const governorate = String(body.governorate || "").trim();
       const wilayat = String(body.wilayat || "").trim();
       if (!name || !digits) return NextResponse.json({ error: "الاسم ورقم الهاتف مطلوبان" }, { status: 400 });
       if (!governorate || !wilayat) return NextResponse.json({ error: "المحافظة والولاية مطلوبتان" }, { status: 400 });
 
-      const existing = await prisma.customer.findFirst({ where: { phone: { contains: digits } }, select: { id: true } });
-      if (existing) {
-        customerId = existing.id;
+      // 1) Existing customer with a quote? Link to their latest quotation.
+      const existingQuote = await prisma.quotation.findFirst({
+        where: { customer: { phone: { contains: digits }, deletedAt: null }, deletedAt: null },
+        orderBy: { createdAt: "desc" },
+        select: { id: true },
+      });
+      if (existingQuote) {
+        quotationId = existingQuote.id;
       } else {
-        const c = await prisma.customer.create({
-          data: { name, phone: digits, governorate, wilayat, source: "service", createdBy: auth.user.id },
-          select: { id: true },
-        });
-        customerId = c.id;
+        // 2) Reuse an existing (quote-less) customer with the same phone.
+        const existing = await prisma.customer.findFirst({ where: { phone: { contains: digits }, deletedAt: null }, select: { id: true } });
+        if (existing) {
+          customerId = existing.id;
+        } else {
+          // 3) Genuinely new customer.
+          const c = await prisma.customer.create({
+            data: { name, phone: digits, governorate, wilayat, source: "service", createdBy: auth.user.id },
+            select: { id: true },
+          });
+          customerId = c.id;
+        }
       }
     } else if (!quotationId) {
       // Existing customer: find their most recent quotation by name + phone.
