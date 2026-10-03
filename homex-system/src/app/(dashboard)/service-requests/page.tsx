@@ -10,7 +10,7 @@ import { displayName } from "@/lib/translit";
 import { useToast } from "@/components/toast";
 import { CardsSkeleton } from "@/components/skeleton";
 import {
-  LifeBuoy, Plus, Phone, FileText, Check, CalendarDays, User, RotateCcw, MapPin,
+  LifeBuoy, Plus, Phone, FileText, Check, CalendarDays, User, RotateCcw, MapPin, Pencil, Trash2, X,
 } from "lucide-react";
 
 interface ServiceRequest {
@@ -55,10 +55,18 @@ export default function ServiceRequestsPage() {
   const [schedDate, setSchedDate] = useState("");
   const [schedTech, setSchedTech] = useState("");
   const [canMoney, setCanMoney] = useState(true);
+  const [role, setRole] = useState("");
+  // Inline edit (type + reason) and two-step delete confirm.
+  const [editId, setEditId] = useState<string | null>(null);
+  const [editType, setEditType] = useState("maintenance");
+  const [editReason, setEditReason] = useState("");
+  const [confirmDelId, setConfirmDelId] = useState<string | null>(null);
+
+  const canDelete = role === "admin" || role === "ceo" || role === "manager";
 
   useEffect(() => {
     fetch("/api/me").then((r) => (r.ok ? r.json() : null)).then((m) => {
-      if (m) setCanMoney(m.canSeeFinancials !== false);
+      if (m) { setCanMoney(m.canSeeFinancials !== false); setRole(m.role || ""); }
     }).catch(() => {});
   }, []);
 
@@ -105,6 +113,26 @@ export default function ServiceRequestsPage() {
   const patch = (id: string, body: Record<string, any>) => {
     fetch(`/api/service-requests/${id}`, { method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) })
       .then(() => fetchData()).catch(() => fetchData());
+  };
+
+  const openEdit = (r: ServiceRequest) => {
+    setEditId(r.id);
+    setEditType(r.type || "maintenance");
+    setEditReason(r.reason || "");
+    setSchedId(null);
+  };
+  const saveEdit = () => {
+    if (!editId) return;
+    patch(editId, { type: editType, reason: editReason });
+    setEditId(null);
+  };
+  const del = async (id: string) => {
+    try {
+      const res = await fetch(`/api/service-requests/${id}`, { method: "DELETE" });
+      if (res.ok) { toast.success(t("deletedSuccess")); fetchData(); }
+      else { const e = await res.json().catch(() => ({})); toast.error(e.error || t("saveFailed")); }
+    } catch { toast.error(t("serverConnectionError")); }
+    finally { setConfirmDelId(null); }
   };
 
   const openSched = (r: ServiceRequest) => {
@@ -247,6 +275,24 @@ export default function ServiceRequestsPage() {
                   </div>
                 )}
 
+                {editId === r.id && (
+                  <div className="mt-3 p-3 rounded-lg bg-gray-50 dark:bg-gray-700/50 space-y-2">
+                    <div className="flex flex-wrap items-center gap-2">
+                      <label className="text-xs font-bold text-gray-500">{t("newServiceRequest")}</label>
+                      <select value={editType} onChange={(e) => setEditType(e.target.value)} className="field w-auto h-9 text-xs py-0">
+                        <option value="maintenance">{t("typeMaintenance")}</option>
+                        <option value="return">{t("typeReturn")}</option>
+                        <option value="completion">{t("typeCompletion")}</option>
+                      </select>
+                    </div>
+                    <textarea value={editReason} onChange={(e) => setEditReason(e.target.value)} className="field-textarea" rows={2} placeholder={t("serviceReason")} />
+                    <div className="flex items-center gap-2">
+                      <button onClick={saveEdit} className="inline-flex items-center gap-1 px-3 h-9 rounded-lg bg-gray-900 dark:bg-white dark:text-gray-900 text-white text-xs font-bold"><Check className="w-3.5 h-3.5" /> {t("save")}</button>
+                      <button onClick={() => setEditId(null)} className="px-3 h-9 text-xs font-bold text-gray-500">{t("cancel")}</button>
+                    </div>
+                  </div>
+                )}
+
                 {schedId === r.id && (
                   <div className="mt-3 flex flex-wrap items-center gap-2 p-2 rounded-lg bg-gray-50 dark:bg-gray-700/50">
                     <input type="date" value={schedDate} onChange={(e) => setSchedDate(e.target.value)} className="field w-auto h-9 font-mono-en" />
@@ -263,7 +309,7 @@ export default function ServiceRequestsPage() {
                   {canMoney && r.quotation ? (
                     <Link href={`/quotations/${r.quotation.id}`} className="inline-flex items-center gap-1.5 text-xs font-bold text-gray-900 dark:text-white hover:underline"><FileText className="w-3.5 h-3.5" /> {t("openOriginalQuote")}</Link>
                   ) : <span />}
-                  <div className="flex items-center gap-2">
+                  <div className="flex flex-wrap items-center gap-2">
                     <a href={`tel:${tel}`} className="inline-flex items-center gap-1.5 px-3 h-9 rounded-lg bg-gray-900 dark:bg-gray-100 dark:text-gray-900 text-white text-xs font-bold"><Phone className="w-3.5 h-3.5" /> {t("callAction")}</a>
                     {r.status !== "resolved" ? (
                       <>
@@ -272,6 +318,19 @@ export default function ServiceRequestsPage() {
                       </>
                     ) : (
                       <button onClick={() => patch(r.id, { status: "open" })} className="inline-flex items-center gap-1.5 px-3 h-9 rounded-lg border border-amber-300 dark:border-amber-700 bg-amber-50 dark:bg-amber-900/20 text-amber-700 dark:text-amber-300 text-xs font-bold"><RotateCcw className="w-3.5 h-3.5" /> {t("svcOpen")}</button>
+                    )}
+                    {/* Edit the request (type + reason) */}
+                    <button onClick={() => (editId === r.id ? setEditId(null) : openEdit(r))} className="inline-flex items-center gap-1.5 px-3 h-9 rounded-lg border border-gray-200 dark:border-gray-700 text-gray-600 dark:text-gray-300 text-xs font-bold hover:bg-gray-50 dark:hover:bg-gray-700"><Pencil className="w-3.5 h-3.5" /> {t("edit")}</button>
+                    {/* Delete — admins/managers only, two-step confirm */}
+                    {canDelete && (
+                      confirmDelId === r.id ? (
+                        <span className="inline-flex items-center gap-1">
+                          <button onClick={() => del(r.id)} className="inline-flex items-center gap-1.5 px-3 h-9 rounded-lg bg-red-600 hover:bg-red-700 text-white text-xs font-bold"><Trash2 className="w-3.5 h-3.5" /> {t("confirmDelete")}</button>
+                          <button onClick={() => setConfirmDelId(null)} className="inline-flex items-center justify-center w-9 h-9 rounded-lg border border-gray-200 dark:border-gray-700 text-gray-500"><X className="w-3.5 h-3.5" /></button>
+                        </span>
+                      ) : (
+                        <button onClick={() => setConfirmDelId(r.id)} className="inline-flex items-center gap-1.5 px-3 h-9 rounded-lg border border-red-200 dark:border-red-800 text-red-600 dark:text-red-400 text-xs font-bold hover:bg-red-50 dark:hover:bg-red-900/20"><Trash2 className="w-3.5 h-3.5" /> {t("delete")}</button>
+                      )
                     )}
                   </div>
                 </div>
