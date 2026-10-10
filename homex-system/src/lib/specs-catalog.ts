@@ -14,8 +14,13 @@ export interface SpecField {
   id: string;
   labelAr: string;
   labelEn: string;
-  // The selectable options for this field (the dropdown values). Empty is
-  // allowed — the field then behaves as a free-text entry until options exist.
+  // Input mode:
+  //  • "list" — a dropdown of `options`, plus an "Other…" escape to type a
+  //    custom value (e.g. wood codes: pick a known one or type a new one).
+  //  • "text" — a plain free-text box, no options (e.g. fabric codes, which run
+  //    into the thousands — staff just type the code).
+  mode: "list" | "text";
+  // The selectable options for this field (the dropdown values) in "list" mode.
   options: string[];
   // Category ids this field applies to (see CategoryBuilder's `cat.id`). Empty
   // means "all categories". Lets a field like "نوع القماش" show only on
@@ -31,11 +36,11 @@ export interface SpecsCatalog {
 // in from the Catalog page; categories empty = shown on every category.
 export const DEFAULT_SPECS_CATALOG: SpecsCatalog = {
   fields: [
-    { id: "wood", labelAr: "نوع الخشب", labelEn: "Wood type", options: [], categories: [] },
-    { id: "woodColor", labelAr: "لون / كود الخشب", labelEn: "Wood colour / code", options: [], categories: [] },
-    { id: "fabric", labelAr: "نوع القماش", labelEn: "Fabric type", options: [], categories: [] },
-    { id: "fabricCode", labelAr: "كود القماش", labelEn: "Fabric code", options: [], categories: [] },
-    { id: "channel", labelAr: "نوع التشانالات", labelEn: "Channel type", options: [], categories: [] },
+    { id: "wood", labelAr: "نوع الخشب", labelEn: "Wood type", mode: "list", options: [], categories: [] },
+    { id: "woodCode", labelAr: "كود الخشب", labelEn: "Wood code", mode: "list", options: [], categories: [] },
+    { id: "fabric", labelAr: "نوع القماش", labelEn: "Fabric type", mode: "list", options: [], categories: [] },
+    { id: "fabricCode", labelAr: "كود القماش", labelEn: "Fabric code", mode: "text", options: [], categories: [] },
+    { id: "channel", labelAr: "نوع التشانالات", labelEn: "Channel type", mode: "list", options: [], categories: [] },
   ],
 };
 
@@ -79,6 +84,7 @@ export function mergeSpecsCatalog(raw: unknown): SpecsCatalog {
       id,
       labelAr: labelAr || labelEn,
       labelEn: labelEn || labelAr,
+      mode: ff.mode === "text" ? "text" : "list",
       options: cleanStrings(ff.options).slice(0, 300),
       categories: cleanStrings(ff.categories).slice(0, 50),
     });

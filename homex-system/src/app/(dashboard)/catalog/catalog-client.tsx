@@ -10,7 +10,7 @@ import { DEFAULT_SPECS_CATALOG, type SpecField, type SpecsCatalog } from "@/lib/
 type Cat = { id: string; nameAr: string; nameEn: string };
 
 function newField(): SpecField {
-  return { id: `f${Date.now().toString(36)}`, labelAr: "", labelEn: "", options: [], categories: [] };
+  return { id: `f${Date.now().toString(36)}`, labelAr: "", labelEn: "", mode: "list", options: [], categories: [] };
 }
 
 export default function CatalogClient({ categories }: { categories: Cat[] }) {
@@ -110,7 +110,21 @@ export default function CatalogClient({ categories }: { categories: Cat[] }) {
             </button>
           </div>
 
-          {/* Options */}
+          {/* Input mode */}
+          <div className="mt-4">
+            <span className="text-xs font-semibold text-gray-500">{t("catModeHint")}</span>
+            <div className="flex gap-2 mt-2">
+              {(["list", "text"] as const).map((m) => (
+                <button key={m} onClick={() => patch(i, { mode: m })}
+                  className={cn("px-3 py-1.5 rounded-lg text-xs font-bold border", f.mode === m ? "bg-teal-600 text-white border-teal-600" : "border-gray-200 dark:border-gray-600 text-gray-500 hover:bg-gray-50 dark:hover:bg-gray-700")}>
+                  {m === "list" ? t("catModeList") : t("catModeText")}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          {/* Options (list mode only) */}
+          {f.mode === "list" && (
           <div className="mt-4">
             <span className="text-xs font-semibold text-gray-500">{t("catOptions")}</span>
             <div className="flex flex-wrap gap-2 mt-2">
@@ -133,6 +147,7 @@ export default function CatalogClient({ categories }: { categories: Cat[] }) {
               <button onClick={() => addOption(i)} className="btn-secondary shrink-0 flex items-center gap-1"><Plus className="w-4 h-4" /> {t("catAddOption")}</button>
             </div>
           </div>
+          )}
 
           {/* Category scope */}
           <div className="mt-4">

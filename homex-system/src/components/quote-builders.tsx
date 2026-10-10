@@ -69,6 +69,17 @@ export function CatalogProvider({ children }: { children: React.ReactNode }) {
 function SpecOne({ field, value, onChange }: { field: SpecField; value: string; onChange: (v: string) => void }) {
   const { t, locale } = useI18n();
   const label = locale === "ar" ? field.labelAr : field.labelEn;
+
+  // Free-text field (e.g. fabric codes): a plain box, no dropdown.
+  if (field.mode === "text") {
+    return (
+      <label className="block">
+        <span className="text-xs font-semibold text-gray-500 dark:text-gray-400">{label}</span>
+        <input value={value} onChange={(e) => onChange(e.target.value)} className="field w-full mt-1" placeholder={t("specsTypeCode")} />
+      </label>
+    );
+  }
+
   // When the stored value isn't one of the defined options, the field is in
   // free-text mode (an "Other…" value, or an option removed from the catalog).
   const isCustom = value !== "" && !field.options.includes(value);
