@@ -229,6 +229,101 @@ export async function getForemanInstalls(dateStr: string) {
   });
 }
 
+// ── Attendance (dedicated register, twice-daily) ──
+
+const OWNER_CIVIL_IDS = ["2016", "1389"];
+export function isAttendanceOwner(civilId: string) {
+  return OWNER_CIVIL_IDS.includes(civilId);
+}
+
+// One attendance session: the roster for a given day + shift, each worker's
+// recorded status, and the "last taken" stamp (who saved it, when).
+export async function getAttendanceSession(dateStr: string, period: string) {
+  const { start, end } = dayBounds(dateStr);
+  const [workers, rows] = await Promise.all([
+    prisma.worker.findMany({ where: { isActive: true }, orderBy: { sortOrder: "asc" }, select: { id: true, name: true, color: true } }),
+    prisma.workerAttendance.findMany({ where: { date: { gte: start, lte: end }, period } }),
+  ]);
+  const byWorker = new Map(rows.map((r) => [r.workerId, r]));
+
+  // Lock stamp: latest takenAt in the session + who saved it.
+  let stampAt: Date | null = null;
+  let stampBy: string | null = null;
+  for (const r of rows) {
+    if (r.takenAt && (!stampAt || r.takenAt > stampAt)) { stampAt = r.takenAt; stampBy = r.takenBy || null; }
+  }
+  let takenByName = "";
+  if (stampBy) {
+    const emp = await prisma.employee.findUnique({ where: { id: stampBy }, select: { name: true } }).catch(() => null);
+    takenByName = emp?.name || "";
+  }
+
+  const roster = workers.map((w) => {
+    const r = byWorker.get(w.id);
+    return {
+      workerId: w.id, name: w.name, color: w.color,
+      status: r?.status || "present",
+      reason: r?.reason || "",
+      note: r?.note || "",
+      recorded: !!r,
+    };
+  });
+
+  return {
+    date: dateStr, period,
+    workers: roster,
+    takenAt: stampAt ? stampAt.toISOString() : null,
+    takenByName,
+    locked: !!stampAt, // a session with a stamp is saved/locked
+  };
+}
+
+// Monthly attendance grid: per worker, each day's morning/evening status, plus
+// totals and an attendance percentage.
+export async function getAttendanceMonth(year: number, month1: number) {
+  const start = new Date(year, month1 - 1, 1, 0, 0, 0, 0);
+  const end = new Date(year, month1, 0, 23, 59, 59, 999);
+  const daysInMonth = new Date(year, month1, 0).getDate();
+
+  const [workers, rows] = await Promise.all([
+    prisma.worker.findMany({ where: { isActive: true }, orderBy: { sortOrder: "asc" }, select: { id: true, name: true } }),
+    prisma.workerAttendance.findMany({ where: { date: { gte: start, lte: end } }, select: { workerId: true, date: true, period: true, status: true } }),
+  ]);
+
+  // key: workerId -> day(1..n) -> { am, pm }
+  const grid = new Map<string, Map<number, { am?: string; pm?: string }>>();
+  for (const r of rows) {
+    const day = r.date.getDate();
+    const wm = grid.get(r.workerId) || grid.set(r.workerId, new Map()).get(r.workerId)!;
+    const cell = wm.get(day) || {};
+    if (r.period === "evening") cell.pm = r.status; else cell.am = r.status;
+    wm.set(day, cell);
+  }
+
+  const result = workers.map((w) => {
+    const wm = grid.get(w.id) || new Map();
+    let present = 0, absent = 0, recorded = 0;
+    const days: Record<number, { am?: string; pm?: string }> = {};
+    for (let d = 1; d <= daysInMonth; d++) {
+      const cell = wm.get(d);
+      if (!cell) continue;
+      days[d] = cell;
+      for (const s of [cell.am, cell.pm]) {
+        if (!s) continue;
+        recorded += 1;
+        if (s === "absent") absent += 1; else present += 1;
+      }
+    }
+    return {
+      workerId: w.id, name: w.name, days,
+      present, absent, recorded,
+      pct: recorded > 0 ? Math.round((present / recorded) * 100) : null,
+    };
+  });
+
+  return { year, month: month1, daysInMonth, rows: result };
+}
+
 // Performance report over a range: per-worker productivity (tasks done),
 // site log (installs attended) and attendance days.
 export async function getForemanReport(fromStr: string, toStr: string) {

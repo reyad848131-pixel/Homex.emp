@@ -1,10 +1,11 @@
 "use client";
 
 import { useEffect, useState, useCallback } from "react";
-import { ChevronRight, ChevronLeft, Check, X, HardHat, Truck, BarChart3, AlertTriangle, Plus, FileSpreadsheet, Loader2, Factory, FileText } from "lucide-react";
+import { ChevronRight, ChevronLeft, Check, X, HardHat, Truck, BarChart3, AlertTriangle, Plus, FileSpreadsheet, Loader2, Factory, FileText, ClipboardCheck } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useToast } from "@/components/toast";
 import ProductionConsole from "@/components/foreman-production";
+import AttendanceConsole from "@/components/foreman-attendance";
 
 type Task = { id: string; stage: string; workerId: string | null; itemDesc: string; quoteId: string; quoteNumber: string; customer: string };
 type WorkerCard = { id: string; name: string; color: string; am: string; pm: string; amNote: string; pmNote: string; onCrew: boolean; open: Task[]; doneToday: Task[] };
@@ -13,11 +14,10 @@ type Board = { date: string; workers: WorkerCard[]; ready: Task[]; onSiteCount: 
 
 const todayStr = () => new Date().toISOString().slice(0, 10);
 const shiftDay = (d: string, n: number) => { const dt = new Date(d + "T12:00:00"); dt.setDate(dt.getDate() + n); return dt.toISOString().slice(0, 10); };
-const ATT = [["present", "حاضر"], ["onsite", "بالموقع"], ["absent", "غائب"]] as const;
 
 export default function ForemanClient() {
   const toast = useToast();
-  const [tab, setTab] = useState<"production" | "board" | "install" | "reports">("production");
+  const [tab, setTab] = useState<"production" | "attendance" | "board" | "install" | "reports">("production");
   const [date, setDate] = useState(todayStr());
   const [data, setData] = useState<Board | null>(null);
   const [loading, setLoading] = useState(true);
@@ -42,7 +42,6 @@ export default function ForemanClient() {
     } catch { toast.error("تعذّر الاتصال"); return null; }
   };
 
-  const setAttendance = async (workerId: string, status: string, period: string) => { await post("/api/foreman/attendance", { workerId, date, status, period }); load(date); };
   const reassign = async (taskId: string, workerId: string) => { await post("/api/item-tasks", { id: taskId, workerId: workerId || null }, "PATCH"); load(date); };
   const markDone = async (taskId: string) => { await post("/api/item-tasks", { id: taskId, done: true }, "PATCH"); load(date); };
 
@@ -81,7 +80,7 @@ export default function ForemanClient() {
 
       {/* Tabs */}
       <div className="flex gap-2">
-        {([["production", "الإنتاج", Factory], ["board", "العمّال", HardHat], ["install", "التركيب", Truck], ["reports", "التقارير", BarChart3]] as const).map(([k, l, Icon]) => (
+        {([["production", "الإنتاج", Factory], ["attendance", "الحضور", ClipboardCheck], ["board", "العمّال", HardHat], ["install", "التركيب", Truck], ["reports", "التقارير", BarChart3]] as const).map(([k, l, Icon]) => (
           <button key={k} onClick={() => setTab(k)}
             className={cn("flex-1 flex items-center justify-center gap-2 py-2.5 rounded-lg text-sm font-bold border transition-colors",
               tab === k ? "bg-teal-600 text-white border-teal-600" : "bg-white dark:bg-gray-800 border-gray-200 dark:border-gray-700 text-gray-600 dark:text-gray-300")}>
@@ -91,28 +90,13 @@ export default function ForemanClient() {
       </div>
 
       {tab === "production" && <ProductionConsole />}
+      {tab === "attendance" && <AttendanceConsole />}
 
-      {loading && tab !== "production" && tab !== "reports" && <div className="flex items-center gap-2 text-gray-400 p-6"><Loader2 className="w-5 h-5 animate-spin" /> جارٍ التحميل…</div>}
+      {loading && (tab === "board" || tab === "install") && <div className="flex items-center gap-2 text-gray-400 p-6"><Loader2 className="w-5 h-5 animate-spin" /> جارٍ التحميل…</div>}
 
-      {!loading && tab === "board" && <BoardTab workers={workers} ready={data?.ready || []} onAtt={setAttendance} onReassign={reassign} onDone={markDone} />}
+      {!loading && tab === "board" && <BoardTab workers={workers} ready={data?.ready || []} onReassign={reassign} onDone={markDone} />}
       {!loading && tab === "install" && <InstallTab installs={data?.installs || []} workers={workers} onRequired={setRequired} onNotes={setNotes} onAdd={addMember} onRemove={removeMember} />}
       {tab === "reports" && <ReportsTab />}
-    </div>
-  );
-}
-
-function StatusPill({ status, onChange }: { status: string; onChange: (s: string) => void }) {
-  return (
-    <div className="flex gap-1">
-      {ATT.map(([k, l]) => (
-        <button key={k} onClick={() => onChange(k)}
-          className={cn("px-2 py-0.5 rounded text-[11px] font-bold border transition-colors",
-            status === k
-              ? k === "absent" ? "bg-red-600 text-white border-red-600" : k === "onsite" ? "bg-amber-500 text-white border-amber-500" : "bg-emerald-600 text-white border-emerald-600"
-              : "bg-white dark:bg-gray-800 border-gray-200 dark:border-gray-700 text-gray-500")}>
-          {l}
-        </button>
-      ))}
     </div>
   );
 }
@@ -134,45 +118,31 @@ function TaskRow({ task, workers, onReassign, onDone }: { task: Task; workers: W
   );
 }
 
-function BoardTab({ workers, ready, onAtt, onReassign, onDone }: { workers: WorkerCard[]; ready: Task[]; onAtt: (w: string, s: string, period: string) => void; onReassign: (id: string, w: string) => void; onDone: (id: string) => void }) {
-  // Summary reflects the current shift (morning before 14:00, else evening).
-  const per: "am" | "pm" = new Date().getHours() < 14 ? "am" : "pm";
-  const perLabel = per === "am" ? "صباحاً" : "مساءً";
-  const stat = (w: WorkerCard) => (per === "am" ? w.am : w.pm);
-  const fullyAbsent = (w: WorkerCard) => w.am === "absent" && w.pm === "absent";
-  const available = workers.filter((w) => stat(w) === "present" && !w.onCrew && w.open.length === 0);
+function BoardTab({ workers, ready, onReassign, onDone }: { workers: WorkerCard[]; ready: Task[]; onReassign: (id: string, w: string) => void; onDone: (id: string) => void }) {
+  const available = workers.filter((w) => !w.onCrew && w.open.length === 0);
   return (
     <div className="space-y-4">
       <div className="flex flex-wrap gap-2 text-xs">
-        <span className="px-3 py-1.5 rounded-lg bg-emerald-50 dark:bg-emerald-900/20 text-emerald-700 dark:text-emerald-300 font-bold">متاح {perLabel}: {available.length}</span>
+        <span className="px-3 py-1.5 rounded-lg bg-emerald-50 dark:bg-emerald-900/20 text-emerald-700 dark:text-emerald-300 font-bold">متفرّغ: {available.length}</span>
         <span className="px-3 py-1.5 rounded-lg bg-amber-50 dark:bg-amber-900/20 text-amber-700 dark:text-amber-300 font-bold">بالمواقع: {workers.filter((w) => w.onCrew).length}</span>
-        <span className="px-3 py-1.5 rounded-lg bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-300 font-bold">غائب {perLabel}: {workers.filter((w) => stat(w) === "absent").length}</span>
       </div>
 
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
         {workers.map((w) => (
-          <div key={w.id} className={cn("rounded-xl border p-3 space-y-2", fullyAbsent(w) ? "opacity-60 border-gray-200 dark:border-gray-700" : "border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800")}>
-            <div className="flex items-start justify-between gap-2">
+          <div key={w.id} className="rounded-xl border p-3 space-y-2 border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800">
+            <div className="flex items-center justify-between gap-2">
               <div className="flex items-center gap-2 min-w-0">
                 <span className="w-3 h-3 rounded-full shrink-0" style={{ background: w.color }} />
                 <span className="font-bold truncate">{w.name}</span>
-                {w.onCrew && <span className="text-[10px] font-bold text-amber-600 shrink-0">بالموقع 🚚</span>}
               </div>
-              <div className="flex flex-col gap-1 shrink-0">
-                <div className="flex items-center gap-1 justify-end"><span className="text-[9px] text-gray-400 w-9 text-start">صباحي</span><StatusPill status={w.am} onChange={(s) => onAtt(w.id, s, "morning")} /></div>
-                <div className="flex items-center gap-1 justify-end"><span className="text-[9px] text-gray-400 w-9 text-start">مسائي</span><StatusPill status={w.pm} onChange={(s) => onAtt(w.id, s, "evening")} /></div>
-              </div>
+              {w.onCrew && <span className="text-[10px] font-bold text-amber-600 shrink-0">بالموقع 🚚</span>}
             </div>
-            {!fullyAbsent(w) && (
-              <>
-                {w.open.length === 0 ? (
-                  <p className="text-[11px] text-emerald-600 font-bold">متاح — لا مهام مفتوحة</p>
-                ) : (
-                  <div className="space-y-1.5">{w.open.map((t) => <TaskRow key={t.id} task={t} workers={workers} onReassign={onReassign} onDone={onDone} />)}</div>
-                )}
-                {w.doneToday.length > 0 && <p className="text-[10px] text-gray-400">أنجز اليوم: <span className="font-bold text-gray-600 dark:text-gray-300">{w.doneToday.length}</span></p>}
-              </>
+            {w.open.length === 0 ? (
+              <p className="text-[11px] text-emerald-600 font-bold">متفرّغ — لا مهام مفتوحة</p>
+            ) : (
+              <div className="space-y-1.5">{w.open.map((t) => <TaskRow key={t.id} task={t} workers={workers} onReassign={onReassign} onDone={onDone} />)}</div>
             )}
+            {w.doneToday.length > 0 && <p className="text-[10px] text-gray-400">أنجز اليوم: <span className="font-bold text-gray-600 dark:text-gray-300">{w.doneToday.length}</span></p>}
           </div>
         ))}
       </div>

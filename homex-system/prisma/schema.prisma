@@ -489,7 +489,14 @@ model WorkerAttendance {
   date      DateTime // the day (stored at local midnight)
   period    String   @default("morning") // morning | evening
   status    String   @default("present") // present | absent | onsite
+  // Absence category when status = absent: vacation | sick | unexcused | duty.
+  reason    String?
   note      String?
+  // Who saved this attendance session and when (the "آخر تحضير" lock stamp).
+  takenBy   String?  @map("taken_by")
+  takenAt   DateTime? @map("taken_at")
+  // Justification when an owner edits a past/locked session (audit trail).
+  editNote  String?  @map("edit_note")
   createdAt DateTime @default(now()) @map("created_at")
   updatedAt DateTime @default(now()) @updatedAt @map("updated_at")
 
