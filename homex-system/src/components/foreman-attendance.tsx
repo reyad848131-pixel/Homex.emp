@@ -1,15 +1,15 @@
 "use client";
 
 import { useEffect, useState, useCallback, useMemo } from "react";
-import { ChevronRight, ChevronLeft, Loader2, Save, Lock, Pencil, CheckCheck, FileSpreadsheet, FileText, CalendarDays } from "lucide-react";
+import { Loader2, Save, Lock, Pencil, CheckCheck, FileSpreadsheet, FileText, CalendarDays } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useToast } from "@/components/toast";
+import { DateDrillNav } from "@/components/date-drill-nav";
 
 type Rec = { workerId: string; name: string; color: string; status: string; reason: string; note: string; recorded: boolean };
 type Session = { date: string; period: string; workers: Rec[]; takenAt: string | null; takenByName: string; locked: boolean };
 
 const todayStr = () => new Date().toISOString().slice(0, 10);
-const shiftDay = (d: string, n: number) => { const dt = new Date(d + "T12:00:00"); dt.setDate(dt.getDate() + n); return dt.toISOString().slice(0, 10); };
 
 const STATUSES: [string, string][] = [["present", "حاضر"], ["onsite", "بالموقع"], ["absent", "غائب"]];
 const REASONS: [string, string][] = [["vacation", "إجازة"], ["sick", "مرضي"], ["unexcused", "بدون عذر"], ["duty", "مأمورية"]];
@@ -111,15 +111,12 @@ function DailyAttendance() {
 
   return (
     <div className="space-y-4">
-      {/* Day navigation */}
-      <div className="flex items-center justify-between gap-2 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl p-2">
-        <button onClick={() => setDate(shiftDay(date, -1))} className="p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700"><ChevronRight className="w-5 h-5" /></button>
-        <div className="flex-1 text-center">
-          <p className="text-sm font-bold">{dayLabel}</p>
-          <input type="date" value={date} onChange={(e) => setDate(e.target.value || todayStr())} max={todayStr()} className="text-xs text-gray-400 bg-transparent text-center font-mono-en" />
-        </div>
-        <button onClick={() => setDate(shiftDay(date, 1))} disabled={date >= todayStr()} className="p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 disabled:opacity-30"><ChevronLeft className="w-5 h-5" /></button>
-        {date !== todayStr() && <button onClick={() => setDate(todayStr())} className="px-3 py-1.5 rounded-lg bg-gray-900 dark:bg-white text-white dark:text-gray-900 text-xs font-bold">اليوم</button>}
+      {/* Day picker — same calendar used across the app (year › month › day) */}
+      <DateDrillNav onChange={(r) => { if (r && r.from === r.to) setDate(r.from); }} />
+      <div className="flex items-center justify-center gap-2 -mt-2">
+        <CalendarDays className="w-4 h-4 text-gray-400" />
+        <span className="text-sm font-bold">{dayLabel}</span>
+        {date !== todayStr() && <button onClick={() => setDate(todayStr())} className="px-2 py-0.5 rounded-lg bg-gray-900 dark:bg-white text-white dark:text-gray-900 text-[11px] font-bold">اليوم</button>}
       </div>
 
       {/* Shift toggle */}
