@@ -67,7 +67,9 @@ export default function ProductionConsole() {
 
 // ── Production file: spec sheets per quote, plus a by-worker pivot ──
 
-function SpecSheet({ item }: { item: PItem }) {
+function SpecSheet({ item, onAdvance }: { item: PItem; onAdvance?: (taskId: string) => void }) {
+  const current = item.tasks.find((t) => !t.done);
+  const allDone = item.tasks.length > 0 && !current;
   return (
     <div className="rounded-lg border border-gray-200 dark:border-gray-700 bg-gray-50/60 dark:bg-gray-900/30 p-3 space-y-2">
       <div className="flex items-start justify-between gap-2">
@@ -90,12 +92,26 @@ function SpecSheet({ item }: { item: PItem }) {
         <div className="flex flex-wrap gap-1.5">
           {item.tasks.map((t) => (
             <span key={t.id} className={cn("inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold border",
-              t.done ? "bg-emerald-50 dark:bg-emerald-900/20 text-emerald-700 dark:text-emerald-300 border-emerald-200 dark:border-emerald-800" : "bg-white dark:bg-gray-800 border-gray-200 dark:border-gray-700 text-gray-600 dark:text-gray-300")}>
+              t.done ? "bg-emerald-50 dark:bg-emerald-900/20 text-emerald-700 dark:text-emerald-300 border-emerald-200 dark:border-emerald-800"
+                : t.id === current?.id ? "bg-amber-100 dark:bg-amber-900/30 text-amber-800 dark:text-amber-200 border-amber-300 dark:border-amber-700"
+                : "bg-white dark:bg-gray-800 border-gray-200 dark:border-gray-700 text-gray-600 dark:text-gray-300")}>
               {t.done && <Check className="w-3 h-3" />}
               {t.stage}{t.workerName ? ` · ${t.workerName}` : ""}
             </span>
           ))}
         </div>
+      )}
+
+      {/* Explicit finish-and-advance control */}
+      {onAdvance && item.tasks.length > 0 && (
+        allDone ? (
+          <p className="text-[11px] font-bold text-emerald-600 flex items-center gap-1"><Check className="w-3.5 h-3.5" /> مكتمل — كل المراحل تمت</p>
+        ) : current ? (
+          <button onClick={() => onAdvance(current.id)}
+            className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold">
+            <Check className="w-3.5 h-3.5" /> أنجز «{current.stage}» وانتقل للتالي
+          </button>
+        ) : null
       )}
     </div>
   );
@@ -125,6 +141,15 @@ function ProductionFile({ data, reload }: { data: ProdFile; reload: () => void }
       else toast.error(d.error || "فشل");
     } catch { toast.error("تعذّر الاتصال"); }
     finally { setBusy(false); }
+  };
+
+  // Finish the current stage of a piece and advance to the next.
+  const advance = async (taskId: string) => {
+    try {
+      const res = await fetch("/api/item-tasks", { method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ id: taskId, done: true }) });
+      if (res.ok) { toast.success("تم — انتقلت للمرحلة التالية"); reload(); }
+      else { const e = await res.json().catch(() => ({})); toast.error(e.error || "فشل"); }
+    } catch { toast.error("تعذّر الاتصال"); }
   };
 
   // By-worker pivot: items with at least one stage assigned to this worker.
@@ -188,7 +213,7 @@ function ProductionFile({ data, reload }: { data: ProdFile; reload: () => void }
                       </div>
                       {q.items.map((it) => (
                         <div key={it.id} className="space-y-1">
-                          <SpecSheet item={it} />
+                          <SpecSheet item={it} onAdvance={advance} />
                           {!it.hasPipeline && (
                             <button disabled={busy} onClick={() => apply({ quoteItemId: it.id })}
                               className="inline-flex items-center gap-1 text-[10px] font-bold text-indigo-600 hover:underline disabled:opacity-50">
@@ -218,7 +243,7 @@ function ProductionFile({ data, reload }: { data: ProdFile; reload: () => void }
                   <Link href={`/quotations/${quote.id}`} target="_blank" className="inline-flex items-center gap-1 text-[11px] text-gray-400 hover:text-teal-600 font-mono-en">
                     {quote.quoteNumber} · {quote.customer} <ExternalLink className="w-3 h-3" />
                   </Link>
-                  <SpecSheet item={item} />
+                  <SpecSheet item={item} onAdvance={advance} />
                 </div>
               ))}
             </div>

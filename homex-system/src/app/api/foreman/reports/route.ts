@@ -37,6 +37,16 @@ export async function GET(req: NextRequest) {
     ws.getRow(1).font = { bold: true };
     for (const r of report.rows) ws.addRow(r);
 
+    // Second sheet: productivity per stage / section.
+    const ws2 = wb.addWorksheet("حسب القسم");
+    ws2.views = [{ rightToLeft: true }];
+    ws2.columns = [
+      { header: "القسم / المرحلة", key: "stage", width: 24 },
+      { header: "قطع منجزة", key: "count", width: 14 },
+    ];
+    ws2.getRow(1).font = { bold: true };
+    for (const s of report.byStage || []) ws2.addRow(s);
+
     const buf = await wb.xlsx.writeBuffer();
     return new NextResponse(buf, {
       headers: {

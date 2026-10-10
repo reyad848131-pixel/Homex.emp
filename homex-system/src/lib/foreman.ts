@@ -251,5 +251,14 @@ export async function getForemanReport(fromStr: string, toStr: string) {
     };
   });
 
-  return { from: fromStr, to: toStr, rows };
+  // Per-stage / per-section breakdown: how many pieces were completed at each
+  // stage in the range (station name == stage name, so this doubles as the
+  // section productivity view).
+  const stageMap = new Map<string, number>();
+  for (const d of done) stageMap.set(d.stage, (stageMap.get(d.stage) || 0) + 1);
+  const byStage = [...stageMap.entries()]
+    .map(([stage, count]) => ({ stage, count }))
+    .sort((a, b) => b.count - a.count);
+
+  return { from: fromStr, to: toStr, rows, byStage };
 }

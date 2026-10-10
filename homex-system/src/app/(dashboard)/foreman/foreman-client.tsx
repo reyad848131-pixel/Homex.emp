@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState, useCallback } from "react";
-import { ChevronRight, ChevronLeft, Check, X, HardHat, Truck, BarChart3, AlertTriangle, Plus, FileSpreadsheet, Loader2, Factory } from "lucide-react";
+import { ChevronRight, ChevronLeft, Check, X, HardHat, Truck, BarChart3, AlertTriangle, Plus, FileSpreadsheet, Loader2, Factory, FileText } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useToast } from "@/components/toast";
 import ProductionConsole from "@/components/foreman-production";
@@ -246,55 +246,124 @@ function ReportsTab() {
   const [from, setFrom] = useState(firstOfMonth());
   const [to, setTo] = useState(todayStr());
   const [rows, setRows] = useState<any[] | null>(null);
+  const [byStage, setByStage] = useState<{ stage: string; count: number }[]>([]);
   const [loading, setLoading] = useState(false);
+  const [preset, setPreset] = useState<string>("month");
 
   const run = useCallback(async () => {
     setLoading(true);
     try {
       const res = await fetch(`/api/foreman/reports?from=${from}&to=${to}`);
-      if (res.ok) { const d = await res.json(); setRows(d.rows || []); }
+      if (res.ok) { const d = await res.json(); setRows(d.rows || []); setByStage(d.byStage || []); }
     } finally { setLoading(false); }
   }, [from, to]);
 
   useEffect(() => { run(); }, [run]);
 
+  // Quick-range presets (rolling week; calendar month/year).
+  const applyPreset = (key: string) => {
+    setPreset(key);
+    const now = new Date();
+    const d = (dt: Date) => dt.toISOString().slice(0, 10);
+    if (key === "day") { setFrom(todayStr()); setTo(todayStr()); }
+    else if (key === "week") { const s = new Date(now); s.setDate(s.getDate() - 6); setFrom(d(s)); setTo(todayStr()); }
+    else if (key === "month") { setFrom(d(new Date(now.getFullYear(), now.getMonth(), 1))); setTo(todayStr()); }
+    else if (key === "year") { setFrom(d(new Date(now.getFullYear(), 0, 1))); setTo(todayStr()); }
+  };
+
+  const printPdf = () => {
+    const esc = (s: string) => String(s).replace(/[&<>]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;" }[c] || c));
+    const workerRows = (rows || []).map((r) => `<tr><td>${esc(r.name)}</td><td>${r.tasksDone}</td><td>${r.installs}</td><td>${r.daysPresent}</td><td>${r.daysAbsent}</td></tr>`).join("");
+    const stageRows = byStage.map((s) => `<tr><td>${esc(s.stage)}</td><td>${s.count}</td></tr>`).join("");
+    const html = `<!doctype html><html dir="rtl" lang="ar"><head><meta charset="utf-8"><title>تقرير الفورمن ${from} — ${to}</title>
+      <style>body{font-family:'Segoe UI',Tahoma,sans-serif;padding:24px;color:#1a1a1a}h1{font-size:18px}h2{font-size:14px;margin-top:22px}
+      table{width:100%;border-collapse:collapse;margin-top:8px}th,td{border:1px solid #ccc;padding:6px 8px;text-align:center;font-size:12px}
+      th{background:#f3f3f3}td:first-child,th:first-child{text-align:right}</style></head>
+      <body><h1>تقرير الفورمن</h1><p>الفترة: ${from} ← ${to}</p>
+      <h2>أداء العمّال</h2><table><thead><tr><th>العامل</th><th>مهام منجزة</th><th>تركيبات</th><th>أيام حضور</th><th>أيام غياب</th></tr></thead><tbody>${workerRows || '<tr><td colspan="5">لا بيانات</td></tr>'}</tbody></table>
+      <h2>حسب القسم / المرحلة</h2><table><thead><tr><th>القسم / المرحلة</th><th>قطع منجزة</th></tr></thead><tbody>${stageRows || '<tr><td colspan="2">لا بيانات</td></tr>'}</tbody></table>
+      <script>window.onload=function(){window.print();}</script></body></html>`;
+    const w = window.open("", "_blank");
+    if (w) { w.document.write(html); w.document.close(); }
+  };
+
+  const presets: [string, string][] = [["day", "اليوم"], ["week", "الأسبوع"], ["month", "الشهر"], ["year", "السنة"]];
+
   return (
     <div className="space-y-4">
+      {/* Quick-range presets */}
+      <div className="flex flex-wrap gap-2">
+        {presets.map(([k, l]) => (
+          <button key={k} onClick={() => applyPreset(k)}
+            className={cn("px-3 py-1.5 rounded-lg text-xs font-bold border", preset === k ? "bg-teal-600 text-white border-teal-600" : "bg-white dark:bg-gray-800 border-gray-200 dark:border-gray-700 text-gray-500")}>
+            {l}
+          </button>
+        ))}
+      </div>
+
       <div className="flex flex-wrap items-end gap-3 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl p-3">
-        <label className="text-xs font-semibold text-gray-500">من<input type="date" value={from} onChange={(e) => setFrom(e.target.value)} className="field font-mono-en mt-1" /></label>
-        <label className="text-xs font-semibold text-gray-500">إلى<input type="date" value={to} onChange={(e) => setTo(e.target.value)} className="field font-mono-en mt-1" /></label>
+        <label className="text-xs font-semibold text-gray-500">من<input type="date" value={from} onChange={(e) => { setFrom(e.target.value); setPreset(""); }} className="field font-mono-en mt-1" /></label>
+        <label className="text-xs font-semibold text-gray-500">إلى<input type="date" value={to} onChange={(e) => { setTo(e.target.value); setPreset(""); }} className="field font-mono-en mt-1" /></label>
         <a href={`/api/foreman/reports?from=${from}&to=${to}&format=xlsx`} target="_blank" rel="noopener noreferrer"
           className="flex items-center gap-2 px-4 py-2.5 rounded-lg bg-emerald-600 text-white text-sm font-bold hover:bg-emerald-700">
-          <FileSpreadsheet className="w-4 h-4" /> تصدير Excel
+          <FileSpreadsheet className="w-4 h-4" /> Excel
         </a>
+        <button onClick={printPdf} className="flex items-center gap-2 px-4 py-2.5 rounded-lg bg-gray-900 dark:bg-white dark:text-gray-900 text-white text-sm font-bold">
+          <FileText className="w-4 h-4" /> PDF
+        </button>
       </div>
 
       {loading ? <div className="flex items-center gap-2 text-gray-400 p-6"><Loader2 className="w-5 h-5 animate-spin" /> …</div> : (
-        <div className="overflow-x-auto rounded-xl border border-gray-200 dark:border-gray-700">
-          <table className="w-full text-sm">
-            <thead className="bg-gray-50 dark:bg-gray-800 text-gray-500">
-              <tr>
-                <th className="text-start px-3 py-2 font-bold">العامل</th>
-                <th className="px-3 py-2 font-bold">مهام منجزة</th>
-                <th className="px-3 py-2 font-bold">تركيبات</th>
-                <th className="px-3 py-2 font-bold">حضور</th>
-                <th className="px-3 py-2 font-bold">غياب</th>
-              </tr>
-            </thead>
-            <tbody>
-              {(rows || []).map((r) => (
-                <tr key={r.workerId} className="border-t border-gray-100 dark:border-gray-700">
-                  <td className="px-3 py-2 font-bold">{r.name}</td>
-                  <td className="px-3 py-2 text-center font-mono-en">{r.tasksDone}</td>
-                  <td className="px-3 py-2 text-center font-mono-en">{r.installs}</td>
-                  <td className="px-3 py-2 text-center font-mono-en text-emerald-600">{r.daysPresent}</td>
-                  <td className="px-3 py-2 text-center font-mono-en text-red-500">{r.daysAbsent}</td>
+        <>
+          <div className="overflow-x-auto rounded-xl border border-gray-200 dark:border-gray-700">
+            <p className="text-xs font-bold text-gray-500 px-3 pt-2">أداء العمّال</p>
+            <table className="w-full text-sm">
+              <thead className="bg-gray-50 dark:bg-gray-800 text-gray-500">
+                <tr>
+                  <th className="text-start px-3 py-2 font-bold">العامل</th>
+                  <th className="px-3 py-2 font-bold">مهام منجزة</th>
+                  <th className="px-3 py-2 font-bold">تركيبات</th>
+                  <th className="px-3 py-2 font-bold">حضور</th>
+                  <th className="px-3 py-2 font-bold">غياب</th>
                 </tr>
-              ))}
-              {rows && rows.length === 0 && <tr><td colSpan={5} className="text-center text-gray-400 py-6">لا بيانات في هذه الفترة</td></tr>}
-            </tbody>
-          </table>
-        </div>
+              </thead>
+              <tbody>
+                {(rows || []).map((r) => (
+                  <tr key={r.workerId} className="border-t border-gray-100 dark:border-gray-700">
+                    <td className="px-3 py-2 font-bold">{r.name}</td>
+                    <td className="px-3 py-2 text-center font-mono-en">{r.tasksDone}</td>
+                    <td className="px-3 py-2 text-center font-mono-en">{r.installs}</td>
+                    <td className="px-3 py-2 text-center font-mono-en text-emerald-600">{r.daysPresent}</td>
+                    <td className="px-3 py-2 text-center font-mono-en text-red-500">{r.daysAbsent}</td>
+                  </tr>
+                ))}
+                {rows && rows.length === 0 && <tr><td colSpan={5} className="text-center text-gray-400 py-6">لا بيانات في هذه الفترة</td></tr>}
+              </tbody>
+            </table>
+          </div>
+
+          {/* Per-section / per-stage productivity */}
+          <div className="overflow-x-auto rounded-xl border border-gray-200 dark:border-gray-700">
+            <p className="text-xs font-bold text-gray-500 px-3 pt-2">حسب القسم / المرحلة</p>
+            <table className="w-full text-sm">
+              <thead className="bg-gray-50 dark:bg-gray-800 text-gray-500">
+                <tr>
+                  <th className="text-start px-3 py-2 font-bold">القسم / المرحلة</th>
+                  <th className="px-3 py-2 font-bold">قطع منجزة</th>
+                </tr>
+              </thead>
+              <tbody>
+                {byStage.map((s) => (
+                  <tr key={s.stage} className="border-t border-gray-100 dark:border-gray-700">
+                    <td className="px-3 py-2 font-bold">{s.stage}</td>
+                    <td className="px-3 py-2 text-center font-mono-en">{s.count}</td>
+                  </tr>
+                ))}
+                {byStage.length === 0 && <tr><td colSpan={2} className="text-center text-gray-400 py-6">لا بيانات في هذه الفترة</td></tr>}
+              </tbody>
+            </table>
+          </div>
+        </>
       )}
     </div>
   );
