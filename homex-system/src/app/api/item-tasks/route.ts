@@ -73,6 +73,12 @@ export async function PATCH(req: NextRequest) {
     if ("workerId" in body) data.workerId = body.workerId || null;
     if (typeof body.stage === "string" && body.stage.trim()) data.stage = body.stage.trim();
     if (typeof body.done === "boolean") data.doneAt = body.done ? new Date() : null;
+    // Allow setting/correcting the exact completion time (to the minute) so the
+    // foreman can log when a stage actually finished — powers speed/productivity.
+    if (typeof body.doneAt === "string" && body.doneAt.trim()) {
+      const dt = new Date(body.doneAt);
+      if (!isNaN(dt.getTime())) data.doneAt = dt;
+    }
 
     const task = await prisma.itemTask.update({ where: { id }, data, include: { worker: true } });
     return NextResponse.json(task);

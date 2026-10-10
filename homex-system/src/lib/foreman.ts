@@ -101,6 +101,7 @@ export async function getProductionFile() {
         id: t.id, stage: t.stage, workerId: t.workerId,
         workerName: t.worker?.name || "", workerColor: t.worker?.color || "",
         done: !!t.doneAt,
+        doneAt: t.doneAt ? t.doneAt.toISOString() : null,
       })),
     })),
   }));
@@ -153,7 +154,8 @@ export async function getForemanBoard(dateStr: string) {
     }),
   ]);
 
-  const attByWorker = new Map(attendance.map((a) => [a.workerId, a]));
+  // Attendance is now per shift (morning/evening). Key by worker+period.
+  const attByKey = new Map(attendance.map((a) => [`${a.workerId}:${a.period}`, a]));
   const onCrew = new Set<string>();
   for (const c of crews) for (const m of c.members) onCrew.add(m.workerId);
 
@@ -170,8 +172,12 @@ export async function getForemanBoard(dateStr: string) {
 
   const workerCards = workers.map((w) => ({
     id: w.id, name: w.name, color: w.color,
-    status: attByWorker.get(w.id)?.status || "present",
-    note: attByWorker.get(w.id)?.note || "",
+    // Per-shift status (unset shift defaults to "present", matching the old
+    // behaviour where a missing record meant present).
+    am: attByKey.get(`${w.id}:morning`)?.status || "present",
+    pm: attByKey.get(`${w.id}:evening`)?.status || "present",
+    amNote: attByKey.get(`${w.id}:morning`)?.note || "",
+    pmNote: attByKey.get(`${w.id}:evening`)?.note || "",
     onCrew: onCrew.has(w.id),
     open: openByWorker.get(w.id) || [],
     doneToday: doneByWorker.get(w.id) || [],
@@ -241,12 +247,19 @@ export async function getForemanReport(fromStr: string, toStr: string) {
     const tasks = done.filter((d) => d.workerId === w.id);
     const installs = crewMembers.filter((m) => m.workerId === w.id);
     const att = attendance.filter((a) => a.workerId === w.id);
+    const dayStr = (d: Date) => d.toISOString().slice(0, 10);
+    const presentDays = new Set(att.filter((a) => a.status !== "absent").map((a) => dayStr(a.date)));
+    const absentDays = new Set(att.filter((a) => a.status === "absent").map((a) => dayStr(a.date)));
     return {
       workerId: w.id, name: w.name,
       tasksDone: tasks.length,
       installs: installs.length,
-      daysPresent: att.filter((a) => a.status === "present" || a.status === "onsite").length,
-      daysAbsent: att.filter((a) => a.status === "absent").length,
+      // Day-level (a day counts present if any shift was present).
+      daysPresent: presentDays.size,
+      daysAbsent: absentDays.size,
+      // Shift-level absence detail.
+      amAbsent: att.filter((a) => a.period === "morning" && a.status === "absent").length,
+      pmAbsent: att.filter((a) => a.period === "evening" && a.status === "absent").length,
       installLog: installs.map((m) => ({ date: m.crew.date.toISOString().slice(0, 10), quote: m.crew.quotation?.quoteNumber || "" })),
     };
   });

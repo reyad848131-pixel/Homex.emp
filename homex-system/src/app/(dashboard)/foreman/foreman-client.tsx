@@ -7,7 +7,7 @@ import { useToast } from "@/components/toast";
 import ProductionConsole from "@/components/foreman-production";
 
 type Task = { id: string; stage: string; workerId: string | null; itemDesc: string; quoteId: string; quoteNumber: string; customer: string };
-type WorkerCard = { id: string; name: string; color: string; status: string; note: string; onCrew: boolean; open: Task[]; doneToday: Task[] };
+type WorkerCard = { id: string; name: string; color: string; am: string; pm: string; amNote: string; pmNote: string; onCrew: boolean; open: Task[]; doneToday: Task[] };
 type Install = { quoteId: string; quoteNumber: string; customer: string; location: string; time: string; crewId: string | null; requiredCount: number; notes: string; members: { workerId: string; name: string; color: string }[] };
 type Board = { date: string; workers: WorkerCard[]; ready: Task[]; onSiteCount: number; installs: Install[] };
 
@@ -42,7 +42,7 @@ export default function ForemanClient() {
     } catch { toast.error("تعذّر الاتصال"); return null; }
   };
 
-  const setAttendance = async (workerId: string, status: string) => { await post("/api/foreman/attendance", { workerId, date, status }); load(date); };
+  const setAttendance = async (workerId: string, status: string, period: string) => { await post("/api/foreman/attendance", { workerId, date, status, period }); load(date); };
   const reassign = async (taskId: string, workerId: string) => { await post("/api/item-tasks", { id: taskId, workerId: workerId || null }, "PATCH"); load(date); };
   const markDone = async (taskId: string) => { await post("/api/item-tasks", { id: taskId, done: true }, "PATCH"); load(date); };
 
@@ -134,28 +134,36 @@ function TaskRow({ task, workers, onReassign, onDone }: { task: Task; workers: W
   );
 }
 
-function BoardTab({ workers, ready, onAtt, onReassign, onDone }: { workers: WorkerCard[]; ready: Task[]; onAtt: (w: string, s: string) => void; onReassign: (id: string, w: string) => void; onDone: (id: string) => void }) {
-  const available = workers.filter((w) => w.status === "present" && !w.onCrew && w.open.length === 0);
+function BoardTab({ workers, ready, onAtt, onReassign, onDone }: { workers: WorkerCard[]; ready: Task[]; onAtt: (w: string, s: string, period: string) => void; onReassign: (id: string, w: string) => void; onDone: (id: string) => void }) {
+  // Summary reflects the current shift (morning before 14:00, else evening).
+  const per: "am" | "pm" = new Date().getHours() < 14 ? "am" : "pm";
+  const perLabel = per === "am" ? "صباحاً" : "مساءً";
+  const stat = (w: WorkerCard) => (per === "am" ? w.am : w.pm);
+  const fullyAbsent = (w: WorkerCard) => w.am === "absent" && w.pm === "absent";
+  const available = workers.filter((w) => stat(w) === "present" && !w.onCrew && w.open.length === 0);
   return (
     <div className="space-y-4">
       <div className="flex flex-wrap gap-2 text-xs">
-        <span className="px-3 py-1.5 rounded-lg bg-emerald-50 dark:bg-emerald-900/20 text-emerald-700 dark:text-emerald-300 font-bold">متاح الحين: {available.length}</span>
+        <span className="px-3 py-1.5 rounded-lg bg-emerald-50 dark:bg-emerald-900/20 text-emerald-700 dark:text-emerald-300 font-bold">متاح {perLabel}: {available.length}</span>
         <span className="px-3 py-1.5 rounded-lg bg-amber-50 dark:bg-amber-900/20 text-amber-700 dark:text-amber-300 font-bold">بالمواقع: {workers.filter((w) => w.onCrew).length}</span>
-        <span className="px-3 py-1.5 rounded-lg bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-300 font-bold">غائب: {workers.filter((w) => w.status === "absent").length}</span>
+        <span className="px-3 py-1.5 rounded-lg bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-300 font-bold">غائب {perLabel}: {workers.filter((w) => stat(w) === "absent").length}</span>
       </div>
 
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
         {workers.map((w) => (
-          <div key={w.id} className={cn("rounded-xl border p-3 space-y-2", w.status === "absent" ? "opacity-60 border-gray-200 dark:border-gray-700" : "border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800")}>
-            <div className="flex items-center justify-between gap-2">
+          <div key={w.id} className={cn("rounded-xl border p-3 space-y-2", fullyAbsent(w) ? "opacity-60 border-gray-200 dark:border-gray-700" : "border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800")}>
+            <div className="flex items-start justify-between gap-2">
               <div className="flex items-center gap-2 min-w-0">
                 <span className="w-3 h-3 rounded-full shrink-0" style={{ background: w.color }} />
                 <span className="font-bold truncate">{w.name}</span>
                 {w.onCrew && <span className="text-[10px] font-bold text-amber-600 shrink-0">بالموقع 🚚</span>}
               </div>
-              <StatusPill status={w.status} onChange={(s) => onAtt(w.id, s)} />
+              <div className="flex flex-col gap-1 shrink-0">
+                <div className="flex items-center gap-1 justify-end"><span className="text-[9px] text-gray-400 w-9 text-start">صباحي</span><StatusPill status={w.am} onChange={(s) => onAtt(w.id, s, "morning")} /></div>
+                <div className="flex items-center gap-1 justify-end"><span className="text-[9px] text-gray-400 w-9 text-start">مسائي</span><StatusPill status={w.pm} onChange={(s) => onAtt(w.id, s, "evening")} /></div>
+              </div>
             </div>
-            {w.status !== "absent" && (
+            {!fullyAbsent(w) && (
               <>
                 {w.open.length === 0 ? (
                   <p className="text-[11px] text-emerald-600 font-bold">متاح — لا مهام مفتوحة</p>
@@ -183,7 +191,7 @@ function BoardTab({ workers, ready, onAtt, onReassign, onDone }: { workers: Work
 function InstallTab({ installs, workers, onRequired, onNotes, onAdd, onRemove }: { installs: Install[]; workers: WorkerCard[]; onRequired: (j: Install, n: number) => void; onNotes: (j: Install, s: string) => void; onAdd: (j: Install, w: string) => void; onRemove: (j: Install, w: string) => void }) {
   const outIds = new Set<string>();
   for (const j of installs) for (const m of j.members) outIds.add(m.workerId);
-  const inFactory = workers.filter((w) => w.status !== "absent" && !outIds.has(w.id));
+  const inFactory = workers.filter((w) => !(w.am === "absent" && w.pm === "absent") && !outIds.has(w.id));
 
   if (installs.length === 0) return <p className="text-sm text-gray-400 p-6 text-center">لا يوجد تركيبات مجدولة لهذا اليوم.</p>;
 
@@ -228,7 +236,7 @@ function InstallTab({ installs, workers, onRequired, onNotes, onAdd, onRemove }:
               <select value="" onChange={(e) => { if (e.target.value) onAdd(j, e.target.value); }}
                 className="text-xs rounded-full border border-dashed border-gray-300 dark:border-gray-600 bg-transparent px-2 py-1">
                 <option value="">+ أضف عامل</option>
-                {workers.filter((w) => w.status !== "absent" && !j.members.some((m) => m.workerId === w.id)).map((w) => <option key={w.id} value={w.id}>{w.name}</option>)}
+                {workers.filter((w) => !(w.am === "absent" && w.pm === "absent") && !j.members.some((m) => m.workerId === w.id)).map((w) => <option key={w.id} value={w.id}>{w.name}</option>)}
               </select>
             </div>
 
@@ -273,14 +281,14 @@ function ReportsTab() {
 
   const printPdf = () => {
     const esc = (s: string) => String(s).replace(/[&<>]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;" }[c] || c));
-    const workerRows = (rows || []).map((r) => `<tr><td>${esc(r.name)}</td><td>${r.tasksDone}</td><td>${r.installs}</td><td>${r.daysPresent}</td><td>${r.daysAbsent}</td></tr>`).join("");
+    const workerRows = (rows || []).map((r) => `<tr><td>${esc(r.name)}</td><td>${r.tasksDone}</td><td>${r.installs}</td><td>${r.daysPresent}</td><td>${r.daysAbsent}</td><td>${r.amAbsent ?? 0}</td><td>${r.pmAbsent ?? 0}</td></tr>`).join("");
     const stageRows = byStage.map((s) => `<tr><td>${esc(s.stage)}</td><td>${s.count}</td></tr>`).join("");
     const html = `<!doctype html><html dir="rtl" lang="ar"><head><meta charset="utf-8"><title>تقرير الفورمن ${from} — ${to}</title>
       <style>body{font-family:'Segoe UI',Tahoma,sans-serif;padding:24px;color:#1a1a1a}h1{font-size:18px}h2{font-size:14px;margin-top:22px}
       table{width:100%;border-collapse:collapse;margin-top:8px}th,td{border:1px solid #ccc;padding:6px 8px;text-align:center;font-size:12px}
       th{background:#f3f3f3}td:first-child,th:first-child{text-align:right}</style></head>
       <body><h1>تقرير الفورمن</h1><p>الفترة: ${from} ← ${to}</p>
-      <h2>أداء العمّال</h2><table><thead><tr><th>العامل</th><th>مهام منجزة</th><th>تركيبات</th><th>أيام حضور</th><th>أيام غياب</th></tr></thead><tbody>${workerRows || '<tr><td colspan="5">لا بيانات</td></tr>'}</tbody></table>
+      <h2>أداء العمّال</h2><table><thead><tr><th>العامل</th><th>مهام منجزة</th><th>تركيبات</th><th>أيام حضور</th><th>أيام غياب</th><th>غياب صباحي</th><th>غياب مسائي</th></tr></thead><tbody>${workerRows || '<tr><td colspan="7">لا بيانات</td></tr>'}</tbody></table>
       <h2>حسب القسم / المرحلة</h2><table><thead><tr><th>القسم / المرحلة</th><th>قطع منجزة</th></tr></thead><tbody>${stageRows || '<tr><td colspan="2">لا بيانات</td></tr>'}</tbody></table>
       <script>window.onload=function(){window.print();}</script></body></html>`;
     const w = window.open("", "_blank");
@@ -323,8 +331,10 @@ function ReportsTab() {
                   <th className="text-start px-3 py-2 font-bold">العامل</th>
                   <th className="px-3 py-2 font-bold">مهام منجزة</th>
                   <th className="px-3 py-2 font-bold">تركيبات</th>
-                  <th className="px-3 py-2 font-bold">حضور</th>
-                  <th className="px-3 py-2 font-bold">غياب</th>
+                  <th className="px-3 py-2 font-bold">أيام حضور</th>
+                  <th className="px-3 py-2 font-bold">أيام غياب</th>
+                  <th className="px-3 py-2 font-bold">غياب صباحي</th>
+                  <th className="px-3 py-2 font-bold">غياب مسائي</th>
                 </tr>
               </thead>
               <tbody>
@@ -335,9 +345,11 @@ function ReportsTab() {
                     <td className="px-3 py-2 text-center font-mono-en">{r.installs}</td>
                     <td className="px-3 py-2 text-center font-mono-en text-emerald-600">{r.daysPresent}</td>
                     <td className="px-3 py-2 text-center font-mono-en text-red-500">{r.daysAbsent}</td>
+                    <td className="px-3 py-2 text-center font-mono-en text-amber-600">{r.amAbsent ?? 0}</td>
+                    <td className="px-3 py-2 text-center font-mono-en text-indigo-600">{r.pmAbsent ?? 0}</td>
                   </tr>
                 ))}
-                {rows && rows.length === 0 && <tr><td colSpan={5} className="text-center text-gray-400 py-6">لا بيانات في هذه الفترة</td></tr>}
+                {rows && rows.length === 0 && <tr><td colSpan={7} className="text-center text-gray-400 py-6">لا بيانات في هذه الفترة</td></tr>}
               </tbody>
             </table>
           </div>

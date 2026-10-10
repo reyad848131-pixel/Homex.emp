@@ -5,8 +5,10 @@ import { foremanAccessIds, canAccessForeman } from "@/lib/foreman-access";
 import { dayBounds } from "@/lib/foreman";
 
 const VALID = ["present", "absent", "onsite"];
+const PERIODS = ["morning", "evening"];
 
-// Set one worker's attendance status for a day. { workerId, date, status, note? }
+// Set one worker's attendance for a day and shift.
+// { workerId, date, status, period?: morning|evening, note? }
 export async function POST(req: NextRequest) {
   try {
     const session = await getAuth();
@@ -19,14 +21,15 @@ export async function POST(req: NextRequest) {
     const workerId = String(body.workerId || "");
     const dateStr = String(body.date || "");
     const status = String(body.status || "present");
+    const period = PERIODS.includes(String(body.period)) ? String(body.period) : "morning";
     if (!workerId || !dateStr || !VALID.includes(status)) return NextResponse.json({ error: "بيانات ناقصة" }, { status: 400 });
 
     const date = dayBounds(dateStr).start; // normalise to local midnight
     const note = typeof body.note === "string" ? body.note.slice(0, 200) : undefined;
     const row = await prisma.workerAttendance.upsert({
-      where: { workerId_date: { workerId, date } },
+      where: { workerId_date_period: { workerId, date, period } },
       update: { status, ...(note !== undefined ? { note } : {}) },
-      create: { workerId, date, status, note: note || null },
+      create: { workerId, date, period, status, note: note || null },
     });
     return NextResponse.json(row);
   } catch (e) {

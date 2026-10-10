@@ -459,11 +459,14 @@ model Worker {
   @@map("workers")
 }
 
-// Foreman console: one worker's presence for a given day.
+// Foreman console: one worker's presence for a given day and shift. Othman takes
+// attendance twice a day (morning + evening), so each worker can have two rows
+// per day — one per period — feeding attendance reports by day AND by shift.
 model WorkerAttendance {
   id        String   @id @default(cuid())
   workerId  String   @map("worker_id")
   date      DateTime // the day (stored at local midnight)
+  period    String   @default("morning") // morning | evening
   status    String   @default("present") // present | absent | onsite
   note      String?
   createdAt DateTime @default(now()) @map("created_at")
@@ -471,7 +474,7 @@ model WorkerAttendance {
 
   worker Worker @relation(fields: [workerId], references: [id], onDelete: Cascade)
 
-  @@unique([workerId, date])
+  @@unique([workerId, date, period])
   @@index([date])
   @@map("worker_attendance")
 }

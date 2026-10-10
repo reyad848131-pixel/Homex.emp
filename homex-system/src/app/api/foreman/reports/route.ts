@@ -33,6 +33,8 @@ export async function GET(req: NextRequest) {
       { header: "تركيبات", key: "installs", width: 12 },
       { header: "أيام حضور", key: "daysPresent", width: 12 },
       { header: "أيام غياب", key: "daysAbsent", width: 12 },
+      { header: "غياب صباحي", key: "amAbsent", width: 12 },
+      { header: "غياب مسائي", key: "pmAbsent", width: 12 },
     ];
     ws.getRow(1).font = { bold: true };
     for (const r of report.rows) ws.addRow(r);

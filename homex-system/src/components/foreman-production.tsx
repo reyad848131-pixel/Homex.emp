@@ -2,13 +2,13 @@
 
 import { useEffect, useMemo, useState, useCallback } from "react";
 import Link from "next/link";
-import { Loader2, Check, ChevronDown, ChevronLeft, Plus, X, Trash2, Save, Wand2, Factory, Users, GitBranch, ArrowUp, ArrowDown, Phone, ExternalLink } from "lucide-react";
+import { Loader2, Check, ChevronDown, ChevronLeft, Plus, X, Trash2, Save, Wand2, Factory, Users, GitBranch, ArrowUp, ArrowDown, Phone, ExternalLink, Clock } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useToast } from "@/components/toast";
 import { DateDrillNav, type DateRange } from "@/components/date-drill-nav";
 
 type SpecRow = { labelAr: string; labelEn: string; value: string };
-type PTask = { id: string; stage: string; workerId: string | null; workerName: string; workerColor: string; done: boolean };
+type PTask = { id: string; stage: string; workerId: string | null; workerName: string; workerColor: string; done: boolean; doneAt: string | null };
 type PItem = { id: string; categoryId: string; description: string; quantity: number; specs: SpecRow[]; hasPipeline: boolean; tasks: PTask[] };
 type PQuote = { id: string; quoteNumber: string; workStatus: string; deliveryDate: string | null; customer: string; customerPhone: string; items: PItem[] };
 type Worker = { id: string; name: string; color: string };
@@ -67,9 +67,25 @@ export default function ProductionConsole() {
 
 // ── Production file: spec sheets per quote, plus a by-worker pivot ──
 
-function SpecSheet({ item, onAdvance }: { item: PItem; onAdvance?: (taskId: string) => void }) {
+// ISO → local "YYYY-MM-DDTHH:MM" for a datetime-local input.
+function toLocalInput(iso: string | null): string {
+  if (!iso) return "";
+  const d = new Date(iso);
+  const p = (n: number) => String(n).padStart(2, "0");
+  return `${d.getFullYear()}-${p(d.getMonth() + 1)}-${p(d.getDate())}T${p(d.getHours())}:${p(d.getMinutes())}`;
+}
+function fmtTime(iso: string | null): string {
+  if (!iso) return "";
+  const d = new Date(iso);
+  const p = (n: number) => String(n).padStart(2, "0");
+  return `${p(d.getHours())}:${p(d.getMinutes())}`;
+}
+
+function SpecSheet({ item, onAdvance, onSetTime }: { item: PItem; onAdvance?: (taskId: string) => void; onSetTime?: (taskId: string, iso: string) => void }) {
+  const [editTimes, setEditTimes] = useState(false);
   const current = item.tasks.find((t) => !t.done);
   const allDone = item.tasks.length > 0 && !current;
+  const doneTasks = item.tasks.filter((t) => t.done);
   return (
     <div className="rounded-lg border border-gray-200 dark:border-gray-700 bg-gray-50/60 dark:bg-gray-900/30 p-3 space-y-2">
       <div className="flex items-start justify-between gap-2">
@@ -96,9 +112,30 @@ function SpecSheet({ item, onAdvance }: { item: PItem; onAdvance?: (taskId: stri
                 : t.id === current?.id ? "bg-amber-100 dark:bg-amber-900/30 text-amber-800 dark:text-amber-200 border-amber-300 dark:border-amber-700"
                 : "bg-white dark:bg-gray-800 border-gray-200 dark:border-gray-700 text-gray-600 dark:text-gray-300")}>
               {t.done && <Check className="w-3 h-3" />}
-              {t.stage}{t.workerName ? ` · ${t.workerName}` : ""}
+              {t.stage}{t.workerName ? ` · ${t.workerName}` : ""}{t.done && t.doneAt ? ` · ${fmtTime(t.doneAt)}` : ""}
             </span>
           ))}
+        </div>
+      )}
+
+      {/* Completion times — view & correct to the minute */}
+      {onSetTime && doneTasks.length > 0 && (
+        <div>
+          <button onClick={() => setEditTimes((v) => !v)} className="text-[10px] font-bold text-gray-500 inline-flex items-center gap-1 hover:text-gray-700 dark:hover:text-gray-200">
+            <Clock className="w-3 h-3" /> أوقات الإنجاز {editTimes ? "▴" : "▾"}
+          </button>
+          {editTimes && (
+            <div className="mt-1 space-y-1">
+              {doneTasks.map((t) => (
+                <label key={t.id} className="flex items-center gap-2 text-[11px]">
+                  <span className="w-20 font-bold text-gray-500 truncate shrink-0">{t.stage}</span>
+                  <input type="datetime-local" defaultValue={toLocalInput(t.doneAt)}
+                    onBlur={(e) => { if (e.target.value) onSetTime(t.id, new Date(e.target.value).toISOString()); }}
+                    className="field h-8 text-xs font-mono-en" />
+                </label>
+              ))}
+            </div>
+          )}
         </div>
       )}
 
@@ -148,6 +185,15 @@ function ProductionFile({ data, reload }: { data: ProdFile; reload: () => void }
     try {
       const res = await fetch("/api/item-tasks", { method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ id: taskId, done: true }) });
       if (res.ok) { toast.success("تم — انتقلت للمرحلة التالية"); reload(); }
+      else { const e = await res.json().catch(() => ({})); toast.error(e.error || "فشل"); }
+    } catch { toast.error("تعذّر الاتصال"); }
+  };
+
+  // Correct the exact completion time of a finished stage (minute precision).
+  const setTime = async (taskId: string, iso: string) => {
+    try {
+      const res = await fetch("/api/item-tasks", { method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ id: taskId, doneAt: iso }) });
+      if (res.ok) { toast.success("تم تحديث وقت الإنجاز"); reload(); }
       else { const e = await res.json().catch(() => ({})); toast.error(e.error || "فشل"); }
     } catch { toast.error("تعذّر الاتصال"); }
   };
@@ -213,7 +259,7 @@ function ProductionFile({ data, reload }: { data: ProdFile; reload: () => void }
                       </div>
                       {q.items.map((it) => (
                         <div key={it.id} className="space-y-1">
-                          <SpecSheet item={it} onAdvance={advance} />
+                          <SpecSheet item={it} onAdvance={advance} onSetTime={setTime} />
                           {!it.hasPipeline && (
                             <button disabled={busy} onClick={() => apply({ quoteItemId: it.id })}
                               className="inline-flex items-center gap-1 text-[10px] font-bold text-indigo-600 hover:underline disabled:opacity-50">
@@ -243,7 +289,7 @@ function ProductionFile({ data, reload }: { data: ProdFile; reload: () => void }
                   <Link href={`/quotations/${quote.id}`} target="_blank" className="inline-flex items-center gap-1 text-[11px] text-gray-400 hover:text-teal-600 font-mono-en">
                     {quote.quoteNumber} · {quote.customer} <ExternalLink className="w-3 h-3" />
                   </Link>
-                  <SpecSheet item={item} onAdvance={advance} />
+                  <SpecSheet item={item} onAdvance={advance} onSetTime={setTime} />
                 </div>
               ))}
             </div>
