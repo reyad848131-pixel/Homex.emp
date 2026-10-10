@@ -436,9 +436,30 @@ model QuoteItem {
   quotation Quotation @relation(fields: [quotationId], references: [id], onDelete: Cascade)
   category  Category  @relation(fields: [categoryId], references: [id])
   tasks     ItemTask[]
+  photos    ItemPhoto[]
 
   @@index([quotationId])
   @@map("quote_items")
+}
+
+// Production photos for a quote item: one "design" photo (from the designer,
+// Alaa → Othman) and one "result" photo (the finished/in-progress piece). Files
+// live in Cloudinary; we keep the URL + publicId (to delete) here. Optional
+// auto-deletion after a retention window (see the photos cleanup cron).
+model ItemPhoto {
+  id          String   @id @default(cuid())
+  quoteItemId String   @map("quote_item_id")
+  kind        String   // "design" | "result"
+  url         String
+  publicId    String   @map("public_id")
+  uploadedBy  String?  @map("uploaded_by")
+  createdAt   DateTime @default(now()) @map("created_at")
+
+  quoteItem QuoteItem @relation(fields: [quoteItemId], references: [id], onDelete: Cascade)
+
+  @@unique([quoteItemId, kind])
+  @@index([createdAt])
+  @@map("item_photos")
 }
 
 // A factory worker (carpenter, painter, upholsterer …). Separate from Employee

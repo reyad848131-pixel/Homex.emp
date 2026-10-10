@@ -71,6 +71,7 @@ export async function getProductionFile() {
               orderBy: { sortOrder: "asc" },
               select: { id: true, stage: true, workerId: true, doneAt: true, worker: { select: { name: true, color: true } } },
             },
+            photos: { select: { id: true, kind: true, url: true } },
           },
         },
       },
@@ -96,6 +97,10 @@ export async function getProductionFile() {
       description: it.description,
       quantity: it.quantity,
       specs: specRows(it.details, catalog),
+      photos: {
+        design: it.photos.find((p) => p.kind === "design") || null,
+        result: it.photos.find((p) => p.kind === "result") || null,
+      },
       hasPipeline: it.tasks.length > 0,
       tasks: it.tasks.map((t) => ({
         id: t.id, stage: t.stage, workerId: t.workerId,

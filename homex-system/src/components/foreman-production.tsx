@@ -1,15 +1,16 @@
 "use client";
 
-import { useEffect, useMemo, useState, useCallback } from "react";
+import { useEffect, useMemo, useState, useCallback, useRef } from "react";
 import Link from "next/link";
-import { Loader2, Check, ChevronDown, ChevronLeft, Plus, X, Trash2, Save, Wand2, Factory, Users, GitBranch, ArrowUp, ArrowDown, Phone, ExternalLink, Clock } from "lucide-react";
+import { Loader2, Check, ChevronDown, ChevronLeft, Plus, X, Trash2, Save, Wand2, Factory, Users, GitBranch, ArrowUp, ArrowDown, Phone, ExternalLink, Clock, Camera } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useToast } from "@/components/toast";
 import { DateDrillNav, type DateRange } from "@/components/date-drill-nav";
 
 type SpecRow = { labelAr: string; labelEn: string; value: string };
 type PTask = { id: string; stage: string; workerId: string | null; workerName: string; workerColor: string; done: boolean; doneAt: string | null };
-type PItem = { id: string; categoryId: string; description: string; quantity: number; specs: SpecRow[]; hasPipeline: boolean; tasks: PTask[] };
+type Photo = { id: string; url: string };
+type PItem = { id: string; categoryId: string; description: string; quantity: number; specs: SpecRow[]; photos: { design: Photo | null; result: Photo | null }; hasPipeline: boolean; tasks: PTask[] };
 type PQuote = { id: string; quoteNumber: string; workStatus: string; deliveryDate: string | null; customer: string; customerPhone: string; items: PItem[] };
 type Worker = { id: string; name: string; color: string };
 type Category = { id: string; nameAr: string; nameEn: string };
@@ -67,6 +68,72 @@ export default function ProductionConsole() {
 
 // ── Production file: spec sheets per quote, plus a by-worker pivot ──
 
+// Downscale + JPEG-compress an image file in the browser before upload, so
+// camera shots (often 3–5MB) go up as ~200–400KB — keeps storage tiny.
+function compressImage(file: File, maxDim = 1600, quality = 0.8): Promise<string> {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () => {
+      const img = new Image();
+      img.onload = () => {
+        let { width, height } = img;
+        if (width > maxDim || height > maxDim) {
+          const r = Math.min(maxDim / width, maxDim / height);
+          width = Math.round(width * r); height = Math.round(height * r);
+        }
+        const canvas = document.createElement("canvas");
+        canvas.width = width; canvas.height = height;
+        const ctx = canvas.getContext("2d");
+        if (!ctx) { reject(new Error("no ctx")); return; }
+        ctx.drawImage(img, 0, 0, width, height);
+        resolve(canvas.toDataURL("image/jpeg", quality));
+      };
+      img.onerror = reject;
+      img.src = reader.result as string;
+    };
+    reader.onerror = reject;
+    reader.readAsDataURL(file);
+  });
+}
+
+function PhotoSlot({ label, kind, itemId, photo, busy, onUpload, onDelete }: {
+  label: string; kind: "design" | "result"; itemId: string; photo: Photo | null; busy: boolean;
+  onUpload: (itemId: string, kind: "design" | "result", dataUrl: string) => void;
+  onDelete: (photoId: string) => void;
+}) {
+  const inputRef = useRef<HTMLInputElement>(null);
+  const [preparing, setPreparing] = useState(false);
+  const handle = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const f = e.target.files?.[0];
+    e.target.value = "";
+    if (!f) return;
+    setPreparing(true);
+    try { const dataUrl = await compressImage(f); onUpload(itemId, kind, dataUrl); }
+    catch { /* ignore */ }
+    finally { setPreparing(false); }
+  };
+  return (
+    <div className="flex-1 min-w-0">
+      <p className="text-[9px] font-bold text-gray-400 mb-1">{label}</p>
+      {photo ? (
+        <div className="relative">
+          <a href={photo.url} target="_blank" rel="noopener noreferrer">
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img src={photo.url} alt={label} className="w-full h-20 object-cover rounded-lg border border-gray-200 dark:border-gray-700" />
+          </a>
+          <button onClick={() => onDelete(photo.id)} className="absolute top-1 start-1 w-5 h-5 grid place-items-center rounded-full bg-black/60 text-white hover:bg-black/80"><X className="w-3 h-3" /></button>
+        </div>
+      ) : (
+        <button onClick={() => inputRef.current?.click()} disabled={busy || preparing}
+          className="w-full h-20 rounded-lg border-2 border-dashed border-gray-300 dark:border-gray-600 grid place-items-center text-gray-400 hover:border-teal-400 disabled:opacity-50">
+          {busy || preparing ? <Loader2 className="w-4 h-4 animate-spin" /> : <span className="flex flex-col items-center text-[10px] font-bold"><Camera className="w-4 h-4 mb-0.5" /> أضف صورة</span>}
+        </button>
+      )}
+      <input ref={inputRef} type="file" accept="image/*" capture="environment" className="hidden" onChange={handle} />
+    </div>
+  );
+}
+
 // ISO → local "YYYY-MM-DDTHH:MM" for a datetime-local input.
 function toLocalInput(iso: string | null): string {
   if (!iso) return "";
@@ -81,7 +148,14 @@ function fmtTime(iso: string | null): string {
   return `${p(d.getHours())}:${p(d.getMinutes())}`;
 }
 
-function SpecSheet({ item, onAdvance, onSetTime }: { item: PItem; onAdvance?: (taskId: string) => void; onSetTime?: (taskId: string, iso: string) => void }) {
+function SpecSheet({ item, onAdvance, onSetTime, onUploadPhoto, onDeletePhoto, uploadingKey }: {
+  item: PItem;
+  onAdvance?: (taskId: string) => void;
+  onSetTime?: (taskId: string, iso: string) => void;
+  onUploadPhoto?: (itemId: string, kind: "design" | "result", dataUrl: string) => void;
+  onDeletePhoto?: (photoId: string) => void;
+  uploadingKey?: string;
+}) {
   const [editTimes, setEditTimes] = useState(false);
   const current = item.tasks.find((t) => !t.done);
   const allDone = item.tasks.length > 0 && !current;
@@ -139,6 +213,16 @@ function SpecSheet({ item, onAdvance, onSetTime }: { item: PItem; onAdvance?: (t
         </div>
       )}
 
+      {/* Photos: design + result */}
+      {onUploadPhoto && onDeletePhoto && (
+        <div className="flex gap-2 pt-1">
+          <PhotoSlot label="📐 التصميم" kind="design" itemId={item.id} photo={item.photos?.design || null}
+            busy={uploadingKey === `${item.id}:design`} onUpload={onUploadPhoto} onDelete={onDeletePhoto} />
+          <PhotoSlot label="✅ النتيجة" kind="result" itemId={item.id} photo={item.photos?.result || null}
+            busy={uploadingKey === `${item.id}:result`} onUpload={onUploadPhoto} onDelete={onDeletePhoto} />
+        </div>
+      )}
+
       {/* Explicit finish-and-advance control */}
       {onAdvance && item.tasks.length > 0 && (
         allDone ? (
@@ -186,6 +270,25 @@ function ProductionFile({ data, reload }: { data: ProdFile; reload: () => void }
       const res = await fetch("/api/item-tasks", { method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ id: taskId, done: true }) });
       if (res.ok) { toast.success("تم — انتقلت للمرحلة التالية"); reload(); }
       else { const e = await res.json().catch(() => ({})); toast.error(e.error || "فشل"); }
+    } catch { toast.error("تعذّر الاتصال"); }
+  };
+
+  const [uploading, setUploading] = useState("");
+  const uploadPhoto = async (quoteItemId: string, kind: "design" | "result", dataUrl: string) => {
+    setUploading(`${quoteItemId}:${kind}`);
+    try {
+      const res = await fetch("/api/foreman/photo", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ quoteItemId, kind, dataUrl }) });
+      const d = await res.json().catch(() => ({}));
+      if (res.ok) { toast.success("تم رفع الصورة"); reload(); }
+      else toast.error(d.error || "تعذّر رفع الصورة");
+    } catch { toast.error("تعذّر الاتصال"); }
+    finally { setUploading(""); }
+  };
+  const removePhoto = async (photoId: string) => {
+    try {
+      const res = await fetch(`/api/foreman/photo?id=${photoId}`, { method: "DELETE" });
+      if (res.ok) { toast.success("تم حذف الصورة"); reload(); }
+      else toast.error("تعذّر الحذف");
     } catch { toast.error("تعذّر الاتصال"); }
   };
 
@@ -259,7 +362,7 @@ function ProductionFile({ data, reload }: { data: ProdFile; reload: () => void }
                       </div>
                       {q.items.map((it) => (
                         <div key={it.id} className="space-y-1">
-                          <SpecSheet item={it} onAdvance={advance} onSetTime={setTime} />
+                          <SpecSheet item={it} onAdvance={advance} onSetTime={setTime} onUploadPhoto={uploadPhoto} onDeletePhoto={removePhoto} uploadingKey={uploading} />
                           {!it.hasPipeline && (
                             <button disabled={busy} onClick={() => apply({ quoteItemId: it.id })}
                               className="inline-flex items-center gap-1 text-[10px] font-bold text-indigo-600 hover:underline disabled:opacity-50">
@@ -289,7 +392,7 @@ function ProductionFile({ data, reload }: { data: ProdFile; reload: () => void }
                   <Link href={`/quotations/${quote.id}`} target="_blank" className="inline-flex items-center gap-1 text-[11px] text-gray-400 hover:text-teal-600 font-mono-en">
                     {quote.quoteNumber} · {quote.customer} <ExternalLink className="w-3 h-3" />
                   </Link>
-                  <SpecSheet item={item} onAdvance={advance} onSetTime={setTime} />
+                  <SpecSheet item={item} onAdvance={advance} onSetTime={setTime} onUploadPhoto={uploadPhoto} onDeletePhoto={removePhoto} uploadingKey={uploading} />
                 </div>
               ))}
             </div>

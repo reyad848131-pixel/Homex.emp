@@ -525,6 +525,20 @@ export default function SettingsClient() {
         </div>
 
         <div className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded p-6">
+          <h2 className="text-base font-bold mb-1">{t("prSetting")}</h2>
+          <p className="text-xs text-gray-400 mb-4">{t("prHint")}</p>
+          <select
+            value={settings.photo_retention_months || "0"}
+            onChange={(e) => update("photo_retention_months", e.target.value)}
+            className="field max-w-xs"
+          >
+            <option value="0">{t("prForever")}</option>
+            <option value="6">{t("pr6")}</option>
+            <option value="12">{t("pr12")}</option>
+          </select>
+        </div>
+
+        <div className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded p-6">
           <h2 className="text-base font-bold mb-1">{t("faSetting")}</h2>
           <p className="text-xs text-gray-400 mb-4">{t("faHint")}</p>
           {(() => {
