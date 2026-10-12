@@ -39,16 +39,36 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
       common.workStatus = st;
     }
 
-    const quotation = await prisma.quotation.findUnique({ where: { id }, select: { id: true } });
+    const quotation = await prisma.quotation.findUnique({ where: { id }, select: { id: true, customerId: true } });
 
     if (quotation) {
-      // LINKED row — upsert the tracking fields onto the quotation's CurtainOrder.
-      if (Object.keys(common).length === 0) return NextResponse.json({ error: "لا يوجد تغيير" }, { status: 400 });
-      await prisma.curtainOrder.upsert({
-        where: { quotationId: id },
-        create: { quotationId: id, ...common },
-        update: common,
-      });
+      // LINKED row. Curtain-tracking fields + a count override live on the
+      // CurtainOrder; customer/quotation fields are written back to the ORIGINAL
+      // records so everything stays a single source of truth.
+      const coData: Record<string, unknown> = { ...common };
+      if (body.curtainCount !== undefined) { const n = num(body.curtainCount); coData.curtainCount = n === null ? null : Math.round(n); }
+      if (Object.keys(coData).length > 0) {
+        await prisma.curtainOrder.upsert({ where: { quotationId: id }, create: { quotationId: id, ...coData }, update: coData });
+      }
+
+      // Customer identity (shared across the customer's orders).
+      const custData: Record<string, unknown> = {};
+      if (body.customerName !== undefined && String(body.customerName).trim()) custData.name = String(body.customerName).trim();
+      if (body.phone !== undefined) { const p = normalizeCredential(String(body.phone || "")); custData.phone = p; if (p) custData.phoneCode = "+968"; }
+      if (Object.keys(custData).length > 0 && quotation.customerId) {
+        await prisma.customer.update({ where: { id: quotation.customerId }, data: custData });
+      }
+
+      // Quotation fields: delivery date + the place (stored as deliveryLocation).
+      const qData: Record<string, unknown> = {};
+      if (body.deliveryDate !== undefined) {
+        if (!body.deliveryDate) qData.deliveryDate = null;
+        else { const d = new Date(body.deliveryDate); if (isNaN(d.getTime())) return NextResponse.json({ error: "تاريخ غير صالح" }, { status: 400 }); qData.deliveryDate = d; }
+      }
+      if (body.region !== undefined) qData.deliveryLocation = String(body.region || "").trim() || null;
+      if (Object.keys(qData).length > 0) {
+        await prisma.quotation.update({ where: { id }, data: qData });
+      }
     } else {
       // STANDALONE row — update by its own id, including its customer fields.
       const existing = await prisma.curtainOrder.findUnique({ where: { id }, select: { id: true, quotationId: true } });
