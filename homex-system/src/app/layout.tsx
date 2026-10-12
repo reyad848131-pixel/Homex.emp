@@ -1,22 +1,17 @@
 import type { Metadata } from "next";
-import { Cairo, Montserrat } from "next/font/google";
+// Self-hosted fonts (via @fontsource) — bundled with the app so the build never
+// depends on fetching Google Fonts at build time (that fetch was intermittently
+// failing and silently blocking deploys). The families "Cairo"/"Montserrat"
+// registered here are what globals.css falls back to.
+import "@fontsource/cairo/400.css";
+import "@fontsource/cairo/600.css";
+import "@fontsource/cairo/700.css";
+import "@fontsource/cairo/800.css";
+import "@fontsource/montserrat/500.css";
+import "@fontsource/montserrat/700.css";
 import "./globals.css";
 import { Providers } from "@/components/providers";
 import { UpdateChecker } from "@/components/update-checker";
-
-const cairo = Cairo({
-  variable: "--font-cairo",
-  subsets: ["arabic", "latin"],
-  weight: ["400", "600", "700", "800"],
-  display: "swap",
-});
-
-const montserrat = Montserrat({
-  variable: "--font-montserrat",
-  subsets: ["latin"],
-  weight: ["500", "700"],
-  display: "swap",
-});
 
 export const metadata: Metadata = {
   title: "Homex | نظام عروض الأسعار",
@@ -47,7 +42,7 @@ export default function RootLayout({
   children: React.ReactNode;
 }) {
   return (
-    <html lang="ar" dir="rtl" className={`${cairo.variable} ${montserrat.variable}`}>
+    <html lang="ar" dir="rtl">
       <head>
         <meta name="theme-color" content="#171717" />
         <script dangerouslySetInnerHTML={{ __html: `try{var t=localStorage.getItem("theme");if(t==="dark"||((t===null||t==="auto")&&window.matchMedia("(prefers-color-scheme: dark)").matches))document.documentElement.classList.add("dark")}catch(e){}` }} />

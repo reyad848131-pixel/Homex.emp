@@ -3,8 +3,8 @@
 @variant dark (&:where(.dark, .dark *));
 
 @theme inline {
-  --font-cairo: var(--font-cairo);
-  --font-montserrat: var(--font-montserrat);
+  --font-cairo: 'Cairo', 'Segoe UI', sans-serif;
+  --font-montserrat: 'Montserrat', 'Segoe UI', sans-serif;
 }
 
 /* === Homex brand palette ==================================================
