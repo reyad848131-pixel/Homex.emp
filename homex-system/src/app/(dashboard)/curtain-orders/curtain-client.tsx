@@ -150,7 +150,7 @@ export default function CurtainOrdersClient() {
               <tr className="bg-gray-50 dark:bg-gray-900/50 text-gray-600 dark:text-gray-300 text-xs">
                 <th className="p-2 border-b border-gray-200 dark:border-gray-700 text-center w-10">{t("coColNo")}</th>
                 <th className="p-2 border-b border-gray-200 dark:border-gray-700 text-start w-40">{t("coColCustomer")}</th>
-                <th className="p-2 border-b border-gray-200 dark:border-gray-700 text-center w-28">{t("coColDate")}</th>
+                <th className="p-2 border-b border-gray-200 dark:border-gray-700 text-center w-24">{t("coColDate")}</th>
                 <th className="p-2 border-b border-gray-200 dark:border-gray-700 text-center w-28">{t("coColPhone")}</th>
                 <th className="p-2 border-b border-gray-200 dark:border-gray-700 text-start w-36">{t("coColPlace")}</th>
                 <th className="p-2 border-b border-gray-200 dark:border-gray-700 text-center w-16">{t("coColCount")}</th>
@@ -184,7 +184,7 @@ export default function CurtainOrdersClient() {
                     </td>
                     {/* Delivery date — editable for both linked and standalone */}
                     <td className="p-2 text-center whitespace-nowrap text-gray-700 dark:text-gray-300">
-                      <input type="date" value={toDateInput(val(e, "deliveryDate"))} onChange={(ev) => save(e.id, { deliveryDate: ev.target.value || null })} className={inputCls + " text-center"} />
+                      <input type="date" value={toDateInput(val(e, "deliveryDate"))} onChange={(ev) => save(e.id, { deliveryDate: ev.target.value || null })} className={inputCls + " text-center min-w-0 px-1"} />
                     </td>
                     <td className="p-2 whitespace-nowrap text-gray-700 dark:text-gray-300" dir="ltr">
                       {std ? (
