@@ -61,13 +61,10 @@ export async function GET(req: NextRequest) {
         customerName: q.customer?.name || "",
         phone: q.customer?.phone || "",
         phoneCode: q.customer?.phoneCode || "",
-        // A place typed on this page is saved to the quote's deliveryLocation and
-        // shown first; otherwise fall back to the customer's governorate/wilayat.
-        region: q.deliveryLocation || [q.customer?.governorate, q.customer?.wilayat].filter(Boolean).join(" – ") || "",
+        region: [q.customer?.governorate, q.customer?.wilayat].filter(Boolean).join(" – ") || q.deliveryLocation || "",
         deliveryDate: q.deliveryDate ? q.deliveryDate.toISOString() : null,
         status: q.status,
-        // A manually-entered count overrides the one derived from the items.
-        curtainCount: co?.curtainCount ?? curtainCount,
+        curtainCount,
         curtainTotal,
         advanceBillNo: co?.advanceBillNo || "",
         ourPrice: roundMoney(ourPrice),

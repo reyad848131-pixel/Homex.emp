@@ -202,29 +202,40 @@ export default function CurtainOrdersClient() {
                   <tr key={e.id} className={`border-b border-gray-100 dark:border-gray-700/50 hover:bg-gray-50/60 dark:hover:bg-gray-700/30 ${!std && e.boardStatus ? (BOARD_ACCENT[e.boardStatus] || "") : ""}`}>
                     <td className="p-2 text-center text-gray-400">{i + 1}</td>
                     <td className="p-2">
-                      <input value={val(e, "customerName") ?? ""} onChange={(ev) => setDraftVal(e.id, "customerName", ev.target.value)}
-                        onBlur={(ev) => { clearDraft(e.id, "customerName"); if (ev.target.value !== e.customerName) save(e.id, { customerName: ev.target.value }); }}
-                        placeholder={t("coColCustomer")} className={inputCls + " font-bold"} />
-                      {!std && <a href={`/quotations/${e.id}`} className="block text-[11px] text-gray-400 hover:text-[#6f7e62] mt-0.5 font-mono-en">{e.quoteNumber}</a>}
+                      {std ? (
+                        <input value={val(e, "customerName") ?? ""} onChange={(ev) => setDraftVal(e.id, "customerName", ev.target.value)}
+                          onBlur={(ev) => { clearDraft(e.id, "customerName"); if (ev.target.value !== e.customerName) save(e.id, { customerName: ev.target.value }); }}
+                          placeholder={t("coColCustomer")} className={inputCls + " font-bold"} />
+                      ) : (
+                        <><a href={`/quotations/${e.id}`} className="font-bold text-gray-900 dark:text-gray-100 hover:text-[#6f7e62]">{e.customerName || "—"}</a>
+                        <div className="text-[11px] text-gray-400 font-mono-en">{e.quoteNumber}</div></>
+                      )}
                       {std && <span className="inline-block mt-0.5 text-[9px] font-bold px-1.5 py-0.5 rounded bg-gray-100 dark:bg-gray-700 text-gray-500">{t("coBadgeStandalone")}</span>}
                     </td>
+                    {/* Delivery date — editable for both linked and standalone */}
                     <td className="p-2 text-center whitespace-nowrap text-gray-700 dark:text-gray-300">
                       <input type="date" value={toDateInput(val(e, "deliveryDate"))} onChange={(ev) => save(e.id, { deliveryDate: ev.target.value || null })} className={inputCls + " text-center"} />
                     </td>
                     <td className="p-2 whitespace-nowrap text-gray-700 dark:text-gray-300" dir="ltr">
-                      <input value={val(e, "phone") ?? ""} onChange={(ev) => setDraftVal(e.id, "phone", ev.target.value)}
-                        onBlur={(ev) => { clearDraft(e.id, "phone"); if (ev.target.value !== e.phone) save(e.id, { phone: ev.target.value }); }}
-                        placeholder="9xxxxxxx" className={inputCls + " text-center w-28"} />
+                      {std ? (
+                        <input value={val(e, "phone") ?? ""} onChange={(ev) => setDraftVal(e.id, "phone", ev.target.value)}
+                          onBlur={(ev) => { clearDraft(e.id, "phone"); if (ev.target.value !== e.phone) save(e.id, { phone: ev.target.value }); }}
+                          placeholder="9xxxxxxx" className={inputCls + " text-center w-28"} />
+                      ) : (e.phone ? `${e.phoneCode || ""}${e.phone}` : "—")}
                     </td>
                     <td className="p-2 text-gray-700 dark:text-gray-300 max-w-[180px]">
-                      <input value={val(e, "region") ?? ""} onChange={(ev) => setDraftVal(e.id, "region", ev.target.value)}
-                        onBlur={(ev) => { clearDraft(e.id, "region"); if (ev.target.value !== e.region) save(e.id, { region: ev.target.value }); }}
-                        placeholder={t("coColPlace")} className={inputCls + " w-32"} />
+                      {std ? (
+                        <input value={val(e, "region") ?? ""} onChange={(ev) => setDraftVal(e.id, "region", ev.target.value)}
+                          onBlur={(ev) => { clearDraft(e.id, "region"); if (ev.target.value !== e.region) save(e.id, { region: ev.target.value }); }}
+                          placeholder={t("coColPlace")} className={inputCls + " w-32"} />
+                      ) : (<span className="truncate block" title={e.region}>{e.region || "—"}</span>)}
                     </td>
                     <td className="p-2 text-center text-gray-700 dark:text-gray-300">
-                      <input type="number" min="0" value={val(e, "curtainCount") ?? ""} onChange={(ev) => setDraftVal(e.id, "curtainCount", ev.target.value)}
-                        onBlur={(ev) => { clearDraft(e.id, "curtainCount"); const n = ev.target.value === "" ? 0 : parseInt(ev.target.value, 10); if (n !== e.curtainCount) save(e.id, { curtainCount: n }); }}
-                        className={inputCls + " text-center w-16"} />
+                      {std ? (
+                        <input type="number" min="0" value={val(e, "curtainCount") ?? ""} onChange={(ev) => setDraftVal(e.id, "curtainCount", ev.target.value)}
+                          onBlur={(ev) => { clearDraft(e.id, "curtainCount"); const n = ev.target.value === "" ? 0 : parseInt(ev.target.value, 10); if (n !== e.curtainCount) save(e.id, { curtainCount: n }); }}
+                          className={inputCls + " text-center w-16"} />
+                      ) : (e.curtainCount || "—")}
                     </td>
                     <td className="p-2">
                       <input value={val(e, "advanceBillNo") ?? ""} onChange={(ev) => setDraftVal(e.id, "advanceBillNo", ev.target.value)}
