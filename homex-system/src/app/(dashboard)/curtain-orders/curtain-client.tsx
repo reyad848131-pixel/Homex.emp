@@ -165,7 +165,6 @@ export default function CurtainOrdersClient() {
         </div>
       )}
 
-      <datalist id="co-manufacturers">{manufacturers.map((m) => <option key={m} value={m} />)}</datalist>
 
       {loading ? (
         <div className="flex items-center justify-center py-20 text-gray-400"><Loader2 className="w-6 h-6 animate-spin" /></div>
@@ -173,7 +172,7 @@ export default function CurtainOrdersClient() {
         <div className="text-center py-20 text-gray-400 text-sm">{t("coNoEntries")}</div>
       ) : (
         <div className="overflow-x-auto bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl">
-          <table className="w-full text-sm border-collapse min-w-[1160px]">
+          <table className="w-full text-sm border-collapse min-w-[940px]">
             <thead>
               <tr className="bg-gray-50 dark:bg-gray-900/50 text-gray-600 dark:text-gray-300 text-xs">
                 <th className="p-2 border-b border-gray-200 dark:border-gray-700 text-center w-10">{t("coColNo")}</th>
@@ -186,7 +185,6 @@ export default function CurtainOrdersClient() {
                 <th className="p-2 border-b border-gray-200 dark:border-gray-700 text-center">{t("coColOur")}</th>
                 <th className="p-2 border-b border-gray-200 dark:border-gray-700 text-center">{t("coColOutside")}</th>
                 <th className="p-2 border-b border-gray-200 dark:border-gray-700 text-center">{t("coColDiff")}</th>
-                <th className="p-2 border-b border-gray-200 dark:border-gray-700 text-start">{t("coColManufacturer")}</th>
                 <th className="p-2 border-b border-gray-200 dark:border-gray-700 text-center">{t("coColStatus")}</th>
                 <th className="p-2 border-b border-gray-200 dark:border-gray-700 w-8"></th>
               </tr>
@@ -219,14 +217,14 @@ export default function CurtainOrdersClient() {
                       {std ? (
                         <input value={val(e, "phone") ?? ""} onChange={(ev) => setDraftVal(e.id, "phone", ev.target.value)}
                           onBlur={(ev) => { clearDraft(e.id, "phone"); if (ev.target.value !== e.phone) save(e.id, { phone: ev.target.value }); }}
-                          placeholder="9xxxxxxx" className={inputCls + " text-center w-28"} />
+                          placeholder="9xxxxxxx" className={inputCls + " text-center w-32"} />
                       ) : (e.phone ? `${e.phoneCode || ""}${e.phone}` : "—")}
                     </td>
                     <td className="p-2 text-gray-700 dark:text-gray-300 max-w-[180px]">
                       {std ? (
                         <input value={val(e, "region") ?? ""} onChange={(ev) => setDraftVal(e.id, "region", ev.target.value)}
                           onBlur={(ev) => { clearDraft(e.id, "region"); if (ev.target.value !== e.region) save(e.id, { region: ev.target.value }); }}
-                          placeholder={t("coColPlace")} className={inputCls + " w-32"} />
+                          placeholder={t("coColPlace")} className={inputCls + " w-44"} />
                       ) : (<span className="truncate block" title={e.region}>{e.region || "—"}</span>)}
                     </td>
                     <td className="p-2 text-center text-gray-700 dark:text-gray-300">
@@ -253,11 +251,6 @@ export default function CurtainOrdersClient() {
                     </td>
                     <td className="p-2 text-center whitespace-nowrap">
                       <span className={`font-black ${diff > 0 ? "text-green-600 dark:text-green-400" : diff < 0 ? "text-red-600 dark:text-red-400" : "text-gray-400"}`}>{fmt(diff)}</span>
-                    </td>
-                    <td className="p-2">
-                      <input list="co-manufacturers" value={val(e, "manufacturer") ?? ""} onChange={(ev) => setDraftVal(e.id, "manufacturer", ev.target.value)}
-                        onBlur={(ev) => { clearDraft(e.id, "manufacturer"); if (ev.target.value !== e.manufacturer) save(e.id, { manufacturer: ev.target.value }); }}
-                        placeholder={t("coManufacturerPlaceholder")} className={inputCls + " w-32"} />
                     </td>
                     <td className="p-2 text-center">
                       {/* Curtain work status is the subcontractor's own (different
