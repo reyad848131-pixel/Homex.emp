@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useCallback, useMemo, useRef } from "react";
+import { useState, useEffect, useCallback, useMemo } from "react";
 import Link from "next/link";
 import { cn, roundMoney } from "@/lib/utils";
 import { displayName } from "@/lib/translit";
@@ -96,86 +96,50 @@ export default function DeliverySchedulePage() {
 
   useEffect(() => { fetchData(); }, [fetchData]);
 
-  // Load a WHOLE year at once (both queue + delivered) so switching months is
-  // instant client-side filtering. Years are cached, and the neighbouring years
-  // are prefetched in the background so changing year is instant too.
-  const calYear = monthAnchor.getFullYear();
-  const [calRows, setCalRows] = useState<DeliveryQuotation[] | null>(null);
-  const calCache = useRef<Record<number, DeliveryQuotation[]>>({});
-  const fetchYear = useCallback(async (year: number): Promise<DeliveryQuotation[]> => {
-    if (calCache.current[year]) return calCache.current[year];
-    const from = `${year}-01-01`, to = `${year}-12-31`;
-    const qp = (delivered: string) => `/api/delivery-schedule?${new URLSearchParams({ delivered, from, to })}`;
-    const [a, b] = await Promise.all([
-      fetch(qp("0")).then((r) => r.json()).catch(() => ({ quotations: [] })),
-      fetch(qp("1")).then((r) => r.json()).catch(() => ({ quotations: [] })),
-    ]);
-    const rows = [
-      ...(a.quotations || []).map((q: DeliveryQuotation) => ({ ...q, _cal: "ready" })),
-      ...(b.quotations || []).map((q: DeliveryQuotation) => ({ ...q, _cal: "delivered" })),
-    ];
-    calCache.current[year] = rows;
-    return rows;
-  }, []);
-  const loadCalendar = useCallback(() => {
-    const cached = calCache.current[calYear];
-    if (cached) setCalRows(cached);
-    else { setCalRows(null); fetchYear(calYear).then((rows) => setCalRows(rows)).catch(() => setCalRows([])); }
-    // Warm the adjacent years silently for instant year switching.
-    [calYear - 1, calYear + 1].forEach((yr) => { if (!calCache.current[yr]) fetchYear(yr).catch(() => {}); });
-  }, [calYear, fetchYear]);
-  useEffect(() => { loadCalendar(); }, [loadCalendar]);
+  // The calendar MIRRORS the delivery board (لوحة التوصيلات): it shows the same
+  // deliveries on their board dates, READ-ONLY. All editing (driver, appt,
+  // mark delivered, location) still happens in the list below; dates/placement
+  // are managed on the board itself.
+  const monthKey = `${monthAnchor.getFullYear()}-${String(monthAnchor.getMonth() + 1).padStart(2, "0")}`;
+  const [boardRaw, setBoardRaw] = useState<CalItem[] | null>(null);
+  const loadBoardCal = useCallback(() => {
+    setBoardRaw(null);
+    const today = new Date(); today.setHours(0, 0, 0, 0); const todayMs = today.getTime();
+    fetch(`/api/delivery-board?month=${monthKey}`)
+      .then((r) => (r.ok ? r.json() : { scheduled: [] }))
+      .then((d) => {
+        const items: CalItem[] = (d.scheduled || []).map((e: any) => {
+          const ddMs = e.deliveryDate ? new Date(e.deliveryDate).setHours(0, 0, 0, 0) : null;
+          const delivered = e.deliveryStatus === "delivered";
+          const late = !delivered && ddMs != null && ddMs < todayMs;
+          return {
+            id: e.id,
+            name: e.customerName || "—",
+            wilayat: e.wilayat || "",
+            governorate: e.governorate || "",
+            quoteNumber: e.quoteNumber,
+            phone: e.phone || "",
+            phoneCode: e.phoneCode || "+968",
+            date: e.deliveryDate,
+            time: e.deliveryTime || null,
+            days: Math.max(1, e.deliveryDays || 1),
+            driver: "",
+            status: delivered ? "delivered" : late ? "late" : "ready",
+          } as CalItem;
+        });
+        setBoardRaw(items);
+      })
+      .catch(() => setBoardRaw([]));
+  }, [monthKey]);
+  useEffect(() => { loadBoardCal(); }, [loadBoardCal]);
 
   const calItems: CalItem[] = useMemo(() => {
     const s = debouncedSearch.trim();
-    return (calRows || [])
-      .filter((q) => q.dispatchDate)
-      .map((q) => {
-        const cal = (q as DeliveryQuotation & { _cal?: string })._cal;
-        const late = cal !== "delivered" && (daysUntil(q.dispatchDate) ?? 0) < 0;
-        return {
-          id: q.id,
-          name: q.customer?.name || "—",
-          wilayat: q.customer?.wilayat || "",
-          governorate: q.customer?.governorate || "",
-          quoteNumber: q.quoteNumber,
-          phone: q.customer?.phone || "",
-          phoneCode: q.customer?.phoneCode || "+968",
-          date: q.dispatchDate,
-          time: q.deliveryTime,
-          days: Math.max(1, q.deliveryDays || 1),
-          driver: q.deliveryDriver || DEFAULT_DRIVER,
-          status: cal === "delivered" ? "delivered" : late ? "late" : "ready",
-        } as CalItem;
-      })
-      .filter((it) => !s || it.name.includes(s) || it.wilayat.includes(s) || it.driver.includes(s));
-  }, [calRows, debouncedSearch]);
+    return (boardRaw || []).filter((it) => !s || it.name.includes(s) || it.wilayat.includes(s));
+  }, [boardRaw, debouncedSearch]);
 
-  const reschedule = (id: string, date: string) => {
-    // Update in memory (and cache) only — no reload, so month switching stays instant.
-    setCalRows((prev) => {
-      const next = prev ? prev.map((q) => (q.id === id ? { ...q, dispatchDate: date } : q)) : prev;
-      if (next) calCache.current[calYear] = next;
-      return next;
-    });
-    fetch("/api/work-orders", {
-      method: "PATCH", headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ id, dispatchDate: date }),
-    }).then(() => { loadStats(); }).catch(() => {});
-  };
-
-  // A list action (mark delivered / return to queue) changes a delivery's
-  // status, so the cached calendar is stale — drop it and reload.
-  const refreshCalendar = useCallback(() => { calCache.current = {}; loadCalendar(); }, [loadCalendar]);
-
-  // Place an order on a day from the calendar's + button — sets its dispatchDate
-  // (the work board's deliveryDate is never touched). Refresh so it appears.
-  const addReadyToDay = useCallback((id: string, date: string, days: number = 1) => {
-    fetch("/api/work-orders", {
-      method: "PATCH", headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ id, dispatchDate: date, deliveryDays: days }),
-    }).then(() => { refreshCalendar(); loadStats(); }).catch(() => {});
-  }, [refreshCalendar]);
+  // After a list action changes a delivery, reload the mirrored calendar.
+  const refreshCalendar = useCallback(() => { loadBoardCal(); }, [loadBoardCal]);
 
   useEffect(() => {
     fetch("/api/employees")
@@ -431,10 +395,10 @@ export default function DeliverySchedulePage() {
           <CalendarDays className="w-4 h-4 text-gray-400" />
           <h2 className="text-sm font-bold text-gray-600 dark:text-gray-300">{t("calendarHeading")}</h2>
         </div>
-        {calRows === null ? (
+        {boardRaw === null ? (
           <div className="flex flex-col items-center justify-center py-16 text-gray-400 gap-3">
             <div className="w-8 h-8 rounded-full border-2 border-gray-200 dark:border-gray-700 border-t-teal-500 animate-spin" />
-            <p className="text-sm font-semibold">{t("dcLoadingYear")} <span className="font-mono-en">{calYear}</span>…</p>
+            <p className="text-sm font-semibold">{t("loadingDots")}</p>
           </div>
         ) : (
           <DeliveryCalendar
@@ -443,9 +407,9 @@ export default function DeliverySchedulePage() {
             onToday={() => setMonthAnchor(new Date())}
             onPrevMonth={() => setMonthAnchor((d) => new Date(d.getFullYear(), d.getMonth() - 1, 1))}
             onNextMonth={() => setMonthAnchor((d) => new Date(d.getFullYear(), d.getMonth() + 1, 1))}
-            onReschedule={reschedule}
-            onAddReady={addReadyToDay}
-            canEdit={canEdit}
+            onReschedule={() => {}}
+            onAddReady={() => {}}
+            canEdit={false}
           />
         )}
       </div>
