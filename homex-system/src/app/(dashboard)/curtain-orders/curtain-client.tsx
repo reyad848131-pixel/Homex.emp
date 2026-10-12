@@ -5,7 +5,6 @@ import { useI18n } from "@/lib/i18n";
 import { useToast } from "@/components/toast";
 import { Blinds, Loader2, TrendingUp, FileSpreadsheet, Plus, Trash2 } from "lucide-react";
 import { CURTAIN_WORK_STATUSES } from "@/lib/curtain-orders";
-import { WORK_STATUS_MAP } from "@/lib/types";
 
 interface Entry {
   id: string; kind: "quote" | "standalone"; quotationId: string | null; quoteNumber: string;
@@ -261,19 +260,13 @@ export default function CurtainOrdersClient() {
                         placeholder={t("coManufacturerPlaceholder")} className={inputCls + " w-32"} />
                     </td>
                     <td className="p-2 text-center">
-                      {std ? (
-                        // Standalone: manual curtain status, editable.
-                        <select value={e.workStatus} onChange={(ev) => save(e.id, { workStatus: ev.target.value })}
-                          className={`px-2 py-1 rounded-full text-xs font-bold border-0 outline-none cursor-pointer ${STATUS_COLOR[e.workStatus] || STATUS_COLOR.placed}`}>
-                          {CURTAIN_WORK_STATUSES.map((s) => <option key={s} value={s} className="bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100">{t(STATUS_LABEL_KEYS[s] as any)}</option>)}
-                        </select>
-                      ) : e.boardStatus && WORK_STATUS_MAP[e.boardStatus] ? (
-                        // Linked: follows the work board (read-only, colour from there).
-                        <span className={`inline-block px-2.5 py-1 rounded-full text-xs font-bold ${WORK_STATUS_MAP[e.boardStatus].badgeColor}`}
-                          title={t("coStatusFromBoard")}>{WORK_STATUS_MAP[e.boardStatus].label}</span>
-                      ) : (
-                        <span className="text-xs text-gray-400">—</span>
-                      )}
+                      {/* Curtain work status is the subcontractor's own (different
+                          factory) — editable for every row and independent of the
+                          quotation's work status. */}
+                      <select value={e.workStatus} onChange={(ev) => save(e.id, { workStatus: ev.target.value })}
+                        className={`px-2 py-1 rounded-full text-xs font-bold border-0 outline-none cursor-pointer ${STATUS_COLOR[e.workStatus] || STATUS_COLOR.placed}`}>
+                        {CURTAIN_WORK_STATUSES.map((s) => <option key={s} value={s} className="bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100">{t(STATUS_LABEL_KEYS[s] as any)}</option>)}
+                      </select>
                       {savingId === e.id && <Loader2 className="w-3 h-3 animate-spin inline-block ms-1 text-gray-400" />}
                     </td>
                     <td className="p-2 text-center">
