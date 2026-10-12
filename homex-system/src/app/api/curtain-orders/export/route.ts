@@ -82,7 +82,6 @@ export async function GET(_req: NextRequest) {
       { header: "سعرنا", key: "our", width: 12 },
       { header: "سعر المورّد", key: "outside", width: 12 },
       { header: "الفارق", key: "diff", width: 12 },
-      { header: "المصنّع", key: "manufacturer", width: 20 },
       { header: "حالة العمل", key: "status", width: 16 },
     ];
     ws.getRow(1).font = { bold: true, color: { argb: "FFFFFFFF" } };
@@ -94,7 +93,7 @@ export async function GET(_req: NextRequest) {
         no: i + 1, name: r.name, date: r.date ? r.date.toLocaleDateString("en-GB") : "",
         phone: r.phone, place: r.place, count: r.count || "", bill: r.bill,
         our: r.our || 0, outside: r.outside || 0, diff: r.diff || 0,
-        manufacturer: r.manufacturer, status: STATUS_AR[r.status] || r.status,
+        status: STATUS_AR[r.status] || r.status,
       });
       totalOur += r.our; totalOut += r.outside; totalDiff += r.diff; totalCount += r.count;
     });

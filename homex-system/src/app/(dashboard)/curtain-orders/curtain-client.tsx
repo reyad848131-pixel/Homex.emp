@@ -50,15 +50,6 @@ export default function CurtainOrdersClient() {
   const [loading, setLoading] = useState(true);
   const [statusFilter, setStatusFilter] = useState("");
   const [savingId, setSavingId] = useState<string | null>(null);
-  // Owners (Riyad / Salim) see the one-time "import Sultan Al Nabhani list" button.
-  const [isOwner, setIsOwner] = useState(false);
-  const [seeding, setSeeding] = useState(false);
-
-  useEffect(() => {
-    fetch("/api/me").then((r) => r.ok ? r.json() : {}).then((u: any) => {
-      setIsOwner(u?.civilId === "2016" || u?.civilId === "1389");
-    }).catch(() => {});
-  }, []);
 
   const fmt = (n: number) => (n || 0).toFixed(3);
   const toDateInput = (iso: string | null) => (iso ? new Date(iso).toISOString().slice(0, 10) : "");
@@ -98,18 +89,6 @@ export default function CurtainOrdersClient() {
     await load();
   };
 
-  const seedNabhani = async () => {
-    if (!confirm("إضافة قائمة سلطان النبهاني (12 طلب) كطلبات مستقلة؟ يحذف أي محاولة سابقة لنفس السندات ويضيفهم من جديد.")) return;
-    setSeeding(true);
-    try {
-      const res = await fetch("/api/curtain-orders/seed", { method: "POST" });
-      const d = await res.json().catch(() => ({}));
-      if (!res.ok) { toast.error(d.error || "تعذّرت الإضافة"); return; }
-      toast.success(`تمت إضافة ${d.added || 0} طلب${d.removedFirst ? ` (حُذف ${d.removedFirst} قديم)` : ""}`);
-      await load();
-    } finally { setSeeding(false); }
-  };
-
   const addManual = async () => {
     const res = await fetch("/api/curtain-orders", {
       method: "POST", headers: { "Content-Type": "application/json" },
@@ -136,12 +115,6 @@ export default function CurtainOrdersClient() {
         <Blinds className="w-6 h-6 text-[#6f7e62]" />
         <h1 className="text-xl font-black text-gray-900 dark:text-gray-100">{t("coTitle")}</h1>
         <div className="flex-1" />
-        {isOwner && (
-          <button onClick={seedNabhani} disabled={seeding}
-            className="flex items-center gap-1.5 px-3 py-2 rounded-lg text-sm font-bold bg-[#6f7e62] text-white hover:opacity-90 disabled:opacity-50">
-            {seeding ? <Loader2 className="w-4 h-4 animate-spin" /> : <FileSpreadsheet className="w-4 h-4" />} استيراد قائمة سلطان النبهاني
-          </button>
-        )}
         <button onClick={addManual} className="flex items-center gap-1.5 px-3 py-2 border border-gray-200 dark:border-gray-700 rounded-lg text-sm font-bold hover:bg-gray-50 dark:hover:bg-gray-700"><Plus className="w-4 h-4" /> {t("coAddManual")}</button>
         <a href="/api/curtain-orders/export" className="flex items-center gap-1.5 px-3 py-2 border border-gray-200 dark:border-gray-700 rounded-lg text-sm font-bold hover:bg-gray-50 dark:hover:bg-gray-700"><FileSpreadsheet className="w-4 h-4" /> {t("coExport")}</a>
         <select value={statusFilter} onChange={(e) => setStatusFilter(e.target.value)}
