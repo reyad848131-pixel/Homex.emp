@@ -78,7 +78,7 @@ export async function GET(req: NextRequest) {
 
     // Standalone rows (imported / external) — no quotation.
     const standaloneRows = await prisma.curtainOrder.findMany({
-      where: { quotationId: null },
+      where: { quotationId: null, deletedAt: null },
       orderBy: [{ deliveryDate: "asc" }, { createdAt: "desc" }],
       take: 800,
     });

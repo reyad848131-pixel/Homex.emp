@@ -344,6 +344,10 @@ model CurtainOrder {
   manufacturer  String?
   workStatus    String   @default("placed") @map("work_status")
 
+  // Soft delete (standalone rows only): moved to Trash and restorable.
+  deletedAt     DateTime? @map("deleted_at")
+  deletedBy     String?   @map("deleted_by")
+
   // Standalone-only fields (ignored when quotationId is set).
   custName      String?   @map("cust_name")
   custPhone     String?   @map("cust_phone")

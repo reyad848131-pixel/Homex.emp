@@ -486,6 +486,7 @@ const translations = {
   trashEmpty: { ar: "لا يوجد عناصر محذوفة", en: "Trash is empty" },
   deletedQuotationsLabel: { ar: "عروض أسعار محذوفة", en: "Deleted quotations" },
   deletedCustomersLabel: { ar: "عملاء محذوفون", en: "Deleted customers" },
+  deletedCurtainsLabel: { ar: "طلبات ستائر محذوفة", en: "Deleted curtain orders" },
   deletedByLabel: { ar: "حذفه", en: "Deleted by" },
   deletedAtLabel: { ar: "تاريخ الحذف", en: "Deleted at" },
   confirmPermanentDelete: { ar: "حذف نهائي؟ لا يمكن التراجع.", en: "Delete permanently? This cannot be undone." },

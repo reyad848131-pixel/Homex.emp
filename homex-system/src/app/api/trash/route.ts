@@ -21,7 +21,7 @@ export async function GET() {
     const g = await guard();
     if (g.error) return g.error;
 
-    const [quotations, customers] = await Promise.all([
+    const [quotations, customers, curtains] = await Promise.all([
       prisma.quotation.findMany({
         where: { deletedAt: { not: null } },
         select: {
@@ -37,10 +37,16 @@ export async function GET() {
         orderBy: { deletedAt: "desc" },
         take: 200,
       }),
+      prisma.curtainOrder.findMany({
+        where: { deletedAt: { not: null } },
+        select: { id: true, custName: true, custPhone: true, place: true, deliveryDate: true, advanceBillNo: true, deletedAt: true, deletedBy: true },
+        orderBy: { deletedAt: "desc" },
+        take: 200,
+      }),
     ]);
 
     // Resolve "deleted by" employee names.
-    const ids = [...new Set([...quotations, ...customers].map((r) => r.deletedBy).filter(Boolean) as string[])];
+    const ids = [...new Set([...quotations, ...customers, ...curtains].map((r) => r.deletedBy).filter(Boolean) as string[])];
     const emps = ids.length ? await prisma.employee.findMany({ where: { id: { in: ids } }, select: { id: true, name: true } }) : [];
     const nameOf = new Map(emps.map((e) => [e.id, e.name]));
     const withName = <T extends { deletedBy: string | null }>(r: T) => ({ ...r, deletedByName: r.deletedBy ? nameOf.get(r.deletedBy) || "" : "" });
@@ -48,6 +54,11 @@ export async function GET() {
     return NextResponse.json({
       quotations: quotations.map(withName),
       customers: customers.map(withName),
+      curtains: curtains.map((c) => ({
+        id: c.id, name: c.custName || "", phone: c.custPhone || "", place: c.place || "",
+        bill: c.advanceBillNo || "", deliveryDate: c.deliveryDate ? c.deliveryDate.toISOString() : null,
+        deletedAt: c.deletedAt, deletedByName: c.deletedBy ? nameOf.get(c.deletedBy) || "" : "",
+      })),
     });
   } catch (e) {
     console.error("API error [/api/trash]:", e);
@@ -62,12 +73,14 @@ export async function POST(req: NextRequest) {
     if (g.error) return g.error;
     const body = await req.json().catch(() => ({}));
     const { type, id } = body;
-    if (!id || (type !== "quotation" && type !== "customer")) {
+    if (!id || !["quotation", "customer", "curtain"].includes(type)) {
       return NextResponse.json({ error: "Invalid request" }, { status: 400 });
     }
 
     if (type === "quotation") {
       await prisma.quotation.update({ where: { id }, data: { deletedAt: null, deletedBy: null } });
+    } else if (type === "curtain") {
+      await prisma.curtainOrder.update({ where: { id }, data: { deletedAt: null, deletedBy: null } });
     } else {
       await prisma.customer.update({ where: { id }, data: { deletedAt: null, deletedBy: null } });
     }
@@ -87,7 +100,7 @@ export async function DELETE(req: NextRequest) {
     const url = new URL(req.url);
     const type = url.searchParams.get("type");
     const id = url.searchParams.get("id") || "";
-    if (!id || (type !== "quotation" && type !== "customer")) {
+    if (!id || !["quotation", "customer", "curtain"].includes(type || "")) {
       return NextResponse.json({ error: "Invalid request" }, { status: 400 });
     }
 
@@ -97,10 +110,12 @@ export async function DELETE(req: NextRequest) {
         prisma.serviceRequest.deleteMany({ where: { quotationId: id } }),
         prisma.quotation.delete({ where: { id } }),
       ]);
+    } else if (type === "curtain") {
+      await prisma.curtainOrder.delete({ where: { id } });
     } else {
       await prisma.customer.delete({ where: { id } });
     }
-    await logAction(g.user.id, "purge", type, id);
+    await logAction(g.user.id, "purge", type || "", id);
     return NextResponse.json({ ok: true });
   } catch (e) {
     console.error("API error [/api/trash DELETE]:", e);

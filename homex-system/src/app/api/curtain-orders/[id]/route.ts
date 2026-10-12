@@ -92,7 +92,8 @@ export async function DELETE(req: NextRequest, { params }: { params: Promise<{ i
     const existing = await prisma.curtainOrder.findUnique({ where: { id }, select: { id: true, quotationId: true } });
     if (!existing) return NextResponse.json({ error: "Not found" }, { status: 404 });
     if (existing.quotationId) return NextResponse.json({ error: "طلب مرتبط بكوتيشن — يُحذف من الكوتيشن", code: "linked" }, { status: 400 });
-    await prisma.curtainOrder.delete({ where: { id } });
+    // Soft delete → goes to Trash, restorable.
+    await prisma.curtainOrder.update({ where: { id }, data: { deletedAt: new Date(), deletedBy: user.id } });
     await logAction(user.id, "curtain_order_delete", "curtain_order", id).catch(() => {});
     return NextResponse.json({ ok: true });
   } catch (e) {
