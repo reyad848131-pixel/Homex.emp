@@ -145,21 +145,21 @@ export default function CurtainOrdersClient() {
         <div className="text-center py-20 text-gray-400 text-sm">{t("coNoEntries")}</div>
       ) : (
         <div className="overflow-x-auto bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl">
-          <table className="w-full text-sm border-collapse min-w-[940px]">
+          <table className="w-full text-sm border-collapse table-fixed min-w-[1160px]">
             <thead>
               <tr className="bg-gray-50 dark:bg-gray-900/50 text-gray-600 dark:text-gray-300 text-xs">
                 <th className="p-2 border-b border-gray-200 dark:border-gray-700 text-center w-10">{t("coColNo")}</th>
-                <th className="p-2 border-b border-gray-200 dark:border-gray-700 text-start">{t("coColCustomer")}</th>
-                <th className="p-2 border-b border-gray-200 dark:border-gray-700 text-center">{t("coColDate")}</th>
-                <th className="p-2 border-b border-gray-200 dark:border-gray-700 text-start">{t("coColPhone")}</th>
-                <th className="p-2 border-b border-gray-200 dark:border-gray-700 text-start">{t("coColPlace")}</th>
-                <th className="p-2 border-b border-gray-200 dark:border-gray-700 text-center">{t("coColCount")}</th>
-                <th className="p-2 border-b border-gray-200 dark:border-gray-700 text-center">{t("coColBill")}</th>
-                <th className="p-2 border-b border-gray-200 dark:border-gray-700 text-center">{t("coColOur")}</th>
-                <th className="p-2 border-b border-gray-200 dark:border-gray-700 text-center">{t("coColOutside")}</th>
-                <th className="p-2 border-b border-gray-200 dark:border-gray-700 text-center">{t("coColDiff")}</th>
-                <th className="p-2 border-b border-gray-200 dark:border-gray-700 text-center">{t("coColStatus")}</th>
-                <th className="p-2 border-b border-gray-200 dark:border-gray-700 w-8"></th>
+                <th className="p-2 border-b border-gray-200 dark:border-gray-700 text-start w-40">{t("coColCustomer")}</th>
+                <th className="p-2 border-b border-gray-200 dark:border-gray-700 text-center w-28">{t("coColDate")}</th>
+                <th className="p-2 border-b border-gray-200 dark:border-gray-700 text-center w-28">{t("coColPhone")}</th>
+                <th className="p-2 border-b border-gray-200 dark:border-gray-700 text-start w-36">{t("coColPlace")}</th>
+                <th className="p-2 border-b border-gray-200 dark:border-gray-700 text-center w-16">{t("coColCount")}</th>
+                <th className="p-2 border-b border-gray-200 dark:border-gray-700 text-center w-24">{t("coColBill")}</th>
+                <th className="p-2 border-b border-gray-200 dark:border-gray-700 text-center w-24">{t("coColOur")}</th>
+                <th className="p-2 border-b border-gray-200 dark:border-gray-700 text-center w-24">{t("coColOutside")}</th>
+                <th className="p-2 border-b border-gray-200 dark:border-gray-700 text-center w-20">{t("coColDiff")}</th>
+                <th className="p-2 border-b border-gray-200 dark:border-gray-700 text-center w-32">{t("coColStatus")}</th>
+                <th className="p-2 border-b border-gray-200 dark:border-gray-700 w-10"></th>
               </tr>
             </thead>
             <tbody>
@@ -190,37 +190,37 @@ export default function CurtainOrdersClient() {
                       {std ? (
                         <input value={val(e, "phone") ?? ""} onChange={(ev) => setDraftVal(e.id, "phone", ev.target.value)}
                           onBlur={(ev) => { clearDraft(e.id, "phone"); if (ev.target.value !== e.phone) save(e.id, { phone: ev.target.value }); }}
-                          placeholder="9xxxxxxx" className={inputCls + " text-center w-32"} />
+                          placeholder="9xxxxxxx" className={inputCls + " text-center"} />
                       ) : (e.phone ? `${e.phoneCode || ""}${e.phone}` : "—")}
                     </td>
                     <td className="p-2 text-gray-700 dark:text-gray-300 max-w-[180px]">
                       {std ? (
                         <input value={val(e, "region") ?? ""} onChange={(ev) => setDraftVal(e.id, "region", ev.target.value)}
                           onBlur={(ev) => { clearDraft(e.id, "region"); if (ev.target.value !== e.region) save(e.id, { region: ev.target.value }); }}
-                          placeholder={t("coColPlace")} className={inputCls + " w-44"} />
+                          placeholder={t("coColPlace")} className={inputCls} />
                       ) : (<span className="truncate block" title={e.region}>{e.region || "—"}</span>)}
                     </td>
                     <td className="p-2 text-center text-gray-700 dark:text-gray-300">
                       {std ? (
                         <input type="number" min="0" value={val(e, "curtainCount") ?? ""} onChange={(ev) => setDraftVal(e.id, "curtainCount", ev.target.value)}
                           onBlur={(ev) => { clearDraft(e.id, "curtainCount"); const n = ev.target.value === "" ? 0 : parseInt(ev.target.value, 10); if (n !== e.curtainCount) save(e.id, { curtainCount: n }); }}
-                          className={inputCls + " text-center w-16"} />
+                          className={inputCls + " text-center"} />
                       ) : (e.curtainCount || "—")}
                     </td>
                     <td className="p-2">
                       <input value={val(e, "advanceBillNo") ?? ""} onChange={(ev) => setDraftVal(e.id, "advanceBillNo", ev.target.value)}
                         onBlur={(ev) => { clearDraft(e.id, "advanceBillNo"); if (ev.target.value !== e.advanceBillNo) save(e.id, { advanceBillNo: ev.target.value }); }}
-                        placeholder="SW-000" className={inputCls + " text-center w-24"} />
+                        placeholder="SW-000" className={inputCls + " text-center"} />
                     </td>
                     <td className="p-2">
                       <input type="number" step="0.001" min="0" value={val(e, "ourPrice") ?? ""} onChange={(ev) => setDraftVal(e.id, "ourPrice", ev.target.value)}
                         onBlur={(ev) => { clearDraft(e.id, "ourPrice"); const n = ev.target.value === "" ? null : Number(ev.target.value); const cur = e.ourPriceOverridden ? e.ourPrice : (std ? e.ourPrice : null); if (n !== cur) save(e.id, { ourPrice: n }); }}
-                        placeholder={fmt(e.curtainTotal)} className={`${inputCls} text-center w-24 ${e.ourPriceOverridden ? "" : "border-dashed text-gray-500"}`} />
+                        placeholder={fmt(e.curtainTotal)} className={`${inputCls} text-center ${e.ourPriceOverridden ? "" : "border-dashed text-gray-500"}`} />
                     </td>
                     <td className="p-2">
                       <input type="number" step="0.001" min="0" value={val(e, "outsidePrice") ?? ""} onChange={(ev) => setDraftVal(e.id, "outsidePrice", ev.target.value)}
                         onBlur={(ev) => { clearDraft(e.id, "outsidePrice"); const n = Number(ev.target.value || 0); if (n !== e.outsidePrice) save(e.id, { outsidePrice: n }); }}
-                        placeholder="0.000" className={inputCls + " text-center w-24"} />
+                        placeholder="0.000" className={inputCls + " text-center"} />
                     </td>
                     <td className="p-2 text-center whitespace-nowrap">
                       <span className={`font-black ${diff > 0 ? "text-green-600 dark:text-green-400" : diff < 0 ? "text-red-600 dark:text-red-400" : "text-gray-400"}`}>{fmt(diff)}</span>
