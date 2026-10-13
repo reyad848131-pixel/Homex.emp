@@ -2,6 +2,7 @@ import { getAuth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { getSettings } from "@/lib/settings";
 import { getRolePermissions } from "@/lib/permissions";
+import { applyQuoteLocation } from "@/lib/quote-location";
 import QuoteDetailClient from "./quote-detail-client";
 
 export const dynamic = "force-dynamic";
@@ -42,6 +43,10 @@ export default async function QuotationDetailPage({ params }: { params: Promise<
   if (quotation && user?.role === "sales" && quotation.employeeId !== user.id) {
     quotation = null;
   }
+
+  // Overlay this order's own location snapshot onto the customer (see
+  // quote-location.ts) so the quote shows the place chosen for THIS order.
+  if (quotation) applyQuoteLocation(quotation);
 
   // Serialize to the exact JSON shape the client interface expects (Dates ->
   // ISO strings), identical to what the /api/quotations/[id] response returns.

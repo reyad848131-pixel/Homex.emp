@@ -1,6 +1,7 @@
 import { prisma } from "@/lib/prisma";
 import { getSettings } from "@/lib/settings";
 import { spreadAdditionalFee } from "@/lib/quote-calc";
+import { applyQuoteLocation } from "@/lib/quote-location";
 import { QuoteDecision } from "./decision";
 
 export const dynamic = "force-dynamic";
@@ -58,6 +59,8 @@ export default async function PublicQuotePage({ params }: { params: Promise<{ to
       </div>
     );
   }
+
+  applyQuoteLocation(q);
 
   const s = await getSettings().catch(() => ({} as Record<string, string>));
   const companyName = s.company_name || "homex";

@@ -6,6 +6,7 @@ import { getSettings } from "@/lib/settings";
 import { pdfToolbar } from "@/lib/pdf-shell";
 import { spreadAdditionalFee } from "@/lib/quote-calc";
 import QRCode from "qrcode";
+import { applyQuoteLocation } from "@/lib/quote-location";
 
 // Official quotation document (premium redesign). Rendered on screen (with the
 // save toolbar) and by headless Chromium for the WhatsApp PDF via pdf-file.
@@ -448,6 +449,7 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ id: 
     if (user.role === "sales" && quotation.employee.id !== user.id) {
       return NextResponse.json({ error: "Forbidden" }, { status: 403 });
     }
+    applyQuoteLocation(quotation);
 
     const s = await getSettings();
     const html = await buildQuotationPdfHtml(quotation, s, {

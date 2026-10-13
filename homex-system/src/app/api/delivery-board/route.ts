@@ -4,6 +4,7 @@ import { prisma } from "@/lib/prisma";
 import { roundMoney } from "@/lib/utils";
 import { normalizeCredential } from "@/lib/text";
 import { boardEditorId, canEditBoard } from "@/lib/delivery-board";
+import { applyQuoteLocations } from "@/lib/quote-location";
 
 // Monthly delivery board: a curated, one-editor organisational view of
 // deliveries. Data is pulled live from the quotations, so it always reflects
@@ -110,6 +111,7 @@ export async function GET(req: NextRequest) {
       take: 400,
     });
 
+    applyQuoteLocations(rows);
     const entries = rows.map(entryShape);
     return NextResponse.json({
       canEdit,

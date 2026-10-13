@@ -2,6 +2,7 @@ import { prisma } from "@/lib/prisma";
 import { getSetting } from "@/lib/settings";
 import { mergeProduction, type ProductionConfig } from "@/lib/production";
 import { mergeSpecsCatalog, type SpecsCatalog } from "@/lib/specs-catalog";
+import { applyQuoteLocations } from "@/lib/quote-location";
 
 // Foreman console data. All "day" params are YYYY-MM-DD in the company's local
 // zone; we bound queries to that whole day.
@@ -204,6 +205,7 @@ export async function getForemanInstalls(dateStr: string) {
       where: { dispatchDate: { gte: start, lte: end } },
       select: {
         id: true, quoteNumber: true, deliveryLocation: true, deliveryTime: true, workStatus: true,
+        governorate: true, wilayat: true, address: true,
         customer: { select: { name: true, governorate: true, wilayat: true } },
       },
       orderBy: { deliveryTime: "asc" },
@@ -213,6 +215,7 @@ export async function getForemanInstalls(dateStr: string) {
       include: { members: { include: { worker: { select: { id: true, name: true, color: true } } } } },
     }),
   ]);
+  applyQuoteLocations(quotes);
   const crewByQuote = new Map(crews.map((c) => [c.quotationId, c]));
   return quotes.map((q) => {
     const c = crewByQuote.get(q.id);

@@ -60,7 +60,10 @@ export async function POST(
       return NextResponse.json({ error: "الطلب مرتبط بهذا العميل بالفعل" }, { status: 400 });
     }
 
-    await prisma.quotation.update({ where: { id }, data: { customerId: targetId } });
+    // Moving to a different customer: drop this order's location snapshot so it
+    // falls back to the new customer's saved location (the old place no longer
+    // applies). The user can re-enter a per-order location afterwards if needed.
+    await prisma.quotation.update({ where: { id }, data: { customerId: targetId, governorate: null, wilayat: null, address: null } });
     await logAction(
       user.id, "reassign", "quotation", id,
       JSON.stringify({ from: quotation.customer?.name, to: targetName, toId: targetId })

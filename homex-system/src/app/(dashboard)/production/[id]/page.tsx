@@ -3,6 +3,7 @@ import { getAuth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { userCan } from "@/lib/permissions";
 import { ProductionClient } from "./production-client";
+import { applyQuoteLocation } from "@/lib/quote-location";
 
 export const dynamic = "force-dynamic";
 
@@ -20,6 +21,7 @@ export default async function ProductionPage({ params }: { params: Promise<{ id:
     where: { id },
     select: {
       id: true, quoteNumber: true, total: true, deliveryDate: true, workStatus: true,
+      governorate: true, wilayat: true, address: true,
       customer: { select: { name: true, phone: true, phoneCode: true, governorate: true, wilayat: true } },
       items: {
         orderBy: { sortOrder: "asc" },
@@ -38,6 +40,7 @@ export default async function ProductionPage({ params }: { params: Promise<{ id:
     },
   });
   if (!order) notFound();
+  applyQuoteLocation(order);
 
   const workers = await prisma.worker.findMany({
     where: { isActive: true },

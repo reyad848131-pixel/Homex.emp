@@ -2,6 +2,7 @@ import { prisma } from "@/lib/prisma";
 import { VALID_WORK_STATUSES } from "@/lib/types";
 import { UPCOMING_FIRST_ORDER } from "@/lib/schedule-order";
 import { normalizeCredential } from "@/lib/text";
+import { applyQuoteLocations } from "@/lib/quote-location";
 
 export interface WorkOrdersParams {
   workStatus?: string | null;
@@ -117,6 +118,7 @@ export async function getWorkOrders(p: WorkOrdersParams) {
   for (const sc of statusCounts) if (sc.workStatus) counts[sc.workStatus] = sc._count;
   counts.no_status = totalWithDelivery - statusCounts.reduce((s, c) => s + (c.workStatus ? c._count : 0), 0);
 
+  applyQuoteLocations(quotations);
   return { quotations, counts };
 }
 
@@ -167,5 +169,6 @@ export async function getDeliverySchedule(p: { from?: string | null; to?: string
     orderBy: [{ dispatchDate: "asc" }, { deliveryTime: "asc" }],
     take: 1500,
   });
+  applyQuoteLocations(quotations);
   return { quotations };
 }

@@ -6,6 +6,7 @@ import { curtainCountFromDesc } from "@/lib/order-rules";
 import { CURTAIN_WORK_STATUSES } from "@/lib/curtain-orders";
 import { normalizeCredential } from "@/lib/text";
 import { logAction } from "@/lib/audit";
+import { applyQuoteLocations } from "@/lib/quote-location";
 
 // Curtain-order tracker. Curtains are made by an external subcontractor:
 //  - LINKED rows come live from any quotation that contains curtain items (a
@@ -46,6 +47,7 @@ export async function GET(req: NextRequest) {
       take: 800,
     });
 
+    applyQuoteLocations(quotes);
     const linked = quotes.map((q) => {
       const curtainTotal = roundMoney(q.items.reduce((s, it) => s + (it.lineTotal || 0), 0));
       const curtainCount = q.items.reduce((s, it) => s + curtainCountFromDesc(it.description), 0);

@@ -182,6 +182,13 @@ model Quotation {
   quoteNumber   String    @unique @map("quote_number")
   customerId    String    @map("customer_id")
   employeeId    String    @map("employee_id")
+  // Per-order delivery location SNAPSHOT. The customer is linked by phone and is
+  // never modified, but the same person may order for different places — so each
+  // quote carries its own location here. Reads prefer these; when null (old
+  // orders) they fall back to the customer's saved location.
+  governorate   String?   @map("governorate")
+  wilayat       String?   @map("wilayat")
+  address       String?   @map("address")
   status        String    @default("draft")
   statusComment String?   @map("status_comment")
   subtotal      Float     @default(0)

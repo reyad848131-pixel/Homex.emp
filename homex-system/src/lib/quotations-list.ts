@@ -1,6 +1,7 @@
 import { prisma } from "@/lib/prisma";
 import { UPCOMING_FIRST_ORDER } from "@/lib/schedule-order";
 import { normalizeCredential } from "@/lib/text";
+import { applyQuoteLocations } from "@/lib/quote-location";
 
 export interface QuotationListParams {
   userId: string;
@@ -60,5 +61,6 @@ export async function getQuotationsList(p: QuotationListParams) {
     prisma.quotation.count({ where }),
   ]);
 
+  applyQuoteLocations(quotations);
   return { quotations, total, page, totalPages: Math.ceil(total / limit) };
 }

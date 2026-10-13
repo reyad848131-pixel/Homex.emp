@@ -10,6 +10,7 @@ import { getSetting, getSettings } from "@/lib/settings";
 import { isFinanciallyLocked, newTotalBelowPaid, canSetStatus } from "@/lib/quote-rules";
 import { userCan } from "@/lib/permissions";
 import { priceEditorIds, canEditPrice, hasPriceOverride } from "@/lib/price-permission";
+import { applyQuoteLocation } from "@/lib/quote-location";
 
 const VALID_STATUSES = ["draft", "pending", "approved", "declined", "revised"];
 
@@ -70,6 +71,7 @@ export async function GET(
       return NextResponse.json({ error: "Forbidden" }, { status: 403 });
     }
 
+    applyQuoteLocation(quotation);
     return NextResponse.json(quotation);
   } catch (e) {
     console.error("API error [/api/quotations/[id]]:", e);
@@ -242,15 +244,15 @@ export async function PATCH(
         );
 
         if (body.customer && body.customerId) {
+          // Identity (name/phone) belongs to the shared customer record; the
+          // LOCATION belongs to THIS order only (snapshot on the quotation
+          // below) so other orders of the same person aren't changed.
           await tx.customer.update({
             where: { id: body.customerId },
             data: {
               name: body.customer.name,
               phone: body.customer.phone,
               phoneCode: body.customer.phoneCode || "+968",
-              governorate: body.customer.governorate,
-              wilayat: body.customer.wilayat,
-              ...(body.customer.address !== undefined ? { address: body.customer.address } : {}),
             },
           });
         }
@@ -258,6 +260,11 @@ export async function PATCH(
         return tx.quotation.update({
           where: { id },
           data: {
+            ...(body.customer ? {
+              governorate: body.customer.governorate || null,
+              wilayat: body.customer.wilayat || null,
+              ...(body.customer.address !== undefined ? { address: body.customer.address || null } : {}),
+            } : {}),
             subtotal: totals.subtotal,
             discountType: "amount",
             discountValue: totals.discountAmount,
@@ -348,17 +355,26 @@ export async function PATCH(
       if (!c.name || !String(c.name).trim()) {
         return NextResponse.json({ error: "اسم الزبون مطلوب" }, { status: 400 });
       }
+      // Identity (name/phone) → shared customer record. Location → THIS order's
+      // snapshot only, so other orders of the same person stay unchanged.
       await prisma.customer.update({
         where: { id: body.customerId },
         data: {
           name: String(c.name).trim(),
           ...(c.phone !== undefined ? { phone: c.phone } : {}),
           ...(c.phoneCode !== undefined ? { phoneCode: c.phoneCode || "+968" } : {}),
-          ...(c.governorate !== undefined ? { governorate: c.governorate } : {}),
-          ...(c.wilayat !== undefined ? { wilayat: c.wilayat } : {}),
-          ...(c.address !== undefined ? { address: c.address } : {}),
         },
       });
+      if (c.governorate !== undefined || c.wilayat !== undefined || c.address !== undefined) {
+        await prisma.quotation.update({
+          where: { id },
+          data: {
+            ...(c.governorate !== undefined ? { governorate: c.governorate || null } : {}),
+            ...(c.wilayat !== undefined ? { wilayat: c.wilayat || null } : {}),
+            ...(c.address !== undefined ? { address: c.address || null } : {}),
+          },
+        });
+      }
       await logAction(user.id, "update", "customer", body.customerId, "customer_info_edit");
     }
 
