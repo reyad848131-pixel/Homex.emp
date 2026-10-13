@@ -572,11 +572,8 @@ export function WorkOrdersClient({ initialData }: { initialData: { quotations: W
         </div>
       ) : (
         <div className="space-y-3">
-          {clusterAdjacent(sortByStatus
-            ? [...data.quotations].sort((a, b) => statusRank(a.workStatus) - statusRank(b.workStatus))
-            : data.quotations
-          ).map((q) => {
-            const grouped = !!(q.boardGroupId && (groupSizes.get(q.boardGroupId) || 0) > 1);
+          {(() => {
+            const renderCard = (q: WorkQuotation) => {
             const days = getDaysRemaining(q.deliveryDate);
             const autoUrgent = isAutoUrgent(q.deliveryDate, q.workStatus);
             const ws = q.workStatus ? WORK_STATUS_MAP[q.workStatus] : null;
@@ -603,9 +600,7 @@ export function WorkOrdersClient({ initialData }: { initialData: { quotations: W
                   // Whole-card tint by work status; falls back to plain white.
                   (q.workStatus && WORK_CARD_TINT[q.workStatus]) || "bg-white dark:bg-gray-800 border-gray-200 dark:border-gray-700",
                   // Urgent orders keep a strong red border on top of the tint.
-                  (q.hasRedAlert || autoUrgent) && q.workStatus !== "delivered" && "border-red-400 dark:border-red-600",
-                  // Merged concurrent orders of one customer: a teal side ribbon.
-                  grouped && "border-s-4 border-s-teal-400 dark:border-s-teal-500"
+                  (q.hasRedAlert || autoUrgent) && q.workStatus !== "delivered" && "border-red-400 dark:border-red-600"
                 )}
               >
                 <div
@@ -622,11 +617,6 @@ export function WorkOrdersClient({ initialData }: { initialData: { quotations: W
                         {q.quoteNumber}
                       </Link>
                       <span className="text-sm font-semibold text-gray-700 dark:text-gray-300">{displayName(q.customer.name, locale)}</span>
-                      {grouped && (
-                        <span className="text-[10px] font-bold px-2 py-0.5 rounded bg-teal-100 text-teal-700 dark:bg-teal-900/30 dark:text-teal-300 inline-flex items-center gap-1">
-                          <Users className="w-3 h-3" /> {t("woSameCustomer")}
-                        </span>
-                      )}
                       {ws && wsKey && (
                         <span className={cn("text-[10px] font-bold px-2 py-0.5 rounded", ws.badgeColor)}>
                           {t(wsKey)}
@@ -918,7 +908,31 @@ export function WorkOrdersClient({ initialData }: { initialData: { quotations: W
                 )}
               </div>
             );
-          })}
+            };
+            // Group consecutive orders that share a boardGroupId (same customer,
+            // merged) into one bordered container with a header; everything else
+            // renders as a standalone card.
+            const ordered = clusterAdjacent(sortByStatus
+              ? [...data.quotations].sort((a, b) => statusRank(a.workStatus) - statusRank(b.workStatus))
+              : data.quotations);
+            const blocks: { group: boolean; items: WorkQuotation[] }[] = [];
+            for (const q of ordered) {
+              const gid = q.boardGroupId && (groupSizes.get(q.boardGroupId) || 0) > 1 ? q.boardGroupId : null;
+              const last = blocks[blocks.length - 1];
+              if (gid && last && last.group && last.items[0].boardGroupId === gid) last.items.push(q);
+              else blocks.push({ group: !!gid, items: [q] });
+            }
+            return blocks.map((block) => block.group ? (
+              <div key={`grp-${block.items[0].boardGroupId}`} className="rounded-2xl border-2 border-teal-300 dark:border-teal-700 bg-teal-50/40 dark:bg-teal-900/10 p-2.5 space-y-2.5">
+                <div className="flex items-center gap-2 px-1.5 pt-0.5">
+                  <Users className="w-4 h-4 text-teal-600 shrink-0" />
+                  <span className="text-sm font-bold text-teal-700 dark:text-teal-300">{displayName(block.items[0].customer.name, locale)}</span>
+                  <span className="text-[11px] font-bold text-teal-700 dark:text-teal-300 bg-teal-100 dark:bg-teal-900/40 rounded-full px-2 py-0.5">{t("woLinkedOrders")} · {block.items.length}</span>
+                </div>
+                {block.items.map((q) => renderCard(q))}
+              </div>
+            ) : renderCard(block.items[0]));
+          })()}
         </div>
       )}
 

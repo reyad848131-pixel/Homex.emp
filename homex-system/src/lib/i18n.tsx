@@ -554,6 +554,7 @@ const translations = {
   workOrdersTitle: { ar: "إدارة الأعمال والتسليم", en: "Work Orders & Delivery" },
   woDispatchSet: { ar: "موعد تسليم محدد", en: "Delivery date set" },
   woSameCustomer: { ar: "نفس العميل", en: "Same customer" },
+  woLinkedOrders: { ar: "طلبات مرتبطة", en: "Linked orders" },
   woSortDefault: { ar: "ترتيب: الأولوية", en: "Sort: priority" },
   woSortByStage: { ar: "ترتيب: مراحل العمل", en: "Sort: by stage" },
   woSortByStageHint: { ar: "بدّل الترتيب: افتراضي (الأولوية والأحدث) ↔ حسب مرحلة العمل (يحتاج طلب فوق ثم جاهز للتنفيذ فقيد التنفيذ… وتم التوصيل تحت)", en: "Toggle order: default (priority + newest) ↔ by work stage (needs-order on top, then ready-to-execute, in-progress… delivered at the bottom)" },
