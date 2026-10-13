@@ -28,7 +28,10 @@ async function findActiveBoardSibling(currentId: string, customerId: string) {
       // null on legacy orders until the board is first opened (lazy backfill),
       // so don't require it here or those siblings would be missed.
       deliveryDate: { not: null },
-      workStatus: { notIn: ["ready_for_delivery", "delivered"] },
+      // Offer merge for any order still on the board, INCLUDING "ready for
+      // delivery" — only a fully DELIVERED order is excluded (it's finished, so
+      // a new order for that customer must be separate).
+      workStatus: { not: "delivered" },
       customer: { phone: cust.phone },
     },
     orderBy: { boardMonth: "desc" },
