@@ -10,8 +10,14 @@ export interface WorkOrdersParams {
   hasRed?: boolean;
   search?: string | null;
   customer?: string | null;
+  // deliveryFrom/deliveryTo filter by the DELIVERY date (used by the contract
+  // availability hint and the delivery-calendar day picker).
   deliveryFrom?: string | null;
   deliveryTo?: string | null;
+  // boardFrom/boardTo (and month) filter by the FROZEN boardMonth — the work
+  // board's own month navigation, independent of the delivery date.
+  boardFrom?: string | null;
+  boardTo?: string | null;
   month?: string | null;
 }
 
@@ -68,10 +74,18 @@ export async function getWorkOrders(p: WorkOrdersParams) {
   if (p.customer) {
     where.customer = { ...where.customer, name: { contains: p.customer, mode: "insensitive" as const } };
   }
-  if (p.deliveryFrom || p.deliveryTo) {
+  // The work board's own month navigation → the frozen boardMonth.
+  if (p.boardFrom || p.boardTo) {
     where.boardMonth = { ...where.boardMonth };
-    if (p.deliveryFrom) where.boardMonth.gte = new Date(p.deliveryFrom);
-    if (p.deliveryTo) where.boardMonth.lte = new Date(p.deliveryTo + "T23:59:59.999Z");
+    if (p.boardFrom) where.boardMonth.gte = new Date(p.boardFrom);
+    if (p.boardTo) where.boardMonth.lte = new Date(p.boardTo + "T23:59:59.999Z");
+  }
+  // Delivery-date window (contract availability hint + delivery-calendar picker)
+  // → stays on deliveryDate (keeps the base { not: null } via the spread).
+  if (p.deliveryFrom || p.deliveryTo) {
+    where.deliveryDate = { ...where.deliveryDate };
+    if (p.deliveryFrom) where.deliveryDate.gte = new Date(p.deliveryFrom);
+    if (p.deliveryTo) where.deliveryDate.lte = new Date(p.deliveryTo + "T23:59:59.999Z");
   }
 
   const deliveryWhere = { deliveryDate: { not: null } } as const;

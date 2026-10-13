@@ -23,6 +23,8 @@ export async function GET(req: NextRequest) {
       customer: searchParams.get("customer"),
       deliveryFrom: searchParams.get("deliveryFrom"),
       deliveryTo: searchParams.get("deliveryTo"),
+      boardFrom: searchParams.get("boardFrom"),
+      boardTo: searchParams.get("boardTo"),
       month: searchParams.get("month"),
     });
 

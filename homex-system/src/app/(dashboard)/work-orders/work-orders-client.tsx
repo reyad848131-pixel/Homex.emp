@@ -244,8 +244,11 @@ export function WorkOrdersClient({ initialData }: { initialData: { quotations: W
     if (alertFilter === "orange") params.set("hasOrange", "true");
     if (alertFilter === "red") params.set("hasRed", "true");
     if (debouncedSearch) params.set("search", debouncedSearch);
-    if (deliveryFrom) params.set("deliveryFrom", deliveryFrom);
-    if (deliveryTo) params.set("deliveryTo", deliveryTo);
+    // The board's month navigation filters the FROZEN boardMonth, not the
+    // delivery date — send boardFrom/boardTo (deliveryFrom/To mean a delivery
+    // window, used by other screens).
+    if (deliveryFrom) params.set("boardFrom", deliveryFrom);
+    if (deliveryTo) params.set("boardTo", deliveryTo);
 
     fetch(`/api/work-orders?${params}`)
       .then((r) => r.json())

@@ -20,10 +20,15 @@ type QLoc = {
 };
 
 export function applyQuoteLocation<T extends QLoc>(q: T): T {
-  if (q.customer) {
-    if (q.governorate) q.customer.governorate = q.governorate;
-    if (q.wilayat) q.customer.wilayat = q.wilayat;
-    if (q.address) q.customer.address = q.address;
+  // All-or-nothing: a quote either has its own location snapshot or it doesn't.
+  // When it does (governorate/wilayat were entered for this order), take ALL
+  // three fields from the quote — including a blank address — so we never mix a
+  // new governorate/wilayat with the customer's stale address from another place.
+  // When it has no snapshot (old orders), leave the customer's location showing.
+  if (q.customer && (q.governorate || q.wilayat)) {
+    q.customer.governorate = q.governorate ?? null;
+    q.customer.wilayat = q.wilayat ?? null;
+    q.customer.address = q.address ?? null;
   }
   return q;
 }

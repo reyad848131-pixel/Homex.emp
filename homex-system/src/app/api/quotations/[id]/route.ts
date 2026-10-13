@@ -24,8 +24,10 @@ async function findActiveBoardSibling(currentId: string, customerId: string) {
   return prisma.quotation.findFirst({
     where: {
       id: { not: currentId },
+      // "On the board" is defined by having a delivery date; boardMonth may be
+      // null on legacy orders until the board is first opened (lazy backfill),
+      // so don't require it here or those siblings would be missed.
       deliveryDate: { not: null },
-      boardMonth: { not: null },
       workStatus: { notIn: ["ready_for_delivery", "delivered"] },
       customer: { phone: cust.phone },
     },
@@ -136,14 +138,21 @@ export async function PATCH(
       if (mode === "merge" && body.mergeWith) {
         const primary = await prisma.quotation.findFirst({
           where: { id: String(body.mergeWith) },
-          select: { id: true, boardMonth: true, boardGroupId: true },
+          select: { id: true, boardMonth: true, boardGroupId: true, contractedAt: true, createdAt: true },
         });
         if (primary) {
           // Sit this order under the primary's frozen month, in the same group.
-          boardMonth = primary.boardMonth ?? boardMonth;
+          // If the primary's boardMonth wasn't backfilled yet, derive it (and
+          // persist it) so BOTH orders share the exact same month bucket and
+          // actually cluster together on the board.
+          const primMonth = primary.boardMonth ?? primary.contractedAt ?? primary.createdAt;
+          boardMonth = primMonth;
           boardGroupId = primary.boardGroupId ?? primary.id;
-          if (!primary.boardGroupId) {
-            await prisma.quotation.update({ where: { id: primary.id }, data: { boardGroupId } });
+          const patch: { boardGroupId?: string; boardMonth?: Date } = {};
+          if (!primary.boardGroupId) patch.boardGroupId = boardGroupId;
+          if (!primary.boardMonth) patch.boardMonth = primMonth;
+          if (Object.keys(patch).length) {
+            await prisma.quotation.update({ where: { id: primary.id }, data: patch });
           }
         }
       }
