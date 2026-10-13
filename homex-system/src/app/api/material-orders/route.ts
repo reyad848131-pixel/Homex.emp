@@ -43,8 +43,10 @@ export async function GET(req: NextRequest) {
     }
     if (req.nextUrl.searchParams.get("view") === "supplier") {
       // Flat pending lines (not received) across all orders, for batch ordering.
+      // Exclude lines whose quotation was deleted (the global soft-delete filter
+      // only applies when quotation is the top-level model, not via this relation).
       const lines = await prisma.materialOrder.findMany({
-        where: { status: { in: ["needed", "ordered"] } },
+        where: { status: { in: ["needed", "ordered"] }, quotation: { deletedAt: null } },
         include: { supplier: true, quotation: { select: { id: true, quoteNumber: true, customer: { select: { name: true } } } } },
         orderBy: { createdAt: "asc" },
       });
@@ -72,6 +74,10 @@ export async function POST(req: NextRequest) {
     const quotationId = String(body.quotationId || "");
     const name = String(body.name || "").trim();
     if (!quotationId || !name) return NextResponse.json({ error: "بيانات ناقصة" }, { status: 400 });
+    // Never attach materials to a deleted/missing quotation (findFirst respects
+    // the soft-delete filter → a trashed quote returns null).
+    const q = await prisma.quotation.findFirst({ where: { id: quotationId }, select: { id: true } });
+    if (!q) return NextResponse.json({ error: "الكوتيشن غير موجود أو محذوف" }, { status: 404 });
     const qty = Number(body.quantity);
     const cost = Number(body.cost);
     const created = await prisma.materialOrder.create({

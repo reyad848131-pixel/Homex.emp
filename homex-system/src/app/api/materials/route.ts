@@ -21,7 +21,7 @@ export async function GET() {
     const [materials, demand] = await Promise.all([
       prisma.material.findMany({ orderBy: [{ isActive: "desc" }, { category: "asc" }, { name: "asc" }], take: 2000 }),
       // Open demand across customer orders (still needed / not yet received).
-      prisma.materialOrder.groupBy({ by: ["materialId"], where: { status: { in: ["needed", "ordered"] }, materialId: { not: null } }, _sum: { quantity: true } }),
+      prisma.materialOrder.groupBy({ by: ["materialId"], where: { status: { in: ["needed", "ordered"] }, materialId: { not: null }, quotation: { deletedAt: null } }, _sum: { quantity: true } }),
     ]);
     const demandMap = new Map(demand.map((d) => [d.materialId, d._sum.quantity || 0]));
     return NextResponse.json(materials.map((m) => ({ ...m, demand: demandMap.get(m.id) || 0 })));

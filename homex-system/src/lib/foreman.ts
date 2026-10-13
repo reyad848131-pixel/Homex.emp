@@ -134,7 +134,7 @@ export async function getForemanBoard(dateStr: string) {
     prisma.workerAttendance.findMany({ where: { date: { gte: start, lte: end } } }),
     // Assigned, not-done tasks on active (undelivered) quotes.
     prisma.itemTask.findMany({
-      where: { workerId: { not: null }, doneAt: null, quoteItem: { quotation: { workStatus: { in: ACTIVE_WORK } } } },
+      where: { workerId: { not: null }, doneAt: null, quoteItem: { quotation: { workStatus: { in: ACTIVE_WORK }, deletedAt: null } } },
       include: { quoteItem: { select: { description: true, quotation: { select: { id: true, quoteNumber: true, customer: { select: { name: true } } } } } } },
       orderBy: { sortOrder: "asc" },
       take: 2000,
@@ -147,7 +147,7 @@ export async function getForemanBoard(dateStr: string) {
     }),
     // Unassigned, not-done tasks on active quotes — the pool to hand out.
     prisma.itemTask.findMany({
-      where: { workerId: null, doneAt: null, quoteItem: { quotation: { workStatus: { in: ACTIVE_WORK } } } },
+      where: { workerId: null, doneAt: null, quoteItem: { quotation: { workStatus: { in: ACTIVE_WORK }, deletedAt: null } } },
       include: { quoteItem: { select: { description: true, quotation: { select: { id: true, quoteNumber: true, customer: { select: { name: true } } } } } } },
       orderBy: { sortOrder: "asc" },
       take: 500,
