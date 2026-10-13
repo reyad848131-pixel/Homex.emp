@@ -481,6 +481,7 @@ const translations = {
   roleCeo: { ar: "مدير تنفيذي (CEO)", en: "CEO" },
   approveQuoteBtn: { ar: "اعتماد العرض", en: "Approve quote" },
   trash: { ar: "المحذوفات", en: "Trash" },
+  ownerAudit: { ar: "فحص الموقع", en: "Site Audit" },
   restore: { ar: "استرجاع", en: "Restore" },
   permanentDelete: { ar: "حذف نهائي", en: "Delete permanently" },
   trashEmpty: { ar: "لا يوجد عناصر محذوفة", en: "Trash is empty" },

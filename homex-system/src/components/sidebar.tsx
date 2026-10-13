@@ -34,6 +34,7 @@ import {
   Blinds,
   Tag,
   Palette,
+  ShieldCheck,
 } from "lucide-react";
 import { useState, useEffect } from "react";
 import { DarkModeToggle } from "@/components/dark-mode-toggle";
@@ -91,6 +92,8 @@ const allItems: Array<{ href: string; labelKey: TranslationKey; icon: any; perm?
   { href: "/foreman", labelKey: "foremanTitle", icon: HardHat, perm: undefined },
   { href: "/settings", labelKey: "settings", icon: Settings, perm: ["settings"] },
   { href: "/trash", labelKey: "trash", icon: Trash2, perm: ["trash"] },
+  // Owner-only; further filtered below to civil id 2016 and the page 404s otherwise.
+  { href: "/owner-audit", labelKey: "ownerAudit", icon: ShieldCheck },
 ];
 
 export function Sidebar({ user, permissions, canAccessSettings, canManagePricing, canManageCatalog, canAccessForeman }: SidebarProps) {
@@ -127,7 +130,9 @@ export function Sidebar({ user, permissions, canAccessSettings, canManagePricing
   ).filter((it) => it.href !== "/settings" || canAccessSettings)
    .filter((it) => it.href !== "/pricing" || canManagePricing)
    .filter((it) => it.href !== "/catalog" || canManageCatalog)
-   .filter((it) => it.href !== "/foreman" || canAccessForeman);
+   .filter((it) => it.href !== "/foreman" || canAccessForeman)
+   // The owner-audit page is private to the owner (civil id 2016).
+   .filter((it) => it.href !== "/owner-audit" || user.civilId === "2016");
 
   const content = (
     <>
