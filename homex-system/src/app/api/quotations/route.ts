@@ -83,6 +83,22 @@ export async function POST(req: NextRequest) {
           createdBy: user.id,
         },
       });
+    } else {
+      // Reusing an existing customer (same phone): refresh their details with
+      // what was entered on THIS quote, so the quote reflects the location/name/
+      // address just chosen — not a stale value saved on an earlier order. This
+      // was the bug where picking (الداخلية/بهلاء) still showed the old
+      // (البريمي/البريمي) because the old customer record was reused untouched.
+      customer = await prisma.customer.update({
+        where: { id: customer.id },
+        data: {
+          name: customerData.name || customer.name,
+          phoneCode: customerData.phoneCode || customer.phoneCode,
+          governorate: customerData.governorate || customer.governorate,
+          wilayat: customerData.wilayat || customer.wilayat,
+          address: customerData.address ?? customer.address,
+        },
+      });
     }
 
     const cfg = await getSettings();
