@@ -13,6 +13,29 @@ import { priceEditorIds, canEditPrice, hasPriceOverride } from "@/lib/price-perm
 
 const VALID_STATUSES = ["draft", "pending", "approved", "declined", "revised"];
 
+// Find another order already on the work board, for the SAME customer (matched
+// by phone — the most reliable key), that is still in work (not ready/delivered,
+// not deleted). Used at contract time to offer "merge into that month" vs. keep
+// the new order separate. findFirst respects the global soft-delete filter.
+async function findActiveBoardSibling(currentId: string, customerId: string) {
+  const cust = await prisma.customer.findFirst({ where: { id: customerId }, select: { phone: true } });
+  if (!cust?.phone) return null;
+  return prisma.quotation.findFirst({
+    where: {
+      id: { not: currentId },
+      deliveryDate: { not: null },
+      boardMonth: { not: null },
+      workStatus: { notIn: ["ready_for_delivery", "delivered"] },
+      customer: { phone: cust.phone },
+    },
+    orderBy: { boardMonth: "desc" },
+    select: {
+      id: true, quoteNumber: true, boardMonth: true, deliveryDate: true, workStatus: true,
+      customer: { select: { name: true, governorate: true, wilayat: true } },
+    },
+  });
+}
+
 export async function GET(
   req: NextRequest,
   { params }: { params: Promise<{ id: string }> }
@@ -96,11 +119,41 @@ export async function PATCH(
       if (!body.deliveryDate) {
         return NextResponse.json({ error: "تاريخ التسليم مطلوب" }, { status: 400 });
       }
+      // Concurrent-order detection: does the SAME customer (matched by phone)
+      // already have another order ON the board that is still in work (not yet
+      // ready / delivered, not deleted)? If so, and the UI hasn't yet chosen how
+      // to handle it, ask it to pick merge-into-that-month vs. a separate order.
+      const mode = body.boardMode === "merge" || body.boardMode === "separate" ? body.boardMode : null;
+      if (!mode) {
+        const sibling = await findActiveBoardSibling(id, quotation.customerId);
+        if (sibling) return NextResponse.json({ code: "duplicate_on_board", existing: sibling }, { status: 409 });
+      }
+      // Default: a fresh, independent order entering the board under this month.
+      let boardMonth = new Date();
+      let boardGroupId: string | null = null;
+      if (mode === "merge" && body.mergeWith) {
+        const primary = await prisma.quotation.findFirst({
+          where: { id: String(body.mergeWith) },
+          select: { id: true, boardMonth: true, boardGroupId: true },
+        });
+        if (primary) {
+          // Sit this order under the primary's frozen month, in the same group.
+          boardMonth = primary.boardMonth ?? boardMonth;
+          boardGroupId = primary.boardGroupId ?? primary.id;
+          if (!primary.boardGroupId) {
+            await prisma.quotation.update({ where: { id: primary.id }, data: { boardGroupId } });
+          }
+        }
+      }
       const updated = await prisma.quotation.update({
         where: { id },
         data: {
           status: "accepted",
           contractedAt: new Date(),
+          // Freeze the board-entry month now so the order stays under this month
+          // on the work board regardless of how its delivery date later moves.
+          boardMonth,
+          boardGroupId,
           deliveryDate: new Date(body.deliveryDate),
           deliveryTime: body.deliveryTime || null,
           deliveryDateEstimated: false,
@@ -408,14 +461,29 @@ export async function DELETE(
       return NextResponse.json({ error: "Insufficient permissions" }, { status: 403 });
     }
 
-    if (isFinanciallyLocked(quotation)) {
+    // Only ACTUAL money records (an invoice or recorded payments) block deletion
+    // — removing those would break financial history. Being merely accepted /
+    // signed (i.e. sitting on the work board) must NOT block deletion anymore:
+    // deleting such a quote is exactly how it should disappear from إدارة الأعمال.
+    const isManager = user.role === "admin" || user.role === "ceo" || user.role === "manager";
+    const hasMoney = !!quotation.invoice || (quotation._count?.payments ?? 0) > 0;
+    if (hasMoney) {
       return NextResponse.json(
-        { error: "لا يمكن حذف عرض معتمد أو مفوتر أو له دفعات", code: "locked" },
+        { error: "لا يمكن حذف عرض له فاتورة أو دفعات مسجّلة", code: "locked" },
         { status: 409 }
       );
     }
+    // Pulling a confirmed/contracted order off the board is a manager's call.
+    if (!isManager && (quotation.status === "accepted" || quotation.signedAt)) {
+      return NextResponse.json(
+        { error: "حذف عرض معتمد ومنقول لإدارة الأعمال يتطلب صلاحية مدير", code: "manager_only" },
+        { status: 403 }
+      );
+    }
 
-    // Soft delete: move to Trash instead of removing.
+    // Soft delete: move to Trash instead of removing. Because the work board (and
+    // every other list) queries the quotation model at top level, the global
+    // soft-delete filter drops it from إدارة الأعمال immediately.
     await prisma.quotation.update({ where: { id }, data: { deletedAt: new Date(), deletedBy: user.id } });
     await logAction(user.id, "delete", "quotation", id);
     return NextResponse.json({ success: true });

@@ -13,7 +13,7 @@ import { renderWaTemplate, waLinkFor, DEFAULT_WA_QUOTE, DEFAULT_WA_PDF } from "@
 import {
   ArrowRight, Printer, Trash2, CheckCircle, XCircle, Send,
   Clock, FileText, User, MapPin, Phone, Pencil, Download, Copy, MessageCircle, CalendarDays,
-  CreditCard, Plus, Banknote, RotateCcw, Receipt, MessageSquare, AlertCircle, Share2,
+  CreditCard, Plus, Banknote, RotateCcw, Receipt, MessageSquare, AlertCircle, Share2, Users,
 } from "lucide-react";
 import Link from "next/link";
 
@@ -159,6 +159,13 @@ export default function QuoteDetailClient({
   const [contractDate, setContractDate] = useState("");
   const [contractTime, setContractTime] = useState("");
   const [contractBusy, setContractBusy] = useState(false);
+  // Concurrent-order prompt: when the same customer already has an active order
+  // on the board, we ask whether to merge the new one into that month or keep it
+  // separate. Holds the existing sibling returned by the server (409).
+  const [dupSibling, setDupSibling] = useState<{
+    id: string; quoteNumber: string; boardMonth: string | null; deliveryDate: string | null;
+    workStatus: string | null; customer: { name: string; governorate: string | null; wilayat: string | null } | null;
+  } | null>(null);
   // How many deliveries are already scheduled on the chosen date (availability
   // hint). null = unknown / not loaded (or the user can't see the board).
   const [dayCount, setDayCount] = useState<number | null>(null);
@@ -180,7 +187,7 @@ export default function QuoteDetailClient({
     return () => { cancelled = true; };
   }, [showContract, contractDate, id]);
 
-  const convertToContract = async () => {
+  const convertToContract = async (boardMode?: "merge" | "separate", mergeWith?: string) => {
     if (!contractDate) { toast.error(t("contractDateRequired")); return; }
     if (contractBusy) return;
     setContractBusy(true);
@@ -188,17 +195,27 @@ export default function QuoteDetailClient({
       const res = await fetch(`/api/quotations/${id}`, {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ action: "contract", deliveryDate: contractDate, deliveryTime: contractTime || null }),
+        body: JSON.stringify({
+          action: "contract", deliveryDate: contractDate, deliveryTime: contractTime || null,
+          ...(boardMode ? { boardMode, mergeWith } : {}),
+        }),
       });
       if (res.ok) {
         const data = await res.json();
         setQ((prev) => prev ? { ...prev, status: "accepted", deliveryDate: data.deliveryDate, deliveryTime: data.deliveryTime } : prev);
         setShowContract(false);
+        setDupSibling(null);
         toast.success(t("contractCreated"));
         router.refresh();
       } else {
         const err = await res.json().catch(() => ({}));
-        toast.error(err.error || t("operationFailed"));
+        // The customer already has an active order on the board — let the user
+        // decide: merge into that month beside it, or keep this one separate.
+        if (res.status === 409 && err.code === "duplicate_on_board" && err.existing) {
+          setDupSibling(err.existing);
+        } else {
+          toast.error(err.error || t("operationFailed"));
+        }
       }
     } catch {
       toast.error(t("serverConnectionError"));
@@ -1019,11 +1036,41 @@ export default function QuoteDetailClient({
             )}
             {!(contractDate && dayCount !== null) && <div className="mb-4" />}
             <div className="flex gap-2">
-              <button onClick={convertToContract} disabled={contractBusy || !contractDate}
+              <button onClick={() => convertToContract()} disabled={contractBusy || !contractDate}
                 className="flex-1 inline-flex items-center justify-center gap-2 h-10 rounded-lg bg-gray-900 dark:bg-white dark:text-gray-900 text-white text-sm font-bold disabled:opacity-50">
                 {contractBusy ? <Clock className="w-4 h-4 animate-spin" /> : <CheckCircle className="w-4 h-4" />} {t("convertContractCta")}
               </button>
               <button onClick={() => setShowContract(false)} className="px-4 h-10 rounded-lg border border-gray-200 dark:border-gray-700 text-sm font-bold text-gray-600 dark:text-gray-300">{t("qdClose")}</button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Concurrent-order (merge vs. separate) choice modal */}
+      {dupSibling && (
+        <div className="fixed inset-0 bg-black/50 z-[60] flex items-center justify-center p-4 print:hidden" onClick={() => setDupSibling(null)}>
+          <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-xl w-full max-w-md p-6" onClick={(e) => e.stopPropagation()}>
+            <h3 className="text-lg font-bold mb-1 flex items-center gap-2">
+              <Users className="w-5 h-5 text-amber-500" /> {t("dupTitle")}
+            </h3>
+            <p className="text-sm text-gray-600 dark:text-gray-300 mb-3">{t("dupBody")}</p>
+            <div className="rounded-xl border border-amber-200 dark:border-amber-900/40 bg-amber-50/60 dark:bg-amber-900/10 p-3 mb-4 text-sm">
+              <p className="font-bold">{dupSibling.customer?.name || "—"}</p>
+              <p className="text-gray-500 dark:text-gray-400">
+                {t("dupExistingOrder")}: <span className="font-mono-en">{dupSibling.quoteNumber}</span>
+                {dupSibling.boardMonth ? ` — ${new Date(dupSibling.boardMonth).toLocaleDateString(dateLocale, { year: "numeric", month: "long" })}` : ""}
+              </p>
+            </div>
+            <div className="flex flex-col gap-2">
+              <button onClick={() => convertToContract("merge", dupSibling.id)} disabled={contractBusy}
+                className="w-full inline-flex items-center justify-center gap-2 h-11 rounded-lg bg-teal-600 text-white text-sm font-bold disabled:opacity-50">
+                <Users className="w-4 h-4" /> {t("dupMerge")}
+              </button>
+              <button onClick={() => convertToContract("separate")} disabled={contractBusy}
+                className="w-full inline-flex items-center justify-center gap-2 h-11 rounded-lg border border-gray-300 dark:border-gray-600 text-sm font-bold text-gray-700 dark:text-gray-200 disabled:opacity-50">
+                {t("dupSeparate")}
+              </button>
+              <button onClick={() => setDupSibling(null)} className="w-full h-9 text-xs font-bold text-gray-400">{t("qdClose")}</button>
             </div>
           </div>
         </div>

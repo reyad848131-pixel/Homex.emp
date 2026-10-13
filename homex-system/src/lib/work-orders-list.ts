@@ -25,15 +25,33 @@ async function healCompletedStatus() {
   catch { mergedCompleted = false; }
 }
 
+// One-time backfill: the work board switched from grouping by deliveryDate to a
+// FIXED boardMonth (frozen at contract time). Seed boardMonth for existing board
+// rows from contractedAt (when it was contracted) or, failing that, createdAt —
+// so historical orders keep sitting under the month they were actually taken,
+// not under their delivery date. Runs once per server instance; fills NULLs only.
+let boardMonthBackfilled = false;
+async function backfillBoardMonth() {
+  if (boardMonthBackfilled) return;
+  boardMonthBackfilled = true;
+  try {
+    await prisma.$executeRaw`UPDATE "quotations" SET "board_month" = COALESCE("contracted_at", "created_at") WHERE "delivery_date" IS NOT NULL AND "board_month" IS NULL`;
+  } catch { boardMonthBackfilled = false; }
+}
+
 // Single source of truth for the work-orders / schedule query, used by the API
 // route and by server-rendered pages so the board paints with real data.
 export async function getWorkOrders(p: WorkOrdersParams) {
   await healCompletedStatus();
+  await backfillBoardMonth();
+  // Presence on the board is unchanged (a contracted order has a deliveryDate),
+  // but the month/date navigation below filters by the FROZEN boardMonth, never
+  // by deliveryDate — the work board has nothing to do with the delivery date.
   const where: any = { deliveryDate: { not: null } };
 
   if (p.month) {
     const [y, m] = p.month.split("-").map(Number);
-    where.deliveryDate = { gte: new Date(y, m - 1, 1), lte: new Date(y, m, 0, 23, 59, 59, 999) };
+    where.boardMonth = { gte: new Date(y, m - 1, 1), lte: new Date(y, m, 0, 23, 59, 59, 999) };
   }
   if (p.workStatus && VALID_WORK_STATUSES.includes(p.workStatus)) where.workStatus = p.workStatus;
   if (p.hasOrange) where.hasOrangeAlert = true;
@@ -50,9 +68,9 @@ export async function getWorkOrders(p: WorkOrdersParams) {
     where.customer = { ...where.customer, name: { contains: p.customer, mode: "insensitive" as const } };
   }
   if (p.deliveryFrom || p.deliveryTo) {
-    where.deliveryDate = { ...where.deliveryDate };
-    if (p.deliveryFrom) where.deliveryDate.gte = new Date(p.deliveryFrom);
-    if (p.deliveryTo) where.deliveryDate.lte = new Date(p.deliveryTo + "T23:59:59.999Z");
+    where.boardMonth = { ...where.boardMonth };
+    if (p.deliveryFrom) where.boardMonth.gte = new Date(p.deliveryFrom);
+    if (p.deliveryTo) where.boardMonth.lte = new Date(p.deliveryTo + "T23:59:59.999Z");
   }
 
   const deliveryWhere = { deliveryDate: { not: null } } as const;

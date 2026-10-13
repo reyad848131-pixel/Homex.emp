@@ -39,6 +39,8 @@ export async function buildExportWorkbook(): Promise<Buffer> {
       orderBy: { createdAt: "desc" },
     }),
     prisma.payment.findMany({
+      // Exclude payments tied to deleted quotes (relation bypasses soft-delete).
+      where: { quotation: { deletedAt: null } },
       include: { quotation: { select: { quoteNumber: true, customer: { select: { name: true } } } }, recorder: { select: { name: true } } },
       orderBy: { paidAt: "desc" },
     }),

@@ -97,7 +97,9 @@ export default async function DashboardPage() {
       _sum: { total: true },
     }),
     prisma.payment.aggregate({
-      where: { quotation: { ...whereClause, status: { in: moneyStatuses } } },
+      // Payment is not a soft-delete-filtered model, so exclude deleted quotes'
+      // payments explicitly (the relation filter bypasses the global filter).
+      where: { quotation: { ...whereClause, status: { in: moneyStatuses }, deletedAt: null } },
       _sum: { amount: true },
     }),
     // Jobs waiting to be photographed (global — the queue isn't per-employee).

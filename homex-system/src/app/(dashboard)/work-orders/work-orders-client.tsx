@@ -27,6 +27,7 @@ import {
   Camera,
   HardHat,
   ListOrdered,
+  Users,
 } from "lucide-react";
 import { initials } from "@/lib/workers";
 import { displayName } from "@/lib/translit";
@@ -58,6 +59,7 @@ interface WorkQuotation {
   deliveryDate: string;
   dispatchDate: string | null;
   deliveryTime: string | null;
+  boardGroupId: string | null;
   workStatus: string | null;
   hasOrangeAlert: boolean;
   hasRedAlert: boolean;
@@ -411,6 +413,27 @@ export function WorkOrdersClient({ initialData }: { initialData: { quotations: W
     setData((prev) => (prev ? { ...prev, quotations: prev.quotations.map((q) => (q.id === prodId ? { ...q, items: fn(q.items) } : q)) } : prev));
   const prod = buildProductionHandlers(prodQ?.items || [], setProdItems, workers);
 
+  // Concurrent-order grouping: orders that were merged share a boardGroupId.
+  // Count members per group so we can flag the ones with 2+ (same customer), and
+  // cluster those rows adjacently (anchored at the first one) so the board shows
+  // them side by side as one customer's set.
+  const groupSizes = new Map<string, number>();
+  for (const q of data.quotations) if (q.boardGroupId) groupSizes.set(q.boardGroupId, (groupSizes.get(q.boardGroupId) || 0) + 1);
+  const clusterAdjacent = (list: WorkQuotation[]) => {
+    const out: WorkQuotation[] = [];
+    const placed = new Set<string>();
+    for (const q of list) {
+      if (placed.has(q.id)) continue;
+      out.push(q); placed.add(q.id);
+      if (q.boardGroupId && (groupSizes.get(q.boardGroupId) || 0) > 1) {
+        for (const other of list) {
+          if (!placed.has(other.id) && other.boardGroupId === q.boardGroupId) { out.push(other); placed.add(other.id); }
+        }
+      }
+    }
+    return out;
+  };
+
   return (
     <div>
       <div className="flex items-center justify-between mb-6">
@@ -546,10 +569,11 @@ export function WorkOrdersClient({ initialData }: { initialData: { quotations: W
         </div>
       ) : (
         <div className="space-y-3">
-          {(sortByStatus
+          {clusterAdjacent(sortByStatus
             ? [...data.quotations].sort((a, b) => statusRank(a.workStatus) - statusRank(b.workStatus))
             : data.quotations
           ).map((q) => {
+            const grouped = !!(q.boardGroupId && (groupSizes.get(q.boardGroupId) || 0) > 1);
             const days = getDaysRemaining(q.deliveryDate);
             const autoUrgent = isAutoUrgent(q.deliveryDate, q.workStatus);
             const ws = q.workStatus ? WORK_STATUS_MAP[q.workStatus] : null;
@@ -576,7 +600,9 @@ export function WorkOrdersClient({ initialData }: { initialData: { quotations: W
                   // Whole-card tint by work status; falls back to plain white.
                   (q.workStatus && WORK_CARD_TINT[q.workStatus]) || "bg-white dark:bg-gray-800 border-gray-200 dark:border-gray-700",
                   // Urgent orders keep a strong red border on top of the tint.
-                  (q.hasRedAlert || autoUrgent) && q.workStatus !== "delivered" && "border-red-400 dark:border-red-600"
+                  (q.hasRedAlert || autoUrgent) && q.workStatus !== "delivered" && "border-red-400 dark:border-red-600",
+                  // Merged concurrent orders of one customer: a teal side ribbon.
+                  grouped && "border-s-4 border-s-teal-400 dark:border-s-teal-500"
                 )}
               >
                 <div
@@ -593,6 +619,11 @@ export function WorkOrdersClient({ initialData }: { initialData: { quotations: W
                         {q.quoteNumber}
                       </Link>
                       <span className="text-sm font-semibold text-gray-700 dark:text-gray-300">{displayName(q.customer.name, locale)}</span>
+                      {grouped && (
+                        <span className="text-[10px] font-bold px-2 py-0.5 rounded bg-teal-100 text-teal-700 dark:bg-teal-900/30 dark:text-teal-300 inline-flex items-center gap-1">
+                          <Users className="w-3 h-3" /> {t("woSameCustomer")}
+                        </span>
+                      )}
                       {ws && wsKey && (
                         <span className={cn("text-[10px] font-bold px-2 py-0.5 rounded", ws.badgeColor)}>
                           {t(wsKey)}

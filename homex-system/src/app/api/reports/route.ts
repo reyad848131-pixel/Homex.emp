@@ -95,9 +95,9 @@ export async function GET(req: NextRequest) {
   // customers still owe across every contract (naturally a current balance).
   const [salesPeriod, paidPeriod, contractsAll, paidAll, costsPeriod] = await Promise.all([
     prisma.quotation.aggregate({ _sum: { total: true }, where: { status: "accepted", deletedAt: null, createdAt: { gte: startDate } } }),
-    prisma.payment.aggregate({ _sum: { amount: true }, where: { paidAt: { gte: startDate } } }),
+    prisma.payment.aggregate({ _sum: { amount: true }, where: { paidAt: { gte: startDate }, quotation: { deletedAt: null } } }),
     prisma.quotation.aggregate({ _sum: { total: true }, where: { status: "accepted", deletedAt: null } }),
-    prisma.payment.aggregate({ _sum: { amount: true } }),
+    prisma.payment.aggregate({ _sum: { amount: true }, where: { quotation: { deletedAt: null } } }),
     prisma.expense.aggregate({ _sum: { amount: true }, where: { spentAt: { gte: startDate } } }),
   ]);
   const totalSales = roundMoney(salesPeriod._sum.total || 0);

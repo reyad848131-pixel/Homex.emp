@@ -219,6 +219,16 @@ model Quotation {
   // When an approved quote was converted into a confirmed contract (locks the
   // quote and pushes it onto the work board).
   contractedAt  DateTime? @map("contracted_at")
+  // The FIXED month the order entered the work board (إدارة الأعمال), frozen at
+  // contract time and never moved afterwards. The board groups/filters by this,
+  // NOT by deliveryDate — so an order stays under its entry month (e.g. month 9)
+  // even if months pass and it's still in progress. deliveryDate only drives the
+  // delivery schedule. Backfilled from contractedAt ?? createdAt for old rows.
+  boardMonth    DateTime? @map("board_month")
+  // Groups two or more concurrent orders of the SAME customer so they appear
+  // together in the board (same person/place/delivery). The "primary" order of a
+  // group keeps its own id here; merged siblings copy the primary's id.
+  boardGroupId  String?   @map("board_group_id")
   deliveryDate  DateTime? @map("delivery_date")
   // True when deliveryDate was ESTIMATED from neighbouring rows during import
   // (the original sheet had no date). Used only to place the row in the right
@@ -315,6 +325,8 @@ model Quotation {
   // a salesperson's own quotations newest-first (employeeId + createdAt).
   @@index([workStatus, deliveryDate])
   @@index([dispatchDate])
+  @@index([boardMonth])
+  @@index([boardGroupId])
   @@index([onDeliveryBoard, deliveryDate])
   @@index([workStatus, installDate])
   @@index([photoStatus])
