@@ -1215,6 +1215,7 @@ const translations = {
   coColManufacturer: { ar: "المصنّع", en: "Manufacturer" },
   coColStatus: { ar: "حالة العمل", en: "Work Status" },
   coColCount: { ar: "عدد الستائر", en: "Curtains" },
+  coStNeedsOrder: { ar: "يحتاج طلب", en: "Needs order" },
   coStPlaced: { ar: "تم الطلب", en: "Placed" },
   coStAwaiting: { ar: "بإنتظار التصنيع", en: "Awaiting" },
   coStManufacturing: { ar: "قيد التصنيع", en: "Manufacturing" },

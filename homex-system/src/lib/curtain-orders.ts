@@ -1,6 +1,7 @@
 // Work-status lifecycle for a curtain order, in order. Shared between the API
 // (validation) and the client (labels / colours) so they never drift.
 export const CURTAIN_WORK_STATUSES = [
+  "needs_order",  // يحتاج طلب
   "placed",       // تم الطلب
   "awaiting",     // بإنتظار التصنيع
   "manufacturing", // قيد التصنيع
@@ -16,6 +17,7 @@ export type CurtainWorkStatus = (typeof CURTAIN_WORK_STATUSES)[number];
 export function parseWorkStatus(raw: unknown): CurtainWorkStatus {
   const s = String(raw ?? "").trim().toLowerCase();
   if (!s) return "placed";
+  if (s.includes("يحتاج") || s.includes("needs")) return "needs_order";
   if (s.includes("توصيل") && (s.includes("تم") || s.includes("سلّم") || s.includes("سلم"))) return "delivered";
   if (s.includes("delivered")) return "delivered";
   if (s.includes("جاهز") || s.includes("ready")) return "ready";

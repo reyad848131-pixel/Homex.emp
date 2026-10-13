@@ -17,7 +17,7 @@ interface Entry {
 interface Summary { count: number; totalOur: number; totalOutside: number; totalProfit: number; totalCurtains: number; }
 
 const STATUS_LABEL_KEYS: Record<string, string> = {
-  placed: "coStPlaced", awaiting: "coStAwaiting", manufacturing: "coStManufacturing",
+  needs_order: "coStNeedsOrder", placed: "coStPlaced", awaiting: "coStAwaiting", manufacturing: "coStManufacturing",
   completed: "coStCompleted", ready: "coStReady", delivered: "coStDelivered",
 };
 // Start-border accent per work-board status, so a linked row's colour tracks
@@ -32,6 +32,7 @@ const BOARD_ACCENT: Record<string, string> = {
 };
 
 const STATUS_COLOR: Record<string, string> = {
+  needs_order: "bg-red-100 text-red-700 dark:bg-red-900/40 dark:text-red-300",
   placed: "bg-gray-100 text-gray-700 dark:bg-gray-700 dark:text-gray-200",
   awaiting: "bg-amber-100 text-amber-800 dark:bg-amber-900/40 dark:text-amber-300",
   manufacturing: "bg-blue-100 text-blue-800 dark:bg-blue-900/40 dark:text-blue-300",
