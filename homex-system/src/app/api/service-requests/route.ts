@@ -7,6 +7,29 @@ import { canEditFieldOps } from "@/lib/permissions";
 import { normalizePhone } from "@/lib/text";
 
 const TYPES = ["return", "maintenance", "completion"];
+
+// Overlay the request's own contact snapshot onto the customer object the UI
+// reads (quotation.customer ?? customer), so every request shows the data typed
+// for IT — never a stale name/location from a linked old quote/customer. Only
+// non-empty snapshot fields override; old requests (no snapshot) are untouched.
+type SRContact = { name?: string | null; phone?: string | null; phoneCode?: string | null; governorate?: string | null; wilayat?: string | null };
+type SRRow = {
+  reqName?: string | null; reqPhone?: string | null; reqPhoneCode?: string | null;
+  reqGovernorate?: string | null; reqWilayat?: string | null;
+  quotation?: { customer?: SRContact | null } | null; customer?: SRContact | null;
+};
+function applyRequestContact<T extends SRRow>(r: T): T {
+  if (!r.reqName && !r.reqPhone && !r.reqGovernorate && !r.reqWilayat) return r;
+  const target = r.quotation?.customer ?? r.customer;
+  if (target) {
+    if (r.reqName) target.name = r.reqName;
+    if (r.reqPhone) target.phone = r.reqPhone;
+    if (r.reqPhoneCode) target.phoneCode = r.reqPhoneCode;
+    if (r.reqGovernorate) target.governorate = r.reqGovernorate;
+    if (r.reqWilayat) target.wilayat = r.reqWilayat;
+  }
+  return r;
+}
 const TYPE_TITLE: Record<string, string> = {
   return: "طلب مرتجع جديد 🔄",
   maintenance: "طلب صيانة جديد 🔧",
@@ -48,6 +71,7 @@ export async function GET(req: NextRequest) {
         customer: { select: { name: true, phone: true, phoneCode: true, governorate: true, wilayat: true } },
       },
     });
+    requests.forEach(applyRequestContact);
     return NextResponse.json(requests);
   } catch (e) {
     console.error("API error [/api/service-requests]:", e);
@@ -69,39 +93,25 @@ export async function POST(req: NextRequest) {
     let customerId: string | null = null;
 
     if (body.mode === "new") {
-      // "New customer" entry. But guard against mislabelling / duplicating a
-      // customer who ALREADY exists in the system:
-      //   1. If their phone already has a quotation → link the request to that
-      //      quote so it shows as the existing customer (not "زبون جديد"), and
-      //      create NOTHING new.
-      //   2. Else reuse a customer record with the same phone if one exists.
-      //   3. Only when truly unknown do we create a brand-new customer.
+      // A NEW request is standalone: it stores and shows exactly the data typed
+      // for it, and is NEVER linked to an old quotation or shown under an old
+      // name — even if the same person already exists. We only keep ONE customer
+      // record per phone in the background (reuse-or-create, never modified) to
+      // avoid duplicate customers; it does not drive what the request displays.
       const governorate = String(body.governorate || "").trim();
       const wilayat = String(body.wilayat || "").trim();
       if (!name || !digits) return NextResponse.json({ error: "الاسم ورقم الهاتف مطلوبان" }, { status: 400 });
       if (!governorate || !wilayat) return NextResponse.json({ error: "المحافظة والولاية مطلوبتان" }, { status: 400 });
 
-      // 1) Existing customer with a quote? Link to their latest quotation.
-      const existingQuote = await prisma.quotation.findFirst({
-        where: { customer: { phone: { contains: digits }, deletedAt: null }, deletedAt: null },
-        orderBy: { createdAt: "desc" },
-        select: { id: true },
-      });
-      if (existingQuote) {
-        quotationId = existingQuote.id;
+      const existing = await prisma.customer.findFirst({ where: { phone: { contains: digits }, deletedAt: null }, select: { id: true } });
+      if (existing) {
+        customerId = existing.id;
       } else {
-        // 2) Reuse an existing (quote-less) customer with the same phone.
-        const existing = await prisma.customer.findFirst({ where: { phone: { contains: digits }, deletedAt: null }, select: { id: true } });
-        if (existing) {
-          customerId = existing.id;
-        } else {
-          // 3) Genuinely new customer.
-          const c = await prisma.customer.create({
-            data: { name, phone: digits, governorate, wilayat, source: "service", createdBy: auth.user.id },
-            select: { id: true },
-          });
-          customerId = c.id;
-        }
+        const c = await prisma.customer.create({
+          data: { name, phone: digits, governorate, wilayat, source: "service", createdBy: auth.user.id },
+          select: { id: true },
+        });
+        customerId = c.id;
       }
     } else if (!quotationId) {
       // Existing customer: find their most recent quotation by name + phone.
@@ -126,13 +136,26 @@ export async function POST(req: NextRequest) {
     if (!quotationId && !customerId) return NextResponse.json({ error: "Missing customer" }, { status: 400 });
 
     const created = await prisma.serviceRequest.create({
-      data: { quotationId, customerId, type, reason: reason || null, createdBy: auth.user.id },
+      data: {
+        quotationId, customerId, type, reason: reason || null, createdBy: auth.user.id,
+        // Snapshot the typed contact ONLY for a standalone new request, so it
+        // shows its own data. In "existing" mode the typed name may be partial
+        // (used to find the customer), so we keep showing the linked customer.
+        ...(body.mode === "new" ? {
+          reqName: name || null,
+          reqPhone: digits || null,
+          reqPhoneCode: String(body.phoneCode || "+968"),
+          reqGovernorate: String(body.governorate || "").trim() || null,
+          reqWilayat: String(body.wilayat || "").trim() || null,
+        } : {}),
+      },
       include: {
         quotation: { select: { id: true, quoteNumber: true, customer: { select: { name: true, phone: true, phoneCode: true, governorate: true, wilayat: true } } } },
         customer: { select: { name: true, phone: true, phoneCode: true, governorate: true, wilayat: true } },
       },
     });
 
+    applyRequestContact(created);
     const cust = created.quotation?.customer ?? created.customer;
     const ref = created.quotation ? `العرض ${created.quotation.quoteNumber}` : "عميل جديد";
     await logAction(auth.user.id, "create", "service_request", created.id, `${type} for ${created.quotation?.quoteNumber ?? cust?.name ?? "?"}`);

@@ -391,6 +391,14 @@ model ServiceRequest {
   // from the request (a brand-new customer with no quote yet). Both optional.
   quotationId   String?   @map("quotation_id")
   customerId    String?   @map("customer_id")
+  // Per-request contact SNAPSHOT: a service request is standalone and shows the
+  // data typed for IT, never pulled from an old quote/customer — even if the
+  // same person already exists. The customer link (if any) is background only.
+  reqName        String?  @map("req_name")
+  reqPhone       String?  @map("req_phone")
+  reqPhoneCode   String?  @map("req_phone_code")
+  reqGovernorate String?  @map("req_governorate")
+  reqWilayat     String?  @map("req_wilayat")
   type          String    @default("maintenance") // "return" | "maintenance" (more later)
   reason        String?
   status        String    @default("open")        // open | scheduled | resolved
