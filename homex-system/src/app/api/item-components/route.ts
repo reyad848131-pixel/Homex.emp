@@ -3,7 +3,7 @@ import { getAuth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { foremanAccessIds, canAccessForeman } from "@/lib/foreman-access";
 
-const STATUSES = ["not_arrived", "arrived", "installed"];
+const STATUSES = ["not_ordered", "ordered", "arrived", "installed"];
 
 // Any signed-in user may VIEW components; only the foreman/owner may change them.
 async function authUser() {
@@ -64,16 +64,20 @@ export async function PATCH(req: NextRequest) {
     if (!STATUSES.includes(status)) return NextResponse.json({ error: "حالة غير صحيحة" }, { status: 400 });
     data.status = status;
     const now = new Date();
-    // Keep the timestamps consistent with the status (installed implies arrived).
-    if (status === "not_arrived") { data.arrivedAt = null; data.installedAt = null; }
+    // Keep timestamps consistent with the status along the 4-stage flow
+    // (not_ordered → ordered → arrived → installed); each stage implies all
+    // earlier stages happened.
+    if (status === "not_ordered") { data.orderedAt = null; data.arrivedAt = null; data.installedAt = null; }
+    else if (status === "ordered") { data.orderedAt = now; data.arrivedAt = null; data.installedAt = null; }
     else if (status === "arrived") { data.arrivedAt = now; data.installedAt = null; }
     else if (status === "installed") { data.installedAt = now; }
   }
   const updated = await prisma.itemComponent.update({ where: { id }, data });
-  // Backfill arrivedAt when jumping straight to installed.
-  if (updated.status === "installed" && !updated.arrivedAt) {
-    await prisma.itemComponent.update({ where: { id }, data: { arrivedAt: updated.installedAt ?? new Date() } });
-  }
+  // Backfill earlier timestamps when jumping ahead.
+  const patch: Record<string, Date> = {};
+  if (["arrived", "installed"].includes(updated.status) && !updated.orderedAt) patch.orderedAt = updated.arrivedAt ?? updated.installedAt ?? new Date();
+  if (updated.status === "installed" && !updated.arrivedAt) patch.arrivedAt = updated.installedAt ?? new Date();
+  if (Object.keys(patch).length) await prisma.itemComponent.update({ where: { id }, data: patch });
   return NextResponse.json(updated);
 }
 

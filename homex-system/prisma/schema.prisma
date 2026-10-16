@@ -511,7 +511,8 @@ model ItemComponent {
   itemId      String    @map("item_id")
   catalogId   String?   @map("catalog_id")   // optional ref to the catalog def
   name        String                          // snapshot of the component label
-  status      String    @default("not_arrived") // not_arrived | arrived | installed
+  status      String    @default("not_ordered") // not_ordered | ordered | arrived | installed
+  orderedAt   DateTime? @map("ordered_at")
   arrivedAt   DateTime? @map("arrived_at")
   installedAt DateTime? @map("installed_at")
   note        String?

@@ -139,19 +139,20 @@ function DaysRemainingBadge({ days, workStatus }: { days: number; workStatus: st
   return <span className="text-xs font-bold px-2 py-1 rounded bg-gray-100 text-gray-600 dark:bg-gray-700 dark:text-gray-300">{days} {t("day")}</span>;
 }
 
-function MaterialBadge({ label, status, onCycle }: { label: string; status: string; onCycle: () => void }) {
+function MaterialBadge({ label, status }: { label: string; status: string }) {
   const { t } = useI18n();
   const s = MATERIAL_STATUS_KEYS[status] || MATERIAL_STATUS_KEYS.not_ordered;
   const statusLabel = t(s.labelKey);
+  // Read-only badge — material/order status is controlled by the foreman, the
+  // board only displays it.
   return (
-    <button
-      onClick={(e) => { e.stopPropagation(); onCycle(); }}
-      className={cn("inline-flex items-center gap-1 text-[10px] font-bold px-2 py-0.5 rounded transition-colors", s.color)}
-      title={`${label}: ${statusLabel} — ${t("clickToChange")}`}
+    <span
+      className={cn("inline-flex items-center gap-1 text-[10px] font-bold px-2 py-0.5 rounded", s.color)}
+      title={`${label}: ${statusLabel}`}
     >
       <Package className="w-3 h-3" />
       {label}: {statusLabel}
-    </button>
+    </span>
   );
 }
 
@@ -637,8 +638,8 @@ export function WorkOrdersClient({ initialData }: { initialData: { quotations: W
                     </p>
                     {q.workStatus !== "delivered" && (
                       <div className="flex items-center gap-2 mt-1.5">
-                        <MaterialBadge label={t("wood")} status={q.woodStatus} onCycle={() => handleMaterialCycle(q.id, "woodStatus", q.woodStatus)} />
-                        <MaterialBadge label={t("fabric")} status={q.fabricStatus} onCycle={() => handleMaterialCycle(q.id, "fabricStatus", q.fabricStatus)} />
+                        <MaterialBadge label={t("wood")} status={q.woodStatus} />
+                        <MaterialBadge label={t("fabric")} status={q.fabricStatus} />
                       </div>
                     )}
                   </div>
@@ -682,45 +683,18 @@ export function WorkOrdersClient({ initialData }: { initialData: { quotations: W
                     <div>
                       <p className="text-xs text-gray-400 font-bold mb-2 flex items-center gap-1">
                         <Package className="w-3.5 h-3.5" /> {t("materialStatus")}
+                        <span className="text-[10px] font-normal text-gray-400">({t("woViewOnly")})</span>
                       </p>
+                      {/* Read-only here — material/order control lives with the
+                          foreman (production & item pages). The board only views. */}
                       <div className="grid grid-cols-2 gap-3">
-                        <div>
-                          <p className="text-xs font-semibold text-gray-600 dark:text-gray-300 mb-1.5">{t("wood")}</p>
-                          <div className="flex gap-1.5">
-                            {Object.entries(MATERIAL_STATUS_KEYS).map(([key, s]) => (
-                              <button
-                                key={key}
-                                onClick={() => handleMaterialSet(q.id, "woodStatus", key)}
-                                className={cn(
-                                  "px-2.5 py-1 rounded text-[10px] font-bold border transition-all",
-                                  q.woodStatus === key
-                                    ? cn(s.color, "ring-1 ring-offset-1 ring-gray-400")
-                                    : "border-gray-200 dark:border-gray-600 text-gray-400"
-                                )}
-                              >
-                                {t(s.labelKey)}
-                              </button>
-                            ))}
-                          </div>
+                        <div className="flex items-center gap-2">
+                          <span className="text-xs font-semibold text-gray-600 dark:text-gray-300">{t("wood")}:</span>
+                          <span className={cn("px-2 py-0.5 rounded text-[10px] font-bold", (MATERIAL_STATUS_KEYS[q.woodStatus] || MATERIAL_STATUS_KEYS.not_ordered).color)}>{t((MATERIAL_STATUS_KEYS[q.woodStatus] || MATERIAL_STATUS_KEYS.not_ordered).labelKey)}</span>
                         </div>
-                        <div>
-                          <p className="text-xs font-semibold text-gray-600 dark:text-gray-300 mb-1.5">{t("fabric")}</p>
-                          <div className="flex gap-1.5">
-                            {Object.entries(MATERIAL_STATUS_KEYS).map(([key, s]) => (
-                              <button
-                                key={key}
-                                onClick={() => handleMaterialSet(q.id, "fabricStatus", key)}
-                                className={cn(
-                                  "px-2.5 py-1 rounded text-[10px] font-bold border transition-all",
-                                  q.fabricStatus === key
-                                    ? cn(s.color, "ring-1 ring-offset-1 ring-gray-400")
-                                    : "border-gray-200 dark:border-gray-600 text-gray-400"
-                                )}
-                              >
-                                {t(s.labelKey)}
-                              </button>
-                            ))}
-                          </div>
+                        <div className="flex items-center gap-2">
+                          <span className="text-xs font-semibold text-gray-600 dark:text-gray-300">{t("fabric")}:</span>
+                          <span className={cn("px-2 py-0.5 rounded text-[10px] font-bold", (MATERIAL_STATUS_KEYS[q.fabricStatus] || MATERIAL_STATUS_KEYS.not_ordered).color)}>{t((MATERIAL_STATUS_KEYS[q.fabricStatus] || MATERIAL_STATUS_KEYS.not_ordered).labelKey)}</span>
                         </div>
                       </div>
                     </div>

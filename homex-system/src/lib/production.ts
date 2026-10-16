@@ -29,8 +29,9 @@ export interface ProductionConfig {
 export const DEFAULT_PRODUCTION: ProductionConfig = {
   stations: [],
   pipelines: {
-    // Seed the one example the factory gave; the rest are set from the UI.
+    // Seed the examples the factory gave; the rest are set from the UI (catalog).
     bed: ["تقطيع", "تنجيد", "تشطيب"],
+    kitchens: ["تقطيع", "تجميع", "اكسسوارات", "أبواب زجاج", "بورسلين زجاج", "مرايه"],
   },
   defaultPipeline: ["تحضير", "تصنيع", "تشطيب"],
 };

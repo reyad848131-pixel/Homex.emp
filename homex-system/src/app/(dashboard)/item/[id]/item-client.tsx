@@ -1,14 +1,14 @@
 "use client";
 
 import Image from "next/image";
-import { Package, MapPin, Phone, CalendarDays, QrCode, Check, Clock } from "lucide-react";
+import { Package, MapPin, Phone, CalendarDays, QrCode, ImageIcon } from "lucide-react";
 import { useI18n } from "@/lib/i18n";
 import { displayName } from "@/lib/translit";
-import { cn } from "@/lib/utils";
-import { stageLabel } from "@/lib/workers";
+import { ItemDescBlock } from "@/components/item-desc-block";
 import { ItemComponentsPanel } from "@/components/item-components-panel";
 import { ItemIssuesPanel } from "@/components/item-issues-panel";
 import { ItemQcPanel } from "@/components/item-qc-panel";
+import { ItemStagesPanel, type StageRow } from "@/components/item-stages-panel";
 
 interface Data {
   id: string; description: string; quantity: number; categoryId: string;
@@ -18,36 +18,29 @@ interface Data {
   specs: { labelAr: string; labelEn: string; value: string }[];
   photos: { id: string; url: string; kind: string }[];
   qr: string; canEdit: boolean;
-  createdAt: string | null;
   qc: { status: string | null; note: string | null; at: string | null };
-  stages: { id: string; stage: string; worker: string | null; color: string | null; createdAt: string; doneAt: string | null; doneByName: string | null }[];
+  workers: { id: string; name: string; color: string }[];
+  stages: StageRow[];
 }
 
-function fmtDuration(ms: number, t: (k: "durDays" | "durHours" | "durMins") => string): string {
-  const mins = Math.max(0, Math.round(ms / 60000));
-  if (mins < 60) return `${mins} ${t("durMins")}`;
-  const hours = Math.round(mins / 60);
-  if (hours < 24) return `${hours} ${t("durHours")}`;
-  return `${Math.round(hours / 24)} ${t("durDays")}`;
-}
+const card = "rounded-2xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 p-5";
 
 export function ItemPageClient({ data }: { data: Data }) {
   const { t, locale, dir } = useI18n();
   const cat = locale === "en" ? data.categoryName.en : data.categoryName.ar;
-  const design = data.photos.filter((p) => p.kind === "design");
-  const result = data.photos.filter((p) => p.kind === "result");
+  const design = data.photos.find((p) => p.kind === "design") || null;
 
   return (
     <div dir={dir} className="mt-3 space-y-4">
       {/* Header */}
-      <div className="rounded-2xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 p-5">
+      <div className={card}>
         <div className="flex items-start justify-between gap-3">
-          <div className="min-w-0">
-            <div className="flex items-center gap-2 flex-wrap">
-              <h1 className="text-xl font-black truncate">{data.description}</h1>
+          <div className="min-w-0 flex-1">
+            <div className="flex items-center gap-2 flex-wrap mb-1">
               <span className="text-gray-400 font-mono-en text-sm">×{data.quantity}</span>
+              <span className="text-[11px] font-bold text-gray-500 bg-gray-100 dark:bg-gray-700 px-2 py-0.5 rounded-full">{cat}</span>
             </div>
-            <span className="inline-block text-[11px] font-bold text-gray-500 bg-gray-100 dark:bg-gray-700 px-2 py-0.5 rounded-full mt-1">{cat}</span>
+            <ItemDescBlock text={data.description} />
             <p className="text-sm font-bold text-gray-700 dark:text-gray-200 mt-3">{displayName(data.customerName, locale)}</p>
             <div className="text-xs text-gray-500 space-y-1 mt-1">
               {(data.governorate || data.wilayat) && <p className="flex items-center gap-1"><MapPin className="w-3.5 h-3.5" /> {data.governorate} — {data.wilayat}</p>}
@@ -65,8 +58,20 @@ export function ItemPageClient({ data }: { data: Data }) {
         </div>
       </div>
 
+      {/* Design photo (reference for verifying the work) */}
+      <div className={card}>
+        <h2 className="text-sm font-bold text-gray-500 mb-3 flex items-center gap-1.5"><ImageIcon className="w-4 h-4" /> {t("itemPhotoDesign")}</h2>
+        {design ? (
+          <a href={design.url} target="_blank" rel="noreferrer" className="block">
+            <Image src={design.url} alt="design" width={640} height={420} className="w-full max-h-80 object-contain rounded-xl border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-900/40" unoptimized />
+          </a>
+        ) : (
+          <p className="text-xs text-gray-400">{t("itemNoDesignPhoto")}</p>
+        )}
+      </div>
+
       {/* Fixed specs */}
-      <div className="rounded-2xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 p-5">
+      <div className={card}>
         <h2 className="text-sm font-bold text-gray-500 mb-3 flex items-center gap-1.5"><Package className="w-4 h-4" /> {t("itemSpecsTitle")}</h2>
         {data.specs.length === 0 ? (
           <p className="text-xs text-gray-400">{t("itemNoSpecs")}</p>
@@ -82,81 +87,24 @@ export function ItemPageClient({ data }: { data: Data }) {
         )}
       </div>
 
-      {/* Live components (editable by foreman/owner) */}
-      <div className="rounded-2xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 p-5">
+      {/* Manufacturing operations (مراحل التصنيع) */}
+      <div className={card}>
+        <ItemStagesPanel itemId={data.id} initial={data.stages} workers={data.workers} canEdit={data.canEdit} />
+      </div>
+
+      {/* Materials / components orders (الطلبات والعناصر) */}
+      <div className={card}>
         <ItemComponentsPanel itemId={data.id} categoryId={data.categoryId} canEdit={data.canEdit} />
       </div>
 
       {/* Issues */}
-      <div className="rounded-2xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 p-5">
+      <div className={card}>
         <ItemIssuesPanel itemId={data.id} canEdit={data.canEdit} />
       </div>
 
       {/* Quality control */}
-      <div className="rounded-2xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 p-5">
+      <div className={card}>
         <ItemQcPanel itemId={data.id} canEdit={data.canEdit} initial={data.qc} />
-      </div>
-
-      {/* Production timeline */}
-      {data.stages.length > 0 && (
-        <div className="rounded-2xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 p-5">
-          <h2 className="text-sm font-bold text-gray-500 mb-3 flex items-center gap-1.5"><Clock className="w-4 h-4" /> {t("timelineTitle")}</h2>
-          <div className="relative ps-5">
-            <div className="absolute top-1 bottom-1 start-[7px] w-px bg-gray-200 dark:bg-gray-700" />
-            {data.stages.map((s, i) => {
-              const prevDone = i > 0 ? data.stages[i - 1].doneAt : data.createdAt;
-              const dur = s.doneAt && prevDone ? fmtDuration(new Date(s.doneAt).getTime() - new Date(prevDone).getTime(), t) : null;
-              return (
-                <div key={s.id} className="relative pb-4 last:pb-0">
-                  <span className={cn("absolute -start-5 top-0.5 w-3.5 h-3.5 rounded-full border-2", s.doneAt ? "bg-emerald-500 border-emerald-500" : "bg-white dark:bg-gray-800 border-gray-300 dark:border-gray-600")}>
-                    {s.doneAt && <Check className="w-2.5 h-2.5 text-white" strokeWidth={3} />}
-                  </span>
-                  <div className="flex items-center gap-2 flex-wrap">
-                    <span className="font-bold text-sm">{stageLabel(s.stage, locale)}</span>
-                    {s.worker && <span className="text-[11px] font-semibold text-gray-500">— {s.worker}</span>}
-                    {s.doneAt ? (
-                      <span className="text-[11px] font-bold text-emerald-600">{t("timelineDone")}</span>
-                    ) : (
-                      <span className="text-[11px] font-bold text-gray-400">{t("timelinePending")}</span>
-                    )}
-                  </div>
-                  <div className="text-[11px] text-gray-400 mt-0.5 flex flex-wrap gap-x-3">
-                    {s.doneAt && <span className="font-mono-en" dir="ltr">{new Date(s.doneAt).toLocaleString("en-GB", { day: "2-digit", month: "2-digit", hour: "2-digit", minute: "2-digit" })}</span>}
-                    {dur && <span>⏱ {dur}</span>}
-                    {s.doneByName && <span>✓ {s.doneByName}</span>}
-                  </div>
-                </div>
-              );
-            })}
-          </div>
-        </div>
-      )}
-
-      {/* Photos */}
-      {(design.length > 0 || result.length > 0) && (
-        <div className="rounded-2xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 p-5">
-          <h2 className="text-sm font-bold text-gray-500 mb-3">{t("itemPhotosTitle")}</h2>
-          <div className="grid grid-cols-2 gap-3">
-            <PhotoCol label={t("itemPhotoDesign")} photos={design} />
-            <PhotoCol label={t("itemPhotoResult")} photos={result} />
-          </div>
-        </div>
-      )}
-    </div>
-  );
-}
-
-function PhotoCol({ label, photos }: { label: string; photos: { id: string; url: string }[] }) {
-  return (
-    <div>
-      <p className="text-[11px] font-bold text-gray-400 mb-1.5">{label}</p>
-      <div className="flex flex-wrap gap-2">
-        {photos.length === 0 && <span className="text-xs text-gray-300">—</span>}
-        {photos.map((p) => (
-          <a key={p.id} href={p.url} target="_blank" rel="noreferrer" className="block">
-            <Image src={p.url} alt="" width={80} height={80} className="w-20 h-20 object-cover rounded-lg border border-gray-200 dark:border-gray-700" unoptimized />
-          </a>
-        ))}
       </div>
     </div>
   );

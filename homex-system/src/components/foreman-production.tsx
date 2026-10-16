@@ -6,6 +6,7 @@ import { Loader2, Check, ChevronDown, ChevronLeft, Plus, X, Trash2, Save, Wand2,
 import { cn } from "@/lib/utils";
 import { useToast } from "@/components/toast";
 import { DateDrillNav, type DateRange } from "@/components/date-drill-nav";
+import { ItemDescBlock } from "@/components/item-desc-block";
 
 type SpecRow = { labelAr: string; labelEn: string; value: string };
 type PTask = { id: string; stage: string; workerId: string | null; workerName: string; workerColor: string; done: boolean; doneAt: string | null };
@@ -163,7 +164,7 @@ function SpecSheet({ item, onAdvance, onSetTime, onUploadPhoto, onDeletePhoto, u
   return (
     <div className="rounded-lg border border-gray-200 dark:border-gray-700 bg-gray-50/60 dark:bg-gray-900/30 p-3 space-y-2">
       <div className="flex items-start justify-between gap-2">
-        <p className="text-sm font-bold text-gray-800 dark:text-gray-100">{item.description}</p>
+        <div className="min-w-0 flex-1"><ItemDescBlock text={item.description} compact /></div>
         <div className="flex items-center gap-2 shrink-0">
           {item.quantity > 1 && <span className="text-[11px] font-mono-en font-bold text-gray-400">×{item.quantity}</span>}
           <Link href={`/item/${item.id}`} className="inline-flex items-center gap-1 text-[11px] font-bold text-teal-600 hover:text-teal-700 border border-teal-200 dark:border-teal-800 rounded-lg px-2 py-1">

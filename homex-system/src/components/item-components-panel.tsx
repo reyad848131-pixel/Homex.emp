@@ -28,11 +28,12 @@ function loadCanEdit() {
 }
 
 const STATUS_META: Record<string, { key: TranslationKey; cls: string }> = {
-  not_arrived: { key: "compNotArrived", cls: "bg-gray-100 text-gray-500 dark:bg-gray-700 dark:text-gray-300" },
+  not_ordered: { key: "compNotOrdered", cls: "bg-gray-100 text-gray-500 dark:bg-gray-700 dark:text-gray-300" },
+  ordered:     { key: "compOrdered",    cls: "bg-sky-100 text-sky-700 dark:bg-sky-900/30 dark:text-sky-300" },
   arrived:     { key: "compArrived",    cls: "bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-300" },
   installed:   { key: "compInstalled",  cls: "bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-300" },
 };
-const ORDER = ["not_arrived", "arrived", "installed"];
+const ORDER = ["not_ordered", "ordered", "arrived", "installed"];
 
 export function ItemComponentsPanel({ itemId, categoryId, canEdit: canEditProp }: { itemId: string; categoryId?: string | null; canEdit?: boolean }) {
   const { t, locale } = useI18n();
@@ -95,17 +96,17 @@ export function ItemComponentsPanel({ itemId, categoryId, canEdit: canEditProp }
           <div key={r.id} className="flex items-center gap-2 flex-wrap bg-gray-50 dark:bg-gray-900/40 rounded-lg px-2.5 py-1.5">
             <span className="text-sm font-semibold flex-1 min-w-0 truncate">{r.name}</span>
             {canEdit ? (
-              <div className="inline-flex rounded-lg overflow-hidden border border-gray-200 dark:border-gray-600">
+              <div className="flex flex-wrap gap-1 justify-end">
                 {ORDER.map((s) => (
                   <button key={s} onClick={() => setStatus(r.id, s)}
-                    className={cn("px-2 py-1 text-[11px] font-bold transition-colors",
-                      r.status === s ? STATUS_META[s].cls : "bg-white dark:bg-gray-800 text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-700")}>
+                    className={cn("px-2 py-1 rounded-md text-[11px] font-bold border transition-colors",
+                      r.status === s ? `${STATUS_META[s].cls} border-transparent` : "bg-white dark:bg-gray-800 border-gray-200 dark:border-gray-600 text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-700")}>
                     {t(STATUS_META[s].key)}
                   </button>
                 ))}
               </div>
             ) : (
-              <span className={cn("text-[11px] font-bold px-2 py-0.5 rounded-full", STATUS_META[r.status]?.cls)}>{t(STATUS_META[r.status]?.key || "compNotArrived")}</span>
+              <span className={cn("text-[11px] font-bold px-2 py-0.5 rounded-full", STATUS_META[r.status]?.cls)}>{t(STATUS_META[r.status]?.key || "compNotOrdered")}</span>
             )}
             {canEdit && <button onClick={() => remove(r.id)} className="text-gray-300 hover:text-red-500" title={t("delete")}><X className="w-3.5 h-3.5" /></button>}
           </div>

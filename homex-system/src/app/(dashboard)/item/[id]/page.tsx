@@ -23,7 +23,7 @@ export default async function ItemPage({ params }: { params: Promise<{ id: strin
     select: {
       id: true, description: true, quantity: true, details: true, categoryId: true,
       qcStatus: true, qcNote: true, qcAt: true,
-      tasks: { orderBy: { sortOrder: "asc" }, select: { id: true, stage: true, doneAt: true, doneBy: true, createdAt: true, worker: { select: { name: true, color: true } } } },
+      tasks: { orderBy: { sortOrder: "asc" }, select: { id: true, stage: true, workerId: true, doneAt: true, doneBy: true, createdAt: true, worker: { select: { name: true, color: true } } } },
       category: { select: { nameAr: true, nameEn: true } },
       quotation: {
         select: {
@@ -45,7 +45,10 @@ export default async function ItemPage({ params }: { params: Promise<{ id: strin
 
   // Resolve the "done by" user ids on stages to names for the timeline.
   const doneByIds = Array.from(new Set(item.tasks.map((t) => t.doneBy).filter(Boolean) as string[]));
-  const emps = doneByIds.length ? await prisma.employee.findMany({ where: { id: { in: doneByIds } }, select: { id: true, name: true } }) : [];
+  const [emps, workers] = await Promise.all([
+    doneByIds.length ? prisma.employee.findMany({ where: { id: { in: doneByIds } }, select: { id: true, name: true } }) : Promise.resolve([] as { id: string; name: string }[]),
+    prisma.worker.findMany({ where: { isActive: true }, orderBy: { sortOrder: "asc" }, select: { id: true, name: true, color: true } }),
+  ]);
   const nameById = new Map(emps.map((e) => [e.id, e.name]));
 
   // QR encodes the internal item id only (not a public URL); the in-app scanner
@@ -70,15 +73,14 @@ export default async function ItemPage({ params }: { params: Promise<{ id: strin
     photos: item.photos,
     qr,
     canEdit,
-    // Baseline for the first stage's duration = when the first stage was added.
-    createdAt: item.tasks[0] ? item.tasks[0].createdAt.toISOString() : null,
     qc: { status: item.qcStatus, note: item.qcNote, at: item.qcAt ? item.qcAt.toISOString() : null },
+    workers,
     stages: item.tasks.map((tsk) => ({
       id: tsk.id,
       stage: tsk.stage,
-      worker: tsk.worker?.name || null,
-      color: tsk.worker?.color || null,
-      createdAt: tsk.createdAt.toISOString(),
+      workerId: tsk.workerId,
+      workerName: tsk.worker?.name || null,
+      workerColor: tsk.worker?.color || null,
       doneAt: tsk.doneAt ? tsk.doneAt.toISOString() : null,
       doneByName: tsk.doneBy ? (nameById.get(tsk.doneBy) || null) : null,
     })),

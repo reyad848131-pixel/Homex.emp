@@ -16,45 +16,7 @@ import {
   CreditCard, Plus, Banknote, RotateCcw, Receipt, MessageSquare, AlertCircle, Share2, Users,
 } from "lucide-react";
 import Link from "next/link";
-
-// An item's description is auto-built as parts joined by " · " (e.g.
-// "مطبخ 2.6م · MDF - 2 Unit · اكسسوارات المطبخ: درج، سلة · ملاحظة"). Render it
-// structured instead of one long line: the first part is the title (with
-// measurements), the accessories part gets its own highlighted line, and the
-// rest show as compact tags — far easier to read.
-function ItemDescBlock({ text }: { text: string }) {
-  const parts = (text || "").split(" · ").map((p) => p.trim()).filter(Boolean);
-  if (parts.length === 0) return null;
-  const [title, ...rest] = parts;
-  const isAcc = (p: string) => /اكسسوار|إكسسوار|accessor/i.test(p);
-  const acc = rest.filter(isAcc);
-  const others = rest.filter((p) => !isAcc(p));
-  return (
-    <div className="space-y-1.5">
-      <div className="font-bold text-gray-900 dark:text-white leading-snug">{title}</div>
-      {acc.map((a, i) => {
-        const idx = a.indexOf(":");
-        const label = idx > -1 ? a.slice(0, idx).trim() : "اكسسوارات";
-        const vals = (idx > -1 ? a.slice(idx + 1) : a).split("،").map((x) => x.trim()).filter(Boolean);
-        return (
-          <div key={i} className="flex flex-wrap items-center gap-1.5">
-            <span className="text-[11px] font-bold text-teal-700 dark:text-teal-300">{label}:</span>
-            {vals.map((v, j) => (
-              <span key={j} className="text-[11px] font-semibold bg-teal-50 dark:bg-teal-900/20 text-teal-700 dark:text-teal-300 rounded-full px-2 py-0.5">{v}</span>
-            ))}
-          </div>
-        );
-      })}
-      {others.length > 0 && (
-        <div className="flex flex-wrap gap-1.5">
-          {others.map((o, i) => (
-            <span key={i} className="text-[11px] font-semibold text-gray-500 dark:text-gray-400 bg-gray-100 dark:bg-gray-700/60 rounded-full px-2 py-0.5">{o}</span>
-          ))}
-        </div>
-      )}
-    </div>
-  );
-}
+import { ItemDescBlock } from "@/components/item-desc-block";
 
 interface QuotationDetail {
   id: string;

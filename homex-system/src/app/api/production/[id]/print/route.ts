@@ -4,6 +4,7 @@ import { getAuth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { getSpecsCatalog } from "@/lib/foreman";
 import { specRowsFromDetails } from "@/lib/specs-catalog";
+import { parseItemDesc } from "@/lib/item-desc";
 import { applyQuoteLocation } from "@/lib/quote-location";
 
 export const dynamic = "force-dynamic";
@@ -48,6 +49,10 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ id: 
 
     const cards = await Promise.all(q.items.map(async (it) => {
       const qr = await QRCode.toDataURL(`item:${it.id}`, { margin: 1, width: 150 }).catch(() => "");
+      const d = parseItemDesc(it.description);
+      const descHtml = `<div class="title">${esc(d.title)} <span class="qty">×${it.quantity}</span></div>`
+        + d.accessories.map((a) => `<div class="acc"><b>${esc(a.label)}:</b> ${a.values.map((v) => `<span class="chip">${esc(v)}</span>`).join(" ")}</div>`).join("")
+        + (d.others.length ? `<div class="others">${d.others.map((o) => `<span class="chip g">${esc(o)}</span>`).join(" ")}</div>` : "");
       const specs = specRowsFromDetails(it.details, catalog);
       const specsHtml = specs.length
         ? specs.map((s) => `<div class="spec"><span class="k">${esc(s.labelAr)}</span><span class="v">${esc(s.value)}</span></div>`).join("")
@@ -59,7 +64,7 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ id: 
       <div class="card">
         <div class="head">
           <div>
-            <div class="title">${esc(it.description)} <span class="qty">×${it.quantity}</span></div>
+            ${descHtml}
             <div class="cat">${esc(it.category.nameAr)}</div>
           </div>
           ${qr ? `<img class="qr" src="${qr}" alt="QR"/>` : ""}
@@ -90,6 +95,10 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ id: 
       .card{background:#fff;border:1px solid #d1d5db;border-radius:12px;padding:14px;margin:0 auto 12px;max-width:720px;page-break-inside:avoid}
       .head{display:flex;justify-content:space-between;align-items:flex-start;gap:10px;border-bottom:1px solid #eee;padding-bottom:8px}
       .title{font-size:18px;font-weight:800} .qty{color:#9ca3af;font-size:14px}
+      .acc{font-size:12px;margin-top:3px} .acc b{color:#0d9488}
+      .others{margin-top:3px}
+      .chip{display:inline-block;background:#f0fdfa;color:#0f766e;border-radius:999px;padding:1px 7px;font-size:11px;font-weight:bold;margin:1px}
+      .chip.g{background:#f3f4f6;color:#6b7280}
       .cat{display:inline-block;background:#f3f4f6;border-radius:999px;padding:2px 8px;font-size:11px;font-weight:bold;color:#6b7280;margin-top:4px}
       .qr{width:84px;height:84px;border:1px solid #e5e7eb;border-radius:8px}
       .meta{display:flex;flex-wrap:wrap;gap:4px 14px;font-size:12px;color:#374151;margin:8px 0}
