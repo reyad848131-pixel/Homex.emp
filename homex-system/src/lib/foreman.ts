@@ -1,6 +1,6 @@
 import { prisma } from "@/lib/prisma";
 import { getSetting } from "@/lib/settings";
-import { mergeProduction, type ProductionConfig } from "@/lib/production";
+import { mergeProduction, pipelineFor, stationForStage, type ProductionConfig } from "@/lib/production";
 import { mergeSpecsCatalog, type SpecsCatalog } from "@/lib/specs-catalog";
 import { applyQuoteLocations } from "@/lib/quote-location";
 
@@ -55,7 +55,33 @@ function specRows(detailsRaw: string | null, catalog: SpecsCatalog) {
 // what the foreman and workers read to know exactly what to build — wood,
 // fabric, colour, channels, dimensions (in the description) and who does which
 // stage. Scoped strictly to signed/accepted work in progress.
+// Auto-apply each category's stage pipeline to any active item that has no
+// stages yet — so the manufacturing steps appear immediately (no manual
+// "apply template" click), for every category. Idempotent: only touches items
+// with zero tasks, so it does nothing once seeded.
+export async function seedMissingStages(scopeItemId?: string) {
+  const config = await getProductionConfig();
+  const items = await prisma.quoteItem.findMany({
+    where: scopeItemId
+      ? { id: scopeItemId, tasks: { none: {} } }
+      : { quotation: { workStatus: { in: ACTIVE_WORK }, deletedAt: null }, tasks: { none: {} } },
+    select: { id: true, categoryId: true },
+    take: 1500,
+  });
+  for (const it of items) {
+    const stages = pipelineFor(config, it.categoryId);
+    if (stages.length === 0) continue;
+    let order = -1;
+    for (const stage of stages) {
+      order += 1;
+      const station = stationForStage(config, stage);
+      await prisma.itemTask.create({ data: { quoteItemId: it.id, stage, workerId: station?.mainWorkerId || null, sortOrder: order } }).catch(() => {});
+    }
+  }
+}
+
 export async function getProductionFile() {
+  await seedMissingStages();
   const [catalog, config, quotes, workers, categories] = await Promise.all([
     getSpecsCatalog(),
     getProductionConfig(),

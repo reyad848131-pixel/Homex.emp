@@ -3,7 +3,7 @@ import Link from "next/link";
 import QRCode from "qrcode";
 import { getAuth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
-import { getSpecsCatalog } from "@/lib/foreman";
+import { getSpecsCatalog, seedMissingStages } from "@/lib/foreman";
 import { specRowsFromDetails } from "@/lib/specs-catalog";
 import { canAccessForeman, foremanAccessIds } from "@/lib/foreman-access";
 import { applyQuoteLocation } from "@/lib/quote-location";
@@ -37,6 +37,17 @@ export default async function ItemPage({ params }: { params: Promise<{ id: strin
     },
   });
   if (!item) notFound();
+
+  // Auto-seed this item's manufacturing stages from its category template if it
+  // has none yet, then reload them — so stages always show without a manual step.
+  if (item.tasks.length === 0) {
+    await seedMissingStages(item.id);
+    item.tasks = await prisma.itemTask.findMany({
+      where: { quoteItemId: item.id },
+      orderBy: { sortOrder: "asc" },
+      select: { id: true, stage: true, workerId: true, doneAt: true, doneBy: true, createdAt: true, worker: { select: { name: true, color: true } } },
+    });
+  }
 
   applyQuoteLocation(item.quotation as Parameters<typeof applyQuoteLocation>[0]);
 

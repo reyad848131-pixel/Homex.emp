@@ -185,6 +185,16 @@ function SpecSheet({ item, onAdvance, onSetTime, onUploadPhoto, onDeletePhoto, u
         </div>
       )}
 
+      {/* Design + result photos — shown ABOVE the stages, per the foreman's ask */}
+      {onUploadPhoto && onDeletePhoto && (
+        <div className="flex gap-2 pt-1">
+          <PhotoSlot label="📐 التصميم" kind="design" itemId={item.id} photo={item.photos?.design || null}
+            busy={uploadingKey === `${item.id}:design`} onUpload={onUploadPhoto} onDelete={onDeletePhoto} />
+          <PhotoSlot label="✅ النتيجة" kind="result" itemId={item.id} photo={item.photos?.result || null}
+            busy={uploadingKey === `${item.id}:result`} onUpload={onUploadPhoto} onDelete={onDeletePhoto} />
+        </div>
+      )}
+
       {item.tasks.length > 0 && (
         <div className="flex flex-wrap gap-1.5">
           {item.tasks.map((t) => (
@@ -217,16 +227,6 @@ function SpecSheet({ item, onAdvance, onSetTime, onUploadPhoto, onDeletePhoto, u
               ))}
             </div>
           )}
-        </div>
-      )}
-
-      {/* Photos: design + result */}
-      {onUploadPhoto && onDeletePhoto && (
-        <div className="flex gap-2 pt-1">
-          <PhotoSlot label="📐 التصميم" kind="design" itemId={item.id} photo={item.photos?.design || null}
-            busy={uploadingKey === `${item.id}:design`} onUpload={onUploadPhoto} onDelete={onDeletePhoto} />
-          <PhotoSlot label="✅ النتيجة" kind="result" itemId={item.id} photo={item.photos?.result || null}
-            busy={uploadingKey === `${item.id}:result`} onUpload={onUploadPhoto} onDelete={onDeletePhoto} />
         </div>
       )}
 
