@@ -1,10 +1,14 @@
 "use client";
 
 import Image from "next/image";
-import { Package, MapPin, Phone, CalendarDays, QrCode } from "lucide-react";
+import { Package, MapPin, Phone, CalendarDays, QrCode, Check, Clock } from "lucide-react";
 import { useI18n } from "@/lib/i18n";
 import { displayName } from "@/lib/translit";
+import { cn } from "@/lib/utils";
+import { stageLabel } from "@/lib/workers";
 import { ItemComponentsPanel } from "@/components/item-components-panel";
+import { ItemIssuesPanel } from "@/components/item-issues-panel";
+import { ItemQcPanel } from "@/components/item-qc-panel";
 
 interface Data {
   id: string; description: string; quantity: number; categoryId: string;
@@ -14,6 +18,17 @@ interface Data {
   specs: { labelAr: string; labelEn: string; value: string }[];
   photos: { id: string; url: string; kind: string }[];
   qr: string; canEdit: boolean;
+  createdAt: string | null;
+  qc: { status: string | null; note: string | null; at: string | null };
+  stages: { id: string; stage: string; worker: string | null; color: string | null; createdAt: string; doneAt: string | null; doneByName: string | null }[];
+}
+
+function fmtDuration(ms: number, t: (k: "durDays" | "durHours" | "durMins") => string): string {
+  const mins = Math.max(0, Math.round(ms / 60000));
+  if (mins < 60) return `${mins} ${t("durMins")}`;
+  const hours = Math.round(mins / 60);
+  if (hours < 24) return `${hours} ${t("durHours")}`;
+  return `${Math.round(hours / 24)} ${t("durDays")}`;
 }
 
 export function ItemPageClient({ data }: { data: Data }) {
@@ -71,6 +86,51 @@ export function ItemPageClient({ data }: { data: Data }) {
       <div className="rounded-2xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 p-5">
         <ItemComponentsPanel itemId={data.id} categoryId={data.categoryId} canEdit={data.canEdit} />
       </div>
+
+      {/* Issues */}
+      <div className="rounded-2xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 p-5">
+        <ItemIssuesPanel itemId={data.id} canEdit={data.canEdit} />
+      </div>
+
+      {/* Quality control */}
+      <div className="rounded-2xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 p-5">
+        <ItemQcPanel itemId={data.id} canEdit={data.canEdit} initial={data.qc} />
+      </div>
+
+      {/* Production timeline */}
+      {data.stages.length > 0 && (
+        <div className="rounded-2xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 p-5">
+          <h2 className="text-sm font-bold text-gray-500 mb-3 flex items-center gap-1.5"><Clock className="w-4 h-4" /> {t("timelineTitle")}</h2>
+          <div className="relative ps-5">
+            <div className="absolute top-1 bottom-1 start-[7px] w-px bg-gray-200 dark:bg-gray-700" />
+            {data.stages.map((s, i) => {
+              const prevDone = i > 0 ? data.stages[i - 1].doneAt : data.createdAt;
+              const dur = s.doneAt && prevDone ? fmtDuration(new Date(s.doneAt).getTime() - new Date(prevDone).getTime(), t) : null;
+              return (
+                <div key={s.id} className="relative pb-4 last:pb-0">
+                  <span className={cn("absolute -start-5 top-0.5 w-3.5 h-3.5 rounded-full border-2", s.doneAt ? "bg-emerald-500 border-emerald-500" : "bg-white dark:bg-gray-800 border-gray-300 dark:border-gray-600")}>
+                    {s.doneAt && <Check className="w-2.5 h-2.5 text-white" strokeWidth={3} />}
+                  </span>
+                  <div className="flex items-center gap-2 flex-wrap">
+                    <span className="font-bold text-sm">{stageLabel(s.stage, locale)}</span>
+                    {s.worker && <span className="text-[11px] font-semibold text-gray-500">— {s.worker}</span>}
+                    {s.doneAt ? (
+                      <span className="text-[11px] font-bold text-emerald-600">{t("timelineDone")}</span>
+                    ) : (
+                      <span className="text-[11px] font-bold text-gray-400">{t("timelinePending")}</span>
+                    )}
+                  </div>
+                  <div className="text-[11px] text-gray-400 mt-0.5 flex flex-wrap gap-x-3">
+                    {s.doneAt && <span className="font-mono-en" dir="ltr">{new Date(s.doneAt).toLocaleString("en-GB", { day: "2-digit", month: "2-digit", hour: "2-digit", minute: "2-digit" })}</span>}
+                    {dur && <span>⏱ {dur}</span>}
+                    {s.doneByName && <span>✓ {s.doneByName}</span>}
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      )}
 
       {/* Photos */}
       {(design.length > 0 || result.length > 0) && (

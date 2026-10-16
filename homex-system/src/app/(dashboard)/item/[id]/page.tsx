@@ -22,6 +22,8 @@ export default async function ItemPage({ params }: { params: Promise<{ id: strin
     where: { id },
     select: {
       id: true, description: true, quantity: true, details: true, categoryId: true,
+      qcStatus: true, qcNote: true, qcAt: true,
+      tasks: { orderBy: { sortOrder: "asc" }, select: { id: true, stage: true, doneAt: true, doneBy: true, createdAt: true, worker: { select: { name: true, color: true } } } },
       category: { select: { nameAr: true, nameEn: true } },
       quotation: {
         select: {
@@ -40,6 +42,11 @@ export default async function ItemPage({ params }: { params: Promise<{ id: strin
   const catalog = await getSpecsCatalog();
   const specs = specRowsFromDetails(item.details, catalog);
   const canEdit = canAccessForeman(user.civilId, user.id, await foremanAccessIds().catch(() => []));
+
+  // Resolve the "done by" user ids on stages to names for the timeline.
+  const doneByIds = Array.from(new Set(item.tasks.map((t) => t.doneBy).filter(Boolean) as string[]));
+  const emps = doneByIds.length ? await prisma.employee.findMany({ where: { id: { in: doneByIds } }, select: { id: true, name: true } }) : [];
+  const nameById = new Map(emps.map((e) => [e.id, e.name]));
 
   // QR encodes the internal item id only (not a public URL); the in-app scanner
   // resolves it to this page. Rendered as a data URL on the server.
@@ -63,6 +70,18 @@ export default async function ItemPage({ params }: { params: Promise<{ id: strin
     photos: item.photos,
     qr,
     canEdit,
+    // Baseline for the first stage's duration = when the first stage was added.
+    createdAt: item.tasks[0] ? item.tasks[0].createdAt.toISOString() : null,
+    qc: { status: item.qcStatus, note: item.qcNote, at: item.qcAt ? item.qcAt.toISOString() : null },
+    stages: item.tasks.map((tsk) => ({
+      id: tsk.id,
+      stage: tsk.stage,
+      worker: tsk.worker?.name || null,
+      color: tsk.worker?.color || null,
+      createdAt: tsk.createdAt.toISOString(),
+      doneAt: tsk.doneAt ? tsk.doneAt.toISOString() : null,
+      doneByName: tsk.doneBy ? (nameById.get(tsk.doneBy) || null) : null,
+    })),
   };
 
   return (
