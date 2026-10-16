@@ -63,6 +63,7 @@ export async function getProductionFile() {
       where: { workStatus: { in: ACTIVE_WORK }, deletedAt: null },
       select: {
         id: true, quoteNumber: true, workStatus: true, deliveryDate: true,
+        woodStatus: true, fabricStatus: true,
         customer: { select: { name: true, phone: true } },
         items: {
           orderBy: { sortOrder: "asc" },
@@ -89,6 +90,8 @@ export async function getProductionFile() {
     id: q.id,
     quoteNumber: q.quoteNumber,
     workStatus: q.workStatus,
+    woodStatus: q.woodStatus,
+    fabricStatus: q.fabricStatus,
     deliveryDate: q.deliveryDate ? q.deliveryDate.toISOString().slice(0, 10) : null,
     customer: q.customer?.name || "",
     customerPhone: q.customer?.phone || "",

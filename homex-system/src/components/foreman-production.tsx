@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useState, useCallback, useRef } from "react";
 import Link from "next/link";
-import { Loader2, Check, ChevronDown, ChevronLeft, Plus, X, Trash2, Save, Wand2, Factory, Users, GitBranch, ArrowUp, ArrowDown, Phone, ExternalLink, Clock, Camera } from "lucide-react";
+import { Loader2, Check, ChevronDown, ChevronLeft, Plus, X, Trash2, Save, Wand2, Factory, Users, GitBranch, ArrowUp, ArrowDown, Phone, ExternalLink, Clock, Camera, ClipboardList, Package } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useToast } from "@/components/toast";
 import { DateDrillNav, type DateRange } from "@/components/date-drill-nav";
@@ -11,7 +11,7 @@ type SpecRow = { labelAr: string; labelEn: string; value: string };
 type PTask = { id: string; stage: string; workerId: string | null; workerName: string; workerColor: string; done: boolean; doneAt: string | null };
 type Photo = { id: string; url: string };
 type PItem = { id: string; categoryId: string; description: string; quantity: number; specs: SpecRow[]; photos: { design: Photo | null; result: Photo | null }; hasPipeline: boolean; tasks: PTask[] };
-type PQuote = { id: string; quoteNumber: string; workStatus: string; deliveryDate: string | null; customer: string; customerPhone: string; items: PItem[] };
+type PQuote = { id: string; quoteNumber: string; workStatus: string; deliveryDate: string | null; woodStatus?: string; fabricStatus?: string; customer: string; customerPhone: string; items: PItem[] };
 type Worker = { id: string; name: string; color: string };
 type Category = { id: string; nameAr: string; nameEn: string };
 type Station = { id: string; name: string; mainWorkerId: string | null; subWorkerIds: string[]; mainWorkerName?: string; subNames?: string[] };
@@ -164,7 +164,12 @@ function SpecSheet({ item, onAdvance, onSetTime, onUploadPhoto, onDeletePhoto, u
     <div className="rounded-lg border border-gray-200 dark:border-gray-700 bg-gray-50/60 dark:bg-gray-900/30 p-3 space-y-2">
       <div className="flex items-start justify-between gap-2">
         <p className="text-sm font-bold text-gray-800 dark:text-gray-100">{item.description}</p>
-        {item.quantity > 1 && <span className="text-[11px] font-mono-en font-bold text-gray-400 shrink-0">×{item.quantity}</span>}
+        <div className="flex items-center gap-2 shrink-0">
+          {item.quantity > 1 && <span className="text-[11px] font-mono-en font-bold text-gray-400">×{item.quantity}</span>}
+          <Link href={`/item/${item.id}`} className="inline-flex items-center gap-1 text-[11px] font-bold text-teal-600 hover:text-teal-700 border border-teal-200 dark:border-teal-800 rounded-lg px-2 py-1">
+            <ClipboardList className="w-3.5 h-3.5" /> التفاصيل
+          </Link>
+        </div>
       </div>
 
       {item.specs.length > 0 && (
@@ -360,6 +365,19 @@ function ProductionFile({ data, reload }: { data: ProdFile; reload: () => void }
                           <Wand2 className="w-3.5 h-3.5" /> تطبيق مراحل الأقسام على الكل
                         </button>
                       </div>
+                      {(() => {
+                        const miss: string[] = [];
+                        if (q.woodStatus && q.woodStatus !== "arrived") miss.push(`الأخشاب (${q.woodStatus === "ordered" ? "تحت الطلب" : "لم تُطلب"})`);
+                        if (q.fabricStatus && q.fabricStatus !== "arrived") miss.push(`الأقمشة (${q.fabricStatus === "ordered" ? "تحت الطلب" : "لم تُطلب"})`);
+                        if (!miss.length) return null;
+                        return (
+                          <div className="rounded-lg border border-amber-300 dark:border-amber-700 bg-amber-50/70 dark:bg-amber-900/15 px-3 py-2 flex items-center gap-2 text-[11px] mb-1">
+                            <Package className="w-3.5 h-3.5 text-amber-600 shrink-0" />
+                            <span className="font-bold text-amber-800 dark:text-amber-200">مواد لم تصل:</span>
+                            <span className="text-amber-700 dark:text-amber-300">{miss.join("، ")}</span>
+                          </div>
+                        );
+                      })()}
                       {q.items.map((it) => (
                         <div key={it.id} className="space-y-1">
                           <SpecSheet item={it} onAdvance={advance} onSetTime={setTime} onUploadPhoto={uploadPhoto} onDeletePhoto={removePhoto} uploadingKey={uploading} />
