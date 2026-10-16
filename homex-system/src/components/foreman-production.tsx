@@ -149,6 +149,46 @@ function fmtTime(iso: string | null): string {
   return `${p(d.getHours())}:${p(d.getMinutes())}`;
 }
 
+// Wood/fabric procurement control for an order — the foreman sets it here
+// (لم تُطلب / تم الطلب / وصلت); إدارة الأعمال only views it.
+const MAT_OPTS: { key: string; label: string; on: string }[] = [
+  { key: "not_ordered", label: "لم تُطلب", on: "bg-gray-200 text-gray-700 dark:bg-gray-600 dark:text-gray-100" },
+  { key: "ordered", label: "تم الطلب", on: "bg-sky-500 text-white" },
+  { key: "arrived", label: "وصلت", on: "bg-green-600 text-white" },
+];
+function MatRow({ label, value, onSet }: { label: string; value: string; onSet: (v: string) => void }) {
+  return (
+    <div className="flex items-center gap-2">
+      <span className="text-[11px] font-bold text-gray-500 w-12 shrink-0">{label}</span>
+      <div className="flex gap-1 flex-wrap">
+        {MAT_OPTS.map((o) => (
+          <button key={o.key} onClick={() => onSet(o.key)}
+            className={cn("px-2 py-0.5 rounded-md text-[11px] font-bold border transition-colors",
+              value === o.key ? `${o.on} border-transparent` : "bg-white dark:bg-gray-800 border-gray-200 dark:border-gray-600 text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-700")}>
+            {o.label}
+          </button>
+        ))}
+      </div>
+    </div>
+  );
+}
+function MaterialControl({ quoteId, wood, fabric }: { quoteId: string; wood: string; fabric: string }) {
+  const toast = useToast();
+  const [w, setW] = useState(wood);
+  const [f, setF] = useState(fabric);
+  const save = async (patch: { woodStatus?: string; fabricStatus?: string }) => {
+    const res = await fetch("/api/foreman/materials", { method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ quotationId: quoteId, ...patch }) });
+    if (!res.ok) toast.error("تعذّر الحفظ");
+  };
+  return (
+    <div className="rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 px-3 py-2 mb-1 space-y-1.5">
+      <div className="flex items-center gap-1.5 text-[11px] font-bold text-gray-500"><Package className="w-3.5 h-3.5" /> طلب المواد</div>
+      <MatRow label="الأخشاب" value={w} onSet={(v) => { setW(v); save({ woodStatus: v }); }} />
+      <MatRow label="الأقمشة" value={f} onSet={(v) => { setF(v); save({ fabricStatus: v }); }} />
+    </div>
+  );
+}
+
 function SpecSheet({ item, onAdvance, onSetTime, onUploadPhoto, onDeletePhoto, uploadingKey }: {
   item: PItem;
   onAdvance?: (taskId: string) => void;
@@ -366,19 +406,7 @@ function ProductionFile({ data, reload }: { data: ProdFile; reload: () => void }
                           <Wand2 className="w-3.5 h-3.5" /> تطبيق مراحل الأقسام على الكل
                         </button>
                       </div>
-                      {(() => {
-                        const miss: string[] = [];
-                        if (q.woodStatus && q.woodStatus !== "arrived") miss.push(`الأخشاب (${q.woodStatus === "ordered" ? "تحت الطلب" : "لم تُطلب"})`);
-                        if (q.fabricStatus && q.fabricStatus !== "arrived") miss.push(`الأقمشة (${q.fabricStatus === "ordered" ? "تحت الطلب" : "لم تُطلب"})`);
-                        if (!miss.length) return null;
-                        return (
-                          <div className="rounded-lg border border-amber-300 dark:border-amber-700 bg-amber-50/70 dark:bg-amber-900/15 px-3 py-2 flex items-center gap-2 text-[11px] mb-1">
-                            <Package className="w-3.5 h-3.5 text-amber-600 shrink-0" />
-                            <span className="font-bold text-amber-800 dark:text-amber-200">مواد لم تصل:</span>
-                            <span className="text-amber-700 dark:text-amber-300">{miss.join("، ")}</span>
-                          </div>
-                        );
-                      })()}
+                      <MaterialControl quoteId={q.id} wood={q.woodStatus || "not_ordered"} fabric={q.fabricStatus || "not_ordered"} />
                       {q.items.map((it) => (
                         <div key={it.id} className="space-y-1">
                           <SpecSheet item={it} onAdvance={advance} onSetTime={setTime} onUploadPhoto={uploadPhoto} onDeletePhoto={removePhoto} uploadingKey={uploading} />
