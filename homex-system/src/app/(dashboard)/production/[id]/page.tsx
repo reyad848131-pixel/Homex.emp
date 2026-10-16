@@ -26,7 +26,7 @@ export default async function ProductionPage({ params }: { params: Promise<{ id:
       items: {
         orderBy: { sortOrder: "asc" },
         select: {
-          id: true, description: true, quantity: true, lineTotal: true,
+          id: true, description: true, quantity: true, lineTotal: true, categoryId: true,
           category: { select: { nameAr: true, nameEn: true } },
           tasks: {
             orderBy: { sortOrder: "asc" },

@@ -7,11 +7,13 @@ import { ArrowRight, Check, X, Plus, Package, FileText, HardHat, Layers, Sparkle
 import { DEFAULT_STAGES, initials, stageLabel } from "@/lib/workers";
 import { displayName } from "@/lib/translit";
 import { useI18n } from "@/lib/i18n";
+import { ItemComponentsPanel } from "@/components/item-components-panel";
 
 export interface WorkerLite { id: string; name: string; color: string }
 export interface Task { id: string; stage: string; workerId: string | null; doneAt: string | null; sortOrder: number; worker: WorkerLite | null }
 export interface Item {
   id: string; description: string; quantity: number;
+  categoryId?: string;
   category: { nameAr: string; nameEn: string };
   tasks: Task[];
 }
@@ -171,6 +173,7 @@ function ItemSection({ item, workers, h }: { item: Item; workers: WorkerLite[]; 
         {item.tasks.map((task, i) => <StageCard key={task.id} task={task} index={i} itemId={item.id} workers={workers} h={h} />)}
         <AddStage itemId={item.id} onAdd={h.add} />
       </div>
+      <ItemComponentsPanel itemId={item.id} categoryId={item.categoryId} />
     </div>
   );
 }

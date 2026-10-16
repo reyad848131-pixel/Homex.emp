@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { getAuth } from "@/lib/auth";
 import { getRolePermissions } from "@/lib/permissions";
 import { priceEditorIds, canEditPrice } from "@/lib/price-permission";
+import { foremanAccessIds, canAccessForeman } from "@/lib/foreman-access";
 
 export async function GET() {
   const session = await getAuth();
@@ -12,6 +13,7 @@ export async function GET() {
   const has = (p: string) => permissions.includes(p as any);
   const privileged = user.role === "admin" || user.role === "ceo" || user.role === "manager";
   const editorIds = await priceEditorIds().catch(() => [] as string[]);
+  const foremanIds = await foremanAccessIds().catch(() => [] as string[]);
 
   const res = NextResponse.json({
     id: user.id,
@@ -25,6 +27,8 @@ export async function GET() {
     canEditDeliveries: privileged || has("work_orders") || has("deliveries"),
     // Permanent owners (Riyad / Salim by civil id) + designated employees only.
     canEditPrice: canEditPrice(user.civilId, user.id, editorIds),
+    // Foreman/owner: may edit production item components (not arrived/arrived/installed).
+    canForeman: canAccessForeman(user.civilId, user.id, foremanIds),
   });
   res.headers.set("Cache-Control", "private, max-age=30, stale-while-revalidate=120");
   return res;
