@@ -120,25 +120,54 @@ function TaskRow({ task, workers, onReassign, onDone }: { task: Task; workers: W
   );
 }
 
+// Workload level from the number of open tasks: free → busy → heavy → overloaded.
+function loadLevel(n: number): { label: string; bar: string; text: string; pct: number } {
+  if (n === 0) return { label: "متفرّغ", bar: "bg-emerald-500", text: "text-emerald-600", pct: 0 };
+  if (n <= 3) return { label: "مشغول", bar: "bg-teal-500", text: "text-teal-600", pct: (n / 8) * 100 };
+  if (n <= 6) return { label: "حِمل عالٍ", bar: "bg-amber-500", text: "text-amber-600", pct: (n / 8) * 100 };
+  return { label: "محمّل زيادة", bar: "bg-red-500", text: "text-red-600", pct: 100 };
+}
+
 function BoardTab({ workers, ready, onReassign, onDone }: { workers: WorkerCard[]; ready: Task[]; onReassign: (id: string, w: string) => void; onDone: (id: string) => void }) {
   const available = workers.filter((w) => !w.onCrew && w.open.length === 0);
+  const isAbsent = (w: WorkerCard) => w.am === "absent" && w.pm === "absent";
+  const absentWithWork = workers.filter((w) => isAbsent(w) && w.open.length > 0);
+  const overloaded = workers.filter((w) => w.open.length > 6);
   return (
     <div className="space-y-4">
       <div className="flex flex-wrap gap-2 text-xs">
         <span className="px-3 py-1.5 rounded-lg bg-emerald-50 dark:bg-emerald-900/20 text-emerald-700 dark:text-emerald-300 font-bold">متفرّغ: {available.length}</span>
         <span className="px-3 py-1.5 rounded-lg bg-amber-50 dark:bg-amber-900/20 text-amber-700 dark:text-amber-300 font-bold">بالمواقع: {workers.filter((w) => w.onCrew).length}</span>
+        {overloaded.length > 0 && <span className="px-3 py-1.5 rounded-lg bg-red-50 dark:bg-red-900/20 text-red-700 dark:text-red-300 font-bold">محمّل زيادة: {overloaded.length}</span>}
+        {absentWithWork.length > 0 && <span className="px-3 py-1.5 rounded-lg bg-red-50 dark:bg-red-900/20 text-red-700 dark:text-red-300 font-bold">غائب وعنده مهام: {absentWithWork.length}</span>}
       </div>
 
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-        {workers.map((w) => (
-          <div key={w.id} className="rounded-xl border p-3 space-y-2 border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800">
+        {workers.map((w) => {
+          const lvl = loadLevel(w.open.length);
+          const absent = isAbsent(w);
+          const partial = !absent && (w.am === "absent" || w.pm === "absent");
+          return (
+          <div key={w.id} className={cn("rounded-xl border p-3 space-y-2 bg-white dark:bg-gray-800", absent && w.open.length > 0 ? "border-red-300 dark:border-red-700" : "border-gray-200 dark:border-gray-700")}>
             <div className="flex items-center justify-between gap-2">
               <div className="flex items-center gap-2 min-w-0">
                 <span className="w-3 h-3 rounded-full shrink-0" style={{ background: w.color }} />
                 <span className="font-bold truncate">{w.name}</span>
               </div>
-              {w.onCrew && <span className="text-[10px] font-bold text-amber-600 shrink-0">بالموقع 🚚</span>}
+              <div className="flex items-center gap-1.5 shrink-0">
+                {absent && <span className="text-[10px] font-bold text-red-600">غائب</span>}
+                {partial && <span className="text-[10px] font-bold text-amber-600">غياب جزئي</span>}
+                {w.onCrew && <span className="text-[10px] font-bold text-amber-600">بالموقع 🚚</span>}
+              </div>
             </div>
+            {/* Workload bar */}
+            <div className="flex items-center gap-2">
+              <div className="flex-1 h-1.5 rounded-full bg-gray-100 dark:bg-gray-700 overflow-hidden">
+                <div className={cn("h-full rounded-full transition-all", lvl.bar)} style={{ width: `${lvl.pct}%` }} />
+              </div>
+              <span className={cn("text-[10px] font-bold shrink-0", lvl.text)}>{lvl.label} · {w.open.length}</span>
+            </div>
+            {absent && w.open.length > 0 && <p className="text-[11px] text-red-600 font-bold">⚠ غائب اليوم — أعد توزيع مهامه</p>}
             {w.open.length === 0 ? (
               <p className="text-[11px] text-emerald-600 font-bold">متفرّغ — لا مهام مفتوحة</p>
             ) : (
@@ -146,7 +175,8 @@ function BoardTab({ workers, ready, onReassign, onDone }: { workers: WorkerCard[
             )}
             {w.doneToday.length > 0 && <p className="text-[10px] text-gray-400">أنجز اليوم: <span className="font-bold text-gray-600 dark:text-gray-300">{w.doneToday.length}</span></p>}
           </div>
-        ))}
+          );
+        })}
       </div>
 
       {/* Ready pool — unassigned work to hand out */}
@@ -253,14 +283,14 @@ function ReportsTab() {
 
   const printPdf = () => {
     const esc = (s: string) => String(s).replace(/[&<>]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;" }[c] || c));
-    const workerRows = (rows || []).map((r) => `<tr><td>${esc(r.name)}</td><td>${r.tasksDone}</td><td>${r.installs}</td><td>${r.daysPresent}</td><td>${r.daysAbsent}</td><td>${r.amAbsent ?? 0}</td><td>${r.pmAbsent ?? 0}</td></tr>`).join("");
+    const workerRows = (rows || []).map((r) => `<tr><td>${esc(r.name)}</td><td>${r.tasksDone}</td><td>${r.installs}</td><td>${r.daysPresent}</td><td>${r.daysAbsent}</td><td>${r.amAbsent ?? 0}</td><td>${r.pmAbsent ?? 0}</td><td>${r.daysPresent > 0 ? (r.tasksDone / r.daysPresent).toFixed(1) : "—"}</td></tr>`).join("");
     const stageRows = byStage.map((s) => `<tr><td>${esc(s.stage)}</td><td>${s.count}</td></tr>`).join("");
     const html = `<!doctype html><html dir="rtl" lang="ar"><head><meta charset="utf-8"><title>تقرير الفورمن ${from} — ${to}</title>
       <style>body{font-family:'Segoe UI',Tahoma,sans-serif;padding:24px;color:#1a1a1a}h1{font-size:18px}h2{font-size:14px;margin-top:22px}
       table{width:100%;border-collapse:collapse;margin-top:8px}th,td{border:1px solid #ccc;padding:6px 8px;text-align:center;font-size:12px}
       th{background:#f3f3f3}td:first-child,th:first-child{text-align:right}</style></head>
       <body><h1>تقرير الفورمن</h1><p>الفترة: ${from} ← ${to}</p>
-      <h2>أداء العمّال</h2><table><thead><tr><th>العامل</th><th>مهام منجزة</th><th>تركيبات</th><th>أيام حضور</th><th>أيام غياب</th><th>غياب صباحي</th><th>غياب مسائي</th></tr></thead><tbody>${workerRows || '<tr><td colspan="7">لا بيانات</td></tr>'}</tbody></table>
+      <h2>أداء العمّال</h2><table><thead><tr><th>العامل</th><th>مهام منجزة</th><th>تركيبات</th><th>أيام حضور</th><th>أيام غياب</th><th>غياب صباحي</th><th>غياب مسائي</th><th>معدّل/يوم</th></tr></thead><tbody>${workerRows || '<tr><td colspan="8">لا بيانات</td></tr>'}</tbody></table>
       <h2>حسب القسم / المرحلة</h2><table><thead><tr><th>القسم / المرحلة</th><th>قطع منجزة</th></tr></thead><tbody>${stageRows || '<tr><td colspan="2">لا بيانات</td></tr>'}</tbody></table>
       <script>window.onload=function(){window.print();}</script></body></html>`;
     const w = window.open("", "_blank");
@@ -307,6 +337,7 @@ function ReportsTab() {
                   <th className="px-3 py-2 font-bold">أيام غياب</th>
                   <th className="px-3 py-2 font-bold">غياب صباحي</th>
                   <th className="px-3 py-2 font-bold">غياب مسائي</th>
+                  <th className="px-3 py-2 font-bold">معدّل/يوم</th>
                 </tr>
               </thead>
               <tbody>
@@ -319,9 +350,10 @@ function ReportsTab() {
                     <td className="px-3 py-2 text-center font-mono-en text-red-500">{r.daysAbsent}</td>
                     <td className="px-3 py-2 text-center font-mono-en text-amber-600">{r.amAbsent ?? 0}</td>
                     <td className="px-3 py-2 text-center font-mono-en text-indigo-600">{r.pmAbsent ?? 0}</td>
+                    <td className="px-3 py-2 text-center font-mono-en font-bold">{r.daysPresent > 0 ? (r.tasksDone / r.daysPresent).toFixed(1) : "—"}</td>
                   </tr>
                 ))}
-                {rows && rows.length === 0 && <tr><td colSpan={7} className="text-center text-gray-400 py-6">لا بيانات في هذه الفترة</td></tr>}
+                {rows && rows.length === 0 && <tr><td colSpan={8} className="text-center text-gray-400 py-6">لا بيانات في هذه الفترة</td></tr>}
               </tbody>
             </table>
           </div>
