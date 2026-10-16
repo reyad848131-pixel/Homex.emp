@@ -378,3 +378,78 @@ export async function getForemanReport(fromStr: string, toStr: string) {
 
   return { from: fromStr, to: toStr, rows, byStage };
 }
+
+// Production INSIGHTS (#2 stage averages, #5 projected ready date, #3 at-risk).
+// Learns how long each stage actually takes from recent completed work, then
+// projects when each active order will be ready and flags the ones that won't
+// make their delivery date. All timings in milliseconds.
+export async function getForemanInsights() {
+  const since = new Date(Date.now() - 120 * 86400 * 1000);
+  const doneTasks = await prisma.itemTask.findMany({
+    where: { doneAt: { gte: since } },
+    select: { quoteItemId: true, stage: true, doneAt: true, createdAt: true, sortOrder: true },
+    orderBy: [{ quoteItemId: "asc" }, { sortOrder: "asc" }],
+    take: 6000,
+  });
+
+  // Duration of a stage ≈ its completion time minus the previous stage's
+  // completion (or the stage's own creation for the first). Outliers (>45d or
+  // ≤0) are dropped so one forgotten card doesn't skew the average.
+  const byItem = new Map<string, typeof doneTasks>();
+  for (const t of doneTasks) (byItem.get(t.quoteItemId) || byItem.set(t.quoteItemId, []).get(t.quoteItemId)!).push(t);
+  const durByStage = new Map<string, number[]>();
+  for (const [, tasks] of byItem) {
+    let prev: number | null = null;
+    for (const t of tasks) {
+      if (!t.doneAt) continue;
+      const done = t.doneAt.getTime();
+      const dur = done - (prev ?? t.createdAt.getTime());
+      if (dur > 0 && dur < 45 * 86400 * 1000) (durByStage.get(t.stage) || durByStage.set(t.stage, []).get(t.stage)!).push(dur);
+      prev = done;
+    }
+  }
+  const avgByStage = new Map<string, number>();
+  const stageAverages: { stage: string; avgMs: number; count: number }[] = [];
+  for (const [stage, arr] of durByStage) {
+    const avg = arr.reduce((a, b) => a + b, 0) / arr.length;
+    avgByStage.set(stage, avg);
+    stageAverages.push({ stage, avgMs: Math.round(avg), count: arr.length });
+  }
+  stageAverages.sort((a, b) => b.avgMs - a.avgMs);
+  const globalAvg = stageAverages.length ? stageAverages.reduce((a, s) => a + s.avgMs, 0) / stageAverages.length : 2 * 86400 * 1000;
+
+  // Active (undelivered) orders with a delivery date: project the remaining work.
+  const activeItems = await prisma.quoteItem.findMany({
+    where: { quotation: { workStatus: { in: ACTIVE_WORK }, deletedAt: null, deliveryDate: { not: null } } },
+    select: {
+      tasks: { select: { stage: true, doneAt: true }, orderBy: { sortOrder: "asc" } },
+      quotation: { select: { id: true, quoteNumber: true, deliveryDate: true, customer: { select: { name: true } } } },
+    },
+    take: 4000,
+  });
+  const orders = new Map<string, { quoteId: string; quoteNumber: string; customer: string; deliveryDate: Date | null; projMs: number }>();
+  for (const it of activeItems) {
+    const remaining = it.tasks.filter((t) => !t.doneAt);
+    let ms = remaining.reduce((s, r) => s + (avgByStage.get(r.stage) ?? globalAvg), 0);
+    if (it.tasks.length === 0) ms += globalAvg; // no pipeline yet → assume one stage
+    const q = it.quotation;
+    const cur = orders.get(q.id) || { quoteId: q.id, quoteNumber: q.quoteNumber, customer: q.customer?.name || "", deliveryDate: q.deliveryDate, projMs: 0 };
+    cur.projMs = Math.max(cur.projMs, ms); // items run in parallel; the longest drives the order
+    orders.set(q.id, cur);
+  }
+  const now = Date.now();
+  const list = Array.from(orders.values()).map((o) => {
+    const projectedReady = now + o.projMs;
+    const due = o.deliveryDate ? o.deliveryDate.getTime() : null;
+    const slackDays = due != null ? Math.round((due - projectedReady) / 86400000) : null;
+    return {
+      quoteId: o.quoteId, quoteNumber: o.quoteNumber, customer: o.customer,
+      deliveryDate: o.deliveryDate ? o.deliveryDate.toISOString() : null,
+      projectedReady: new Date(projectedReady).toISOString(),
+      atRisk: due != null && projectedReady > due,
+      slackDays,
+    };
+  });
+  list.sort((a, b) => (a.slackDays ?? 1e9) - (b.slackDays ?? 1e9));
+  return { stageAverages, orders: list, atRiskCount: list.filter((o) => o.atRisk).length };
+}

@@ -1,7 +1,8 @@
 "use client";
 
 import { useEffect, useState, useCallback } from "react";
-import { ChevronRight, ChevronLeft, Check, X, HardHat, Truck, BarChart3, AlertTriangle, Plus, FileSpreadsheet, Loader2, Factory, FileText, ClipboardCheck } from "lucide-react";
+import Link from "next/link";
+import { ChevronRight, ChevronLeft, Check, X, HardHat, Truck, BarChart3, AlertTriangle, Plus, FileSpreadsheet, Loader2, Factory, FileText, ClipboardCheck, Activity, Clock } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useToast } from "@/components/toast";
 import ProductionConsole from "@/components/foreman-production";
@@ -18,7 +19,7 @@ const shiftDay = (d: string, n: number) => { const dt = new Date(d + "T12:00:00"
 
 export default function ForemanClient() {
   const toast = useToast();
-  const [tab, setTab] = useState<"production" | "attendance" | "board" | "install" | "reports">("production");
+  const [tab, setTab] = useState<"production" | "attendance" | "board" | "install" | "reports" | "insights">("production");
   const [date, setDate] = useState(todayStr());
   const [data, setData] = useState<Board | null>(null);
   const [loading, setLoading] = useState(true);
@@ -82,7 +83,7 @@ export default function ForemanClient() {
 
       {/* Tabs */}
       <div className="flex gap-2">
-        {([["production", "الإنتاج", Factory], ["attendance", "الحضور", ClipboardCheck], ["board", "العمّال", HardHat], ["install", "التركيب", Truck], ["reports", "التقارير", BarChart3]] as const).map(([k, l, Icon]) => (
+        {([["production", "الإنتاج", Factory], ["attendance", "الحضور", ClipboardCheck], ["board", "العمّال", HardHat], ["install", "التركيب", Truck], ["insights", "مؤشرات", Activity], ["reports", "التقارير", BarChart3]] as const).map(([k, l, Icon]) => (
           <button key={k} onClick={() => setTab(k)}
             className={cn("flex-1 flex items-center justify-center gap-2 py-2.5 rounded-lg text-sm font-bold border transition-colors",
               tab === k ? "bg-teal-600 text-white border-teal-600" : "bg-white dark:bg-gray-800 border-gray-200 dark:border-gray-700 text-gray-600 dark:text-gray-300")}>
@@ -98,6 +99,7 @@ export default function ForemanClient() {
 
       {!loading && tab === "board" && <BoardTab workers={workers} ready={data?.ready || []} onReassign={reassign} onDone={markDone} />}
       {!loading && tab === "install" && <InstallTab installs={data?.installs || []} workers={workers} onRequired={setRequired} onNotes={setNotes} onAdd={addMember} onRemove={removeMember} />}
+      {tab === "insights" && <InsightsTab />}
       {tab === "reports" && <ReportsTab />}
     </div>
   );
@@ -247,6 +249,96 @@ function InstallTab({ installs, workers, onRequired, onNotes, onAdd, onRemove }:
           </div>
         );
       })}
+    </div>
+  );
+}
+
+function fmtMs(ms: number): string {
+  const h = ms / 3600000;
+  if (h < 24) return `${h.toFixed(h < 10 ? 1 : 0)} س`;
+  return `${(h / 24).toFixed(1)} يوم`;
+}
+function fmtDay(iso: string | null): string {
+  return iso ? new Date(iso).toLocaleDateString("en-GB", { day: "2-digit", month: "2-digit" }) : "—";
+}
+
+type Insights = {
+  stageAverages: { stage: string; avgMs: number; count: number }[];
+  orders: { quoteId: string; quoteNumber: string; customer: string; deliveryDate: string | null; projectedReady: string; atRisk: boolean; slackDays: number | null }[];
+  atRiskCount: number;
+};
+
+function InsightsTab() {
+  const [data, setData] = useState<Insights | null>(null);
+  const [loading, setLoading] = useState(true);
+  useEffect(() => {
+    fetch("/api/foreman/insights").then((r) => (r.ok ? r.json() : null)).then(setData).catch(() => {}).finally(() => setLoading(false));
+  }, []);
+  if (loading) return <div className="flex items-center gap-2 text-gray-400 p-6"><Loader2 className="w-5 h-5 animate-spin" /> جارٍ التحليل…</div>;
+  if (!data) return <p className="text-sm text-red-500 p-6">تعذّر التحميل</p>;
+
+  const atRisk = data.orders.filter((o) => o.atRisk);
+  const safe = data.orders.filter((o) => !o.atRisk);
+
+  return (
+    <div className="space-y-5">
+      {/* At-risk orders (#3) */}
+      <div>
+        <h2 className="text-sm font-bold text-gray-500 mb-2 flex items-center gap-1.5">
+          <AlertTriangle className={cn("w-4 h-4", atRisk.length ? "text-red-500" : "text-gray-400")} /> طلبات معرّضة للتأخير ({atRisk.length})
+        </h2>
+        {atRisk.length === 0 ? (
+          <p className="text-xs text-emerald-600 font-bold bg-emerald-50 dark:bg-emerald-900/20 rounded-lg p-3">كل الطلبات ضمن الوقت المتوقّع 👍</p>
+        ) : (
+          <div className="space-y-2">
+            {atRisk.map((o) => (
+              <Link key={o.quoteId} href={`/production/${o.quoteId}`} className="flex items-center gap-2 flex-wrap rounded-xl border border-red-300 dark:border-red-700 bg-red-50/60 dark:bg-red-900/15 p-3">
+                <span className="font-mono-en font-bold text-sm">{o.quoteNumber}</span>
+                <span className="text-sm font-semibold">{o.customer}</span>
+                <span className="ms-auto text-xs text-gray-500">التسليم: <b className="font-mono-en">{fmtDay(o.deliveryDate)}</b></span>
+                <span className="text-xs text-gray-500">متوقّع يجهز: <b className="font-mono-en text-red-600">{fmtDay(o.projectedReady)}</b></span>
+                {o.slackDays != null && <span className="text-[11px] font-bold text-red-600 bg-red-100 dark:bg-red-900/30 rounded-full px-2 py-0.5">متأخّر {Math.abs(o.slackDays)} يوم</span>}
+              </Link>
+            ))}
+          </div>
+        )}
+      </div>
+
+      {/* Projected ready for the rest (#5) */}
+      {safe.length > 0 && (
+        <div>
+          <h2 className="text-sm font-bold text-gray-500 mb-2 flex items-center gap-1.5"><Clock className="w-4 h-4" /> التواريخ المتوقّعة للجهوزية</h2>
+          <div className="space-y-1.5">
+            {safe.slice(0, 20).map((o) => (
+              <Link key={o.quoteId} href={`/production/${o.quoteId}`} className="flex items-center gap-2 flex-wrap rounded-lg bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 px-3 py-2 text-sm">
+                <span className="font-mono-en font-bold">{o.quoteNumber}</span>
+                <span className="font-semibold text-gray-600 dark:text-gray-300">{o.customer}</span>
+                <span className="ms-auto text-xs text-gray-400">التسليم <b className="font-mono-en">{fmtDay(o.deliveryDate)}</b></span>
+                <span className="text-xs text-emerald-600">يجهز ≈ <b className="font-mono-en">{fmtDay(o.projectedReady)}</b></span>
+                {o.slackDays != null && <span className="text-[10px] text-gray-400">(فائض {o.slackDays} يوم)</span>}
+              </Link>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* Stage averages (#2) */}
+      <div>
+        <h2 className="text-sm font-bold text-gray-500 mb-2 flex items-center gap-1.5"><Activity className="w-4 h-4" /> متوسّط زمن كل مرحلة</h2>
+        {data.stageAverages.length === 0 ? (
+          <p className="text-xs text-gray-400">لا بيانات كافية بعد — تتراكم مع إنجاز المراحل.</p>
+        ) : (
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+            {data.stageAverages.map((s) => (
+              <div key={s.stage} className="flex items-center justify-between rounded-lg bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 px-3 py-2">
+                <span className="text-sm font-bold">{s.stage}</span>
+                <span className="text-sm font-mono-en font-bold text-teal-600">{fmtMs(s.avgMs)}</span>
+                <span className="text-[10px] text-gray-400">({s.count})</span>
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
     </div>
   );
 }
