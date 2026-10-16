@@ -31,7 +31,6 @@ import {
 } from "lucide-react";
 import { initials } from "@/lib/workers";
 import { displayName } from "@/lib/translit";
-import { ProductionBody, buildProductionHandlers } from "../production/[id]/production-client";
 
 interface WorkerLite { id: string; name: string; color: string }
 interface ItemTask {
@@ -223,7 +222,6 @@ export function WorkOrdersClient({ initialData }: { initialData: { quotations: W
   const [waCompany, setWaCompany] = useState({ name: "", phone: "" });
   const [waPrompt, setWaPrompt] = useState<{ q: WorkQuotation; status: "ready_for_delivery" | "delivered" } | null>(null);
   const [workers, setWorkers] = useState<WorkerLite[]>([]);
-  const [prodId, setProdId] = useState<string | null>(null);
   const debouncedSearch = useDebouncedValue(search);
   // The default view is already server-rendered; skip the first client refetch.
   const firstRun = useRef(true);
@@ -409,12 +407,6 @@ export function WorkOrdersClient({ initialData }: { initialData: { quotations: W
     return <div className="text-center py-20 text-red-500">{t("dataError")}</div>;
   }
 
-  // Instant production overlay — driven by the board's already-loaded data, so
-  // it opens with no navigation and no DB round-trip.
-  const prodQ = data.quotations.find((q) => q.id === prodId) || null;
-  const setProdItems = (fn: (prev: WorkItem[]) => WorkItem[]) =>
-    setData((prev) => (prev ? { ...prev, quotations: prev.quotations.map((q) => (q.id === prodId ? { ...q, items: fn(q.items) } : q)) } : prev));
-  const prod = buildProductionHandlers(prodQ?.items || [], setProdItems, workers);
 
   // Concurrent-order grouping: orders that were merged share a boardGroupId.
   // Count members per group so we can flag the ones with 2+ (same customer), and
@@ -733,35 +725,6 @@ export function WorkOrdersClient({ initialData }: { initialData: { quotations: W
                       </div>
                     </div>
 
-                    {/* Production line — opens the spacious workspace instantly as
-                        an overlay (uses data already loaded, no DB round-trip). */}
-                    <button
-                      type="button"
-                      onClick={() => setProdId(q.id)}
-                      className="group w-full text-start flex items-center gap-3 p-3 rounded-xl border border-gray-200 dark:border-gray-700 hover:border-teal-400 dark:hover:border-teal-600 hover:bg-teal-50/40 dark:hover:bg-teal-900/10 transition-colors"
-                    >
-                      <div className="w-10 h-10 rounded-lg bg-teal-50 dark:bg-teal-900/20 grid place-items-center text-teal-600 shrink-0">
-                        <HardHat className="w-5 h-5" />
-                      </div>
-                      <div className="min-w-0 flex-1">
-                        <div className="font-bold text-sm">{t("prodLine")}</div>
-                        <div className="text-xs text-gray-500 dark:text-gray-400">
-                          {totalTasks > 0
-                            ? <><span className="font-mono-en font-bold">{doneTasks}/{totalTasks}</span> {t("prodStagesDone")}</>
-                            : t("prodNoStages")}
-                        </div>
-                      </div>
-                      {orderWorkers.length > 0 && (
-                        <div className="flex items-center gap-1 shrink-0">
-                          {orderWorkers.slice(0, 4).map((w) => (
-                            <Avatar key={w.id} color={w.color} name={w.name} size={24} />
-                          ))}
-                          {orderWorkers.length > 4 && <span className="text-[10px] font-bold text-gray-400 font-mono-en">+{orderWorkers.length - 4}</span>}
-                        </div>
-                      )}
-                      <ChevronLeft className="w-5 h-5 text-gray-400 group-hover:text-teal-600 shrink-0" />
-                    </button>
-
                     {q.workStatus === "ready_for_delivery" && (
                       <div className="flex items-center justify-between gap-3 px-4 py-2.5 rounded-lg bg-teal-50 dark:bg-teal-900/20 border border-teal-200 dark:border-teal-800">
                         <span className="flex items-center gap-2 text-sm font-bold text-teal-700 dark:text-teal-300">
@@ -933,23 +896,6 @@ export function WorkOrdersClient({ initialData }: { initialData: { quotations: W
               </div>
             ) : renderCard(block.items[0]));
           })()}
-        </div>
-      )}
-
-      {/* Instant production workspace overlay */}
-      {prodQ && (
-        <div className="fixed inset-0 z-50 bg-black/50 backdrop-blur-sm overflow-y-auto" onClick={() => setProdId(null)}>
-          <div className="min-h-full flex items-start justify-center p-0 sm:p-4">
-            <div className="bg-gray-50 dark:bg-gray-900 w-full sm:max-w-4xl sm:rounded-2xl shadow-2xl p-4 sm:p-6 sm:my-4" onClick={(e) => e.stopPropagation()}>
-              <div className="flex items-center justify-between mb-3">
-                <span className="text-xs font-bold text-gray-400">{t("prodWorkspace")}</span>
-                <button onClick={() => setProdId(null)} className="w-9 h-9 rounded-full border border-gray-200 dark:border-gray-700 grid place-items-center text-gray-500 hover:bg-gray-100 dark:hover:bg-gray-800" aria-label={t("cancel")}>
-                  <X className="w-4 h-4" />
-                </button>
-              </div>
-              <ProductionBody order={prodQ} items={prodQ.items} workers={workers} h={prod.h} applyToAll={prod.applyToAll} />
-            </div>
-          </div>
         </div>
       )}
 
