@@ -134,6 +134,26 @@ function mergeComponents(raw: unknown): ComponentDef[] {
   return out;
 }
 
+// Turn an item's stored details JSON (its `.specs` map of fieldId → value) into
+// labelled rows using the catalog. Unknown/removed fields are kept (labelled by
+// their id) so nothing silently disappears. Shared by the foreman file and the
+// per-item (barcode) page.
+export function specRowsFromDetails(detailsRaw: string | null, catalog: SpecsCatalog): { labelAr: string; labelEn: string; value: string }[] {
+  let specs: Record<string, unknown> = {};
+  try {
+    const d = detailsRaw ? JSON.parse(detailsRaw) : null;
+    if (d && typeof d.specs === "object" && d.specs) specs = d.specs as Record<string, unknown>;
+  } catch { /* ignore malformed details */ }
+  const rows: { labelAr: string; labelEn: string; value: string }[] = [];
+  for (const [fid, val] of Object.entries(specs)) {
+    const value = typeof val === "string" ? val.trim() : "";
+    if (!value) continue;
+    const f = catalog.fields.find((x) => x.id === fid);
+    rows.push({ labelAr: f?.labelAr || fid, labelEn: f?.labelEn || fid, value });
+  }
+  return rows;
+}
+
 // The components that apply to one category (category-scoped + the "all" ones).
 export function componentsForCategory(catalog: SpecsCatalog, categoryId: string): ComponentDef[] {
   return catalog.components.filter(
