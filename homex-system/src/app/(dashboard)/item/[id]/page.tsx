@@ -28,6 +28,7 @@ export default async function ItemPage({ params }: { params: Promise<{ id: strin
       quotation: {
         select: {
           id: true, quoteNumber: true, deliveryDate: true, workStatus: true,
+          woodStatus: true, fabricStatus: true,
           governorate: true, wilayat: true, address: true,
           customer: { select: { name: true, phone: true, phoneCode: true, governorate: true, wilayat: true } },
         },
@@ -65,6 +66,8 @@ export default async function ItemPage({ params }: { params: Promise<{ id: strin
     quotationId: item.quotation.id,
     deliveryDate: item.quotation.deliveryDate ? item.quotation.deliveryDate.toISOString() : null,
     workStatus: item.quotation.workStatus,
+    woodStatus: item.quotation.woodStatus || "not_ordered",
+    fabricStatus: item.quotation.fabricStatus || "not_ordered",
     customerName: item.quotation.customer?.name || "",
     phone: item.quotation.customer ? `${item.quotation.customer.phoneCode}${item.quotation.customer.phone}` : "",
     governorate: item.quotation.customer?.governorate || "",

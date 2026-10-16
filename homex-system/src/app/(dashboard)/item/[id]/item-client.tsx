@@ -9,11 +9,13 @@ import { ItemComponentsPanel } from "@/components/item-components-panel";
 import { ItemIssuesPanel } from "@/components/item-issues-panel";
 import { ItemQcPanel } from "@/components/item-qc-panel";
 import { ItemStagesPanel, type StageRow } from "@/components/item-stages-panel";
+import { MaterialControl } from "@/components/material-control";
 
 interface Data {
   id: string; description: string; quantity: number; categoryId: string;
   categoryName: { ar: string; en: string };
   quoteNumber: string; quotationId: string; deliveryDate: string | null; workStatus: string | null;
+  woodStatus: string; fabricStatus: string;
   customerName: string; phone: string; governorate: string; wilayat: string;
   specs: { labelAr: string; labelEn: string; value: string }[];
   photos: { id: string; url: string; kind: string }[];
@@ -92,8 +94,13 @@ export function ItemPageClient({ data }: { data: Data }) {
         <ItemStagesPanel itemId={data.id} initial={data.stages} workers={data.workers} canEdit={data.canEdit} />
       </div>
 
-      {/* Materials / components orders (الطلبات والعناصر) */}
+      {/* Order-level materials (wood/fabric) + per-item components (الطلبات والعناصر) */}
       <div className={card}>
+        {data.canEdit && (
+          <div className="pb-3 mb-3 border-b border-dashed border-gray-200 dark:border-gray-700">
+            <MaterialControl quoteId={data.quotationId} wood={data.woodStatus} fabric={data.fabricStatus} />
+          </div>
+        )}
         <ItemComponentsPanel itemId={data.id} categoryId={data.categoryId} canEdit={data.canEdit} />
       </div>
 
