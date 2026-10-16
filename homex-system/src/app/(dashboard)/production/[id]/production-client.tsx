@@ -3,7 +3,7 @@
 import { useState } from "react";
 import Link from "next/link";
 import { cn } from "@/lib/utils";
-import { ArrowRight, Check, X, Plus, Package, FileText, HardHat, Layers, Sparkles } from "lucide-react";
+import { ArrowRight, Check, X, Plus, Package, FileText, HardHat, Layers, Sparkles, Printer } from "lucide-react";
 import { DEFAULT_STAGES, initials, stageLabel } from "@/lib/workers";
 import { displayName } from "@/lib/translit";
 import { useI18n } from "@/lib/i18n";
@@ -305,9 +305,15 @@ export function ProductionClient({ order, workers }: { order: Order; workers: Wo
   const { h, applyToAll } = buildProductionHandlers(items, setItems, workers);
   return (
     <div>
-      <Link href="/work-orders" className="inline-flex items-center gap-1.5 text-sm font-bold text-gray-500 hover:text-gray-900 dark:hover:text-white mb-4">
-        <ArrowRight className="w-4 h-4" /> {t("prodBack")}
-      </Link>
+      <div className="flex items-center justify-between gap-2 mb-4">
+        <Link href="/work-orders" className="inline-flex items-center gap-1.5 text-sm font-bold text-gray-500 hover:text-gray-900 dark:hover:text-white">
+          <ArrowRight className="w-4 h-4" /> {t("prodBack")}
+        </Link>
+        <a href={`/api/production/${order.id}/print`} target="_blank" rel="noreferrer"
+          className="inline-flex items-center gap-1.5 h-9 px-3 rounded-lg border border-gray-200 dark:border-gray-700 text-sm font-bold text-gray-600 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800">
+          <Printer className="w-4 h-4" /> {t("prodPrintTickets")}
+        </a>
+      </div>
       <ProductionBody order={order} items={items} workers={workers} h={h} applyToAll={applyToAll} />
     </div>
   );

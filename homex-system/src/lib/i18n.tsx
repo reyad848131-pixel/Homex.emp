@@ -820,6 +820,7 @@ const translations = {
   itemPhotosTitle: { ar: "الصور", en: "Photos" },
   itemPhotoDesign: { ar: "التصميم", en: "Design" },
   itemPhotoResult: { ar: "النتيجة", en: "Result" },
+  prodPrintTickets: { ar: "اطبع بطاقات العمل", en: "Print job tickets" },
   scanTitle: { ar: "مسح باركود", en: "Scan barcode" },
   scanHint: { ar: "وجّه الكاميرا نحو باركود البند لفتح صفحته.", en: "Point the camera at an item's barcode to open its page." },
   scanNoCamera: { ar: "تعذّر فتح الكاميرا — تأكّد من السماح بالوصول للكاميرا.", en: "Couldn't open the camera — check camera permission." },
