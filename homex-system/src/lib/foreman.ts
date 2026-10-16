@@ -453,3 +453,38 @@ export async function getForemanInsights() {
   list.sort((a, b) => (a.slackDays ?? 1e9) - (b.slackDays ?? 1e9));
   return { stageAverages, orders: list, atRiskCount: list.filter((o) => o.atRisk).length };
 }
+
+// Live shop-floor view (#13): every active item whose CURRENT stage (the first
+// not-done one) is assigned to a worker — i.e. actually being worked on now —
+// with how long it has been in that stage. For a factory wall display.
+export async function getLiveFloor() {
+  const items = await prisma.quoteItem.findMany({
+    where: { quotation: { workStatus: { in: ACTIVE_WORK }, deletedAt: null } },
+    select: {
+      id: true, description: true,
+      tasks: { select: { stage: true, doneAt: true, workerId: true, createdAt: true, worker: { select: { name: true, color: true } } }, orderBy: { sortOrder: "asc" } },
+      quotation: { select: { quoteNumber: true, customer: { select: { name: true } } } },
+    },
+    take: 4000,
+  });
+  const now = Date.now();
+  const live: { itemId: string; item: string; quoteNumber: string; customer: string; stage: string; worker: string; color: string; sinceMs: number }[] = [];
+  for (const it of items) {
+    let prevDone: number | null = null;
+    let current: { stage: string; workerId: string | null; createdAt: Date; worker: { name: string; color: string } | null } | null = null;
+    for (const tk of it.tasks) {
+      if (!tk.doneAt) { current = tk; break; }
+      prevDone = tk.doneAt.getTime();
+    }
+    if (!current || !current.workerId) continue;
+    const started = prevDone ?? current.createdAt.getTime();
+    live.push({
+      itemId: it.id, item: it.description,
+      quoteNumber: it.quotation.quoteNumber, customer: it.quotation.customer?.name || "",
+      stage: current.stage, worker: current.worker?.name || "", color: current.worker?.color || "#999",
+      sinceMs: now - started,
+    });
+  }
+  live.sort((a, b) => b.sinceMs - a.sinceMs);
+  return { live, count: live.length };
+}

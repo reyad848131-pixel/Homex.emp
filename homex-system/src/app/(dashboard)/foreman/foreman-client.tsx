@@ -65,7 +65,10 @@ export default function ForemanClient() {
       <div className="flex items-center gap-3">
         <div className="w-10 h-10 rounded-lg bg-teal-50 dark:bg-teal-900/20 grid place-items-center text-teal-600 shrink-0"><HardHat className="w-5 h-5" /></div>
         <h1 className="text-xl font-bold">لوحة الفورمن</h1>
-        <div className="ms-auto"><BarcodeScanner /></div>
+        <div className="ms-auto flex items-center gap-2">
+          <Link href="/foreman/live" className="inline-flex items-center gap-1.5 h-10 px-3 rounded-lg border border-gray-200 dark:border-gray-700 text-sm font-bold text-gray-600 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800"><Activity className="w-4 h-4" /> تحت التنفيذ</Link>
+          <BarcodeScanner />
+        </div>
       </div>
 
       {/* Day navigation — only for the day-scoped tabs */}

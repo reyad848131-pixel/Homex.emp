@@ -19,10 +19,12 @@ export interface Item {
 }
 export interface ProdHeader {
   id: string; quoteNumber: string; deliveryDate: string | null;
+  woodStatus?: string; fabricStatus?: string;
   customer: { name: string; governorate: string; wilayat: string };
 }
 interface Order {
   id: string; quoteNumber: string; total: number; deliveryDate: string | null; workStatus: string | null;
+  woodStatus?: string; fabricStatus?: string;
   customer: { name: string; phone: string; phoneCode: string; governorate: string; wilayat: string };
   items: Item[];
 }
@@ -214,6 +216,23 @@ export function ProductionBody({ order, items, workers, h, applyToAll, showHeade
           </div>
         </div>
       )}
+
+      {/* Material readiness gate (#4): warn before work starts without materials. */}
+      {(() => {
+        const wood = order.woodStatus, fab = order.fabricStatus;
+        const missing: string[] = [];
+        if (wood && wood !== "arrived") missing.push(`الأخشاب (${wood === "ordered" ? "تحت الطلب" : "لم تُطلب"})`);
+        if (fab && fab !== "arrived") missing.push(`الأقمشة (${fab === "ordered" ? "تحت الطلب" : "لم تُطلب"})`);
+        if (missing.length === 0) return null;
+        return (
+          <div className="rounded-xl border border-amber-300 dark:border-amber-700 bg-amber-50/70 dark:bg-amber-900/15 p-3 mb-4 flex items-center gap-2 text-sm">
+            <Package className="w-4 h-4 text-amber-600 shrink-0" />
+            <span className="font-bold text-amber-800 dark:text-amber-200">مواد لم تصل بعد:</span>
+            <span className="text-amber-700 dark:text-amber-300">{missing.join("، ")}</span>
+            <span className="text-xs text-amber-600/80">— يُفضّل عدم بدء المراحل حتى تصل الموادّ.</span>
+          </div>
+        );
+      })()}
 
       {/* Toolbar: apply a stage / a quick template to ALL items at once */}
       {items.length > 1 && (

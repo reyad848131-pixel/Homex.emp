@@ -21,6 +21,7 @@ export default async function ProductionPage({ params }: { params: Promise<{ id:
     where: { id },
     select: {
       id: true, quoteNumber: true, total: true, deliveryDate: true, workStatus: true,
+      woodStatus: true, fabricStatus: true,
       governorate: true, wilayat: true, address: true,
       customer: { select: { name: true, phone: true, phoneCode: true, governorate: true, wilayat: true } },
       items: {
