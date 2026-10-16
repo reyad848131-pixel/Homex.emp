@@ -16,7 +16,6 @@ import {
   CreditCard, Plus, Banknote, RotateCcw, Receipt, MessageSquare, AlertCircle, Share2, Users,
 } from "lucide-react";
 import Link from "next/link";
-import { ItemDescBlock } from "@/components/item-desc-block";
 
 interface QuotationDetail {
   id: string;
@@ -724,12 +723,12 @@ export default function QuoteDetailClient({
                       </tr>
                       {catItems.map((item, i) => (
                         <tr key={item.id} className="border-b border-gray-50">
-                          <td className="py-2.5 font-mono-en text-gray-400 align-top">{i + 1}</td>
-                          <td className="py-2.5 align-top min-w-[180px]"><ItemDescBlock text={item.description} /></td>
-                          <td className="py-2.5 font-mono-en align-top">{item.quantity}</td>
-                          <td className="py-2.5 font-mono-en align-top">{fmtCur(item.unitPrice)}</td>
-                          <td className="py-2.5 font-mono-en align-top">{item.extras > 0 ? fmtCur(item.extras) : "-"}</td>
-                          <td className="py-2.5 font-mono-en font-bold align-top">{fmtCur(item.lineTotal)}</td>
+                          <td className="py-2.5 font-mono-en text-gray-400">{i + 1}</td>
+                          <td className="py-2.5 font-semibold">{item.description}</td>
+                          <td className="py-2.5 font-mono-en">{item.quantity}</td>
+                          <td className="py-2.5 font-mono-en">{fmtCur(item.unitPrice)}</td>
+                          <td className="py-2.5 font-mono-en">{item.extras > 0 ? fmtCur(item.extras) : "-"}</td>
+                          <td className="py-2.5 font-mono-en font-bold">{fmtCur(item.lineTotal)}</td>
                         </tr>
                       ))}
                     </>
