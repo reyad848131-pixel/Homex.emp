@@ -464,14 +464,42 @@ model QuoteItem {
   lineTotal   Float   @map("line_total")
   sortOrder   Int     @default(0) @map("sort_order")
 
+  // Quality-control verdict after production (before delivery). pass | fail.
+  qcStatus    String?   @map("qc_status")
+  qcNote      String?   @map("qc_note")
+  qcAt        DateTime? @map("qc_at")
+  qcBy        String?   @map("qc_by")
+
   quotation Quotation @relation(fields: [quotationId], references: [id], onDelete: Cascade)
   category  Category  @relation(fields: [categoryId], references: [id])
   tasks     ItemTask[]
   photos    ItemPhoto[]
   components ItemComponent[]
+  issues    ItemIssue[]
 
   @@index([quotationId])
   @@map("quote_items")
+}
+
+// A problem/flag raised on a produced item (missing material, wrong measure,
+// defect…), optionally with a photo. Shows as a red flag on the board until
+// resolved. See the foreman "open issues" list.
+model ItemIssue {
+  id         String    @id @default(cuid())
+  itemId     String    @map("item_id")
+  note       String
+  photoUrl   String?   @map("photo_url")
+  status     String    @default("open")   // open | resolved
+  createdBy  String    @map("created_by")
+  createdAt  DateTime  @default(now()) @map("created_at")
+  resolvedAt DateTime? @map("resolved_at")
+  resolvedBy String?   @map("resolved_by")
+
+  item QuoteItem @relation(fields: [itemId], references: [id], onDelete: Cascade)
+
+  @@index([itemId])
+  @@index([status])
+  @@map("item_issues")
 }
 
 // A trackable component/add-on attached to a produced item (glass doors,
@@ -604,6 +632,7 @@ model ItemTask {
   stage       String    // stage name, e.g. "نجارة" / "دهان" / "تنجيد"
   workerId    String?   @map("worker_id")
   doneAt      DateTime? @map("done_at")
+  doneBy      String?   @map("done_by")     // who marked it done (accountability)
   sortOrder   Int       @default(0) @map("sort_order")
   createdAt   DateTime  @default(now()) @map("created_at")
 

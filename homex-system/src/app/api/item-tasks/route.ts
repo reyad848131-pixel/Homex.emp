@@ -3,6 +3,7 @@ import { getAuth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { userCan } from "@/lib/permissions";
 import { foremanAccessIds, canAccessForeman } from "@/lib/foreman-access";
+import { logAction } from "@/lib/audit";
 
 async function guard() {
   const session = await getAuth();
@@ -72,7 +73,13 @@ export async function PATCH(req: NextRequest) {
     const data: Record<string, unknown> = {};
     if ("workerId" in body) data.workerId = body.workerId || null;
     if (typeof body.stage === "string" && body.stage.trim()) data.stage = body.stage.trim();
-    if (typeof body.done === "boolean") data.doneAt = body.done ? new Date() : null;
+    if (typeof body.done === "boolean") {
+      data.doneAt = body.done ? new Date() : null;
+      // Stamp who completed it (accountability). Reopening clears the stamp and
+      // is recorded in the audit log.
+      data.doneBy = body.done ? g.user.id : null;
+      if (!body.done) await logAction(g.user.id, "reopen_stage", "item_task", id, "").catch(() => {});
+    }
     // Allow setting/correcting the exact completion time (to the minute) so the
     // foreman can log when a stage actually finished — powers speed/productivity.
     if (typeof body.doneAt === "string" && body.doneAt.trim()) {
