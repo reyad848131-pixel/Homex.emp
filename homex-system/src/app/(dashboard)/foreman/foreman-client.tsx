@@ -5,6 +5,7 @@ import { ChevronRight, ChevronLeft, Check, X, HardHat, Truck, BarChart3, AlertTr
 import { cn } from "@/lib/utils";
 import { useToast } from "@/components/toast";
 import ProductionConsole from "@/components/foreman-production";
+import { BarcodeScanner } from "@/components/barcode-scanner";
 import AttendanceConsole from "@/components/foreman-attendance";
 
 type Task = { id: string; stage: string; workerId: string | null; itemDesc: string; quoteId: string; quoteNumber: string; customer: string };
@@ -63,6 +64,7 @@ export default function ForemanClient() {
       <div className="flex items-center gap-3">
         <div className="w-10 h-10 rounded-lg bg-teal-50 dark:bg-teal-900/20 grid place-items-center text-teal-600 shrink-0"><HardHat className="w-5 h-5" /></div>
         <h1 className="text-xl font-bold">لوحة الفورمن</h1>
+        <div className="ms-auto"><BarcodeScanner /></div>
       </div>
 
       {/* Day navigation — only for the day-scoped tabs */}
