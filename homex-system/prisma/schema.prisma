@@ -468,9 +468,33 @@ model QuoteItem {
   category  Category  @relation(fields: [categoryId], references: [id])
   tasks     ItemTask[]
   photos    ItemPhoto[]
+  components ItemComponent[]
 
   @@index([quotationId])
   @@map("quote_items")
+}
+
+// A trackable component/add-on attached to a produced item (glass doors,
+// lighting, handles…). Each carries a live status the foreman advances; the
+// name is snapshotted so renaming/removing the catalog definition never changes
+// history. See ComponentDef in specs-catalog.ts for the master list.
+model ItemComponent {
+  id          String    @id @default(cuid())
+  itemId      String    @map("item_id")
+  catalogId   String?   @map("catalog_id")   // optional ref to the catalog def
+  name        String                          // snapshot of the component label
+  status      String    @default("not_arrived") // not_arrived | arrived | installed
+  arrivedAt   DateTime? @map("arrived_at")
+  installedAt DateTime? @map("installed_at")
+  note        String?
+  updatedBy   String?   @map("updated_by")
+  createdAt   DateTime  @default(now()) @map("created_at")
+  updatedAt   DateTime  @updatedAt @map("updated_at")
+
+  item QuoteItem @relation(fields: [itemId], references: [id], onDelete: Cascade)
+
+  @@index([itemId])
+  @@map("item_components")
 }
 
 // Production photos for a quote item: one "design" photo (from the designer,

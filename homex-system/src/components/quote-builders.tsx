@@ -44,12 +44,12 @@ export function PricingProvider({ children }: { children: React.ReactNode }) {
 
 // The production specs catalog (wood / fabric / colour / channel option lists),
 // fetched once and shared with every builder so its spec dropdowns populate.
-const CatalogContext = createContext<SpecsCatalog>({ fields: [] });
+const CatalogContext = createContext<SpecsCatalog>({ fields: [], components: [] });
 export function useSpecsCatalog() {
   return useContext(CatalogContext);
 }
 export function CatalogProvider({ children }: { children: React.ReactNode }) {
-  const [catalog, setCatalog] = useState<SpecsCatalog>({ fields: [] });
+  const [catalog, setCatalog] = useState<SpecsCatalog>({ fields: [], components: [] });
   useEffect(() => {
     let alive = true;
     fetch("/api/catalog")

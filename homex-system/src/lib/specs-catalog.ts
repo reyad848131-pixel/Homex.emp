@@ -28,8 +28,22 @@ export interface SpecField {
   categories: string[];
 }
 
+// A trackable component/add-on that can be attached to a produced item (glass
+// doors, lighting, handles, shelves…). Unlike a SpecField (a fixed spec value),
+// each attached component carries a live status (not arrived → arrived →
+// installed) that the foreman updates from the item page / its barcode.
+export interface ComponentDef {
+  id: string;
+  labelAr: string;
+  labelEn: string;
+  // Category ids this component applies to (empty = all), so the picker shows
+  // only relevant components per item.
+  categories: string[];
+}
+
 export interface SpecsCatalog {
   fields: SpecField[];
+  components: ComponentDef[];
 }
 
 // Seed fields the factory asked for. Options start empty — the admins fill them
@@ -42,6 +56,7 @@ export const DEFAULT_SPECS_CATALOG: SpecsCatalog = {
     { id: "fabricCode", labelAr: "كود القماش", labelEn: "Fabric code", mode: "text", options: [], categories: [] },
     { id: "channel", labelAr: "نوع التشانالات", labelEn: "Channel type", mode: "list", options: [], categories: [] },
   ],
+  components: [],
 };
 
 function cleanStrings(v: unknown): string[] {
@@ -67,8 +82,9 @@ function fieldId(raw: unknown): string {
 // Validate/normalise any payload into a clean catalog, so a tampered or partial
 // body can never inject arbitrary shapes into storage.
 export function mergeSpecsCatalog(raw: unknown): SpecsCatalog {
-  const src = (raw && typeof raw === "object" ? (raw as any) : {}) as { fields?: unknown };
-  if (!Array.isArray(src.fields)) return { fields: [] };
+  const src = (raw && typeof raw === "object" ? (raw as any) : {}) as { fields?: unknown; components?: unknown };
+  const components = mergeComponents(src.components);
+  if (!Array.isArray(src.fields)) return { fields: [], components };
   const ids = new Set<string>();
   const fields: SpecField[] = [];
   for (const f of src.fields) {
@@ -90,7 +106,39 @@ export function mergeSpecsCatalog(raw: unknown): SpecsCatalog {
     });
     if (fields.length >= 60) break;
   }
-  return { fields };
+  return { fields, components };
+}
+
+// Validate/normalise the trackable-component definitions.
+function mergeComponents(raw: unknown): ComponentDef[] {
+  if (!Array.isArray(raw)) return [];
+  const ids = new Set<string>();
+  const out: ComponentDef[] = [];
+  for (const c of raw) {
+    if (!c || typeof c !== "object") continue;
+    const cc = c as any;
+    const labelAr = typeof cc.labelAr === "string" ? cc.labelAr.trim().slice(0, 60) : "";
+    const labelEn = typeof cc.labelEn === "string" ? cc.labelEn.trim().slice(0, 60) : "";
+    if (!labelAr && !labelEn) continue;
+    let id = fieldId(cc.id);
+    while (ids.has(id)) id = `${id}_${(idSeq++).toString(36)}`;
+    ids.add(id);
+    out.push({
+      id,
+      labelAr: labelAr || labelEn,
+      labelEn: labelEn || labelAr,
+      categories: cleanStrings(cc.categories).slice(0, 50),
+    });
+    if (out.length >= 100) break;
+  }
+  return out;
+}
+
+// The components that apply to one category (category-scoped + the "all" ones).
+export function componentsForCategory(catalog: SpecsCatalog, categoryId: string): ComponentDef[] {
+  return catalog.components.filter(
+    (c) => c.categories.length === 0 || c.categories.includes(categoryId)
+  );
 }
 
 // The fields that apply to one category (category-scoped + the "all" fields).

@@ -1,11 +1,11 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { Layers, Save, Loader2, Plus, X, Trash2 } from "lucide-react";
+import { Layers, Save, Loader2, Plus, X, Trash2, Boxes } from "lucide-react";
 import { useI18n } from "@/lib/i18n";
 import { useToast } from "@/components/toast";
 import { cn } from "@/lib/utils";
-import { DEFAULT_SPECS_CATALOG, type SpecField, type SpecsCatalog } from "@/lib/specs-catalog";
+import { DEFAULT_SPECS_CATALOG, type SpecField, type SpecsCatalog, type ComponentDef } from "@/lib/specs-catalog";
 
 type Cat = { id: string; nameAr: string; nameEn: string };
 
@@ -13,10 +13,15 @@ function newField(): SpecField {
   return { id: `f${Date.now().toString(36)}`, labelAr: "", labelEn: "", mode: "list", options: [], categories: [] };
 }
 
+function newComponent(): ComponentDef {
+  return { id: `c${Date.now().toString(36)}`, labelAr: "", labelEn: "", categories: [] };
+}
+
 export default function CatalogClient({ categories }: { categories: Cat[] }) {
   const { t, locale } = useI18n();
   const toast = useToast();
   const [fields, setFields] = useState<SpecField[]>([]);
+  const [components, setComponents] = useState<ComponentDef[]>([]);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   // Per-field draft text for the "add option" input.
@@ -25,10 +30,20 @@ export default function CatalogClient({ categories }: { categories: Cat[] }) {
   useEffect(() => {
     fetch("/api/catalog")
       .then((r) => (r.ok ? r.json() : null))
-      .then((d: SpecsCatalog | null) => setFields(d?.fields?.length ? d.fields : DEFAULT_SPECS_CATALOG.fields))
+      .then((d: SpecsCatalog | null) => {
+        setFields(d?.fields?.length ? d.fields : DEFAULT_SPECS_CATALOG.fields);
+        setComponents(d?.components || []);
+      })
       .catch(() => setFields(DEFAULT_SPECS_CATALOG.fields))
       .finally(() => setLoading(false));
   }, []);
+
+  const patchComp = (i: number, p: Partial<ComponentDef>) =>
+    setComponents((prev) => prev.map((c, idx) => (idx === i ? { ...c, ...p } : c)));
+  const toggleCompCat = (i: number, catId: string) => {
+    const cur = components[i].categories;
+    patchComp(i, { categories: cur.includes(catId) ? cur.filter((c) => c !== catId) : [...cur, catId] });
+  };
 
   const patch = (i: number, p: Partial<SpecField>) =>
     setFields((prev) => prev.map((f, idx) => (idx === i ? { ...f, ...p } : f)));
@@ -54,10 +69,10 @@ export default function CatalogClient({ categories }: { categories: Cat[] }) {
       const res = await fetch("/api/catalog", {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ fields }),
+        body: JSON.stringify({ fields, components }),
       });
       const data = await res.json().catch(() => ({}));
-      if (res.ok) { setFields((data as SpecsCatalog).fields || []); toast.success(t("catalogSaved")); }
+      if (res.ok) { setFields((data as SpecsCatalog).fields || []); setComponents((data as SpecsCatalog).components || []); toast.success(t("catalogSaved")); }
       else toast.error(data.error || t("saveFailed"));
     } catch {
       toast.error(t("serverConnectionError"));
@@ -176,6 +191,53 @@ export default function CatalogClient({ categories }: { categories: Cat[] }) {
       <button onClick={() => setFields((prev) => [...prev, newField()])} className="btn-secondary w-full flex items-center justify-center gap-2">
         <Plus className="w-4 h-4" /> {t("catAddField")}
       </button>
+
+      {/* ── Trackable components ──────────────────────────────────────────── */}
+      <div className="pt-4 mt-2 border-t border-gray-200 dark:border-gray-700">
+        <h2 className="text-lg font-bold flex items-center gap-2"><Boxes className="w-5 h-5 text-teal-600" /> {t("catComponentsTitle")}</h2>
+        <p className="text-sm text-gray-500 mt-1 mb-4">{t("catComponentsHint")}</p>
+
+        {components.map((c, i) => (
+          <div key={c.id} className={cn(card, "mb-3")}>
+            <div className="flex items-start gap-3">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 flex-1">
+                <label className="block">
+                  <span className="text-xs font-semibold text-gray-500">{t("catFieldLabelAr")}</span>
+                  <input value={c.labelAr} onChange={(e) => patchComp(i, { labelAr: e.target.value })} className="field mt-1 w-full" dir="rtl" placeholder="أبواب زجاج" />
+                </label>
+                <label className="block">
+                  <span className="text-xs font-semibold text-gray-500">{t("catFieldLabelEn")}</span>
+                  <input value={c.labelEn} onChange={(e) => patchComp(i, { labelEn: e.target.value })} className="field mt-1 w-full font-mono-en" dir="ltr" placeholder="Glass doors" />
+                </label>
+              </div>
+              <button onClick={() => setComponents((prev) => prev.filter((_, idx) => idx !== i))} className="mt-5 p-2 rounded-lg text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20 shrink-0" title={t("delete")}>
+                <Trash2 className="w-4 h-4" />
+              </button>
+            </div>
+            <div className="mt-4">
+              <span className="text-xs font-semibold text-gray-500">{t("catAppliesTo")}</span>
+              <div className="flex flex-wrap gap-2 mt-2">
+                <span className={cn("px-2.5 py-1 rounded-full text-xs font-bold", c.categories.length === 0 ? "bg-teal-600 text-white" : "bg-gray-100 dark:bg-gray-700 text-gray-400")}>
+                  {t("catAllCategories")}
+                </span>
+                {categories.map((cat) => {
+                  const on = c.categories.includes(cat.id);
+                  return (
+                    <button key={cat.id} onClick={() => toggleCompCat(i, cat.id)}
+                      className={cn("px-2.5 py-1 rounded-full text-xs font-semibold border transition-colors", on ? "bg-gray-900 text-white border-gray-900 dark:bg-gray-600 dark:border-gray-600" : "border-gray-200 dark:border-gray-600 hover:bg-gray-50 dark:hover:bg-gray-700")}>
+                      {locale === "ar" ? cat.nameAr : cat.nameEn}
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+          </div>
+        ))}
+
+        <button onClick={() => setComponents((prev) => [...prev, newComponent()])} className="btn-secondary w-full flex items-center justify-center gap-2">
+          <Plus className="w-4 h-4" /> {t("catAddComponent")}
+        </button>
+      </div>
 
       {/* Sticky save */}
       <div className="fixed bottom-0 inset-x-0 lg:ps-64 bg-white/90 dark:bg-gray-900/90 backdrop-blur border-t border-gray-200 dark:border-gray-700 p-3 no-print">
