@@ -135,7 +135,9 @@ function PhotoSlot({ label, kind, itemId, photo, busy, onUpload, onDelete }: {
           {busy || preparing ? <Loader2 className="w-4 h-4 animate-spin" /> : <span className="flex flex-col items-center text-[10px] font-bold"><Camera className="w-4 h-4 mb-0.5" /> أضف صورة</span>}
         </button>
       )}
-      <input ref={inputRef} type="file" accept="image/*" capture="environment" className="hidden" onChange={handle} />
+      {/* No `capture` attribute → the native picker offers camera, photo
+          library and files, instead of forcing the camera only. */}
+      <input ref={inputRef} type="file" accept="image/*" className="hidden" onChange={handle} />
     </div>
   );
 }
