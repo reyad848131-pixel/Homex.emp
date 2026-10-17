@@ -8,6 +8,7 @@ import { useToast } from "@/components/toast";
 import { DateDrillNav, type DateRange } from "@/components/date-drill-nav";
 import { ItemDescBlock } from "@/components/item-desc-block";
 import { MaterialControl } from "@/components/material-control";
+import { RetryImg } from "@/components/retry-img";
 
 type SpecRow = { labelAr: string; labelEn: string; value: string };
 type PTask = { id: string; stage: string; workerId: string | null; workerName: string; workerColor: string; done: boolean; doneAt: string | null };
@@ -124,8 +125,7 @@ function PhotoSlot({ label, kind, itemId, photo, busy, onUpload, onDelete }: {
       {photo ? (
         <div className="relative">
           <a href={photo.url} target="_blank" rel="noopener noreferrer">
-            {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img src={photo.url} alt={label} className="w-full h-20 object-cover rounded-lg border border-gray-200 dark:border-gray-700" />
+            <RetryImg src={photo.url} alt={label} className="w-full h-20 object-cover rounded-lg border border-gray-200 dark:border-gray-700" />
           </a>
           <button onClick={() => onDelete(photo.id)} className="absolute top-1 start-1 w-5 h-5 grid place-items-center rounded-full bg-black/60 text-white hover:bg-black/80"><X className="w-3 h-3" /></button>
         </div>

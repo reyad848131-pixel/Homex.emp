@@ -1,7 +1,7 @@
 "use client";
 
-import Image from "next/image";
 import { useRouter } from "next/navigation";
+import { RetryImg } from "@/components/retry-img";
 import { Package, MapPin, Phone, CalendarDays, ImageIcon, ArrowRight } from "lucide-react";
 import { useI18n } from "@/lib/i18n";
 import { displayName } from "@/lib/translit";
@@ -78,7 +78,7 @@ export function ItemPageClient({ data }: { data: Data }) {
         <h2 className="text-sm font-bold text-gray-500 mb-3 flex items-center gap-1.5"><ImageIcon className="w-4 h-4" /> {t("itemPhotoDesign")}</h2>
         {design ? (
           <a href={design.url} target="_blank" rel="noreferrer" className="block">
-            <Image src={design.url} alt="design" width={640} height={420} className="w-full max-h-80 object-contain rounded-xl border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-900/40" unoptimized />
+            <RetryImg src={design.url} alt="design" className="w-full max-h-80 object-contain rounded-xl border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-900/40" />
           </a>
         ) : (
           <p className="text-xs text-gray-400">{t("itemNoDesignPhoto")}</p>
