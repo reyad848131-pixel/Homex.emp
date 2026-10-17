@@ -348,6 +348,7 @@ function ProductionFile({ data, reload }: { data: ProdFile; reload: () => void }
     finally { setUploading(""); }
   };
   const removePhoto = async (photoId: string) => {
+    if (!window.confirm("حذف هذه الصورة؟")) return;
     try {
       const res = await fetch(`/api/foreman/photo?id=${photoId}`, { method: "DELETE" });
       if (res.ok) { toast.success("تم حذف الصورة"); reload(); }
