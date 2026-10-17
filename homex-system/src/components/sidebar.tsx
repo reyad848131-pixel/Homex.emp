@@ -40,6 +40,7 @@ import {
 import { useState, useEffect } from "react";
 import { DarkModeToggle } from "@/components/dark-mode-toggle";
 import { LanguageToggle } from "@/components/language-toggle";
+import { useSidebar } from "@/components/sidebar-context";
 
 const ROLE_KEYS: Record<string, TranslationKey> = {
   ceo: "roleCeo",
@@ -100,7 +101,7 @@ const allItems: Array<{ href: string; labelKey: TranslationKey; icon: any; perm?
 export function Sidebar({ user, permissions, canAccessSettings, canManagePricing, canManageCatalog, canAccessForeman }: SidebarProps) {
   const pathname = usePathname();
   const router = useRouter();
-  const [mobileOpen, setMobileOpen] = useState(false);
+  const { collapsed, mobileOpen, setMobileOpen } = useSidebar();
   const [logo, setLogo] = useState("");
   const { t, dir } = useI18n();
 
@@ -214,16 +215,7 @@ export function Sidebar({ user, permissions, canAccessSettings, canManagePricing
 
   return (
     <>
-      <button
-        className={cn(
-          "fixed top-4 z-50 lg:hidden bg-gray-900 text-white p-2 rounded-lg shadow-lg no-print",
-          isRTL ? "right-4" : "left-4"
-        )}
-        onClick={() => setMobileOpen(!mobileOpen)}
-      >
-        {mobileOpen ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5" />}
-      </button>
-
+      {/* Phone overlay backdrop (the ☰ toggle now lives in the page top bar). */}
       {mobileOpen && (
         <div
           className="fixed inset-0 bg-black/30 z-30 lg:hidden"
@@ -235,9 +227,12 @@ export function Sidebar({ user, permissions, canAccessSettings, canManagePricing
         className={cn(
           "fixed top-0 h-full w-64 bg-white dark:bg-gray-800 flex flex-col z-40 transition-transform no-print",
           isRTL
-            ? "right-0 border-l border-gray-200 dark:border-gray-700 max-lg:translate-x-full"
-            : "left-0 border-r border-gray-200 dark:border-gray-700 max-lg:-translate-x-full",
-          mobileOpen && "max-lg:translate-x-0"
+            ? "right-0 border-l border-gray-200 dark:border-gray-700 translate-x-full"
+            : "left-0 border-r border-gray-200 dark:border-gray-700 -translate-x-full",
+          // Phone: shown only while the overlay is open.
+          mobileOpen && "max-lg:translate-x-0",
+          // Desktop: shown unless collapsed.
+          collapsed ? (isRTL ? "lg:translate-x-full" : "lg:-translate-x-full") : "lg:translate-x-0"
         )}
       >
         {content}

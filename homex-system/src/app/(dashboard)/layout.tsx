@@ -10,6 +10,8 @@ import { NotificationBell } from "@/components/notification-bell";
 import { DashboardContent } from "@/components/dashboard-content";
 import { GlobalSearch } from "@/components/global-search";
 import { SessionGuard } from "@/components/session-guard";
+import { SidebarProvider } from "@/components/sidebar-context";
+import { SidebarToggle } from "@/components/sidebar-toggle";
 
 export default async function DashboardLayout({
   children,
@@ -31,19 +33,21 @@ export default async function DashboardLayout({
   const foremanAccess = canAccessForeman(su.civilId, su.id, foremanEditors);
 
   return (
-    <div className="flex min-h-screen">
-      <SessionGuard />
-      <Sidebar user={session.user as any} permissions={permissions} canAccessSettings={settingsAccess} canManagePricing={pricingAccess} canManageCatalog={catalogAccess} canAccessForeman={foremanAccess} />
-      <DashboardContent>
-        {/* ps-12 on mobile reserves room for the fixed hamburger button (which
-            sits at the inline-start top corner) so it doesn't cover the search. */}
-        <div className="flex items-center gap-3 mb-4 no-print max-lg:ps-12">
-          <GlobalSearch />
-          <div className="flex-1" />
-          <NotificationBell />
-        </div>
-        {children}
-      </DashboardContent>
-    </div>
+    <SidebarProvider>
+      <div className="flex min-h-screen">
+        <SessionGuard />
+        <Sidebar user={session.user as any} permissions={permissions} canAccessSettings={settingsAccess} canManagePricing={pricingAccess} canManageCatalog={catalogAccess} canAccessForeman={foremanAccess} />
+        <DashboardContent>
+          {/* The ☰ toggle collapses/expands the sidebar on every screen size. */}
+          <div className="flex items-center gap-3 mb-4 no-print">
+            <SidebarToggle />
+            <GlobalSearch />
+            <div className="flex-1" />
+            <NotificationBell />
+          </div>
+          {children}
+        </DashboardContent>
+      </div>
+    </SidebarProvider>
   );
 }
