@@ -105,47 +105,48 @@ export async function GET(_req: NextRequest, { params }: { params: Promise<{ id:
   .bar button{padding:9px 20px;border:0;border-radius:9px;font-weight:bold;cursor:pointer;font-size:14px;font-family:var(--font-body)}
   .bar .print{background:var(--sage-d);color:#fff} .bar .close{background:#dcdcd4;color:#333}
 
-  /* Card: a touch bigger than a business card, sized to fit one small page. */
-  .label{width:82mm;background:var(--paper);border:1px solid var(--line);
+  /* Card: true business-card size (54×85mm, portrait) so it prints small. */
+  .label{width:54mm;background:var(--paper);border:1px solid var(--line);
          box-shadow:0 10px 36px rgba(0,0,0,.12);overflow:hidden;text-align:center}
   .lh{background:linear-gradient(135deg,var(--green) 0%,var(--green-2) 100%);color:#fff;
-      padding:14px 16px 12px;position:relative;overflow:hidden}
+      padding:9px 10px 7px;position:relative;overflow:hidden}
   /* Plain strong header — the green radial glow was removed; keep the subtle
      sage underline from the brand theme only. */
-  .lh::after{content:"";position:absolute;left:0;right:0;bottom:0;height:3px;
+  .lh::after{content:"";position:absolute;left:0;right:0;bottom:0;height:2px;
              background:linear-gradient(90deg,transparent,var(--sage),transparent)}
   .lh-inner{position:relative}
-  .lh-badge{width:40px;height:40px;margin:0 auto 8px;border:1px solid rgba(255,255,255,.35);border-radius:10px;
+  .lh-badge{width:28px;height:28px;margin:0 auto 5px;border:1px solid rgba(255,255,255,.35);border-radius:7px;
             display:flex;align-items:center;justify-content:center;background:rgba(255,255,255,.07);overflow:hidden}
   .lh-badge img{width:100%;height:100%;object-fit:contain}
-  .lh-badge svg{width:24px;height:24px}
-  .lh h1{font-family:var(--font-word);font-size:19px;font-weight:700;letter-spacing:6px;line-height:1;padding-inline-start:6px}
-  .lh-sub{font-size:8.5px;color:rgba(255,255,255,.78);margin-top:5px;font-weight:500;letter-spacing:.4px}
-  .lh-tag{display:inline-block;margin-top:8px;font-size:8px;letter-spacing:2px;text-transform:uppercase;
-          color:rgba(255,255,255,.72);border:1px solid rgba(255,255,255,.28);border-radius:20px;padding:2px 10px}
+  .lh-badge svg{width:17px;height:17px}
+  .lh h1{font-family:var(--font-word);font-size:14px;font-weight:700;letter-spacing:4px;line-height:1;padding-inline-start:4px}
+  .lh-sub{font-size:6px;color:rgba(255,255,255,.78);margin-top:4px;font-weight:500;letter-spacing:.3px}
+  .lh-tag{display:inline-block;margin-top:5px;font-size:5.5px;letter-spacing:1.5px;text-transform:uppercase;
+          color:rgba(255,255,255,.72);border:1px solid rgba(255,255,255,.28);border-radius:20px;padding:1px 7px}
 
-  .body{padding:16px 16px 14px}
-  .idblock{position:relative;padding:6px 0 2px;overflow:hidden}
+  .body{padding:9px 9px 8px}
+  .idblock{position:relative;padding:3px 0 1px;overflow:hidden}
   .idwm{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;pointer-events:none;z-index:0}
-  .idwm img{width:120px;height:120px;object-fit:contain}
-  .idwm span{font-size:96px;font-weight:900;line-height:1}
+  .idwm img{width:74px;height:74px;object-fit:contain}
+  .idwm span{font-size:60px;font-weight:900;line-height:1}
   .idblock>*:not(.idwm){position:relative;z-index:1}
-  .cust{font-size:19px;font-weight:800;color:var(--ink);line-height:1.2}
-  .qnum{display:inline-block;margin-top:8px;font-size:13px;font-weight:800;color:var(--sage-d);
-        background:var(--soft);border:1px solid #cdd6c2;border-radius:8px;padding:3px 12px}
-  .loc{font-size:12px;color:var(--muted);font-weight:600;margin-top:6px}
+  .cust{font-size:13px;font-weight:800;color:var(--ink);line-height:1.2}
+  .qnum{display:inline-block;margin-top:5px;font-size:9.5px;font-weight:800;color:var(--sage-d);
+        background:var(--soft);border:1px solid #cdd6c2;border-radius:6px;padding:2px 8px}
+  .loc{font-size:8.5px;color:var(--muted);font-weight:600;margin-top:4px}
 
-  .qr{width:34mm;height:34mm;margin:12px auto 0;border:1px solid var(--line);border-radius:10px;padding:7px;background:#fff;display:block}
+  .qr{width:25mm;height:25mm;margin:7px auto 0;border:1px solid var(--line);border-radius:7px;padding:4px;background:#fff;display:block}
 
-  .foot{margin-top:12px;padding-top:9px;border-top:1px solid var(--line);
-        display:flex;justify-content:space-between;align-items:center;gap:8px;font-size:11px;color:var(--muted)}
-  .foot .cat{font-size:12px;font-weight:800;color:var(--sage-d)}
+  .foot{margin-top:7px;padding-top:5px;border-top:1px solid var(--line);
+        display:flex;justify-content:space-between;align-items:center;gap:6px;font-size:7.5px;color:var(--muted)}
+  .foot .cat{font-size:8.5px;font-weight:800;color:var(--sage-d)}
   .foot .due b{color:var(--ink);font-weight:800}
 
-  @page{ size:90mm 132mm; margin:4mm }
+  @page{ size:54mm 85mm; margin:0 }
   @media print{
-    body{background:#fff;padding:0;gap:0} .bar{display:none}
-    .label{border:none;box-shadow:none;width:100%;break-after:page;page-break-after:always}
+    html,body{background:#fff;padding:0;margin:0;gap:0;display:block}
+    .bar{display:none !important}
+    .label{border:none;box-shadow:none;width:54mm;margin:0;break-after:page;page-break-after:always}
     .label:last-child{break-after:auto;page-break-after:auto}
   }
 </style></head><body>
