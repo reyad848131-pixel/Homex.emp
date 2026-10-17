@@ -7,9 +7,11 @@ import { ScanLine, X, Camera, AlertTriangle } from "lucide-react";
 import { useI18n } from "@/lib/i18n";
 
 // In-app barcode scanner. Opens the device camera INSIDE the app (never the
-// phone's own camera app), reads the item QR (encoded as "item:<id>"), and
-// navigates to that item's page. Any signed-in user can scan to VIEW; only the
-// foreman/owner can edit once there. Closing fully releases the camera stream.
+// phone's own camera app), reads the project QR (encoded as "quote:<id>") and
+// opens that project's page with all its sections; it still understands the
+// older per-item QR ("item:<id>") for backward compatibility. Any signed-in
+// user can scan to VIEW; only the foreman/owner can edit once there. Closing
+// fully releases the camera stream.
 export function BarcodeScanner({ className }: { className?: string }) {
   const { t } = useI18n();
   const router = useRouter();
@@ -20,12 +22,12 @@ export function BarcodeScanner({ className }: { className?: string }) {
       <button onClick={() => setOpen(true)} className={className || "inline-flex items-center gap-2 h-10 px-4 rounded-lg bg-teal-600 text-white text-sm font-bold hover:bg-teal-700"}>
         <ScanLine className="w-4 h-4" /> {t("scanTitle")}
       </button>
-      {open && <ScannerModal onClose={() => setOpen(false)} onHit={(id) => { setOpen(false); router.push(`/item/${id}`); }} />}
+      {open && <ScannerModal onClose={() => setOpen(false)} onHit={(path) => { setOpen(false); router.push(path); }} />}
     </>
   );
 }
 
-function ScannerModal({ onClose, onHit }: { onClose: () => void; onHit: (id: string) => void }) {
+function ScannerModal({ onClose, onHit }: { onClose: () => void; onHit: (path: string) => void }) {
   const { t } = useI18n();
   const videoRef = useRef<HTMLVideoElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
@@ -63,8 +65,11 @@ function ScannerModal({ onClose, onHit }: { onClose: () => void; onHit: (id: str
           const img = ctx.getImageData(0, 0, w, h);
           const code = jsQR(img.data, w, h, { inversionAttempts: "dontInvert" });
           if (code && code.data) {
-            const m = code.data.trim().match(/^item:([A-Za-z0-9_-]+)$/);
-            if (m) { onHit(m[1]); return; }
+            const data = code.data.trim();
+            const mq = data.match(/^quote:([A-Za-z0-9_-]+)$/);
+            if (mq) { onHit(`/project/${mq[1]}`); return; }
+            const mi = data.match(/^item:([A-Za-z0-9_-]+)$/);
+            if (mi) { onHit(`/item/${mi[1]}`); return; }
           }
         }
       }

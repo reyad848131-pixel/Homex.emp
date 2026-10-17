@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useState, useCallback, useRef } from "react";
 import Link from "next/link";
-import { Loader2, Check, ChevronDown, ChevronLeft, Plus, X, Trash2, Save, Wand2, Factory, Users, GitBranch, ArrowUp, ArrowDown, Phone, ExternalLink, Clock, Camera, ClipboardList, Package } from "lucide-react";
+import { Loader2, Check, ChevronDown, ChevronLeft, Plus, X, Trash2, Save, Wand2, Factory, Users, GitBranch, ArrowUp, ArrowDown, Phone, ExternalLink, Clock, Camera, ClipboardList, Package, Printer } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useToast } from "@/components/toast";
 import { DateDrillNav, type DateRange } from "@/components/date-drill-nav";
@@ -405,6 +405,10 @@ function ProductionFile({ data, reload }: { data: ProdFile; reload: () => void }
                           className="inline-flex items-center gap-1 text-[11px] font-bold px-2.5 py-1 rounded-lg border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-700">
                           <ExternalLink className="w-3.5 h-3.5" /> فتح الكوتيشن كامل
                         </Link>
+                        <a href={`/api/quote/${q.id}/label`} target="_blank" rel="noreferrer"
+                          className="inline-flex items-center gap-1 text-[11px] font-bold px-2.5 py-1 rounded-lg border border-teal-300 dark:border-teal-700 text-teal-700 dark:text-teal-300 hover:bg-teal-50 dark:hover:bg-teal-900/20">
+                          <Printer className="w-3.5 h-3.5" /> طباعة البطاقة
+                        </a>
                         <button disabled={busy} onClick={() => { if (window.confirm("إعادة تطبيق قالب مراحل القسم على كل أصناف هذا الكوتيشن؟\nسيتم استبدال المراحل غير المنجزة بمراحل القالب (المراحل المنجزة تبقى).")) apply({ quotationId: q.id, replace: true }); }}
                           className="ms-auto inline-flex items-center gap-1 text-[11px] font-bold px-2.5 py-1 rounded-lg bg-indigo-600 text-white hover:bg-indigo-700 disabled:opacity-50">
                           <Wand2 className="w-3.5 h-3.5" /> إعادة تطبيق القالب

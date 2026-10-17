@@ -1,6 +1,4 @@
 import { notFound } from "next/navigation";
-import Link from "next/link";
-import QRCode from "qrcode";
 import { getAuth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { getSpecsCatalog, seedMissingStages } from "@/lib/foreman";
@@ -63,10 +61,6 @@ export default async function ItemPage({ params }: { params: Promise<{ id: strin
   ]);
   const nameById = new Map(emps.map((e) => [e.id, e.name]));
 
-  // QR encodes the internal item id only (not a public URL); the in-app scanner
-  // resolves it to this page. Rendered as a data URL on the server.
-  const qr = await QRCode.toDataURL(`item:${item.id}`, { margin: 1, width: 240 }).catch(() => "");
-
   const data = {
     id: item.id,
     description: item.description,
@@ -85,7 +79,6 @@ export default async function ItemPage({ params }: { params: Promise<{ id: strin
     wilayat: item.quotation.customer?.wilayat || "",
     specs,
     photos: item.photos,
-    qr,
     canEdit,
     qc: { status: item.qcStatus, note: item.qcNote, at: item.qcAt ? item.qcAt.toISOString() : null },
     workers,
@@ -102,7 +95,6 @@ export default async function ItemPage({ params }: { params: Promise<{ id: strin
 
   return (
     <div className="max-w-2xl mx-auto p-4 sm:p-6">
-      <Link href={`/production/${item.quotation.id}`} className="text-sm font-bold text-gray-500 hover:text-gray-900 dark:hover:text-white">← {item.quotation.quoteNumber}</Link>
       <ItemPageClient data={data} />
     </div>
   );

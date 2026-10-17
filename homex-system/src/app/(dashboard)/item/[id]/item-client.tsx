@@ -1,7 +1,8 @@
 "use client";
 
 import Image from "next/image";
-import { Package, MapPin, Phone, CalendarDays, QrCode, ImageIcon, Printer } from "lucide-react";
+import { useRouter } from "next/navigation";
+import { Package, MapPin, Phone, CalendarDays, ImageIcon, ArrowRight } from "lucide-react";
 import { useI18n } from "@/lib/i18n";
 import { displayName } from "@/lib/translit";
 import { ItemDescBlock } from "@/components/item-desc-block";
@@ -19,7 +20,7 @@ interface Data {
   customerName: string; phone: string; governorate: string; wilayat: string;
   specs: { labelAr: string; labelEn: string; value: string }[];
   photos: { id: string; url: string; kind: string }[];
-  qr: string; canEdit: boolean;
+  canEdit: boolean;
   qc: { status: string | null; note: string | null; at: string | null };
   workers: { id: string; name: string; color: string }[];
   stages: StageRow[];
@@ -29,38 +30,38 @@ const card = "rounded-2xl border border-gray-200 dark:border-gray-700 bg-white d
 
 export function ItemPageClient({ data }: { data: Data }) {
   const { t, locale, dir } = useI18n();
+  const router = useRouter();
   const cat = locale === "en" ? data.categoryName.en : data.categoryName.ar;
   const design = data.photos.find((p) => p.kind === "design") || null;
 
+  // Return to wherever we came from (the project page, the foreman board, …);
+  // fall back to the project page if the item was opened with no history.
+  const back = () => {
+    if (typeof window !== "undefined" && window.history.length > 1) router.back();
+    else router.push(`/project/${data.quotationId}`);
+  };
+
   return (
-    <div dir={dir} className="mt-3 space-y-4">
+    <div dir={dir} className="mt-1 space-y-4">
+      <button onClick={back} className="inline-flex items-center gap-1 text-sm font-bold text-gray-500 hover:text-gray-900 dark:hover:text-white">
+        <ArrowRight className="w-4 h-4 rtl:rotate-0 ltr:rotate-180" /> {t("back")}
+      </button>
+
       {/* Header */}
       <div className={card}>
-        <div className="flex items-start justify-between gap-3">
-          <div className="min-w-0 flex-1">
-            <div className="flex items-center gap-2 flex-wrap mb-1">
-              <span className="text-gray-400 font-mono-en text-sm">×{data.quantity}</span>
-              <span className="text-[11px] font-bold text-gray-500 bg-gray-100 dark:bg-gray-700 px-2 py-0.5 rounded-full">{cat}</span>
-            </div>
-            <ItemDescBlock text={data.description} />
-            <p className="text-sm font-bold text-gray-700 dark:text-gray-200 mt-3">{displayName(data.customerName, locale)}</p>
-            <div className="text-xs text-gray-500 space-y-1 mt-1">
-              {(data.governorate || data.wilayat) && <p className="flex items-center gap-1"><MapPin className="w-3.5 h-3.5" /> {data.governorate} — {data.wilayat}</p>}
-              {data.phone && <p className="flex items-center gap-1 font-mono-en" dir="ltr"><Phone className="w-3.5 h-3.5" /> {data.phone}</p>}
-              {data.deliveryDate && <p className="flex items-center gap-1"><CalendarDays className="w-3.5 h-3.5" /> {t("deliveryDate")}: <span className="font-mono-en">{new Date(data.deliveryDate).toLocaleDateString("en-GB")}</span></p>}
-            </div>
+        <div className="min-w-0">
+          <div className="flex items-center gap-2 flex-wrap mb-1">
+            <span className="text-gray-400 font-mono-en text-sm">×{data.quantity}</span>
+            <span className="text-[11px] font-bold text-gray-500 bg-gray-100 dark:bg-gray-700 px-2 py-0.5 rounded-full">{cat}</span>
+            <span className="text-[11px] font-mono-en font-bold text-teal-700">{data.quoteNumber}</span>
           </div>
-          {data.qr && (
-            <div className="shrink-0 text-center">
-              {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img src={data.qr} alt="QR" className="w-24 h-24 rounded-lg border border-gray-200 dark:border-gray-700" />
-              <span className="text-[9px] text-gray-400 font-mono-en flex items-center justify-center gap-0.5 mt-1"><QrCode className="w-3 h-3" /> {data.quoteNumber}</span>
-              <a href={`/api/item/${data.id}/label`} target="_blank" rel="noreferrer"
-                className="mt-2 inline-flex items-center gap-1 text-[11px] font-bold text-teal-600 border border-teal-200 dark:border-teal-800 rounded-lg px-2 py-1 hover:bg-teal-50 dark:hover:bg-teal-900/20">
-                <Printer className="w-3.5 h-3.5" /> {t("printLabel")}
-              </a>
-            </div>
-          )}
+          <ItemDescBlock text={data.description} />
+          <p className="text-sm font-bold text-gray-700 dark:text-gray-200 mt-3">{displayName(data.customerName, locale)}</p>
+          <div className="text-xs text-gray-500 space-y-1 mt-1">
+            {(data.governorate || data.wilayat) && <p className="flex items-center gap-1"><MapPin className="w-3.5 h-3.5" /> {data.governorate} — {data.wilayat}</p>}
+            {data.phone && <p className="flex items-center gap-1 font-mono-en" dir="ltr"><Phone className="w-3.5 h-3.5" /> {data.phone}</p>}
+            {data.deliveryDate && <p className="flex items-center gap-1"><CalendarDays className="w-3.5 h-3.5" /> {t("deliveryDate")}: <span className="font-mono-en">{new Date(data.deliveryDate).toLocaleDateString("en-GB")}</span></p>}
+          </div>
         </div>
       </div>
 
