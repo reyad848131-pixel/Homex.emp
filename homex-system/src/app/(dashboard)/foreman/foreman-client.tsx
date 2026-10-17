@@ -19,10 +19,29 @@ const shiftDay = (d: string, n: number) => { const dt = new Date(d + "T12:00:00"
 
 export default function ForemanClient() {
   const toast = useToast();
-  const [tab, setTab] = useState<"production" | "attendance" | "board" | "install" | "reports" | "insights">("production");
+  // Keep the active tab across a trip into an item/project and back.
+  type ForemanTab = "production" | "attendance" | "board" | "install" | "reports" | "insights";
+  const [tab, setTab] = useState<ForemanTab>(() => {
+    if (typeof window !== "undefined") {
+      try {
+        const s = sessionStorage.getItem("fm:tab");
+        if (s && ["production", "attendance", "board", "install", "reports", "insights"].includes(s)) return s as ForemanTab;
+      } catch { /* ignore */ }
+    }
+    return "production";
+  });
   const [date, setDate] = useState(todayStr());
   const [data, setData] = useState<Board | null>(null);
   const [loading, setLoading] = useState(true);
+
+  useEffect(() => { try { sessionStorage.setItem("fm:tab", tab); } catch { /* ignore */ } }, [tab]);
+
+  // Continuously remember the scroll position so returning restores it.
+  useEffect(() => {
+    const onScroll = () => { try { sessionStorage.setItem("fm:scroll", String(window.scrollY)); } catch { /* ignore */ } };
+    window.addEventListener("scroll", onScroll, { passive: true });
+    return () => window.removeEventListener("scroll", onScroll);
+  }, []);
 
   const load = useCallback(async (d: string) => {
     setLoading(true);

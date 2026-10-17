@@ -49,18 +49,26 @@ export function ItemPageClient({ data }: { data: Data }) {
 
       {/* Header */}
       <div className={card}>
-        <div className="min-w-0">
-          <div className="flex items-center gap-2 flex-wrap mb-1">
-            <span className="text-gray-400 font-mono-en text-sm">×{data.quantity}</span>
-            <span className="text-[11px] font-bold text-gray-500 bg-gray-100 dark:bg-gray-700 px-2 py-0.5 rounded-full">{cat}</span>
-            <span className="text-[11px] font-mono-en font-bold text-teal-700">{data.quoteNumber}</span>
+        <div className="flex items-start justify-between gap-3">
+          <div className="min-w-0 flex-1">
+            <div className="flex items-center gap-2 flex-wrap mb-1">
+              <span className="text-gray-400 font-mono-en text-sm">×{data.quantity}</span>
+              <span className="text-[11px] font-bold text-gray-500 bg-gray-100 dark:bg-gray-700 px-2 py-0.5 rounded-full">{cat}</span>
+              <span className="text-[11px] font-mono-en font-bold text-teal-700">{data.quoteNumber}</span>
+            </div>
+            <ItemDescBlock text={data.description} />
+            <p className="text-sm font-bold text-gray-700 dark:text-gray-200 mt-3">{displayName(data.customerName, locale)}</p>
+            <div className="text-xs text-gray-500 space-y-1 mt-1">
+              {(data.governorate || data.wilayat) && <p className="flex items-center gap-1"><MapPin className="w-3.5 h-3.5" /> {data.governorate} — {data.wilayat}</p>}
+              {data.phone && <p className="flex items-center gap-1 font-mono-en" dir="ltr"><Phone className="w-3.5 h-3.5" /> {data.phone}</p>}
+              {data.deliveryDate && <p className="flex items-center gap-1"><CalendarDays className="w-3.5 h-3.5" /> {t("deliveryDate")}: <span className="font-mono-en">{new Date(data.deliveryDate).toLocaleDateString("en-GB")}</span></p>}
+            </div>
           </div>
-          <ItemDescBlock text={data.description} />
-          <p className="text-sm font-bold text-gray-700 dark:text-gray-200 mt-3">{displayName(data.customerName, locale)}</p>
-          <div className="text-xs text-gray-500 space-y-1 mt-1">
-            {(data.governorate || data.wilayat) && <p className="flex items-center gap-1"><MapPin className="w-3.5 h-3.5" /> {data.governorate} — {data.wilayat}</p>}
-            {data.phone && <p className="flex items-center gap-1 font-mono-en" dir="ltr"><Phone className="w-3.5 h-3.5" /> {data.phone}</p>}
-            {data.deliveryDate && <p className="flex items-center gap-1"><CalendarDays className="w-3.5 h-3.5" /> {t("deliveryDate")}: <span className="font-mono-en">{new Date(data.deliveryDate).toLocaleDateString("en-GB")}</span></p>}
+          {/* Project barcode — visible on-screen so it can be scanned directly. */}
+          <div className="shrink-0 text-center">
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img src={`/api/quote/${data.quotationId}/qr`} alt="QR" className="w-24 h-24 rounded-lg border border-gray-200 dark:border-gray-700 bg-white" />
+            <span className="block text-[9px] text-gray-400 font-bold mt-1">{t("projectBarcode")}</span>
           </div>
         </div>
       </div>

@@ -33,7 +33,11 @@ export default function ProductionConsole() {
   const toast = useToast();
   const [data, setData] = useState<ProdFile | null>(null);
   const [loading, setLoading] = useState(true);
-  const [sub, setSub] = useState<"file" | "stations" | "pipelines">("file");
+  const [sub, setSub] = useState<"file" | "stations" | "pipelines">(() => {
+    if (typeof window !== "undefined") { try { const s = sessionStorage.getItem("fm:sub"); if (s === "file" || s === "stations" || s === "pipelines") return s; } catch { /* ignore */ } }
+    return "file";
+  });
+  useEffect(() => { try { sessionStorage.setItem("fm:sub", sub); } catch { /* ignore */ } }, [sub]);
 
   const load = useCallback(async () => {
     try {
@@ -277,11 +281,33 @@ function SpecSheet({ item, workers, onAdvance, onSetTime, onToggle, onAssign, on
 
 function ProductionFile({ data, reload }: { data: ProdFile; reload: () => void }) {
   const toast = useToast();
-  const [mode, setMode] = useState<"quote" | "worker">("quote");
-  const [openQuote, setOpenQuote] = useState<string | null>(null);
+  // Remember which quote is open, the mode and the scroll position across a
+  // trip into an item's details, so "back" lands exactly where you left off.
+  const [mode, setMode] = useState<"quote" | "worker">(() => {
+    if (typeof window !== "undefined") { try { const s = sessionStorage.getItem("fm:mode"); if (s === "worker" || s === "quote") return s; } catch { /* ignore */ } }
+    return "quote";
+  });
+  const [openQuote, setOpenQuote] = useState<string | null>(() => {
+    if (typeof window !== "undefined") { try { return sessionStorage.getItem("fm:openQuote") || null; } catch { /* ignore */ } }
+    return null;
+  });
   const [workerId, setWorkerId] = useState<string>(data.workers[0]?.id || "");
   const [busy, setBusy] = useState(false);
   const [range, setRange] = useState<DateRange | null>(null);
+
+  useEffect(() => { try { sessionStorage.setItem("fm:mode", mode); } catch { /* ignore */ } }, [mode]);
+  useEffect(() => { try { if (openQuote) sessionStorage.setItem("fm:openQuote", openQuote); else sessionStorage.removeItem("fm:openQuote"); } catch { /* ignore */ } }, [openQuote]);
+
+  // Restore the saved scroll position once, after the (restored) open quote has
+  // had a chance to render its content.
+  useEffect(() => {
+    let y = 0;
+    try { y = parseInt(sessionStorage.getItem("fm:scroll") || "0", 10) || 0; } catch { /* ignore */ }
+    if (y > 0) {
+      const r1 = requestAnimationFrame(() => { const r2 = requestAnimationFrame(() => window.scrollTo(0, y)); void r2; });
+      return () => cancelAnimationFrame(r1);
+    }
+  }, []);
 
   // Filter active quotes by their planned delivery date (the date the work is
   // organised by). "All" (null range) shows everything, including undated.
@@ -397,6 +423,16 @@ function ProductionFile({ data, reload }: { data: ProdFile; reload: () => void }
                   </button>
                   {open && (
                     <div className="p-3 pt-0 space-y-2">
+                      {/* Project barcode shown on-screen for quick scanning (no
+                          need to open the print view just to see it). */}
+                      <div className="flex items-center gap-3 rounded-lg border border-gray-200 dark:border-gray-700 bg-gray-50/60 dark:bg-gray-900/30 p-2">
+                        {/* eslint-disable-next-line @next/next/no-img-element */}
+                        <img src={`/api/quote/${q.id}/qr`} alt="QR" className="w-20 h-20 rounded-md border border-gray-200 dark:border-gray-700 bg-white shrink-0" />
+                        <div className="min-w-0">
+                          <p className="text-[11px] font-bold text-gray-600 dark:text-gray-300">باركود المشروع</p>
+                          <p className="text-[10px] text-gray-400">امسحه لفتح صفحة المشروع بكل الأقسام. «طباعة البطاقة» للطباعة فقط.</p>
+                        </div>
+                      </div>
                       <div className="flex flex-wrap items-center gap-2 pb-1">
                         {q.customerPhone && (
                           <a href={`tel:${q.customerPhone}`} className="inline-flex items-center gap-1 text-[11px] font-bold text-teal-600"><Phone className="w-3 h-3" /> {q.customerPhone}</a>

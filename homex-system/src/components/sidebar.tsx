@@ -6,6 +6,7 @@ import { useRouter } from "next/navigation";
 import { cn } from "@/lib/utils";
 import { useI18n, type TranslationKey } from "@/lib/i18n";
 import { SidebarUpdate } from "@/components/sidebar-update";
+import { BarcodeScanner } from "@/components/barcode-scanner";
 import {
   LayoutDashboard,
   CalendarCheck,
@@ -158,6 +159,10 @@ export function Sidebar({ user, permissions, canAccessSettings, canManagePricing
       </div>
 
       <nav className="flex-1 min-h-0 overflow-y-auto p-3 space-y-1">
+        {/* Scan the project barcode straight from the menu — opens the camera
+            and jumps to the scanned project. Available to every user. */}
+        <BarcodeScanner className="flex items-center gap-3 w-full px-3 py-2.5 mb-1 rounded text-sm font-semibold bg-teal-600 text-white hover:bg-teal-700 transition-colors" />
+
         {items.map((item) => {
           const isActive = pathname === item.href ||
             (item.href !== "/" && pathname.startsWith(item.href));
