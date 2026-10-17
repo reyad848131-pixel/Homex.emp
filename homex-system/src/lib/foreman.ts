@@ -150,6 +150,59 @@ export async function getProductionFile() {
   return { quotes: mappedQuotes, workers, categories, stations, pipelines: config.pipelines, defaultPipeline: config.defaultPipeline };
 }
 
+// One quote's full work data for its dedicated work page (/project/[id]) —
+// items in the same shape the production console uses, plus the header fields
+// and the active workers. Available to any viewer; editing is gated in the UI.
+export async function getQuoteWork(quoteId: string) {
+  await seedMissingStages();
+  const [catalog, quote, workers] = await Promise.all([
+    getSpecsCatalog(),
+    prisma.quotation.findFirst({
+      where: { id: quoteId },
+      select: {
+        id: true, quoteNumber: true, workStatus: true, deliveryDate: true,
+        woodStatus: true, fabricStatus: true,
+        governorate: true, wilayat: true, address: true,
+        customer: { select: { name: true, phone: true, phoneCode: true, governorate: true, wilayat: true } },
+        items: {
+          orderBy: { sortOrder: "asc" },
+          select: {
+            id: true, categoryId: true, description: true, details: true, quantity: true,
+            tasks: {
+              orderBy: { sortOrder: "asc" },
+              select: { id: true, stage: true, workerId: true, doneAt: true, worker: { select: { name: true, color: true } } },
+            },
+            photos: { select: { id: true, kind: true, url: true } },
+          },
+        },
+      },
+    }),
+    prisma.worker.findMany({ where: { isActive: true }, orderBy: { sortOrder: "asc" }, select: { id: true, name: true, color: true } }),
+  ]);
+  if (!quote) return null;
+
+  const items = quote.items.map((it) => ({
+    id: it.id,
+    categoryId: it.categoryId,
+    description: it.description,
+    quantity: it.quantity,
+    specs: specRows(it.details, catalog),
+    photos: {
+      design: it.photos.find((p) => p.kind === "design") || null,
+      result: it.photos.find((p) => p.kind === "result") || null,
+    },
+    hasPipeline: it.tasks.length > 0,
+    tasks: it.tasks.map((t) => ({
+      id: t.id, stage: t.stage, workerId: t.workerId,
+      workerName: t.worker?.name || "", workerColor: t.worker?.color || "",
+      done: !!t.doneAt,
+      doneAt: t.doneAt ? t.doneAt.toISOString() : null,
+    })),
+  }));
+
+  return { quote, items, workers };
+}
+
 export interface ForemanTask {
   id: string; stage: string; workerId: string | null; doneAt: string | null;
   itemDesc: string; quoteId: string; quoteNumber: string; customer: string;

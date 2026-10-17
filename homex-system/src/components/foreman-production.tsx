@@ -6,14 +6,8 @@ import { Loader2, Check, ChevronDown, ChevronLeft, Plus, X, Trash2, Save, Wand2,
 import { cn } from "@/lib/utils";
 import { useToast } from "@/components/toast";
 import { DateDrillNav, type DateRange } from "@/components/date-drill-nav";
-import { ItemDescBlock } from "@/components/item-desc-block";
-import { MaterialControl } from "@/components/material-control";
-import { RetryImg } from "@/components/retry-img";
+import { SpecSheet, type PItem } from "@/components/production-spec";
 
-type SpecRow = { labelAr: string; labelEn: string; value: string };
-type PTask = { id: string; stage: string; workerId: string | null; workerName: string; workerColor: string; done: boolean; doneAt: string | null };
-type Photo = { id: string; url: string };
-type PItem = { id: string; categoryId: string; description: string; quantity: number; specs: SpecRow[]; photos: { design: Photo | null; result: Photo | null }; hasPipeline: boolean; tasks: PTask[] };
 type PQuote = { id: string; quoteNumber: string; workStatus: string; deliveryDate: string | null; woodStatus?: string; fabricStatus?: string; customer: string; customerPhone: string; items: PItem[] };
 type Worker = { id: string; name: string; color: string };
 type Category = { id: string; nameAr: string; nameEn: string };
@@ -75,211 +69,6 @@ export default function ProductionConsole() {
 
 // ── Production file: spec sheets per quote, plus a by-worker pivot ──
 
-// Downscale + JPEG-compress an image file in the browser before upload, so
-// camera shots (often 3–5MB) go up as ~200–400KB — keeps storage tiny.
-function compressImage(file: File, maxDim = 1600, quality = 0.8): Promise<string> {
-  return new Promise((resolve, reject) => {
-    const reader = new FileReader();
-    reader.onload = () => {
-      const img = new Image();
-      img.onload = () => {
-        let { width, height } = img;
-        if (width > maxDim || height > maxDim) {
-          const r = Math.min(maxDim / width, maxDim / height);
-          width = Math.round(width * r); height = Math.round(height * r);
-        }
-        const canvas = document.createElement("canvas");
-        canvas.width = width; canvas.height = height;
-        const ctx = canvas.getContext("2d");
-        if (!ctx) { reject(new Error("no ctx")); return; }
-        ctx.drawImage(img, 0, 0, width, height);
-        resolve(canvas.toDataURL("image/jpeg", quality));
-      };
-      img.onerror = reject;
-      img.src = reader.result as string;
-    };
-    reader.onerror = reject;
-    reader.readAsDataURL(file);
-  });
-}
-
-function PhotoSlot({ label, kind, itemId, photo, busy, onUpload, onDelete }: {
-  label: string; kind: "design" | "result"; itemId: string; photo: Photo | null; busy: boolean;
-  onUpload: (itemId: string, kind: "design" | "result", dataUrl: string) => void;
-  onDelete: (photoId: string) => void;
-}) {
-  const inputRef = useRef<HTMLInputElement>(null);
-  const [preparing, setPreparing] = useState(false);
-  const handle = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const f = e.target.files?.[0];
-    e.target.value = "";
-    if (!f) return;
-    setPreparing(true);
-    try { const dataUrl = await compressImage(f); onUpload(itemId, kind, dataUrl); }
-    catch { /* ignore */ }
-    finally { setPreparing(false); }
-  };
-  return (
-    <div className="flex-1 min-w-0">
-      <p className="text-[9px] font-bold text-gray-400 mb-1">{label}</p>
-      {photo ? (
-        <div className="relative">
-          <a href={photo.url} target="_blank" rel="noopener noreferrer">
-            <RetryImg src={photo.url} alt={label} className="w-full h-20 object-cover rounded-lg border border-gray-200 dark:border-gray-700" />
-          </a>
-          <button onClick={() => onDelete(photo.id)} className="absolute top-1 start-1 w-5 h-5 grid place-items-center rounded-full bg-black/60 text-white hover:bg-black/80"><X className="w-3 h-3" /></button>
-        </div>
-      ) : (
-        <button onClick={() => inputRef.current?.click()} disabled={busy || preparing}
-          className="w-full h-20 rounded-lg border-2 border-dashed border-gray-300 dark:border-gray-600 grid place-items-center text-gray-400 hover:border-teal-400 disabled:opacity-50">
-          {busy || preparing ? <Loader2 className="w-4 h-4 animate-spin" /> : <span className="flex flex-col items-center text-[10px] font-bold"><Camera className="w-4 h-4 mb-0.5" /> أضف صورة</span>}
-        </button>
-      )}
-      {/* No `capture` attribute → the native picker offers camera, photo
-          library and files, instead of forcing the camera only. */}
-      <input ref={inputRef} type="file" accept="image/*" className="hidden" onChange={handle} />
-    </div>
-  );
-}
-
-// ISO → local "YYYY-MM-DDTHH:MM" for a datetime-local input.
-function toLocalInput(iso: string | null): string {
-  if (!iso) return "";
-  const d = new Date(iso);
-  const p = (n: number) => String(n).padStart(2, "0");
-  return `${d.getFullYear()}-${p(d.getMonth() + 1)}-${p(d.getDate())}T${p(d.getHours())}:${p(d.getMinutes())}`;
-}
-function fmtTime(iso: string | null): string {
-  if (!iso) return "";
-  const d = new Date(iso);
-  const p = (n: number) => String(n).padStart(2, "0");
-  return `${p(d.getHours())}:${p(d.getMinutes())}`;
-}
-
-function SpecSheet({ item, workers, onAdvance, onSetTime, onToggle, onAssign, onRemoveStage, onUploadPhoto, onDeletePhoto, uploadingKey }: {
-  item: PItem;
-  workers?: { id: string; name: string; color: string }[];
-  onAdvance?: (taskId: string) => void;
-  onSetTime?: (taskId: string, iso: string) => void;
-  onToggle?: (taskId: string, done: boolean) => void;
-  onAssign?: (taskId: string, workerId: string) => void;
-  onRemoveStage?: (taskId: string, stageName: string) => void;
-  onUploadPhoto?: (itemId: string, kind: "design" | "result", dataUrl: string) => void;
-  onDeletePhoto?: (photoId: string) => void;
-  uploadingKey?: string;
-}) {
-  const [editTimes, setEditTimes] = useState(false);
-  const current = item.tasks.find((t) => !t.done);
-  const allDone = item.tasks.length > 0 && !current;
-  const doneTasks = item.tasks.filter((t) => t.done);
-  return (
-    <div className="rounded-lg border border-gray-200 dark:border-gray-700 bg-gray-50/60 dark:bg-gray-900/30 p-3 space-y-2">
-      <div className="flex items-start justify-between gap-2">
-        <div className="min-w-0 flex-1"><ItemDescBlock text={item.description} compact /></div>
-        <div className="flex items-center gap-2 shrink-0">
-          {item.quantity > 1 && <span className="text-[11px] font-mono-en font-bold text-gray-400">×{item.quantity}</span>}
-          <Link href={`/item/${item.id}`} className="inline-flex items-center gap-1 text-[11px] font-bold text-teal-600 hover:text-teal-700 border border-teal-200 dark:border-teal-800 rounded-lg px-2 py-1">
-            <ClipboardList className="w-3.5 h-3.5" /> التفاصيل
-          </Link>
-        </div>
-      </div>
-
-      {item.specs.length > 0 && (
-        <div className="grid grid-cols-2 sm:grid-cols-3 gap-1.5">
-          {item.specs.map((s, i) => (
-            <div key={i} className="rounded-md bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 px-2 py-1">
-              <p className="text-[9px] text-gray-400 font-bold">{s.labelAr}</p>
-              <p className="text-xs font-bold text-gray-800 dark:text-gray-100 truncate">{s.value}</p>
-            </div>
-          ))}
-        </div>
-      )}
-
-      {/* Design + result photos — shown ABOVE the stages, per the foreman's ask */}
-      {onUploadPhoto && onDeletePhoto && (
-        <div className="flex gap-2 pt-1">
-          <PhotoSlot label="📐 التصميم" kind="design" itemId={item.id} photo={item.photos?.design || null}
-            busy={uploadingKey === `${item.id}:design`} onUpload={onUploadPhoto} onDelete={onDeletePhoto} />
-          <PhotoSlot label="✅ النتيجة" kind="result" itemId={item.id} photo={item.photos?.result || null}
-            busy={uploadingKey === `${item.id}:result`} onUpload={onUploadPhoto} onDelete={onDeletePhoto} />
-        </div>
-      )}
-
-      {/* Manufacturing stages — interactive (mark done / assign / remove), laid
-          out 2–3 per row to save space (same controls as the item details page). */}
-      {item.tasks.length > 0 && (
-        <div>
-          <div className="flex items-center gap-1 mb-1.5 text-[11px] font-bold text-gray-500">
-            <GitBranch className="w-3.5 h-3.5" /> مراحل التصنيع <span className="font-mono-en text-gray-400">{doneTasks.length}/{item.tasks.length}</span>
-          </div>
-          <div className="grid grid-cols-2 lg:grid-cols-3 gap-1.5">
-            {item.tasks.map((t, i) => (
-              <div key={t.id} className={cn("rounded-lg border p-1.5 flex flex-col gap-1",
-                t.done ? "bg-emerald-50 dark:bg-emerald-900/15 border-emerald-200 dark:border-emerald-800"
-                  : t.id === current?.id ? "bg-amber-50 dark:bg-amber-900/15 border-amber-300 dark:border-amber-700"
-                  : "bg-white dark:bg-gray-800 border-gray-200 dark:border-gray-700")}>
-                <div className="flex items-center gap-1">
-                  <span className="text-[9px] font-mono-en text-gray-400 shrink-0">{i + 1}</span>
-                  <span className="text-[11px] font-bold truncate flex-1">{t.stage}</span>
-                  {onRemoveStage && <button onClick={() => onRemoveStage(t.id, t.stage)} className="text-gray-300 hover:text-red-500 shrink-0" title="حذف"><X className="w-3 h-3" /></button>}
-                </div>
-                <div className="flex items-center gap-1">
-                  {onAssign && workers ? (
-                    <select value={t.workerId || ""} onChange={(e) => onAssign(t.id, e.target.value)}
-                      className="text-[10px] bg-transparent border border-gray-200 dark:border-gray-600 rounded px-1 py-0.5 flex-1 min-w-0">
-                      <option value="">—</option>
-                      {workers.map((w) => <option key={w.id} value={w.id}>{w.name}</option>)}
-                    </select>
-                  ) : <span className="text-[10px] text-gray-400 flex-1 truncate">{t.workerName || "—"}</span>}
-                  {onToggle && (
-                    <button onClick={() => onToggle(t.id, !t.done)} title="تم"
-                      className={cn("w-6 h-6 rounded grid place-items-center shrink-0", t.done ? "bg-emerald-500 text-white" : "border border-gray-300 dark:border-gray-600 text-gray-400 hover:text-emerald-600")}>
-                      <Check className="w-3.5 h-3.5" />
-                    </button>
-                  )}
-                </div>
-                {t.done && t.doneAt && <span className="text-[9px] text-gray-400 font-mono-en" dir="ltr">{fmtTime(t.doneAt)}</span>}
-              </div>
-            ))}
-          </div>
-        </div>
-      )}
-
-      {/* Completion times — view & correct to the minute */}
-      {onSetTime && doneTasks.length > 0 && (
-        <div>
-          <button onClick={() => setEditTimes((v) => !v)} className="text-[10px] font-bold text-gray-500 inline-flex items-center gap-1 hover:text-gray-700 dark:hover:text-gray-200">
-            <Clock className="w-3 h-3" /> أوقات الإنجاز {editTimes ? "▴" : "▾"}
-          </button>
-          {editTimes && (
-            <div className="mt-1 space-y-1">
-              {doneTasks.map((t) => (
-                <label key={t.id} className="flex items-center gap-2 text-[11px]">
-                  <span className="w-20 font-bold text-gray-500 truncate shrink-0">{t.stage}</span>
-                  <input type="datetime-local" defaultValue={toLocalInput(t.doneAt)}
-                    onBlur={(e) => { if (e.target.value) onSetTime(t.id, new Date(e.target.value).toISOString()); }}
-                    className="field h-8 text-xs font-mono-en" />
-                </label>
-              ))}
-            </div>
-          )}
-        </div>
-      )}
-
-      {/* Explicit finish-and-advance control */}
-      {onAdvance && item.tasks.length > 0 && (
-        allDone ? (
-          <p className="text-[11px] font-bold text-emerald-600 flex items-center gap-1"><Check className="w-3.5 h-3.5" /> مكتمل — كل المراحل تمت</p>
-        ) : current ? (
-          <button onClick={() => onAdvance(current.id)}
-            className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold">
-            <Check className="w-3.5 h-3.5" /> أنجز «{current.stage}» وانتقل للتالي
-          </button>
-        ) : null
-      )}
-    </div>
-  );
-}
 
 function ProductionFile({ data, reload }: { data: ProdFile; reload: () => void }) {
   const toast = useToast();
@@ -289,16 +78,11 @@ function ProductionFile({ data, reload }: { data: ProdFile; reload: () => void }
     if (typeof window !== "undefined") { try { const s = sessionStorage.getItem("fm:mode"); if (s === "worker" || s === "quote") return s; } catch { /* ignore */ } }
     return "quote";
   });
-  const [openQuote, setOpenQuote] = useState<string | null>(() => {
-    if (typeof window !== "undefined") { try { return sessionStorage.getItem("fm:openQuote") || null; } catch { /* ignore */ } }
-    return null;
-  });
   const [workerId, setWorkerId] = useState<string>(data.workers[0]?.id || "");
   const [busy, setBusy] = useState(false);
   const [range, setRange] = useState<DateRange | null>(null);
 
   useEffect(() => { try { sessionStorage.setItem("fm:mode", mode); } catch { /* ignore */ } }, [mode]);
-  useEffect(() => { try { if (openQuote) sessionStorage.setItem("fm:openQuote", openQuote); else sessionStorage.removeItem("fm:openQuote"); } catch { /* ignore */ } }, [openQuote]);
 
   // Restore the saved scroll position once, after the (restored) open quote has
   // had a chance to render its content.
@@ -408,68 +192,26 @@ function ProductionFile({ data, reload }: { data: ProdFile; reload: () => void }
       {mode === "quote" && (
         quotes.length === 0 ? <p className="text-sm text-gray-400 p-6 text-center">لا توجد كوتيشنات بهذا التاريخ.</p> : (
           <div className="space-y-2">
+            {/* Each quote opens its own dedicated WORK PAGE (/project/[id]) with
+                all the controls — instead of expanding inline — so the list
+                stays light and "back" returns cleanly to this spot. */}
             {quotes.map((q) => {
-              const open = openQuote === q.id;
               const doneCount = q.items.reduce((a, it) => a + it.tasks.filter((t) => t.done).length, 0);
               const taskCount = q.items.reduce((a, it) => a + it.tasks.length, 0);
               return (
-                <div key={q.id} className="rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 overflow-hidden">
-                  <button onClick={() => setOpenQuote(open ? null : q.id)} className="w-full flex items-center gap-2 p-3 text-start hover:bg-gray-50 dark:hover:bg-gray-700/40">
-                    {open ? <ChevronDown className="w-4 h-4 text-gray-400 shrink-0" /> : <ChevronLeft className="w-4 h-4 text-gray-400 shrink-0" />}
-                    <div className="min-w-0 flex-1">
-                      <p className="font-bold truncate">{q.customer}</p>
-                      <p className="text-[11px] text-gray-400 font-mono-en truncate">{q.quoteNumber}{q.deliveryDate ? ` · ${q.deliveryDate}` : ""}</p>
-                    </div>
-                    <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300 shrink-0">{WS_LABEL[q.workStatus || ""] || "—"}</span>
-                    <span className="text-[10px] font-mono-en text-gray-400 shrink-0">{q.items.length} صنف</span>
-                    {taskCount > 0 && <span className="text-[10px] font-mono-en text-emerald-600 shrink-0">{doneCount}/{taskCount}</span>}
-                  </button>
-                  {open && (
-                    <div className="p-3 pt-0 space-y-2">
-                      {/* Project barcode shown on-screen for quick scanning (no
-                          need to open the print view just to see it). */}
-                      <div className="flex items-center gap-3 rounded-lg border border-gray-200 dark:border-gray-700 bg-gray-50/60 dark:bg-gray-900/30 p-2">
-                        {/* eslint-disable-next-line @next/next/no-img-element */}
-                        <img src={`/api/quote/${q.id}/qr`} alt="QR" className="w-20 h-20 rounded-md border border-gray-200 dark:border-gray-700 bg-white shrink-0" />
-                        <div className="min-w-0">
-                          <p className="text-[11px] font-bold text-gray-600 dark:text-gray-300">باركود المشروع</p>
-                          <p className="text-[10px] text-gray-400">امسحه لفتح صفحة المشروع بكل الأقسام. «طباعة البطاقة» للطباعة فقط.</p>
-                        </div>
-                      </div>
-                      <div className="flex flex-wrap items-center gap-2 pb-1">
-                        {q.customerPhone && (
-                          <a href={`tel:${q.customerPhone}`} className="inline-flex items-center gap-1 text-[11px] font-bold text-teal-600"><Phone className="w-3 h-3" /> {q.customerPhone}</a>
-                        )}
-                        <Link href={`/quotations/${q.id}`} target="_blank"
-                          className="inline-flex items-center gap-1 text-[11px] font-bold px-2.5 py-1 rounded-lg border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-700">
-                          <ExternalLink className="w-3.5 h-3.5" /> فتح الكوتيشن كامل
-                        </Link>
-                        <a href={`/api/quote/${q.id}/label`} target="_blank" rel="noreferrer"
-                          className="inline-flex items-center gap-1 text-[11px] font-bold px-2.5 py-1 rounded-lg border border-teal-300 dark:border-teal-700 text-teal-700 dark:text-teal-300 hover:bg-teal-50 dark:hover:bg-teal-900/20">
-                          <Printer className="w-3.5 h-3.5" /> طباعة البطاقة
-                        </a>
-                        <button disabled={busy} onClick={() => { if (window.confirm("إعادة تطبيق قالب مراحل القسم على كل أصناف هذا الكوتيشن؟\nسيتم استبدال المراحل غير المنجزة بمراحل القالب (المراحل المنجزة تبقى).")) apply({ quotationId: q.id, replace: true }); }}
-                          className="ms-auto inline-flex items-center gap-1 text-[11px] font-bold px-2.5 py-1 rounded-lg bg-indigo-600 text-white hover:bg-indigo-700 disabled:opacity-50">
-                          <Wand2 className="w-3.5 h-3.5" /> إعادة تطبيق القالب
-                        </button>
-                      </div>
-                      <div className="rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 px-3 py-2 mb-1">
-                        <MaterialControl quoteId={q.id} wood={q.woodStatus || "not_ordered"} fabric={q.fabricStatus || "not_ordered"} />
-                      </div>
-                      {q.items.map((it) => (
-                        <div key={it.id} className="space-y-1">
-                          <SpecSheet item={it} workers={data.workers} onAdvance={advance} onSetTime={setTime} onToggle={toggleStage} onAssign={assignStage} onRemoveStage={removeStage} onUploadPhoto={uploadPhoto} onDeletePhoto={removePhoto} uploadingKey={uploading} />
-                          {!it.hasPipeline && (
-                            <button disabled={busy} onClick={() => apply({ quoteItemId: it.id })}
-                              className="inline-flex items-center gap-1 text-[10px] font-bold text-indigo-600 hover:underline disabled:opacity-50">
-                              <Plus className="w-3 h-3" /> أنشئ مراحل هذا الصنف
-                            </button>
-                          )}
-                        </div>
-                      ))}
-                    </div>
-                  )}
-                </div>
+                <Link key={q.id} href={`/project/${q.id}`}
+                  className="flex items-center gap-2 p-3 rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 hover:border-teal-300 dark:hover:border-teal-700 transition-colors">
+                  <div className="min-w-0 flex-1">
+                    <p className="font-bold truncate">{q.customer}</p>
+                    <p className="text-[11px] text-gray-400 font-mono-en truncate">{q.quoteNumber}{q.deliveryDate ? ` · ${q.deliveryDate}` : ""}</p>
+                  </div>
+                  <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300 shrink-0">{WS_LABEL[q.workStatus || ""] || "—"}</span>
+                  <span className="text-[10px] font-mono-en text-gray-400 shrink-0">{q.items.length} صنف</span>
+                  {taskCount > 0 && <span className="text-[10px] font-mono-en text-emerald-600 shrink-0">{doneCount}/{taskCount}</span>}
+                  <span className="shrink-0 inline-flex items-center gap-1 text-[11px] font-bold text-teal-600 border border-teal-200 dark:border-teal-800 rounded-lg px-2 py-1">
+                    صفحة العمل <ChevronLeft className="w-3.5 h-3.5 rtl:rotate-0 ltr:rotate-180" />
+                  </span>
+                </Link>
               );
             })}
           </div>
