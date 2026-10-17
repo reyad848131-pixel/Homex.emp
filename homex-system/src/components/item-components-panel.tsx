@@ -76,6 +76,8 @@ export function ItemComponentsPanel({ itemId, categoryId, canEdit: canEditProp }
   };
 
   const remove = async (id: string) => {
+    const row = rows.find((r) => r.id === id);
+    if (!window.confirm(`حذف «${row?.name || "المكوّن"}»؟`)) return;
     setRows((p) => p.filter((r) => r.id !== id));
     await fetch(`/api/item-components?id=${id}`, { method: "DELETE" }).catch(() => {});
   };

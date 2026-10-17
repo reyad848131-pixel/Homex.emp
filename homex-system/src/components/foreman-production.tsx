@@ -150,10 +150,14 @@ function fmtTime(iso: string | null): string {
   return `${p(d.getHours())}:${p(d.getMinutes())}`;
 }
 
-function SpecSheet({ item, onAdvance, onSetTime, onUploadPhoto, onDeletePhoto, uploadingKey }: {
+function SpecSheet({ item, workers, onAdvance, onSetTime, onToggle, onAssign, onRemoveStage, onUploadPhoto, onDeletePhoto, uploadingKey }: {
   item: PItem;
+  workers?: { id: string; name: string; color: string }[];
   onAdvance?: (taskId: string) => void;
   onSetTime?: (taskId: string, iso: string) => void;
+  onToggle?: (taskId: string, done: boolean) => void;
+  onAssign?: (taskId: string, workerId: string) => void;
+  onRemoveStage?: (taskId: string, stageName: string) => void;
   onUploadPhoto?: (itemId: string, kind: "design" | "result", dataUrl: string) => void;
   onDeletePhoto?: (photoId: string) => void;
   uploadingKey?: string;
@@ -195,17 +199,43 @@ function SpecSheet({ item, onAdvance, onSetTime, onUploadPhoto, onDeletePhoto, u
         </div>
       )}
 
+      {/* Manufacturing stages — interactive (mark done / assign / remove), laid
+          out 2–3 per row to save space (same controls as the item details page). */}
       {item.tasks.length > 0 && (
-        <div className="flex flex-wrap gap-1.5">
-          {item.tasks.map((t) => (
-            <span key={t.id} className={cn("inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold border",
-              t.done ? "bg-emerald-50 dark:bg-emerald-900/20 text-emerald-700 dark:text-emerald-300 border-emerald-200 dark:border-emerald-800"
-                : t.id === current?.id ? "bg-amber-100 dark:bg-amber-900/30 text-amber-800 dark:text-amber-200 border-amber-300 dark:border-amber-700"
-                : "bg-white dark:bg-gray-800 border-gray-200 dark:border-gray-700 text-gray-600 dark:text-gray-300")}>
-              {t.done && <Check className="w-3 h-3" />}
-              {t.stage}{t.workerName ? ` · ${t.workerName}` : ""}{t.done && t.doneAt ? ` · ${fmtTime(t.doneAt)}` : ""}
-            </span>
-          ))}
+        <div>
+          <div className="flex items-center gap-1 mb-1.5 text-[11px] font-bold text-gray-500">
+            <GitBranch className="w-3.5 h-3.5" /> مراحل التصنيع <span className="font-mono-en text-gray-400">{doneTasks.length}/{item.tasks.length}</span>
+          </div>
+          <div className="grid grid-cols-2 lg:grid-cols-3 gap-1.5">
+            {item.tasks.map((t, i) => (
+              <div key={t.id} className={cn("rounded-lg border p-1.5 flex flex-col gap-1",
+                t.done ? "bg-emerald-50 dark:bg-emerald-900/15 border-emerald-200 dark:border-emerald-800"
+                  : t.id === current?.id ? "bg-amber-50 dark:bg-amber-900/15 border-amber-300 dark:border-amber-700"
+                  : "bg-white dark:bg-gray-800 border-gray-200 dark:border-gray-700")}>
+                <div className="flex items-center gap-1">
+                  <span className="text-[9px] font-mono-en text-gray-400 shrink-0">{i + 1}</span>
+                  <span className="text-[11px] font-bold truncate flex-1">{t.stage}</span>
+                  {onRemoveStage && <button onClick={() => onRemoveStage(t.id, t.stage)} className="text-gray-300 hover:text-red-500 shrink-0" title="حذف"><X className="w-3 h-3" /></button>}
+                </div>
+                <div className="flex items-center gap-1">
+                  {onAssign && workers ? (
+                    <select value={t.workerId || ""} onChange={(e) => onAssign(t.id, e.target.value)}
+                      className="text-[10px] bg-transparent border border-gray-200 dark:border-gray-600 rounded px-1 py-0.5 flex-1 min-w-0">
+                      <option value="">—</option>
+                      {workers.map((w) => <option key={w.id} value={w.id}>{w.name}</option>)}
+                    </select>
+                  ) : <span className="text-[10px] text-gray-400 flex-1 truncate">{t.workerName || "—"}</span>}
+                  {onToggle && (
+                    <button onClick={() => onToggle(t.id, !t.done)} title="تم"
+                      className={cn("w-6 h-6 rounded grid place-items-center shrink-0", t.done ? "bg-emerald-500 text-white" : "border border-gray-300 dark:border-gray-600 text-gray-400 hover:text-emerald-600")}>
+                      <Check className="w-3.5 h-3.5" />
+                    </button>
+                  )}
+                </div>
+                {t.done && t.doneAt && <span className="text-[9px] text-gray-400 font-mono-en" dir="ltr">{fmtTime(t.doneAt)}</span>}
+              </div>
+            ))}
+          </div>
         </div>
       )}
 
@@ -308,6 +338,19 @@ function ProductionFile({ data, reload }: { data: ProdFile; reload: () => void }
     } catch { toast.error("تعذّر الاتصال"); }
   };
 
+  // Interactive stage controls (mark done / assign / remove) — same as the item
+  // details page, driven here through reload() like the rest of this console.
+  const toggleStage = async (taskId: string, done: boolean) => {
+    try { const r = await fetch("/api/item-tasks", { method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ id: taskId, done }) }); if (r.ok) reload(); else toast.error("فشل"); } catch { toast.error("تعذّر الاتصال"); }
+  };
+  const assignStage = async (taskId: string, wId: string) => {
+    try { const r = await fetch("/api/item-tasks", { method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ id: taskId, workerId: wId }) }); if (r.ok) reload(); else toast.error("فشل"); } catch { toast.error("تعذّر الاتصال"); }
+  };
+  const removeStage = async (taskId: string, stageName: string) => {
+    if (!window.confirm(`حذف مرحلة «${stageName}»؟`)) return;
+    try { const r = await fetch(`/api/item-tasks?id=${taskId}`, { method: "DELETE" }); if (r.ok) reload(); else toast.error("فشل"); } catch { toast.error("تعذّر الاتصال"); }
+  };
+
   // By-worker pivot: items with at least one stage assigned to this worker.
   const workerItems = useMemo(() => {
     if (mode !== "worker" || !workerId) return [];
@@ -362,9 +405,9 @@ function ProductionFile({ data, reload }: { data: ProdFile; reload: () => void }
                           className="inline-flex items-center gap-1 text-[11px] font-bold px-2.5 py-1 rounded-lg border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-700">
                           <ExternalLink className="w-3.5 h-3.5" /> فتح الكوتيشن كامل
                         </Link>
-                        <button disabled={busy} onClick={() => apply({ quotationId: q.id })}
+                        <button disabled={busy} onClick={() => { if (window.confirm("إعادة تطبيق قالب مراحل القسم على كل أصناف هذا الكوتيشن؟\nسيتم استبدال المراحل غير المنجزة بمراحل القالب (المراحل المنجزة تبقى).")) apply({ quotationId: q.id, replace: true }); }}
                           className="ms-auto inline-flex items-center gap-1 text-[11px] font-bold px-2.5 py-1 rounded-lg bg-indigo-600 text-white hover:bg-indigo-700 disabled:opacity-50">
-                          <Wand2 className="w-3.5 h-3.5" /> تطبيق مراحل الأقسام على الكل
+                          <Wand2 className="w-3.5 h-3.5" /> إعادة تطبيق القالب
                         </button>
                       </div>
                       <div className="rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 px-3 py-2 mb-1">
@@ -372,7 +415,7 @@ function ProductionFile({ data, reload }: { data: ProdFile; reload: () => void }
                       </div>
                       {q.items.map((it) => (
                         <div key={it.id} className="space-y-1">
-                          <SpecSheet item={it} onAdvance={advance} onSetTime={setTime} onUploadPhoto={uploadPhoto} onDeletePhoto={removePhoto} uploadingKey={uploading} />
+                          <SpecSheet item={it} workers={data.workers} onAdvance={advance} onSetTime={setTime} onToggle={toggleStage} onAssign={assignStage} onRemoveStage={removeStage} onUploadPhoto={uploadPhoto} onDeletePhoto={removePhoto} uploadingKey={uploading} />
                           {!it.hasPipeline && (
                             <button disabled={busy} onClick={() => apply({ quoteItemId: it.id })}
                               className="inline-flex items-center gap-1 text-[10px] font-bold text-indigo-600 hover:underline disabled:opacity-50">
@@ -402,7 +445,7 @@ function ProductionFile({ data, reload }: { data: ProdFile; reload: () => void }
                   <Link href={`/quotations/${quote.id}`} target="_blank" className="inline-flex items-center gap-1 text-[11px] text-gray-400 hover:text-teal-600 font-mono-en">
                     {quote.quoteNumber} · {quote.customer} <ExternalLink className="w-3 h-3" />
                   </Link>
-                  <SpecSheet item={item} onAdvance={advance} onSetTime={setTime} onUploadPhoto={uploadPhoto} onDeletePhoto={removePhoto} uploadingKey={uploading} />
+                  <SpecSheet item={item} workers={data.workers} onAdvance={advance} onSetTime={setTime} onToggle={toggleStage} onAssign={assignStage} onRemoveStage={removeStage} onUploadPhoto={uploadPhoto} onDeletePhoto={removePhoto} uploadingKey={uploading} />
                 </div>
               ))}
             </div>

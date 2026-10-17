@@ -32,7 +32,7 @@ export function ItemIssuesPanel({ itemId, canEdit }: { itemId: string; canEdit: 
     setRows((p) => p.map((r) => (r.id === id ? { ...r, status: resolved ? "resolved" : "open" } : r)));
     await fetch("/api/item-issues", { method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ id, status: resolved ? "resolved" : "open" }) });
   };
-  const remove = async (id: string) => { setRows((p) => p.filter((r) => r.id !== id)); await fetch(`/api/item-issues?id=${id}`, { method: "DELETE" }).catch(() => {}); };
+  const remove = async (id: string) => { if (!window.confirm("حذف هذه الملاحظة؟")) return; setRows((p) => p.filter((r) => r.id !== id)); await fetch(`/api/item-issues?id=${id}`, { method: "DELETE" }).catch(() => {}); };
 
   if (loading) return <div className="text-xs text-gray-400 flex items-center gap-1.5"><Loader2 className="w-3.5 h-3.5 animate-spin" /> …</div>;
 

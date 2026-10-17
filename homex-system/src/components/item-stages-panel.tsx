@@ -38,6 +38,7 @@ export function ItemStagesPanel({ itemId, initial, workers, canEdit }: {
     await fetch("/api/item-tasks", { method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ id: r.id, workerId }) }).catch(() => {});
   };
   const remove = async (r: StageRow) => {
+    if (!window.confirm(`حذف مرحلة «${r.stage}»؟`)) return;
     setRows((p) => p.filter((x) => x.id !== r.id));
     await fetch(`/api/item-tasks?id=${r.id}`, { method: "DELETE" }).catch(() => {});
   };

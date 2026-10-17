@@ -821,6 +821,7 @@ const translations = {
   itemPhotosTitle: { ar: "الصور", en: "Photos" },
   itemPhotoDesign: { ar: "التصميم", en: "Design" },
   itemPhotoResult: { ar: "النتيجة", en: "Result" },
+  printLabel: { ar: "طباعة البطاقة", en: "Print label" },
   issuesTitle: { ar: "المشاكل", en: "Issues" },
   issuesNone: { ar: "لا مشاكل على هذا البند.", en: "No issues on this item." },
   issueRaise: { ar: "رفع مشكلة", en: "Raise issue" },

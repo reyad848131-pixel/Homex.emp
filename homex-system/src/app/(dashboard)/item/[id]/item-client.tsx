@@ -1,7 +1,7 @@
 "use client";
 
 import Image from "next/image";
-import { Package, MapPin, Phone, CalendarDays, QrCode, ImageIcon } from "lucide-react";
+import { Package, MapPin, Phone, CalendarDays, QrCode, ImageIcon, Printer } from "lucide-react";
 import { useI18n } from "@/lib/i18n";
 import { displayName } from "@/lib/translit";
 import { ItemDescBlock } from "@/components/item-desc-block";
@@ -55,6 +55,10 @@ export function ItemPageClient({ data }: { data: Data }) {
               {/* eslint-disable-next-line @next/next/no-img-element */}
               <img src={data.qr} alt="QR" className="w-24 h-24 rounded-lg border border-gray-200 dark:border-gray-700" />
               <span className="text-[9px] text-gray-400 font-mono-en flex items-center justify-center gap-0.5 mt-1"><QrCode className="w-3 h-3" /> {data.quoteNumber}</span>
+              <a href={`/api/item/${data.id}/label`} target="_blank" rel="noreferrer"
+                className="mt-2 inline-flex items-center gap-1 text-[11px] font-bold text-teal-600 border border-teal-200 dark:border-teal-800 rounded-lg px-2 py-1 hover:bg-teal-50 dark:hover:bg-teal-900/20">
+                <Printer className="w-3.5 h-3.5" /> {t("printLabel")}
+              </a>
             </div>
           )}
         </div>
