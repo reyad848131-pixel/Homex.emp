@@ -43,7 +43,7 @@ export function OwnerAuditClient() {
   const clean = report && report.snapshotCount === 0;
 
   return (
-    <div dir="rtl" className="max-w-3xl mx-auto">
+    <div dir="rtl" className="max-w-5xl mx-auto">
       <h1 className="text-2xl font-bold flex items-center gap-2 mb-1">
         <ShieldCheck className="w-6 h-6 text-teal-600" /> فحص المالك — تدقيق المواقع
       </h1>

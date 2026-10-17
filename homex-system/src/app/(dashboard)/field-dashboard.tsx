@@ -23,7 +23,7 @@ export function FieldDashboard({
   const { t, locale } = useI18n();
 
   return (
-    <div className="max-w-3xl">
+    <div className="max-w-5xl">
       <div className="mb-6">
         <h1 className="text-2xl font-bold">{t("welcome")}{locale === "ar" ? " " : " "}{userName} 👋</h1>
         <p className="text-sm text-gray-500 mt-1">

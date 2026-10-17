@@ -97,7 +97,7 @@ export default function TrashPage() {
   ];
 
   return (
-    <div className="max-w-3xl">
+    <div className="max-w-5xl">
       <h1 className="text-2xl font-bold flex items-center gap-2 mb-5">
         <Trash2 className="w-6 h-6" /> {t("trash")}
       </h1>
