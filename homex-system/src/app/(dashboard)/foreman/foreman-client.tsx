@@ -17,7 +17,7 @@ type Board = { date: string; workers: WorkerCard[]; ready: Task[]; onSiteCount: 
 const todayStr = () => new Date().toISOString().slice(0, 10);
 const shiftDay = (d: string, n: number) => { const dt = new Date(d + "T12:00:00"); dt.setDate(dt.getDate() + n); return dt.toISOString().slice(0, 10); };
 
-export default function ForemanClient() {
+export default function ForemanClient({ isOwner = false }: { isOwner?: boolean }) {
   const toast = useToast();
   // Keep the active tab across a trip into an item/project and back.
   type ForemanTab = "production" | "attendance" | "board" | "install" | "reports" | "insights";
@@ -25,7 +25,9 @@ export default function ForemanClient() {
     if (typeof window !== "undefined") {
       try {
         const s = sessionStorage.getItem("fm:tab");
-        if (s && ["production", "attendance", "board", "install", "reports", "insights"].includes(s)) return s as ForemanTab;
+        // Reports/insights are owner-only; fall back if a non-owner had one saved.
+        const ownerOnly = s === "reports" || s === "insights";
+        if (s && ["production", "attendance", "board", "install", "reports", "insights"].includes(s) && (!ownerOnly || isOwner)) return s as ForemanTab;
       } catch { /* ignore */ }
     }
     return "production";
@@ -103,9 +105,16 @@ export default function ForemanClient() {
       </div>
       )}
 
-      {/* Tabs */}
-      <div className="flex gap-2">
-        {([["production", "الإنتاج", Factory], ["attendance", "الحضور", ClipboardCheck], ["board", "العمّال", HardHat], ["install", "التركيب", Truck], ["insights", "مؤشرات", Activity], ["reports", "التقارير", BarChart3]] as const).map(([k, l, Icon]) => (
+      {/* Tabs — the foreman sees only the daily work; reports/insights (owner
+          review only) are shown to owners. */}
+      <div className="flex flex-wrap gap-2">
+        {(([
+          ["production", "الإنتاج", Factory],
+          ["attendance", "الحضور", ClipboardCheck],
+          ["board", "العمّال", HardHat],
+          ["install", "التركيب", Truck],
+          ...(isOwner ? [["insights", "مؤشرات", Activity], ["reports", "التقارير", BarChart3]] : []),
+        ]) as [ForemanTab, string, typeof Factory][]).map(([k, l, Icon]) => (
           <button key={k} onClick={() => setTab(k)}
             className={cn("flex-1 flex items-center justify-center gap-2 py-2.5 rounded-lg text-sm font-bold border transition-colors",
               tab === k ? "bg-teal-600 text-white border-teal-600" : "bg-white dark:bg-gray-800 border-gray-200 dark:border-gray-700 text-gray-600 dark:text-gray-300")}>
@@ -114,15 +123,15 @@ export default function ForemanClient() {
         ))}
       </div>
 
-      {tab === "production" && <ProductionConsole />}
+      {tab === "production" && <ProductionConsole isOwner={isOwner} />}
       {tab === "attendance" && <AttendanceConsole />}
 
       {loading && (tab === "board" || tab === "install") && <div className="flex items-center gap-2 text-gray-400 p-6"><Loader2 className="w-5 h-5 animate-spin" /> جارٍ التحميل…</div>}
 
       {!loading && tab === "board" && <BoardTab workers={workers} ready={data?.ready || []} onReassign={reassign} onDone={markDone} />}
       {!loading && tab === "install" && <InstallTab installs={data?.installs || []} workers={workers} onRequired={setRequired} onNotes={setNotes} onAdd={addMember} onRemove={removeMember} />}
-      {tab === "insights" && <InsightsTab />}
-      {tab === "reports" && <ReportsTab />}
+      {isOwner && tab === "insights" && <InsightsTab />}
+      {isOwner && tab === "reports" && <ReportsTab />}
     </div>
   );
 }
@@ -314,7 +323,7 @@ function InsightsTab() {
         ) : (
           <div className="space-y-2">
             {atRisk.map((o) => (
-              <Link key={o.quoteId} href={`/production/${o.quoteId}`} className="flex items-center gap-2 flex-wrap rounded-xl border border-red-300 dark:border-red-700 bg-red-50/60 dark:bg-red-900/15 p-3">
+              <Link key={o.quoteId} href={`/project/${o.quoteId}`} className="flex items-center gap-2 flex-wrap rounded-xl border border-red-300 dark:border-red-700 bg-red-50/60 dark:bg-red-900/15 p-3">
                 <span className="font-mono-en font-bold text-sm">{o.quoteNumber}</span>
                 <span className="text-sm font-semibold">{o.customer}</span>
                 <span className="ms-auto text-xs text-gray-500">التسليم: <b className="font-mono-en">{fmtDay(o.deliveryDate)}</b></span>
@@ -332,7 +341,7 @@ function InsightsTab() {
           <h2 className="text-sm font-bold text-gray-500 mb-2 flex items-center gap-1.5"><Clock className="w-4 h-4" /> التواريخ المتوقّعة للجهوزية</h2>
           <div className="space-y-1.5">
             {safe.slice(0, 20).map((o) => (
-              <Link key={o.quoteId} href={`/production/${o.quoteId}`} className="flex items-center gap-2 flex-wrap rounded-lg bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 px-3 py-2 text-sm">
+              <Link key={o.quoteId} href={`/project/${o.quoteId}`} className="flex items-center gap-2 flex-wrap rounded-lg bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 px-3 py-2 text-sm">
                 <span className="font-mono-en font-bold">{o.quoteNumber}</span>
                 <span className="font-semibold text-gray-600 dark:text-gray-300">{o.customer}</span>
                 <span className="ms-auto text-xs text-gray-400">التسليم <b className="font-mono-en">{fmtDay(o.deliveryDate)}</b></span>

@@ -6,7 +6,7 @@ import { Loader2, Check, ChevronDown, ChevronLeft, Plus, X, Trash2, Save, Wand2,
 import { cn } from "@/lib/utils";
 import { useToast } from "@/components/toast";
 import { DateDrillNav, type DateRange } from "@/components/date-drill-nav";
-import { SpecSheet, type PItem } from "@/components/production-spec";
+import { type PItem } from "@/components/production-spec";
 
 type PQuote = { id: string; quoteNumber: string; workStatus: string; deliveryDate: string | null; woodStatus?: string; fabricStatus?: string; customer: string; customerPhone: string; items: PItem[] };
 type Worker = { id: string; name: string; color: string };
@@ -24,7 +24,7 @@ const WS_LABEL: Record<string, string> = {
   ready_for_delivery: "جاهز للتوصيل",
 };
 
-export default function ProductionConsole() {
+export default function ProductionConsole({ isOwner = false }: { isOwner?: boolean }) {
   const toast = useToast();
   const [data, setData] = useState<ProdFile | null>(null);
   const [loading, setLoading] = useState(true);
@@ -50,19 +50,23 @@ export default function ProductionConsole() {
 
   return (
     <div className="space-y-4">
-      <div className="flex gap-2">
-        {([["file", "ملف الإنتاج", Factory], ["stations", "الأقسام", Users], ["pipelines", "المراحل", GitBranch]] as const).map(([k, l, Icon]) => (
-          <button key={k} onClick={() => setSub(k)}
-            className={cn("flex-1 flex items-center justify-center gap-2 py-2 rounded-lg text-xs sm:text-sm font-bold border transition-colors",
-              sub === k ? "bg-gray-900 text-white border-gray-900 dark:bg-gray-600 dark:border-gray-600" : "bg-white dark:bg-gray-800 border-gray-200 dark:border-gray-700 text-gray-600 dark:text-gray-300")}>
-            <Icon className="w-4 h-4" /> {l}
-          </button>
-        ))}
-      </div>
+      {/* The setup sub-tabs (stations & pipelines) are configured once and shown
+          only to owners; the foreman just sees the production file. */}
+      {isOwner && (
+        <div className="flex gap-2">
+          {([["file", "ملف الإنتاج", Factory], ["stations", "الأقسام", Users], ["pipelines", "المراحل", GitBranch]] as const).map(([k, l, Icon]) => (
+            <button key={k} onClick={() => setSub(k)}
+              className={cn("flex-1 flex items-center justify-center gap-2 py-2 rounded-lg text-xs sm:text-sm font-bold border transition-colors",
+                sub === k ? "bg-gray-900 text-white border-gray-900 dark:bg-gray-600 dark:border-gray-600" : "bg-white dark:bg-gray-800 border-gray-200 dark:border-gray-700 text-gray-600 dark:text-gray-300")}>
+              <Icon className="w-4 h-4" /> {l}
+            </button>
+          ))}
+        </div>
+      )}
 
-      {sub === "file" && <ProductionFile data={data} reload={load} />}
-      {sub === "stations" && <StationsEditor data={data} reload={load} />}
-      {sub === "pipelines" && <PipelinesEditor data={data} reload={load} />}
+      {(!isOwner || sub === "file") && <ProductionFile data={data} />}
+      {isOwner && sub === "stations" && <StationsEditor data={data} reload={load} />}
+      {isOwner && sub === "pipelines" && <PipelinesEditor data={data} reload={load} />}
     </div>
   );
 }
@@ -70,22 +74,10 @@ export default function ProductionConsole() {
 // ── Production file: spec sheets per quote, plus a by-worker pivot ──
 
 
-function ProductionFile({ data, reload }: { data: ProdFile; reload: () => void }) {
-  const toast = useToast();
-  // Remember which quote is open, the mode and the scroll position across a
-  // trip into an item's details, so "back" lands exactly where you left off.
-  const [mode, setMode] = useState<"quote" | "worker">(() => {
-    if (typeof window !== "undefined") { try { const s = sessionStorage.getItem("fm:mode"); if (s === "worker" || s === "quote") return s; } catch { /* ignore */ } }
-    return "quote";
-  });
-  const [workerId, setWorkerId] = useState<string>(data.workers[0]?.id || "");
-  const [busy, setBusy] = useState(false);
+function ProductionFile({ data }: { data: ProdFile }) {
   const [range, setRange] = useState<DateRange | null>(null);
 
-  useEffect(() => { try { sessionStorage.setItem("fm:mode", mode); } catch { /* ignore */ } }, [mode]);
-
-  // Restore the saved scroll position once, after the (restored) open quote has
-  // had a chance to render its content.
+  // Restore the saved scroll position once, on returning from a work page.
   useEffect(() => {
     let y = 0;
     try { y = parseInt(sessionStorage.getItem("fm:scroll") || "0", 10) || 0; } catch { /* ignore */ }
@@ -102,139 +94,38 @@ function ProductionFile({ data, reload }: { data: ProdFile; reload: () => void }
     return data.quotes.filter((q) => q.deliveryDate && q.deliveryDate >= range.from && q.deliveryDate <= range.to);
   }, [range, data.quotes]);
 
-  const apply = async (body: any) => {
-    setBusy(true);
-    try {
-      const res = await fetch("/api/foreman/apply-pipeline", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) });
-      const d = await res.json().catch(() => ({}));
-      if (res.ok) { toast.success(d.created ? `تم إنشاء ${d.created} مرحلة` : "لا جديد — المراحل موجودة"); reload(); }
-      else toast.error(d.error || "فشل");
-    } catch { toast.error("تعذّر الاتصال"); }
-    finally { setBusy(false); }
-  };
-
-  // Finish the current stage of a piece and advance to the next.
-  const advance = async (taskId: string) => {
-    try {
-      const res = await fetch("/api/item-tasks", { method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ id: taskId, done: true }) });
-      if (res.ok) { toast.success("تم — انتقلت للمرحلة التالية"); reload(); }
-      else { const e = await res.json().catch(() => ({})); toast.error(e.error || "فشل"); }
-    } catch { toast.error("تعذّر الاتصال"); }
-  };
-
-  const [uploading, setUploading] = useState("");
-  const uploadPhoto = async (quoteItemId: string, kind: "design" | "result", dataUrl: string) => {
-    setUploading(`${quoteItemId}:${kind}`);
-    try {
-      const res = await fetch("/api/foreman/photo", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ quoteItemId, kind, dataUrl }) });
-      const d = await res.json().catch(() => ({}));
-      if (res.ok) { toast.success("تم رفع الصورة"); reload(); }
-      else toast.error(d.error || "تعذّر رفع الصورة");
-    } catch { toast.error("تعذّر الاتصال"); }
-    finally { setUploading(""); }
-  };
-  const removePhoto = async (photoId: string) => {
-    if (!window.confirm("حذف هذه الصورة؟")) return;
-    try {
-      const res = await fetch(`/api/foreman/photo?id=${photoId}`, { method: "DELETE" });
-      if (res.ok) { toast.success("تم حذف الصورة"); reload(); }
-      else toast.error("تعذّر الحذف");
-    } catch { toast.error("تعذّر الاتصال"); }
-  };
-
-  // Correct the exact completion time of a finished stage (minute precision).
-  const setTime = async (taskId: string, iso: string) => {
-    try {
-      const res = await fetch("/api/item-tasks", { method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ id: taskId, doneAt: iso }) });
-      if (res.ok) { toast.success("تم تحديث وقت الإنجاز"); reload(); }
-      else { const e = await res.json().catch(() => ({})); toast.error(e.error || "فشل"); }
-    } catch { toast.error("تعذّر الاتصال"); }
-  };
-
-  // Interactive stage controls (mark done / assign / remove) — same as the item
-  // details page, driven here through reload() like the rest of this console.
-  const toggleStage = async (taskId: string, done: boolean) => {
-    try { const r = await fetch("/api/item-tasks", { method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ id: taskId, done }) }); if (r.ok) reload(); else toast.error("فشل"); } catch { toast.error("تعذّر الاتصال"); }
-  };
-  const assignStage = async (taskId: string, wId: string) => {
-    try { const r = await fetch("/api/item-tasks", { method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ id: taskId, workerId: wId }) }); if (r.ok) reload(); else toast.error("فشل"); } catch { toast.error("تعذّر الاتصال"); }
-  };
-  const removeStage = async (taskId: string, stageName: string) => {
-    if (!window.confirm(`حذف مرحلة «${stageName}»؟`)) return;
-    try { const r = await fetch(`/api/item-tasks?id=${taskId}`, { method: "DELETE" }); if (r.ok) reload(); else toast.error("فشل"); } catch { toast.error("تعذّر الاتصال"); }
-  };
-
-  // By-worker pivot: items with at least one stage assigned to this worker.
-  const workerItems = useMemo(() => {
-    if (mode !== "worker" || !workerId) return [];
-    const out: { quote: PQuote; item: PItem }[] = [];
-    for (const q of quotes) for (const it of q.items) {
-      if (it.tasks.some((t) => t.workerId === workerId)) out.push({ quote: q, item: it });
-    }
-    return out;
-  }, [mode, workerId, quotes]);
-
   return (
     <div className="space-y-3">
-      <div className="flex gap-2">
-        {([["quote", "حسب الكوتيشن"], ["worker", "حسب العامل"]] as const).map(([k, l]) => (
-          <button key={k} onClick={() => setMode(k)}
-            className={cn("px-3 py-1.5 rounded-lg text-xs font-bold border", mode === k ? "bg-teal-600 text-white border-teal-600" : "bg-white dark:bg-gray-800 border-gray-200 dark:border-gray-700 text-gray-500")}>
-            {l}
-          </button>
-        ))}
+      <div className="flex">
         <span className="ms-auto self-center text-[11px] text-gray-400">كوتيشنات إدارة الأعمال: {quotes.length}</span>
       </div>
 
       {/* Flexible date filter (year › month › week › day) on the planned date */}
       <DateDrillNav onChange={(r) => setRange(r)} />
 
-      {mode === "quote" && (
-        quotes.length === 0 ? <p className="text-sm text-gray-400 p-6 text-center">لا توجد كوتيشنات بهذا التاريخ.</p> : (
-          <div className="space-y-2">
-            {/* Each quote opens its own dedicated WORK PAGE (/project/[id]) with
-                all the controls — instead of expanding inline — so the list
-                stays light and "back" returns cleanly to this spot. */}
-            {quotes.map((q) => {
-              const doneCount = q.items.reduce((a, it) => a + it.tasks.filter((t) => t.done).length, 0);
-              const taskCount = q.items.reduce((a, it) => a + it.tasks.length, 0);
-              return (
-                <Link key={q.id} href={`/project/${q.id}`}
-                  className="flex items-center gap-2 p-3 rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 hover:border-teal-300 dark:hover:border-teal-700 transition-colors">
-                  <div className="min-w-0 flex-1">
-                    <p className="font-bold truncate">{q.customer}</p>
-                    <p className="text-[11px] text-gray-400 font-mono-en truncate">{q.quoteNumber}{q.deliveryDate ? ` · ${q.deliveryDate}` : ""}</p>
-                  </div>
-                  <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300 shrink-0">{WS_LABEL[q.workStatus || ""] || "—"}</span>
-                  <span className="text-[10px] font-mono-en text-gray-400 shrink-0">{q.items.length} صنف</span>
-                  {taskCount > 0 && <span className="text-[10px] font-mono-en text-emerald-600 shrink-0">{doneCount}/{taskCount}</span>}
-                  <span className="shrink-0 inline-flex items-center gap-1 text-[11px] font-bold text-teal-600 border border-teal-200 dark:border-teal-800 rounded-lg px-2 py-1">
-                    صفحة العمل <ChevronLeft className="w-3.5 h-3.5 rtl:rotate-0 ltr:rotate-180" />
-                  </span>
-                </Link>
-              );
-            })}
-          </div>
-        )
-      )}
-
-      {mode === "worker" && (
-        <div className="space-y-3">
-          <select value={workerId} onChange={(e) => setWorkerId(e.target.value)} className="field w-full max-w-xs">
-            {data.workers.map((w) => <option key={w.id} value={w.id}>{w.name}</option>)}
-          </select>
-          {workerItems.length === 0 ? <p className="text-sm text-gray-400 p-6 text-center">لا مهام مسندة لهذا العامل في الكوتيشنات الجارية.</p> : (
-            <div className="space-y-2">
-              {workerItems.map(({ quote, item }) => (
-                <div key={item.id} className="space-y-1">
-                  <Link href={`/quotations/${quote.id}`} target="_blank" className="inline-flex items-center gap-1 text-[11px] text-gray-400 hover:text-teal-600 font-mono-en">
-                    {quote.quoteNumber} · {quote.customer} <ExternalLink className="w-3 h-3" />
-                  </Link>
-                  <SpecSheet item={item} workers={data.workers} onAdvance={advance} onSetTime={setTime} onToggle={toggleStage} onAssign={assignStage} onRemoveStage={removeStage} onUploadPhoto={uploadPhoto} onDeletePhoto={removePhoto} uploadingKey={uploading} />
+      {quotes.length === 0 ? <p className="text-sm text-gray-400 p-6 text-center">لا توجد كوتيشنات بهذا التاريخ.</p> : (
+        <div className="space-y-2">
+          {/* Each quote opens its own dedicated WORK PAGE (/project/[id]) with
+              all the controls — the list stays light and "back" returns here. */}
+          {quotes.map((q) => {
+            const doneCount = q.items.reduce((a, it) => a + it.tasks.filter((t) => t.done).length, 0);
+            const taskCount = q.items.reduce((a, it) => a + it.tasks.length, 0);
+            return (
+              <Link key={q.id} href={`/project/${q.id}`}
+                className="flex items-center gap-2 p-3 rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 hover:border-teal-300 dark:hover:border-teal-700 transition-colors">
+                <div className="min-w-0 flex-1">
+                  <p className="font-bold truncate">{q.customer}</p>
+                  <p className="text-[11px] text-gray-400 font-mono-en truncate">{q.quoteNumber}{q.deliveryDate ? ` · ${q.deliveryDate}` : ""}</p>
                 </div>
-              ))}
-            </div>
-          )}
+                <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300 shrink-0">{WS_LABEL[q.workStatus || ""] || "—"}</span>
+                <span className="text-[10px] font-mono-en text-gray-400 shrink-0">{q.items.length} صنف</span>
+                {taskCount > 0 && <span className="text-[10px] font-mono-en text-emerald-600 shrink-0">{doneCount}/{taskCount}</span>}
+                <span className="shrink-0 inline-flex items-center gap-1 text-[11px] font-bold text-teal-600 border border-teal-200 dark:border-teal-800 rounded-lg px-2 py-1">
+                  صفحة العمل <ChevronLeft className="w-3.5 h-3.5 rtl:rotate-0 ltr:rotate-180" />
+                </span>
+              </Link>
+            );
+          })}
         </div>
       )}
     </div>

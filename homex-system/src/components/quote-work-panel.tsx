@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { Wand2 } from "lucide-react";
+import { Wand2, MoreHorizontal } from "lucide-react";
 import { useToast } from "@/components/toast";
 import { MaterialControl } from "@/components/material-control";
 import { SpecSheet, type PItem } from "@/components/production-spec";
@@ -22,6 +22,7 @@ export function QuoteWorkPanel({ quoteId, items, workers, woodStatus, fabricStat
   const toast = useToast();
   const [busy, setBusy] = useState(false);
   const [uploading, setUploading] = useState("");
+  const [menuOpen, setMenuOpen] = useState(false);
 
   const apply = async (body: Record<string, unknown>) => {
     setBusy(true);
@@ -83,11 +84,26 @@ export function QuoteWorkPanel({ quoteId, items, workers, woodStatus, fabricStat
     <div className="space-y-3">
       {canEdit && (
         <>
-          <div className="flex flex-wrap items-center gap-2">
-            <button disabled={busy} onClick={() => { if (window.confirm("إعادة تطبيق قالب مراحل القسم على كل أصناف هذا الكوتيشن؟\nسيتم استبدال المراحل غير المنجزة بمراحل القالب (المراحل المنجزة تبقى).")) apply({ quotationId: quoteId, replace: true }); }}
-              className="ms-auto inline-flex items-center gap-1 text-[11px] font-bold px-2.5 py-1 rounded-lg bg-indigo-600 text-white hover:bg-indigo-700 disabled:opacity-50">
-              <Wand2 className="w-3.5 h-3.5" /> إعادة تطبيق القالب
-            </button>
+          {/* Frequent control (material ordering) stays in view; the rare,
+              destructive "re-apply template" tucks into a ⋯ menu. */}
+          <div className="flex items-center gap-2">
+            <div className="ms-auto relative">
+              <button onClick={() => setMenuOpen((v) => !v)} aria-label="المزيد"
+                className="w-8 h-8 grid place-items-center rounded-lg border border-gray-200 dark:border-gray-700 text-gray-500 hover:bg-gray-50 dark:hover:bg-gray-700">
+                <MoreHorizontal className="w-4 h-4" />
+              </button>
+              {menuOpen && (
+                <>
+                  <div className="fixed inset-0 z-10" onClick={() => setMenuOpen(false)} />
+                  <div className="absolute z-20 mt-1 end-0 w-56 rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 shadow-lg p-1">
+                    <button disabled={busy} onClick={() => { setMenuOpen(false); if (window.confirm("إعادة تطبيق قالب مراحل القسم على كل أصناف هذا الكوتيشن؟\nسيتم استبدال المراحل غير المنجزة بمراحل القالب (المراحل المنجزة تبقى).")) apply({ quotationId: quoteId, replace: true }); }}
+                      className="w-full flex items-center gap-2 text-start text-xs font-bold px-3 py-2 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 text-gray-700 dark:text-gray-200 disabled:opacity-50">
+                      <Wand2 className="w-3.5 h-3.5 text-indigo-600" /> إعادة تطبيق القالب
+                    </button>
+                  </div>
+                </>
+              )}
+            </div>
           </div>
           <div className="rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 px-3 py-2">
             <MaterialControl quoteId={quoteId} wood={woodStatus || "not_ordered"} fabric={fabricStatus || "not_ordered"} />
