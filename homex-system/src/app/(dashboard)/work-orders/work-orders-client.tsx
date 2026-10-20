@@ -243,9 +243,9 @@ export function WorkOrdersClient({ initialData }: { initialData: { quotations: W
     if (alertFilter === "orange") params.set("hasOrange", "true");
     if (alertFilter === "red") params.set("hasRed", "true");
     if (debouncedSearch) params.set("search", debouncedSearch);
-    // The board's month navigation filters the FROZEN boardMonth, not the
-    // delivery date — send boardFrom/boardTo (deliveryFrom/To mean a delivery
-    // window, used by other screens).
+    // The board's month navigation filters by the DELIVERY date — an order
+    // shows under the month it is due to be delivered. Sent as boardFrom/boardTo
+    // (the board's own month window).
     if (deliveryFrom) params.set("boardFrom", deliveryFrom);
     if (deliveryTo) params.set("boardTo", deliveryTo);
 

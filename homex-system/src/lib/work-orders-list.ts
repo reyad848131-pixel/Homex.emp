@@ -14,8 +14,8 @@ export interface WorkOrdersParams {
   // availability hint and the delivery-calendar day picker).
   deliveryFrom?: string | null;
   deliveryTo?: string | null;
-  // boardFrom/boardTo (and month) filter by the FROZEN boardMonth — the work
-  // board's own month navigation, independent of the delivery date.
+  // boardFrom/boardTo (and month) drive the work board's own month navigation,
+  // filtering by the DELIVERY date (the order shows under its delivery month).
   boardFrom?: string | null;
   boardTo?: string | null;
   month?: string | null;
@@ -51,14 +51,15 @@ async function backfillBoardMonth() {
 export async function getWorkOrders(p: WorkOrdersParams) {
   await healCompletedStatus();
   await backfillBoardMonth();
-  // Presence on the board is unchanged (a contracted order has a deliveryDate),
-  // but the month/date navigation below filters by the FROZEN boardMonth, never
-  // by deliveryDate — the work board has nothing to do with the delivery date.
+  // Presence on the board is unchanged (a contracted order has a deliveryDate).
+  // The month/date navigation below filters by the DELIVERY date — an order
+  // shows under the month it is due to be delivered (the date written in the
+  // quotation at contract signing), not the month the contract was signed.
   const where: any = { deliveryDate: { not: null } };
 
   if (p.month) {
     const [y, m] = p.month.split("-").map(Number);
-    where.boardMonth = { gte: new Date(y, m - 1, 1), lte: new Date(y, m, 0, 23, 59, 59, 999) };
+    where.deliveryDate = { ...where.deliveryDate, gte: new Date(y, m - 1, 1), lte: new Date(y, m, 0, 23, 59, 59, 999) };
   }
   if (p.workStatus && VALID_WORK_STATUSES.includes(p.workStatus)) where.workStatus = p.workStatus;
   if (p.hasOrange) where.hasOrangeAlert = true;
@@ -74,11 +75,12 @@ export async function getWorkOrders(p: WorkOrdersParams) {
   if (p.customer) {
     where.customer = { ...where.customer, name: { contains: p.customer, mode: "insensitive" as const } };
   }
-  // The work board's own month navigation → the frozen boardMonth.
+  // The work board's own month navigation → now the DELIVERY date, so each order
+  // sits under the month it is due to be delivered.
   if (p.boardFrom || p.boardTo) {
-    where.boardMonth = { ...where.boardMonth };
-    if (p.boardFrom) where.boardMonth.gte = new Date(p.boardFrom);
-    if (p.boardTo) where.boardMonth.lte = new Date(p.boardTo + "T23:59:59.999Z");
+    where.deliveryDate = { ...where.deliveryDate };
+    if (p.boardFrom) where.deliveryDate.gte = new Date(p.boardFrom);
+    if (p.boardTo) where.deliveryDate.lte = new Date(p.boardTo + "T23:59:59.999Z");
   }
   // Delivery-date window (contract availability hint + delivery-calendar picker)
   // → stays on deliveryDate (keeps the base { not: null } via the spread).
