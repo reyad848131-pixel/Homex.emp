@@ -952,7 +952,6 @@ function CurtainBuilder({ config, onUpdate, initial }: { config: any; onUpdate: 
   const light = useLighting(initial);
   const [type, setType] = useState(initial?.type ?? "chiffon");
   const [motor, setMotor] = useState<"manual" | "electric">(initial?.motor ?? "manual");
-  const [count, setCount] = useState<number>(initial?.count ?? 2);
   const [width, setWidth] = useState(initial?.width ?? 2);
   const [height, setHeight] = useState(initial?.height ?? 2);
   const [rateOverride, setRateOverride] = useState<number | null>(initial?.rateOverride ?? null);
@@ -983,9 +982,9 @@ function CurtainBuilder({ config, onUpdate, initial }: { config: any; onUpdate: 
   const price = priceOverride != null ? priceOverride - extras : computedBase;
 
   useEffect(() => {
-    const desc = withNote(`ستائر ${TYPES[type]?.label} (${count} ستارة) - ${width}×${height}م = ${area} م²${light.lightDesc}`, note);
-    onUpdate(desc, price, extras, { type, motor, count, width, height, lightCount: light.lightCount, rateOverride, priceOverride, note });
-  }, [type, motor, count, width, height, price, rateOverride, priceOverride, extras, light.lightCount, light.lightDesc, note, config, onUpdate]);
+    const desc = withNote(`ستائر ${TYPES[type]?.label} - ${width}×${height}م = ${area} م²${light.lightDesc}`, note);
+    onUpdate(desc, price, extras, { type, motor, width, height, lightCount: light.lightCount, rateOverride, priceOverride, note });
+  }, [type, motor, width, height, price, rateOverride, priceOverride, extras, light.lightCount, light.lightDesc, note, config, onUpdate]);
 
   return (
     <div className="space-y-4">
@@ -1024,16 +1023,6 @@ function CurtainBuilder({ config, onUpdate, initial }: { config: any; onUpdate: 
             {motorQty > 1 && ` × ${motorQty} ${t("motorLabel")}`} = {motorSurcharge.toFixed(3)} {t("omr")}
           </p>
         )}
-      </div>
-
-      <div>
-        <StepperRow
-          label={t("curtainCount")}
-          hint={t("curtainsUnit")}
-          value={count}
-          onChange={setCount}
-          min={1}
-        />
       </div>
 
       <div>
