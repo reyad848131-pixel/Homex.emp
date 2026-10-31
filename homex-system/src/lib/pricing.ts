@@ -23,7 +23,7 @@ export const RATE_KEYS = [
 export interface KitchenAccessory { id: string; name: string; price: number }
 
 export interface PricingConfig {
-  cabinets: { perMeter: number };
+  cabinets: { perMeter: number; handlePerUnit: number; handleEvery: number };
   bed: { wood: Record<string, number>; fabric: Record<string, number> };
   sofa: { single: number; double: number; triple: number; woodenSurcharge: number };
   curtains: { chiffon: number; blackout: number; combo: number; roll: number; motorBase: number; motorPerMeter: number };
@@ -35,7 +35,9 @@ export interface PricingConfig {
 }
 
 export const DEFAULT_PRICING: PricingConfig = {
-  cabinets: { perMeter: 54 },
+  // handlePerUnit: price of one handle; handleEvery: a handle is added for each
+  // full handleEvery-cm of cabinet width (floor). Both editable on the Pricing page.
+  cabinets: { perMeter: 54, handlePerUnit: 1.9, handleEvery: 45 },
   bed: {
     wood:   { "90x190": 120, "100x200": 130, "120x200": 135, "180x200": 390, "200x200": 400, "220x220": 410 },
     fabric: { "90x190": 125, "100x200": 135, "120x200": 140, "180x200": 420, "200x200": 430, "220x220": 450 },
@@ -105,7 +107,11 @@ export function mergePricing(stored: any): PricingConfig {
   const s = stored && typeof stored === "object" ? stored : {};
   const d = DEFAULT_PRICING;
   return {
-    cabinets: { perMeter: num(s.cabinets?.perMeter, d.cabinets.perMeter) },
+    cabinets: {
+      perMeter: num(s.cabinets?.perMeter, d.cabinets.perMeter),
+      handlePerUnit: num(s.cabinets?.handlePerUnit, d.cabinets.handlePerUnit),
+      handleEvery: num(s.cabinets?.handleEvery, d.cabinets.handleEvery),
+    },
     bed: {
       wood: mergeMap(s.bed?.wood, d.bed.wood),
       fabric: mergeMap(s.bed?.fabric, d.bed.fabric),

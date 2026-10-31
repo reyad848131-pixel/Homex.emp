@@ -93,8 +93,14 @@ export default function PricingClient() {
       {/* Cabinets — per-metre rate */}
       <div className={card}>
         <h2 className="text-base font-bold mb-4">{t("pricingCabinets")}</h2>
-        <PriceField label={t("pricingPerMeter")} value={p.cabinets.perMeter}
-          onChange={(n) => setP((prev) => ({ ...prev, cabinets: { perMeter: n } }))} />
+        <div className="space-y-3">
+          <PriceField label={t("pricingPerMeter")} value={p.cabinets.perMeter}
+            onChange={(n) => setP((prev) => ({ ...prev, cabinets: { ...prev.cabinets, perMeter: n } }))} />
+          <PriceField label={t("pricingHandlePrice")} value={p.cabinets.handlePerUnit}
+            onChange={(n) => setP((prev) => ({ ...prev, cabinets: { ...prev.cabinets, handlePerUnit: n } }))} />
+          <PriceField label={t("pricingHandleEvery")} value={p.cabinets.handleEvery}
+            onChange={(n) => setP((prev) => ({ ...prev, cabinets: { ...prev.cabinets, handleEvery: n } }))} />
+        </div>
       </div>
 
       {/* Seating sets — per piece + wooden surcharge */}

@@ -802,6 +802,14 @@ function CabinetBuilder({ config, onUpdate, initial }: { config: any; onUpdate: 
   const defaultRate = pricing.cabinets.perMeter;
   const rate = rateOverride ?? defaultRate;
 
+  // Handles: one handle for each full `handleEvery` cm of width (floor), priced
+  // per unit. Folded SILENTLY into the base price — never added to the
+  // description and never shown to the customer (who sees only the line total);
+  // the rep sees the small read-only line below for transparency.
+  const handleEvery = pricing.cabinets.handleEvery;
+  const handleCount = handleEvery > 0 ? Math.floor((width * 100) / handleEvery) : 0;
+  const handleCost = handleCount * pricing.cabinets.handlePerUnit;
+
   const backRate = config.back18 || 40; // سعر المتر المربع للخلفية ١٨ ملي
 
   const setGlassCount = (key: string, n: number) =>
@@ -816,7 +824,7 @@ function CabinetBuilder({ config, onUpdate, initial }: { config: any; onUpdate: 
 
   const backCost = back18 ? backSqm * backRate : 0;
   const extras = glassCost + leds * (config.led || 25) + backCost;
-  const computedBase = width * height * rate;
+  const computedBase = width * height * rate + handleCost;
   const computedTotal = computedBase + extras;
   useResetFlatOnChange(computedTotal, priceOverride, () => setPriceOverride(null));
   // When a flat total is set it is the FINAL price incl. extras, so the base
@@ -865,6 +873,14 @@ function CabinetBuilder({ config, onUpdate, initial }: { config: any; onUpdate: 
       <PriceOverrideRow defaultRate={defaultRate} rate={rate} computedPrice={computedTotal}
         rateOverride={rateOverride} priceOverride={priceOverride}
         onRateChange={setRateOverride} onPriceChange={setPriceOverride} />
+      {handleCount > 0 && (
+        <div className="flex items-center justify-between rounded-lg bg-gray-100 border border-gray-200 px-4 py-2.5">
+          <span className="text-sm font-semibold text-gray-600">{t("cabinetHandles")}</span>
+          <span className="font-mono-en text-sm font-bold text-gray-800">
+            {handleCount} × {pricing.cabinets.handlePerUnit} = {handleCost.toFixed(3)}
+          </span>
+        </div>
+      )}
       <div>
         <button type="button" onClick={() => setGlassEnabled((v) => !v)}
           className={cn("w-full flex items-center justify-between px-4 py-3 rounded border text-sm font-bold transition-colors",
