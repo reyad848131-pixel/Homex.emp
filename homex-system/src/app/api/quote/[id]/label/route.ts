@@ -19,7 +19,7 @@ const CHEVRON = (s1: string, s2: string) =>
 // page with all sections in order. Card-sized (a touch bigger than a business
 // card) so it fits on one small page, in the company's unified brand theme with
 // the settings-driven watermark behind the identity block. Auto-opens print.
-export async function GET(_req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
+export async function GET(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
     const session = await getAuth();
     if (!session) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
@@ -50,6 +50,27 @@ export async function GET(_req: NextRequest, { params }: { params: Promise<{ id:
     const sectionsLine = uniqueSections.join(" · ") || "—";
     // One identical copy per section, so a label can go on each piece.
     const copies = Math.max(1, q.items.length);
+
+    // Print layout: "a4" (default) tiles many labels on one A4 sheet to save
+    // paper; "label" prints one 54×85mm label per page for a thermal/label
+    // printer (zero waste, peel-and-stick).
+    const sheet = new URL(req.url).searchParams.get("sheet") === "label" ? "label" : "a4";
+    const printCss = sheet === "label"
+      ? `@page{ size:54mm 85mm; margin:0 }
+  @media print{
+    html,body{background:#fff;padding:0;margin:0;gap:0;display:block}
+    .bar{display:none !important}
+    .label{border:none;box-shadow:none;width:54mm;margin:0;break-after:page;page-break-after:always}
+    .label:last-child{break-after:auto;page-break-after:auto}
+  }`
+      : `@page{ size:A4 portrait; margin:7mm }
+  @media print{
+    html,body{background:#fff;padding:0;margin:0;gap:0}
+    body{display:block;text-align:start}
+    .bar{display:none !important}
+    .label{display:inline-block;vertical-align:top;width:54mm;margin:0 2.5mm 2.5mm 0;
+           box-shadow:none;border:1px dashed #c3c4bd;break-inside:avoid;page-break-inside:avoid}
+  }`;
 
     const badge = b.companyLogo
       ? `<img src="${b.companyLogo}" alt="${esc(b.companyName)}" />`
@@ -142,16 +163,11 @@ export async function GET(_req: NextRequest, { params }: { params: Promise<{ id:
   .foot .cat{font-size:8.5px;font-weight:800;color:var(--sage-d)}
   .foot .due b{color:var(--ink);font-weight:800}
 
-  @page{ size:54mm 85mm; margin:0 }
-  @media print{
-    html,body{background:#fff;padding:0;margin:0;gap:0;display:block}
-    .bar{display:none !important}
-    .label{border:none;box-shadow:none;width:54mm;margin:0;break-after:page;page-break-after:always}
-    .label:last-child{break-after:auto;page-break-after:auto}
-  }
+  ${printCss}
 </style></head><body>
   <div class="bar">
     <button class="print" onclick="window.print()">🖨 طباعة (${copies} نسخة)</button>
+    <a class="close" style="text-decoration:none;display:inline-flex;align-items:center" href="?sheet=${sheet === "label" ? "a4" : "label"}">${sheet === "label" ? "⇞ وضع A4 (عدة بالورقة)" : "🏷 وضع طابعة الملصقات"}</a>
     <button class="close" onclick="window.close()">إغلاق</button>
   </div>
   ${Array.from({ length: copies }).map(() => card).join("")}
