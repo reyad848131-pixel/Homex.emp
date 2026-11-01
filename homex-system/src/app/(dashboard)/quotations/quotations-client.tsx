@@ -31,7 +31,7 @@ interface Quotation {
   status: string;
   total: number;
   createdAt: string;
-  customer: { name: string; phone: string; governorate: string };
+  customer: { name: string; phone: string; governorate: string; wilayat: string | null };
   employee: { name: string };
   _count: { items: number };
 }
@@ -317,7 +317,12 @@ export function QuotationsClient({ initialData }: { initialData: { quotations: Q
                         <p className="font-semibold">{displayName(q.customer.name, locale)}</p>
                         <p className="text-xs text-gray-400 font-mono-en">{q.customer.phone}</p>
                       </td>
-                      <td className="p-3 text-gray-500">{q.customer.governorate}</td>
+                      <td className="p-3 text-gray-500">
+                        <p>{q.customer.wilayat || q.customer.governorate || "—"}</p>
+                        {q.customer.wilayat && q.customer.governorate && (
+                          <p className="text-xs text-gray-400">{q.customer.governorate}</p>
+                        )}
+                      </td>
                       <td className="p-3 font-mono-en text-gray-500">{q._count.items}</td>
                       <td className="p-3">
                         <span className={`inline-block px-2.5 py-1 rounded-full text-xs font-bold ${status.color}`}>

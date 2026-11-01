@@ -45,7 +45,7 @@ export async function getQuotationsList(p: QuotationListParams) {
     prisma.quotation.findMany({
       where,
       include: {
-        customer: { select: { name: true, phone: true, governorate: true } },
+        customer: { select: { name: true, phone: true, governorate: true, wilayat: true } },
         employee: { select: { name: true } },
         _count: { select: { items: true } },
       },
