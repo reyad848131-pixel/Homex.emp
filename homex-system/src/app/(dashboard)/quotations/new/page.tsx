@@ -8,6 +8,8 @@ import { useI18n } from "@/lib/i18n";
 import { normalizePhone } from "@/lib/text";
 import { useToast } from "@/components/toast";
 import { CategoryBuilder, NumField, NumStepper, type Category } from "@/components/quote-builders";
+import { ItemVersionBar } from "@/components/item-version-bar";
+import { ensureVersions, pushVersion, applyVersion, removeVersion, type ItemVersion } from "@/lib/item-versions";
 import {
   ChefHat, DoorOpen, Lamp, Blinds, Sparkles, BedDouble,
   Layers, Tv, Monitor, Sofa, WashingMachine, Plus, Refrigerator, Coffee, Columns2, BookOpen,
@@ -30,6 +32,8 @@ interface LineItem {
   unitPrice: number;
   extras: number;
   lineTotal: number;
+  versions?: ItemVersion[];
+  activeVersion?: number;
 }
 
 interface CustomerData {
@@ -215,23 +219,30 @@ export default function NewQuotationPage() {
     if (!selectedCat || !builderDesc || builderPrice <= 0) return;
     const lineTotal = builderQty * builderPrice + builderExtras;
     if (editingItemId) {
-      // Save edits back onto the existing line item.
-      setItems((prev) => prev.map((it) => it.id === editingItemId ? {
-        ...it,
-        categoryId: selectedCat.id,
-        categoryNameAr: selectedCat.nameAr,
-        categoryNameEn: selectedCat.nameEn,
-        description: builderDesc,
-        details: builderDetails,
-        quantity: builderQty,
-        unitPrice: builderPrice,
-        extras: builderExtras,
-        lineTotal,
-      } : it));
+      // Save edits back onto the existing line item, keeping the previous state
+      // as a version so it can be restored later (pushVersion seeds version 1
+      // from the pre-edit values, then appends this edit as the approved one).
+      setItems((prev) => prev.map((it) => {
+        if (it.id !== editingItemId) return it;
+        const seeded = ensureVersions(it);
+        const updated = {
+          ...seeded,
+          categoryId: selectedCat.id,
+          categoryNameAr: selectedCat.nameAr,
+          categoryNameEn: selectedCat.nameEn,
+          description: builderDesc,
+          details: builderDetails,
+          quantity: builderQty,
+          unitPrice: builderPrice,
+          extras: builderExtras,
+          lineTotal,
+        };
+        return pushVersion(updated);
+      }));
     } else {
       setItems((prev) => [
         ...prev,
-        {
+        ensureVersions({
           id: Date.now().toString(36) + Math.random().toString(36).slice(2),
           categoryId: selectedCat.id,
           categoryNameAr: selectedCat.nameAr,
@@ -242,11 +253,17 @@ export default function NewQuotationPage() {
           unitPrice: builderPrice,
           extras: builderExtras,
           lineTotal,
-        },
+        }),
       ]);
     }
     resetBuilder();
   };
+
+  // Approve a chosen version (mirror its values onto the item) / delete a version.
+  const approveItemVersion = (id: string, idx: number) =>
+    setItems((prev) => prev.map((it) => it.id === id ? applyVersion(ensureVersions(it), idx) : it));
+  const deleteItemVersion = (id: string, idx: number) =>
+    setItems((prev) => prev.map((it) => it.id === id ? removeVersion(ensureVersions(it), idx) : it));
 
   const removeItem = (id: string) => {
     if (editingItemId === id) resetBuilder();
@@ -271,7 +288,7 @@ export default function NewQuotationPage() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           customer,
-          items: items.map(({ id, categoryNameAr, categoryNameEn, ...rest }) => rest),
+          items: items.map(({ id, categoryNameAr, categoryNameEn, versions, activeVersion, ...rest }) => rest),
           notes,
           advancePct,
           discountAmount: discountAmt,
@@ -661,6 +678,9 @@ export default function NewQuotationPage() {
                           </div>
                         </div>
                       </div>
+                      <ItemVersionBar item={item} fmtCur={fmtCur}
+                        onApprove={(idx) => approveItemVersion(item.id, idx)}
+                        onDelete={(idx) => deleteItemVersion(item.id, idx)} />
                     </div>
                   ))}
                 </div>
