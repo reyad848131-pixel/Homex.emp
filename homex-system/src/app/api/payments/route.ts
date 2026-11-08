@@ -5,7 +5,7 @@ import { logAction } from "@/lib/audit";
 import { parseBody, paymentSchema } from "@/lib/schemas";
 import { roundMoney } from "@/lib/utils";
 import { isFinanciallyLocked } from "@/lib/quote-rules";
-import { userCan } from "@/lib/permissions";
+import { userCan, ownScopedOnly } from "@/lib/permissions";
 
 export async function POST(req: NextRequest) {
   try {
@@ -33,7 +33,7 @@ export async function POST(req: NextRequest) {
     // (managers + accountant have it). Before lock, the quote owner may too.
     if (isFinanciallyLocked(quotation)) {
       if (!canRecordPayments) return NextResponse.json({ error: "تسجيل الدفعات يتطلب صلاحية الدفعات", code: "locked" }, { status: 403 });
-    } else if (user.role === "sales" && quotation.employeeId !== user.id) {
+    } else if ((await ownScopedOnly(user.role)) && quotation.employeeId !== user.id) {
       return NextResponse.json({ error: "Forbidden" }, { status: 403 });
     }
 

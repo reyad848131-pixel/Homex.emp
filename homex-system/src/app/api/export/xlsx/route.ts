@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getAuth } from "@/lib/auth";
+import { hasReportsAccess } from "@/lib/permissions";
 import { buildExportWorkbook } from "@/lib/excel";
 
 export async function GET(req: NextRequest) {
@@ -7,7 +8,8 @@ export async function GET(req: NextRequest) {
     const session = await getAuth();
     if (!session) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     const user = session.user as any;
-    if (user.role === "sales") return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+    // Full-data export — gate by the reports capability, not just "deny sales".
+    if (!(await hasReportsAccess(user.role))) return NextResponse.json({ error: "Forbidden" }, { status: 403 });
 
     const buffer = await buildExportWorkbook();
     const date = new Date().toISOString().split("T")[0];

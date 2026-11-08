@@ -3,6 +3,7 @@ import { getAuth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { getSetting } from "@/lib/settings";
 import { deletePhoto } from "@/lib/cloudinary";
+import { cronHeaderMatches } from "@/lib/cron-auth";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -14,7 +15,7 @@ export async function GET(req: NextRequest) {
   try {
     const authHeader = req.headers.get("authorization");
     const cronSecret = process.env.CRON_SECRET;
-    const isCron = !!cronSecret && authHeader === `Bearer ${cronSecret}`;
+    const isCron = cronHeaderMatches(authHeader, cronSecret);
     if (!isCron) {
       const session = await getAuth();
       const user = session?.user as any;

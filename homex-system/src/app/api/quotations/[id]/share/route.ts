@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { randomBytes } from "crypto";
 import { getAuth } from "@/lib/auth";
+import { ownScopedOnly } from "@/lib/permissions";
 import { prisma } from "@/lib/prisma";
 import { logAction } from "@/lib/audit";
 
@@ -15,7 +16,7 @@ export async function POST(_req: NextRequest, { params }: { params: Promise<{ id
 
     const quotation = await prisma.quotation.findFirst({ where: { id }, select: { id: true, employeeId: true, publicToken: true } });
     if (!quotation) return NextResponse.json({ error: "Not found" }, { status: 404 });
-    if (user.role === "sales" && quotation.employeeId !== user.id) {
+    if ((await ownScopedOnly(user.role)) && quotation.employeeId !== user.id) {
       return NextResponse.json({ error: "Forbidden" }, { status: 403 });
     }
 

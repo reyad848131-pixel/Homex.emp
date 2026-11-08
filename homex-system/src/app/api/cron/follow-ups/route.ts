@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { getAuth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { notify } from "@/lib/notifications";
+import { cronHeaderMatches } from "@/lib/cron-auth";
 
 // Remind the owning salesperson about quotes that have been sitting with the
 // customer for a while without a decision, so they follow up before the lead
@@ -13,7 +14,7 @@ export async function GET(req: NextRequest) {
   try {
     const authHeader = req.headers.get("authorization");
     const cronSecret = process.env.CRON_SECRET;
-    const isCron = !!cronSecret && authHeader === `Bearer ${cronSecret}`;
+    const isCron = cronHeaderMatches(authHeader, cronSecret);
     if (!isCron) {
       const session = await getAuth();
       const user = session?.user as any;

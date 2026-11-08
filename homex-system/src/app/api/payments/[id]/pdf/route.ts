@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getAuth } from "@/lib/auth";
+import { ownScopedOnly } from "@/lib/permissions";
 import { prisma } from "@/lib/prisma";
 import { roundMoney } from "@/lib/utils";
 import { pdfToolbar } from "@/lib/pdf-shell";
@@ -46,7 +47,7 @@ export async function GET(
     if (!payment) return NextResponse.json({ error: "Not found" }, { status: 404 });
 
     // A sales rep may only access receipts for their own quotations.
-    if (user.role === "sales" && payment.quotation.employeeId !== user.id) {
+    if ((await ownScopedOnly(user.role)) && payment.quotation.employeeId !== user.id) {
       return NextResponse.json({ error: "Forbidden" }, { status: 403 });
     }
 

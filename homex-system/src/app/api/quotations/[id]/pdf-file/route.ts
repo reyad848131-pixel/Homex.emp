@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getAuth } from "@/lib/auth";
+import { ownScopedOnly } from "@/lib/permissions";
 import { prisma } from "@/lib/prisma";
 import chromium from "@sparticuz/chromium";
 import puppeteer from "puppeteer-core";
@@ -29,7 +30,7 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ id: 
       select: { id: true, quoteNumber: true, employee: { select: { id: true } }, customer: { select: { name: true } } },
     });
     if (!quotation) return NextResponse.json({ error: "Not found" }, { status: 404 });
-    if (user.role === "sales" && quotation.employee.id !== user.id) {
+    if ((await ownScopedOnly(user.role)) && quotation.employee.id !== user.id) {
       return NextResponse.json({ error: "Forbidden" }, { status: 403 });
     }
 

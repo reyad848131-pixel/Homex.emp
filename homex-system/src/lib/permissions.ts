@@ -165,4 +165,29 @@ export async function userCan(roleKey: string, perm: Permission): Promise<boolea
   return (await getRolePermissions(roleKey)).includes(perm);
 }
 
+// Roles with blanket visibility across the whole company's records.
+const BROAD_ROLES = new Set(["admin", "ceo", "manager"]);
+
+// Access-scoping helpers — gate by CAPABILITY, never by a hard-coded role name,
+// so custom roles are scoped correctly (a role that isn't literally "sales" must
+// not silently gain full access).
+//
+// seesAllRecords: may read every quotation/customer, not only their own. The
+//   explicit grant is `view_all_quotes` (held by manager/accountant and any
+//   custom role the manager trusts); built-in "sales" lacks it and stays
+//   scoped to its own records, exactly as before.
+export async function seesAllRecords(roleKey: string): Promise<boolean> {
+  return BROAD_ROLES.has(roleKey) || (await userCan(roleKey, "view_all_quotes"));
+}
+// ownScopedOnly: the inverse — the user may only act on records they own.
+export async function ownScopedOnly(roleKey: string): Promise<boolean> {
+  return !(await seesAllRecords(roleKey));
+}
+// hasReportsAccess: may open reports and full-data exports (company-wide,
+// money-bearing data). Gated by the `reports` capability so low-privilege
+// roles (driver, photographer, limited custom roles) cannot pull it.
+export async function hasReportsAccess(roleKey: string): Promise<boolean> {
+  return BROAD_ROLES.has(roleKey) || (await userCan(roleKey, "reports"));
+}
+
 export { CUSTOM_ROLES_KEY };

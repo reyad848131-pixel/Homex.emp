@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { getAuth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { notify } from "@/lib/notifications";
+import { cronHeaderMatches } from "@/lib/cron-auth";
 
 // Notify the owning employee about quotations whose validity is about to expire,
 // so they can follow up before the offer lapses. Runs daily via Vercel Cron
@@ -13,7 +14,7 @@ export async function GET(req: NextRequest) {
   try {
     const authHeader = req.headers.get("authorization");
     const cronSecret = process.env.CRON_SECRET;
-    const isCron = !!cronSecret && authHeader === `Bearer ${cronSecret}`;
+    const isCron = cronHeaderMatches(authHeader, cronSecret);
 
     if (!isCron) {
       const session = await getAuth();

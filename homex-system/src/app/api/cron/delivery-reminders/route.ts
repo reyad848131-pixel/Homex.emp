@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { getAuth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { notify, notifyAdmins } from "@/lib/notifications";
+import { cronHeaderMatches } from "@/lib/cron-auth";
 
 // Daily reminder: notify managers (and the assigned driver) about
 // deliveries scheduled for tomorrow. Runs via Vercel Cron
@@ -10,7 +11,7 @@ export async function GET(req: NextRequest) {
   try {
     const authHeader = req.headers.get("authorization");
     const cronSecret = process.env.CRON_SECRET;
-    const isCron = !!cronSecret && authHeader === `Bearer ${cronSecret}`;
+    const isCron = cronHeaderMatches(authHeader, cronSecret);
 
     if (!isCron) {
       const session = await getAuth();

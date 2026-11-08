@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getAuth } from "@/lib/auth";
+import { ownScopedOnly } from "@/lib/permissions";
 import { prisma } from "@/lib/prisma";
 import { logAction } from "@/lib/audit";
 import { notifyAdmins } from "@/lib/notifications";
@@ -37,7 +38,7 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
       select: { id: true, quoteNumber: true, employeeId: true, signedAt: true, workStatus: true },
     });
     if (!quotation) return NextResponse.json({ error: "Not found" }, { status: 404 });
-    if (user.role === "sales" && quotation.employeeId !== user.id) {
+    if ((await ownScopedOnly(user.role)) && quotation.employeeId !== user.id) {
       return NextResponse.json({ error: "Forbidden" }, { status: 403 });
     }
     if (quotation.signedAt) {

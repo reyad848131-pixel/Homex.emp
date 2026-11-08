@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { getAuth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { logAction } from "@/lib/audit";
-import { userCan } from "@/lib/permissions";
+import { userCan, ownScopedOnly } from "@/lib/permissions";
 
 export async function POST(req: NextRequest) {
   try {
@@ -24,7 +24,7 @@ export async function POST(req: NextRequest) {
     // Before that a sales rep may invoice their own approved quotation.
     if (quotation.status === "accepted" || quotation.signedAt) {
       if (!(await userCan(user.role, "invoices"))) return NextResponse.json({ error: "إصدار الفواتير يتطلب صلاحية الفواتير", code: "locked" }, { status: 403 });
-    } else if (user.role === "sales" && quotation.employeeId !== user.id) {
+    } else if ((await ownScopedOnly(user.role)) && quotation.employeeId !== user.id) {
       return NextResponse.json({ error: "Forbidden" }, { status: 403 });
     }
 

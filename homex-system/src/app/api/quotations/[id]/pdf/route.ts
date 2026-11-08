@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { Prisma } from "@prisma/client";
 import { getAuth } from "@/lib/auth";
+import { ownScopedOnly } from "@/lib/permissions";
 import { prisma } from "@/lib/prisma";
 import { getSettings } from "@/lib/settings";
 import { pdfToolbar } from "@/lib/pdf-shell";
@@ -446,7 +447,7 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ id: 
       },
     });
     if (!quotation) return NextResponse.json({ error: "Not found" }, { status: 404 });
-    if (user.role === "sales" && quotation.employee.id !== user.id) {
+    if ((await ownScopedOnly(user.role)) && quotation.employee.id !== user.id) {
       return NextResponse.json({ error: "Forbidden" }, { status: 403 });
     }
     applyQuoteLocation(quotation);

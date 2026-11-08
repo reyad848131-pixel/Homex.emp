@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getAuth } from "@/lib/auth";
+import { ownScopedOnly } from "@/lib/permissions";
 import { prisma } from "@/lib/prisma";
 import { generateQuoteNumber, withUniqueRetry } from "@/lib/utils";
 import { logAction } from "@/lib/audit";
@@ -22,7 +23,7 @@ export async function POST(
 
   if (!original) return NextResponse.json({ error: "Not found" }, { status: 404 });
 
-  if (user.role === "sales" && original.employeeId !== user.id) {
+  if ((await ownScopedOnly(user.role)) && original.employeeId !== user.id) {
     return NextResponse.json({ error: "Forbidden" }, { status: 403 });
   }
 

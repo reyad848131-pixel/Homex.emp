@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getAuth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
+import { hasReportsAccess } from "@/lib/permissions";
 
 function csvSafe(val: string): string {
   const escaped = val.replace(/"/g, '""');
@@ -13,7 +14,8 @@ export async function GET(req: NextRequest) {
     const session = await getAuth();
     if (!session) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     const user = session.user as any;
-    if (user.role === "sales") return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+    // Full-data export — gate by the reports capability, not just "deny sales".
+    if (!(await hasReportsAccess(user.role))) return NextResponse.json({ error: "Forbidden" }, { status: 403 });
 
   const { searchParams } = new URL(req.url);
   const type = searchParams.get("type") || "quotations";

@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getAuth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
+import { hasReportsAccess } from "@/lib/permissions";
 import { roundMoney } from "@/lib/utils";
 
 export async function GET(req: NextRequest) {
@@ -9,7 +10,10 @@ export async function GET(req: NextRequest) {
     if (!session) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
     const user = session.user as any;
-    if (user.role === "sales") return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+    // Reports expose company-wide, money-bearing data — gate by the reports
+    // capability, not just "deny sales" (which leaked to driver/photographer and
+    // limited custom roles).
+    if (!(await hasReportsAccess(user.role))) return NextResponse.json({ error: "Forbidden" }, { status: 403 });
 
   const { searchParams } = new URL(req.url);
   const period = searchParams.get("period") || "month";

@@ -4,6 +4,7 @@ import { createSnapshot } from "@/lib/backup";
 import { buildExportWorkbook } from "@/lib/excel";
 import { isEmailConfigured, sendMail } from "@/lib/email";
 import { notifyAdmins } from "@/lib/notifications";
+import { cronHeaderMatches } from "@/lib/cron-auth";
 
 // Emails a full Excel workbook of the data as an off-site backup. No-op unless
 // email is configured (RESEND_API_KEY + BACKUP_EMAIL).
@@ -29,7 +30,7 @@ export async function GET(req: NextRequest) {
   try {
     const authHeader = req.headers.get("authorization");
     const cronSecret = process.env.CRON_SECRET;
-    const isCron = !!cronSecret && authHeader === `Bearer ${cronSecret}`;
+    const isCron = cronHeaderMatches(authHeader, cronSecret);
 
     if (!isCron) {
       // Not a valid cron call — require an authenticated admin instead.

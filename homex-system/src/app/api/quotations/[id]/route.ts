@@ -8,7 +8,7 @@ import { parseBody, updateQuotationItemsSchema } from "@/lib/schemas";
 import { roundMoney } from "@/lib/utils";
 import { getSetting, getSettings } from "@/lib/settings";
 import { isFinanciallyLocked, newTotalBelowPaid, canSetStatus } from "@/lib/quote-rules";
-import { userCan } from "@/lib/permissions";
+import { userCan, ownScopedOnly } from "@/lib/permissions";
 import { priceEditorIds, canEditPrice, hasPriceOverride } from "@/lib/price-permission";
 import { applyQuoteLocation } from "@/lib/quote-location";
 
@@ -72,7 +72,7 @@ export async function GET(
 
     if (!quotation) return NextResponse.json({ error: "Not found" }, { status: 404 });
 
-    if (user.role === "sales" && quotation.employeeId !== user.id) {
+    if ((await ownScopedOnly(user.role)) && quotation.employeeId !== user.id) {
       return NextResponse.json({ error: "Forbidden" }, { status: 403 });
     }
 
@@ -102,7 +102,7 @@ export async function PATCH(
     });
     if (!quotation) return NextResponse.json({ error: "Not found" }, { status: 404 });
 
-    if (user.role === "sales" && quotation.employeeId !== user.id) {
+    if ((await ownScopedOnly(user.role)) && quotation.employeeId !== user.id) {
       return NextResponse.json({ error: "Forbidden" }, { status: 403 });
     }
 
@@ -485,7 +485,7 @@ export async function DELETE(
     });
     if (!quotation) return NextResponse.json({ error: "Not found" }, { status: 404 });
 
-    if (user.role === "sales" && quotation.employeeId !== user.id) {
+    if ((await ownScopedOnly(user.role)) && quotation.employeeId !== user.id) {
       return NextResponse.json({ error: "Insufficient permissions" }, { status: 403 });
     }
 

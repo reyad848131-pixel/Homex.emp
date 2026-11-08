@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getAuth } from "@/lib/auth";
+import { ownScopedOnly } from "@/lib/permissions";
 import { prisma } from "@/lib/prisma";
 import { pdfToolbar } from "@/lib/pdf-shell";
 import {
@@ -45,7 +46,7 @@ export async function GET(
     if (!invoice) return NextResponse.json({ error: "Not found" }, { status: 404 });
 
     // A sales rep may only access invoices for their own quotations (IDOR guard).
-    if (user.role === "sales" && invoice.quotation.employeeId !== user.id) {
+    if ((await ownScopedOnly(user.role)) && invoice.quotation.employeeId !== user.id) {
       return NextResponse.json({ error: "Forbidden" }, { status: 403 });
     }
 
