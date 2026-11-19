@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { itemExtraLines, extraLinesSum } from "./extras-lines";
+import { itemExtraLines, extraLinesSum, hideBackPanelFromDesc } from "./extras-lines";
 
 describe("itemExtraLines", () => {
   it("returns [] for missing / malformed details", () => {
@@ -33,6 +33,23 @@ describe("itemExtraLines", () => {
       { label: "x", total: "nope" }, // non-numeric total
     ] });
     expect(lines).toHaveLength(1);
+  });
+
+  it("never shows the hidden 18mm back panel in the breakdown", () => {
+    const lines = itemExtraLines({ extrasBreakdown: [
+      { label: "زجاج ٣م", qty: 1, unitPrice: 60, total: 60 },
+      { label: "خلفية ١٨ملي", qty: 1, unitPrice: 40, total: 40 },
+    ] });
+    expect(lines).toHaveLength(1);
+    expect(lines[0].label).toBe("زجاج ٣م");
+  });
+
+  it("strips the back panel from a customer description", () => {
+    expect(hideBackPanelFromDesc("خزانة عادية ٢×١م · زجاج: ٣م×١ · خلفية ١٨ملي 1م²"))
+      .toBe("خزانة عادية ٢×١م · زجاج: ٣م×١");
+    // unchanged when there is no back panel
+    expect(hideBackPanelFromDesc("خزانة عادية ٢×١م · إضاءة ×٢"))
+      .toBe("خزانة عادية ٢×١م · إضاءة ×٢");
   });
 
   it("base + extras reconciles to the line total", () => {

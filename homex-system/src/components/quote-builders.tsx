@@ -838,8 +838,11 @@ function CabinetBuilder({ config, onUpdate, initial }: { config: any; onUpdate: 
     : 0;
 
   const backCost = back18 ? backSqm * backRate : 0;
-  const extras = glassCost + leds * (config.led || 25) + backCost;
-  const computedBase = width * height * rate + handleCost;
+  // The 18mm back panel is a SILENT surcharge folded into the base — exactly
+  // like the handles, it never shows to the customer (not in the description and
+  // not in the add-ons breakdown); the rep still sets it via the toggle below.
+  const extras = glassCost + leds * (config.led || 25);
+  const computedBase = width * height * rate + handleCost + backCost;
   const computedTotal = computedBase + extras;
   useResetFlatOnChange(computedTotal, priceOverride, () => setPriceOverride(null));
   // When a flat total is set it is the FINAL price incl. extras, so the base
@@ -854,12 +857,12 @@ function CabinetBuilder({ config, onUpdate, initial }: { config: any; onUpdate: 
     const parts = [`خزانة ${shapeName} ${width}×${height}م`];
     if (glassParts.length) parts.push(`زجاج: ${glassParts.join("، ")}`);
     if (leds > 0) parts.push(`إضاءة ×${leds}`);
-    if (back18) parts.push(`خلفية ١٨ملي ${backSqm}م²`);
+    // NOTE: the 18mm back panel is intentionally NOT added to the description —
+    // it is a hidden surcharge folded into the base (see above).
     const desc = withNote(parts.join(" · "), note);
     const extrasBreakdown = [
       ...(glassEnabled ? GLASS_OPTIONS.filter((o) => (glassCounts[o.key] || 0) > 0).map((o) => ({ label: `زجاج ${o.short}`, qty: glassCounts[o.key], unitPrice: o.price, total: glassCounts[o.key] * o.price })) : []),
       leds > 0 ? { label: `${t("lightingLabel")} LED`, qty: leds, unitPrice: config.led || 25, total: leds * (config.led || 25) } : null,
-      back18 && backCost > 0 ? { label: "خلفية ١٨ملي", qty: backSqm, unitPrice: backRate, total: backCost } : null,
     ].filter(Boolean);
     onUpdate(desc, price, extras, { width, height, shape, glassEnabled, glassCounts, leds, back18, backSqm, rateOverride, priceOverride, note, extrasBreakdown });
   }, [width, height, shape, glassEnabled, glassCounts, leds, back18, backSqm, price, extras, rateOverride, priceOverride, note, config, onUpdate]);

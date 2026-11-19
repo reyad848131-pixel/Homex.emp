@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { Prisma } from "@prisma/client";
 import { getAuth } from "@/lib/auth";
 import { ownScopedOnly } from "@/lib/permissions";
-import { itemExtraLines, plainAmount } from "@/lib/extras-lines";
+import { itemExtraLines, plainAmount, hideBackPanelFromDesc } from "@/lib/extras-lines";
 import { prisma } from "@/lib/prisma";
 import { getSettings } from "@/lib/settings";
 import { pdfToolbar } from "@/lib/pdf-shell";
@@ -104,7 +104,7 @@ export async function buildQuotationPdfHtml(
       return `
       <tr>
         <td class="c-idx">${i + 1}</td>
-        <td class="c-desc">${esc(item.description)}${addons}</td>
+        <td class="c-desc">${esc(hideBackPanelFromDesc(item.description))}${addons}</td>
         <td class="c-qty">${item.quantity}</td>
         <td class="c-num">${fmtCur(item.unitPrice)}</td>
         <td class="c-num c-strong">${fmtCur(item.lineTotal)}</td>

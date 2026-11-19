@@ -1,7 +1,7 @@
 import { prisma } from "@/lib/prisma";
 import { getSettings } from "@/lib/settings";
 import { spreadAdditionalFee } from "@/lib/quote-calc";
-import { itemExtraLines, plainAmount } from "@/lib/extras-lines";
+import { itemExtraLines, plainAmount, hideBackPanelFromDesc } from "@/lib/extras-lines";
 import { applyQuoteLocation } from "@/lib/quote-location";
 import { QuoteDecision } from "./decision";
 
@@ -132,7 +132,7 @@ export default async function PublicQuotePage({ params }: { params: Promise<{ to
                   return (
                     <tr key={it.id} className={`border-b border-gray-100 ${i % 2 ? "bg-gray-50" : ""}`}>
                       <td className="py-2.5 px-3">
-                        <p className="font-semibold text-gray-800">{it.description}</p>
+                        <p className="font-semibold text-gray-800">{hideBackPanelFromDesc(it.description)}</p>
                         <p className="text-xs text-gray-400">{it.category?.nameAr}</p>
                         {xlines.length > 0 && (
                           <p className="text-[11px] text-gray-500 mt-1 leading-relaxed">
