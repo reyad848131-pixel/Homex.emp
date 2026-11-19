@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { Prisma } from "@prisma/client";
 import { getAuth } from "@/lib/auth";
 import { ownScopedOnly } from "@/lib/permissions";
+import { itemExtraLines, extraLinesSum } from "@/lib/extras-lines";
 import { prisma } from "@/lib/prisma";
 import { getSettings } from "@/lib/settings";
 import { pdfToolbar } from "@/lib/pdf-shell";
@@ -91,14 +92,46 @@ export async function buildQuotationPdfHtml(
       ? spreadAdditionalFee(quotation.items, quotation.additionalFee, quotation.vatRate)
       : { items: quotation.items, subtotal: quotation.subtotal };
 
-    const itemRows = displayItems.map((item, i) => `
+    const itemRows = displayItems.map((item, i) => {
+      const xlines = itemExtraLines((item as { details?: unknown }).details);
+      if (xlines.length === 0) {
+        // No add-ons (or an older quote) — unchanged single row, full total.
+        return `
       <tr>
         <td class="c-idx">${i + 1}</td>
         <td class="c-desc">${esc(item.description)}</td>
         <td class="c-qty">${item.quantity}</td>
         <td class="c-num">${fmtCur(item.unitPrice)}</td>
         <td class="c-num c-strong">${fmtCur(item.lineTotal)}</td>
+      </tr>`;
+      }
+      // Base = line total minus the shown add-ons, so base + add-ons always
+      // reconciles to the item's real total (even after the hidden fee spread).
+      const base = Math.round((item.lineTotal - extraLinesSum(xlines)) * 1000) / 1000;
+      const subRows = xlines.map((x) => `
+      <tr class="x">
+        <td></td>
+        <td class="c-desc">${esc(x.label)}</td>
+        <td class="c-qty">×${x.qty}</td>
+        <td class="c-num">${fmtCur(x.unitPrice)}</td>
+        <td class="c-num">${fmtCur(x.total)}</td>
       </tr>`).join("");
+      return `
+      <tr>
+        <td class="c-idx">${i + 1}</td>
+        <td class="c-desc">${esc(item.description)}</td>
+        <td class="c-qty">${item.quantity}</td>
+        <td class="c-num">${fmtCur(item.unitPrice)}</td>
+        <td class="c-num">${fmtCur(base)}</td>
+      </tr>${subRows}
+      <tr class="xtot">
+        <td></td>
+        <td class="lbl">إجمالي البند شامل الإضافات</td>
+        <td></td>
+        <td></td>
+        <td class="c-num">${fmtCur(item.lineTotal)}</td>
+      </tr>`;
+    }).join("");
 
     const termsHtml = termsConditions ? (() => {
       const lines = termsConditions.split("\n").filter(Boolean);
@@ -243,6 +276,13 @@ export async function buildQuotationPdfHtml(
   .c-num { text-align:left; width:120px; font-variant-numeric:tabular-nums; direction:ltr; }
   .c-strong { font-weight:800; color:var(--sage-d); }
   .items thead th.ta-c { text-align:center; }
+  /* Add-on breakdown sub-rows under an item (glass, lighting…) shown to the customer. */
+  .items tbody tr.x td { padding:6px 14px; font-size:11.5px; color:#55564f; border-bottom:1px dashed #e4e3dc; background:#fbfbf9; }
+  .items tbody tr.x td.c-desc { font-weight:600; padding-inline-start:30px; position:relative; }
+  .items tbody tr.x td.c-desc::before { content:"\\21B3"; position:absolute; inset-inline-start:12px; color:var(--sage); }
+  .items tbody tr.xtot td { padding:9px 14px; background:#f2f4ef; border-bottom:1px solid var(--line); }
+  .items tbody tr.xtot .lbl { font-weight:700; color:var(--green); font-size:12px; }
+  .items tbody tr.xtot .c-num { font-weight:800; color:var(--sage-d); }
 
   /* ===== TOTALS (card on the right, QR codes fill the free space at left) ===== */
   .totals { display:flex; justify-content:space-between; align-items:flex-end; gap:24px; margin:18px 44px 0; }

@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useCallback, useRef } from "react";
+import { useState, useEffect, useCallback, useRef, Fragment } from "react";
 import { useRouter } from "next/navigation";
 import { GOVERNORATES } from "@/lib/types";
 import { cn } from "@/lib/utils";
@@ -10,6 +10,7 @@ import { useToast } from "@/components/toast";
 import { CategoryBuilder, NumField, NumStepper, type Category } from "@/components/quote-builders";
 import { ItemVersionBar } from "@/components/item-version-bar";
 import { ensureVersions, pushVersion, applyVersion, removeVersion, type ItemVersion } from "@/lib/item-versions";
+import { itemExtraLines, extraLinesSum } from "@/lib/extras-lines";
 import {
   ChefHat, DoorOpen, Lamp, Blinds, Sparkles, BedDouble,
   Layers, Tv, Monitor, Sofa, WashingMachine, Plus, Refrigerator, Coffee, Columns2, BookOpen,
@@ -746,18 +747,40 @@ export default function NewQuotationPage() {
                   </tr>
                 </thead>
                 <tbody>
-                  {items.map((item, i) => (
-                    <tr key={item.id} className="border-b border-gray-50">
-                      <td className="py-2.5 font-mono-en text-gray-400">{i + 1}</td>
-                      <td className="py-2.5">
-                        <p className="font-bold">{item.description}</p>
-                        <p className="text-xs text-gray-400">{itemCatName(item)}</p>
-                      </td>
-                      <td className="py-2.5 font-mono-en">{item.quantity}</td>
-                      <td className="py-2.5 font-mono-en">{fmtCur(item.unitPrice)}</td>
-                      <td className="py-2.5 font-mono-en font-bold">{fmtCur(item.lineTotal)}</td>
-                    </tr>
-                  ))}
+                  {items.map((item, i) => {
+                    const xlines = itemExtraLines(item.details);
+                    const base = Math.round((item.lineTotal - extraLinesSum(xlines)) * 1000) / 1000;
+                    return (
+                    <Fragment key={item.id}>
+                      <tr className="border-b border-gray-50">
+                        <td className="py-2.5 font-mono-en text-gray-400">{i + 1}</td>
+                        <td className="py-2.5">
+                          <p className="font-bold">{item.description}</p>
+                          <p className="text-xs text-gray-400">{itemCatName(item)}</p>
+                        </td>
+                        <td className="py-2.5 font-mono-en">{item.quantity}</td>
+                        <td className="py-2.5 font-mono-en">{fmtCur(item.unitPrice)}</td>
+                        <td className="py-2.5 font-mono-en font-bold">{fmtCur(xlines.length ? base : item.lineTotal)}</td>
+                      </tr>
+                      {xlines.map((x, j) => (
+                        <tr key={j} className="bg-gray-50/60">
+                          <td></td>
+                          <td className="py-1.5 ps-4 text-xs text-gray-500">↳ {x.label} <span className="font-mono-en text-gray-400">×{x.qty} × {fmtCur(x.unitPrice)}</span></td>
+                          <td></td><td></td>
+                          <td className="py-1.5 font-mono-en text-xs text-gray-500">{fmtCur(x.total)}</td>
+                        </tr>
+                      ))}
+                      {xlines.length > 0 && (
+                        <tr className="border-b border-gray-100 bg-[#f2f4ef]">
+                          <td></td>
+                          <td className="py-2 text-xs font-bold text-gray-700">إجمالي البند شامل الإضافات</td>
+                          <td></td><td></td>
+                          <td className="py-2 font-mono-en font-black">{fmtCur(item.lineTotal)}</td>
+                        </tr>
+                      )}
+                    </Fragment>
+                    );
+                  })}
                 </tbody>
               </table>
             </div>

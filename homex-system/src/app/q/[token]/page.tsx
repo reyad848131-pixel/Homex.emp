@@ -1,6 +1,8 @@
+import { Fragment } from "react";
 import { prisma } from "@/lib/prisma";
 import { getSettings } from "@/lib/settings";
 import { spreadAdditionalFee } from "@/lib/quote-calc";
+import { itemExtraLines, extraLinesSum } from "@/lib/extras-lines";
 import { applyQuoteLocation } from "@/lib/quote-location";
 import { QuoteDecision } from "./decision";
 
@@ -126,16 +128,46 @@ export default async function PublicQuotePage({ params }: { params: Promise<{ to
                 </tr>
               </thead>
               <tbody>
-                {displayItems.map((it, i) => (
-                  <tr key={it.id} className={`border-b border-gray-100 ${i % 2 ? "bg-gray-50" : ""}`}>
-                    <td className="py-2.5 px-3">
-                      <p className="font-semibold text-gray-800">{it.description}</p>
-                      <p className="text-xs text-gray-400">{it.category?.nameAr}</p>
-                    </td>
-                    <td className="py-2.5 px-2 text-center font-mono-en text-gray-500">{it.quantity}</td>
-                    <td className="py-2.5 px-3 text-left font-mono-en font-bold text-[#6f7e62]">{money(it.lineTotal)}</td>
-                  </tr>
-                ))}
+                {displayItems.map((it, i) => {
+                  const xlines = itemExtraLines((it as { details?: unknown }).details);
+                  if (xlines.length === 0) {
+                    return (
+                      <tr key={it.id} className={`border-b border-gray-100 ${i % 2 ? "bg-gray-50" : ""}`}>
+                        <td className="py-2.5 px-3">
+                          <p className="font-semibold text-gray-800">{it.description}</p>
+                          <p className="text-xs text-gray-400">{it.category?.nameAr}</p>
+                        </td>
+                        <td className="py-2.5 px-2 text-center font-mono-en text-gray-500">{it.quantity}</td>
+                        <td className="py-2.5 px-3 text-left font-mono-en font-bold text-[#6f7e62]">{money(it.lineTotal)}</td>
+                      </tr>
+                    );
+                  }
+                  const base = Math.round((it.lineTotal - extraLinesSum(xlines)) * 1000) / 1000;
+                  return (
+                    <Fragment key={it.id}>
+                      <tr className="border-b border-gray-100">
+                        <td className="py-2.5 px-3">
+                          <p className="font-semibold text-gray-800">{it.description}</p>
+                          <p className="text-xs text-gray-400">{it.category?.nameAr}</p>
+                        </td>
+                        <td className="py-2.5 px-2 text-center font-mono-en text-gray-500">{it.quantity}</td>
+                        <td className="py-2.5 px-3 text-left font-mono-en text-gray-700">{money(base)}</td>
+                      </tr>
+                      {xlines.map((x, j) => (
+                        <tr key={j} className="bg-[#fbfbf9] border-b border-dashed border-gray-100">
+                          <td className="py-1.5 px-3 ps-7 text-xs text-gray-500">↳ {x.label} <span className="font-mono-en text-gray-400">×{x.qty} × {money(x.unitPrice)}</span></td>
+                          <td></td>
+                          <td className="py-1.5 px-3 text-left font-mono-en text-xs text-gray-500">{money(x.total)}</td>
+                        </tr>
+                      ))}
+                      <tr className="bg-[#f2f4ef] border-b border-gray-200">
+                        <td className="py-2 px-3 text-xs font-bold text-gray-700">إجمالي البند شامل الإضافات</td>
+                        <td></td>
+                        <td className="py-2 px-3 text-left font-mono-en font-bold text-[#6f7e62]">{money(it.lineTotal)}</td>
+                      </tr>
+                    </Fragment>
+                  );
+                })}
               </tbody>
             </table>
           </div>

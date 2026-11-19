@@ -144,6 +144,15 @@ export interface Category {
 type BuilderUpdate = (d: string, p: number, e: number, details?: Record<string, any>) => void;
 type BuilderInitial = Record<string, any> | undefined;
 
+// One priced add-on line shown to the customer under a quote item (glass,
+// lighting, island…). The sum of all a line's extras equals the item's `extras`,
+// and base + extras = the line total. Hidden surcharges (e.g. cabinet handles,
+// folded silently into the base) are NEVER emitted here.
+export type ExtraLine = { label: string; qty: number; unitPrice: number; total: number };
+// Build a lighting add-on line from a count + per-unit price (shared shape).
+const lightingLine = (label: string, qty: number, unitPrice: number): ExtraLine | null =>
+  qty > 0 && unitPrice > 0 ? { label, qty, unitPrice, total: qty * unitPrice } : null;
+
 // Normalise anything a keyboard might produce for a number into plain
 // Latin digits + a single "." separator. On an Arabic-locale iPad the
 // decimal keypad emits the Arabic decimal separator "٫" (U+066B) and often
@@ -304,6 +313,7 @@ function useLighting(initial?: BuilderInitial) {
   const [lightCount, setLightCount] = useState<number>(initial?.lightCount ?? 0);
   const lightExtras = lightCount * perUnit;
   const lightDesc = lightCount > 0 ? ` · ${t("lightingLabel")} ×${lightCount}` : "";
+  const line = lightingLine(t("lightingLabel"), lightCount, perUnit);
   const row = (
     <StepperRow
       label={t("lightingLabel")}
@@ -314,7 +324,7 @@ function useLighting(initial?: BuilderInitial) {
       lineTotal={lightExtras > 0 ? `${lightExtras.toFixed(0)} ${t("omr")}` : undefined}
     />
   );
-  return { lightCount, lightExtras, lightDesc, row };
+  return { lightCount, lightExtras, lightDesc, line, row };
 }
 
 const KITCHEN_BASE_PRICES: Record<string, number | Record<string, number> | null> = {
@@ -569,7 +579,12 @@ function KitchenBuilder({ config, governorate, wilayat, onUpdate, initial }: { c
     });
     const accPart = names.length ? ` · ${t("kitchenAccessories")}: ${names.join("، ")}` : "";
     const desc = withNote(`مطبخ MDF - ${unitLabel} - ${length}م${accPart}${light.lightDesc}`, note);
-    onUpdate(desc, price, extras, { length, unitType, island, accCounts, manualBase, lightCount: light.lightCount, rateOverride, priceOverride, note });
+    const extrasBreakdown = [
+      island !== "none" ? { label: `جزيرة ${island === "small" ? "صغيرة" : "كبيرة"}`, qty: 1, unitPrice: ISLAND_PRICES[island], total: ISLAND_PRICES[island] } : null,
+      ...accessories.filter((a) => accCount(a.id) > 0).map((a) => ({ label: a.name, qty: accCount(a.id), unitPrice: a.price, total: accCount(a.id) * a.price })),
+      light.line,
+    ].filter(Boolean);
+    onUpdate(desc, price, extras, { length, unitType, island, accCounts, manualBase, lightCount: light.lightCount, rateOverride, priceOverride, note, extrasBreakdown });
   }, [length, unitType, island, accCounts, light.lightCount, light.lightDesc, price, extras, rateOverride, priceOverride, note, config, onUpdate, accessories]);
 
   return (
@@ -718,7 +733,7 @@ function PantryBuilder({ config, governorate, wilayat, onUpdate, initial }: { co
   const price = priceOverride != null ? priceOverride - extras : computedBase;
 
   useEffect(() => {
-    onUpdate(withNote(`بانتري - ${length}م${light.lightDesc}`, note), price, extras, { length, manualBase, lightCount: light.lightCount, rateOverride, priceOverride, note });
+    onUpdate(withNote(`بانتري - ${length}م${light.lightDesc}`, note), price, extras, { length, manualBase, lightCount: light.lightCount, rateOverride, priceOverride, note, extrasBreakdown: [light.line].filter(Boolean) });
   }, [length, price, extras, light.lightCount, light.lightDesc, rateOverride, priceOverride, note, config, onUpdate]);
 
   return (
@@ -841,7 +856,12 @@ function CabinetBuilder({ config, onUpdate, initial }: { config: any; onUpdate: 
     if (leds > 0) parts.push(`إضاءة ×${leds}`);
     if (back18) parts.push(`خلفية ١٨ملي ${backSqm}م²`);
     const desc = withNote(parts.join(" · "), note);
-    onUpdate(desc, price, extras, { width, height, shape, glassEnabled, glassCounts, leds, back18, backSqm, rateOverride, priceOverride, note });
+    const extrasBreakdown = [
+      ...(glassEnabled ? GLASS_OPTIONS.filter((o) => (glassCounts[o.key] || 0) > 0).map((o) => ({ label: `زجاج ${o.short}`, qty: glassCounts[o.key], unitPrice: o.price, total: glassCounts[o.key] * o.price })) : []),
+      leds > 0 ? { label: `${t("lightingLabel")} LED`, qty: leds, unitPrice: config.led || 25, total: leds * (config.led || 25) } : null,
+      back18 && backCost > 0 ? { label: "خلفية ١٨ملي", qty: backSqm, unitPrice: backRate, total: backCost } : null,
+    ].filter(Boolean);
+    onUpdate(desc, price, extras, { width, height, shape, glassEnabled, glassCounts, leds, back18, backSqm, rateOverride, priceOverride, note, extrasBreakdown });
   }, [width, height, shape, glassEnabled, glassCounts, leds, back18, backSqm, price, extras, rateOverride, priceOverride, note, config, onUpdate]);
 
   return (
@@ -983,7 +1003,11 @@ function CurtainBuilder({ config, onUpdate, initial }: { config: any; onUpdate: 
 
   useEffect(() => {
     const desc = withNote(`ستائر ${TYPES[type]?.label} - ${width}×${height}م = ${area} م²${light.lightDesc}`, note);
-    onUpdate(desc, price, extras, { type, motor, width, height, lightCount: light.lightCount, rateOverride, priceOverride, note });
+    const extrasBreakdown = [
+      motorSurcharge > 0 ? { label: "موتور كهربائي", qty: motorQty, unitPrice: MOTOR_BASE + MOTOR_PER_METER * width, total: motorSurcharge } : null,
+      light.line,
+    ].filter(Boolean);
+    onUpdate(desc, price, extras, { type, motor, width, height, lightCount: light.lightCount, rateOverride, priceOverride, note, extrasBreakdown });
   }, [type, motor, width, height, price, rateOverride, priceOverride, extras, light.lightCount, light.lightDesc, note, config, onUpdate]);
 
   return (
@@ -1130,7 +1154,11 @@ function BedBuilder({ config, onUpdate, initial }: { config: any; onUpdate: Buil
   useEffect(() => {
     const typeLabel = type === "wood" ? "خشب" : "قماش";
     const desc = withNote(`سرير ${typeLabel} - ${size} سم${legsDescSuffix(legs)}`, note);
-    onUpdate(desc, price, extras, { type, size, lighting, legs, rateOverride, priceOverride, note });
+    const extrasBreakdown = [
+      lighting ? { label: t("lightingLabel"), qty: 1, unitPrice: config.lighting || 20, total: config.lighting || 20 } : null,
+      legs !== "none" ? { label: legs === "wood" ? "أرجل خشبية" : "أرجل ألمنيوم", qty: 1, unitPrice: legsExtra(config, legs), total: legsExtra(config, legs) } : null,
+    ].filter(Boolean);
+    onUpdate(desc, price, extras, { type, size, lighting, legs, rateOverride, priceOverride, note, extrasBreakdown });
   }, [type, size, lighting, legs, price, extras, rateOverride, priceOverride, note, config, onUpdate]);
 
   return (
@@ -1202,7 +1230,7 @@ function CladdingBuilder({ config, onUpdate, initial }: { config: any; onUpdate:
 
   useEffect(() => {
     const desc = withNote(`كلادينج ${TYPES[type]?.label} - ${width}×${height}م = ${area} م²`, note);
-    onUpdate(desc, price, lightSurcharge, { type, width, height, lighting, lightCount, rateOverride, priceOverride, note });
+    onUpdate(desc, price, lightSurcharge, { type, width, height, lighting, lightCount, rateOverride, priceOverride, note, extrasBreakdown: (lighting && lightCount > 0 ? [{ label: t("lightingLabel"), qty: lightCount, unitPrice: LIGHT_PRICE, total: lightCount * LIGHT_PRICE }] : []) });
   }, [type, width, height, lighting, lightCount, price, rateOverride, priceOverride, lightSurcharge, note, config, onUpdate]);
 
   return (
@@ -1314,7 +1342,7 @@ function PartitionBuilder({ config, onUpdate, initial }: { config: any; onUpdate
 
   useEffect(() => {
     const desc = withNote(`بارتشن - ${length}×${width}م = ${area} م²${light.lightDesc}`, note);
-    onUpdate(desc, price, extras, { length, width, lightCount: light.lightCount, rateOverride, priceOverride, note });
+    onUpdate(desc, price, extras, { length, width, lightCount: light.lightCount, rateOverride, priceOverride, note, extrasBreakdown: [light.line].filter(Boolean) });
   }, [length, width, area, price, extras, light.lightCount, light.lightDesc, rateOverride, priceOverride, note, onUpdate]);
 
   return (
@@ -1414,7 +1442,7 @@ function SofaBuilder({ onUpdate, initial }: { config: any; onUpdate: BuilderUpda
       const breakdown = parts.length ? ` — ${parts.join("، ")}` : "";
       desc = withNote(`طقم جلوس ${typeLabel}${breakdown}${light.lightDesc}`, note);
     }
-    onUpdate(desc, finalPrice, light.lightExtras, { mode, type, single, double: dbl, triple, manualPrice, lightCount: light.lightCount, rateOverride, priceOverride, note });
+    onUpdate(desc, finalPrice, light.lightExtras, { mode, type, single, double: dbl, triple, manualPrice, lightCount: light.lightCount, rateOverride, priceOverride, note, extrasBreakdown: [light.line].filter(Boolean) });
   }, [mode, type, single, dbl, triple, manualPrice, finalPrice, light.lightCount, light.lightExtras, light.lightDesc, rateOverride, priceOverride, note, onUpdate]);
 
   const pieceRow = (label: string, unitPrice: number, count: number, setCount: (n: number) => void) => (
@@ -1510,7 +1538,11 @@ function NightstandBuilder({ config, onUpdate, initial }: { config: any; onUpdat
   useEffect(() => {
     const typeLabel = type === "round" ? t("roundType") : t("standardType");
     const legsSuffix = legsDescSuffix(legs);
-    const details = { type, mode, customLength, customWidth, customPrice, legs, lightCount: light.lightCount, rateOverride, priceOverride, note };
+    const extrasBreakdown = [
+      legs !== "none" ? { label: legs === "wood" ? "أرجل خشبية" : "أرجل ألمنيوم", qty: 1, unitPrice: legsExtra(config, legs), total: legsExtra(config, legs) } : null,
+      light.line,
+    ].filter(Boolean);
+    const details = { type, mode, customLength, customWidth, customPrice, legs, lightCount: light.lightCount, rateOverride, priceOverride, note, extrasBreakdown };
     const desc = mode === "fixed"
       ? withNote(`كومودينو ${typeLabel}${legsSuffix}${light.lightDesc}`, note)
       : withNote(`كومودينو ${typeLabel} - ${customLength}×${customWidth} سم${legsSuffix}${light.lightDesc}`, note);
@@ -1593,7 +1625,7 @@ function DressingBuilder({ config, onUpdate, initial }: { config: any; onUpdate:
   const price = priceOverride != null ? priceOverride - extras : computedBase;
 
   useEffect(() => {
-    onUpdate(withNote(`تسريحة - ${length} م.ط`, note), price, extras, { length, lighting, lightCount, rateOverride, priceOverride, note });
+    onUpdate(withNote(`تسريحة - ${length} م.ط`, note), price, extras, { length, lighting, lightCount, rateOverride, priceOverride, note, extrasBreakdown: (lighting && lightCount > 0 ? [{ label: t("lightingLabel"), qty: lightCount, unitPrice: config.lighting || 20, total: lightCount * (config.lighting || 20) }] : []) });
   }, [length, lighting, lightCount, price, extras, rateOverride, priceOverride, note, config, onUpdate]);
 
   return (
@@ -1659,7 +1691,7 @@ function LaundryBuilder({ config, onUpdate, initial }: { config: any; onUpdate: 
   const price = priceOverride != null ? priceOverride - extras : computedBase;
 
   useEffect(() => {
-    onUpdate(withNote(`غرفة غسيل - ${area} م²`, note), price, extras, { area, lighting, lightCount, rateOverride, priceOverride, note });
+    onUpdate(withNote(`غرفة غسيل - ${area} م²`, note), price, extras, { area, lighting, lightCount, rateOverride, priceOverride, note, extrasBreakdown: (lighting && lightCount > 0 ? [{ label: t("lightingLabel"), qty: lightCount, unitPrice: config.lighting || 20, total: lightCount * (config.lighting || 20) }] : []) });
   }, [area, lighting, lightCount, price, extras, rateOverride, priceOverride, note, config, onUpdate]);
 
   return (
@@ -1737,7 +1769,7 @@ function TVTableBuilder({ config, onUpdate, initial }: { config: any; onUpdate: 
     const baseDesc = type === "floor"
       ? `طاولة تلفزيون أرضية - ${length} م.ط`
       : `طاولة تلفزيون مع كلادينج - ${width}×${height}م = ${tvArea} م²`;
-    onUpdate(withNote(`${baseDesc}${light.lightDesc}`, note), price, extras, { type, width, height, length, lightCount: light.lightCount, rateOverride, priceOverride, note });
+    onUpdate(withNote(`${baseDesc}${light.lightDesc}`, note), price, extras, { type, width, height, length, lightCount: light.lightCount, rateOverride, priceOverride, note, extrasBreakdown: [light.line].filter(Boolean) });
   }, [type, width, height, length, tvArea, price, extras, light.lightCount, light.lightDesc, rateOverride, priceOverride, note, config, onUpdate]);
 
   return (
@@ -1826,7 +1858,7 @@ function GenericBuilder({ cat, onUpdate, initial }: { cat: Category; onUpdate: B
       calculatedPrice = priceOverride != null ? priceOverride - genExtras : genComputed;
     }
     const finalDesc = desc || `${cat.nameAr} - ${cat.pricingType === "manual" ? t("customItemLabel") : `${width}${cat.pricingType === "per_sqm" ? `×${height}م` : "م"}`}`;
-    onUpdate(finalDesc, calculatedPrice, genExtras, { desc, price, width, height, lighting, rateOverride, priceOverride });
+    onUpdate(finalDesc, calculatedPrice, genExtras, { desc, price, width, height, lighting, rateOverride, priceOverride, extrasBreakdown: (genExtras > 0 ? [{ label: t("lightingLabel"), qty: 1, unitPrice: genExtras, total: genExtras }] : []) });
   }, [desc, price, width, height, lighting, genComputed, genExtras, rateOverride, priceOverride, cat, onUpdate]);
 
   return (
@@ -1908,8 +1940,12 @@ function StudyTableBuilder({ config, onUpdate, initial }: { config: any; onUpdat
   useEffect(() => {
     const parts = [`طاولة مذاكرة - ${length} م.ط`];
     if (claddingEnabled) parts.push(`كلادينج ${claddingWidth}×${claddingHeight}م = ${claddingArea} م²`);
+    const extrasBreakdown = [
+      claddingEnabled && claddingCost > 0 ? { label: `كلادينج ${claddingWidth}×${claddingHeight}م`, qty: claddingArea, unitPrice: claddingRate, total: claddingCost } : null,
+      light.line,
+    ].filter(Boolean);
     onUpdate(withNote(`${parts.join(" · ")}${light.lightDesc}`, note), price, extras, {
-      length, claddingEnabled, claddingWidth, claddingHeight, lightCount: light.lightCount, rateOverride, priceOverride, note,
+      length, claddingEnabled, claddingWidth, claddingHeight, lightCount: light.lightCount, rateOverride, priceOverride, note, extrasBreakdown,
     });
   }, [length, claddingEnabled, claddingWidth, claddingHeight, claddingArea, extras, light.lightCount, light.lightDesc, price, rateOverride, priceOverride, note, config, onUpdate]);
 
