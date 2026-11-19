@@ -34,3 +34,17 @@ export function itemExtraLines(details: unknown): ExtraLineView[] {
 export function extraLinesSum(lines: { total: number }[]): number {
   return Math.round(lines.reduce((s, l) => s + l.total, 0) * 1000) / 1000;
 }
+
+// A plain amount with no trailing zeros (60.000 → "60", 60.5 → "60.5"), in
+// ASCII digits — used for the compact inline add-ons line, suffixed with " OMR"
+// so it is unmistakably a price.
+export function plainAmount(n: number): string {
+  return String(Math.round(n * 1000) / 1000);
+}
+
+// One add-on rendered inline, e.g. "إضاءة LED ×2 50 OMR" (×count shown only
+// when more than one).
+export function extraInlineText(l: ExtraLineView): string {
+  const qty = l.qty > 1 ? ` ×${l.qty}` : "";
+  return `${l.label}${qty} ${plainAmount(l.total)} OMR`;
+}
